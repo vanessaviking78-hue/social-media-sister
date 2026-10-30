@@ -308,38 +308,76 @@ async function postJson(path: string, body: unknown): Promise<Record<string, any
   return data;
 }
 
+// A training academy uses the same designs as a clinic, so its cover words are rewritten from the academy's point of view.
+export const isAcademyClient = (c: Client): boolean => /academy/i.test(c.businessName);
+const ACADEMY_IDEA = "an academy post from the training academy, speaking to practitioners and people thinking about training in aesthetics, built from the cover words shown";
+
+async function academyCover(post: MPost, c: Client): Promise<Record<string, string>> {
+  type Fd = { key: string; label: string; words?: number };
+  let defaults: Record<string, string> = {};
+  let fields: Fd[] = [];
+  let designIdea = "";
+  if (post.tool === "unique") { const d = UD.UNIQUE_BY_ID[post.design as UD.UniId]; fields = d.fields; defaults = d.defaults; designIdea = d.idea; }
+  else if (post.tool === "treatments") { const d = TD.TREAT_BY_ID[post.design as TD.TreatId]; fields = TD.FIELDS; defaults = d.defaults as Record<string, string>; designIdea = d.idea; }
+  else if (post.tool === "basic") { const d = BC.COVER_BY_ID[post.design as BC.CoverId]; fields = d.fields; defaults = d.defaults; designIdea = d.idea; }
+  else {
+    const d = post.tool === "halloween" ? HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]
+      : post.tool === "november" ? NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]
+      : XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
+    fields = d.fields; defaults = d.defaults as Record<string, string>; designIdea = d.idea;
+  }
+  const req = fields.map((fd) => {
+    const current = post.text[fd.key] ?? defaults[fd.key] ?? "";
+    const n = current.trim() ? current.trim().split(/\s+/).length : 0;
+    return { key: fd.key, label: fd.label, words: fd.words ?? Math.max(3, Math.ceil(n * 1.4)), current };
+  });
+  const data = await postJson("/api/academy/cover", {
+    businessName: c.businessName, ownerName: c.ownerName, role: c.role, area: c.area,
+    designName: designName(post), idea: designIdea, fields: req,
+  });
+  return (data.cover ?? {}) as Record<string, string>;
+}
+
 // Writes the slide words, question and caption for one post. Returns what to merge into the post.
 export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>> {
   const base = {
     businessName: c.businessName, ownerName: c.ownerName, role: c.role, area: c.area, audience: c.audience, brandNotes: c.brandNotes,
   };
+  const academy = isAcademyClient(c);
+  // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
+  let coverText: Record<string, string> | null = null;
+  if (academy && !post.caption.trim()) {
+    const fresh = await academyCover(post, c);
+    if (Object.keys(fresh).length) { coverText = { ...post.text, ...fresh }; post = { ...post, text: coverText }; }
+  }
   let data: Record<string, any>;
   let slides: string[] = [];
   if (post.tool === "unique") {
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     const t = UD.resolveUniText(def, post.text, c.fill);
-    data = await postJson("/api/unique/copy", { ...base, idea: def.idea, cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
+    data = await postJson("/api/unique/copy", { ...base, idea: academy ? ACADEMY_IDEA : def.idea, cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
     slides = [data.slide2, data.slide3];
   } else if (post.tool === "treatments") {
     const def = TD.TREAT_BY_ID[post.design as TD.TreatId];
     const t = Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as Record<string, string>;
-    data = await postJson("/api/treatments/copy", { ...base, treatment: def.idea, headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
+    data = await postJson("/api/treatments/copy", { ...base, treatment: academy ? ACADEMY_IDEA : def.idea, headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
     slides = [data.slide2, data.slide3, data.slide4, data.slide5];
   } else if (post.tool === "basic") {
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
-    data = await postJson("/api/basic-posts/copy", { ...base, coverName: def.name, coverIdea: def.idea, cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
+    data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? ACADEMY_IDEA : def.idea, cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
   } else {
     const def = post.tool === "halloween" ? HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]
       : post.tool === "november" ? NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]
       : XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
     const path = post.tool === "halloween" ? "/api/halloween-posts/copy" : post.tool === "november" ? "/api/november-posts/copy" : "/api/xmas-posts/copy";
-    data = await postJson(path, { ...base, designName: def.name, idea: def.idea, onImage: onImageText(post, c) });
+    data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? ACADEMY_IDEA : def.idea, onImage: onImageText(post, c) });
   }
   let caption = noDashes(data.caption ?? "");
   if (c.footnote && !caption.includes(c.footnote)) caption += `\n\n${c.footnote}`;
   return {
+    ...(coverText ? { text: coverText } : {}),
     slides: slides.map((s) => noDashes(s ?? "")),
     cta: noDashes(data.cta ?? ""),
     caption,

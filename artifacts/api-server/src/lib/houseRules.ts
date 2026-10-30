@@ -15,6 +15,15 @@ export const DENTAL_RULES = `THIS IS A DENTAL PRACTICE, NOT AN AESTHETICS CLINIC
 - Write about dentistry: check-ups, hygiene, whitening, straightening, restorations, nervous patients, children and families, smiles. Never mention aesthetics, skin, injectables or facial treatments.
 - Dental advertising standards: no guaranteed results, no before and after promises, no pressure, no superlatives. Never send readers to the practice website; end treatment posts with exactly: Drop me a DM to see if you're a good fit for this.`;
 
+export const ACADEMY_RULES = `THIS IS AN AESTHETICS TRAINING ACADEMY, NOT A CLINIC (this overrides every line about patients, consultations, treatments and who she is talking to)
+- I run the academy. The reader is a practitioner or someone thinking about training in aesthetics: a nurse, dentist, doctor, pharmacist, beauty therapist or a woman changing career, often over 35, curious but nervous. She is never a patient. Never write about booking a treatment, sitting in the consultation chair or "my patients" as the audience.
+- Write about the training room and the life of a practitioner: first day nerves, small groups, hands on learning, supervision and mentoring, asking the silly question, imposter syndrome, kit bags and clinic life, consent and safety as skills, what good training feels like, starting a clinic, learning at 40 plus. Everything is from the trainer's point of view, personal and warm.
+- Advertising standards for training: no promises about income, jobs, success or being "fully qualified", no guarantees, no prices, no pass rates, no statistics, no before and after. Never name an awarding body, an accreditation, a course title or a date. Never invent a delegate, a quote, a name or a number.
+- A post about a course or a training day ends with exactly: Drop me a DM to see if you're a good fit for this. Every other post ends with one fun, easy engagement question for practitioners, such as What do you wish someone had told you on your first day?
+- Hashtags: exactly 5, lower case, each the area joined to beauty or aesthetics (for example the town plus beauty, the city plus aesthetics). Never mums.`;
+
+export const isAcademy = (name?: string) => /academy/i.test(name ?? "");
+
 export const isDental = (name?: string) => /castle|dental|dentist|orthodont/i.test(name ?? "");
 
 // The one voice every tool writes in. Built from Vanessa's own hook and pillar technique, never named in the copy.
