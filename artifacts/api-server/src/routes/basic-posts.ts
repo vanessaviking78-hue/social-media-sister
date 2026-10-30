@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental } from "../lib/houseRules";
+import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
@@ -72,7 +72,7 @@ function systemPrompt(n: Notes): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
-${isDental(n.businessName) ? `\n${DENTAL_RULES}\n` : ""}
+${isDental(n.businessName) ? `\n${DENTAL_RULES}\n` : ""}${isAcademy(n.businessName) ? `\n${ACADEMY_RULES}\n` : ""}
 The house voice above is the voice for everything you write.
 
 ${voice}
