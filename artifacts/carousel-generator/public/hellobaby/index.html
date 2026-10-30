@@ -281,7 +281,7 @@ function vMe(){
 }
 
 function vWelcome(){
-  const auth=sb?`<form data-form="auth"><label>Email</label><input type="email" name="email" required><label>Password</label><input type="password" name="password" minlength="8" required><button class="btn" type="submit" name="mode" value="up">Create my account</button><button class="btn ghost" type="submit" name="mode" value="in">I already have one</button></form>`:
+  const auth=sb?`<form data-form="auth"><label>Email</label><input type="email" name="email" required><label>Password</label><input type="password" name="password" minlength="8" required><button class="btn" type="submit" name="mode" value="up">Create my account</button><button class="btn ghost" type="submit" name="mode" value="in">I already have one</button><p class="note"><a href="#" data-a="forgot" style="color:var(--rose);font-weight:600">Forgot my password</a></p></form>`:
   `<form data-form="onboard"><label>What shall I call you?</label><input name="name" required placeholder="Your first name"><label>When is baby due?</label><input type="date" name="due_date"><button class="btn" type="submit">Start my journal</button><p class="note">Demo mode: your journal is saved on this device only.</p></form>`;
   return `<div class="welcome"><div class="big">Hello Baby</div><p style="margin:10px 0 24px">A cosy little journal for your pregnancy. Diaries, lists, photos and plans, all in one pretty place.</p></div><div class="card">${auth}</div>`;
 }
@@ -292,6 +292,7 @@ const FOOT='<p class="foot">This app was made for Isabella &amp; Baby Gregory by
 function render(){render0();$('#app').insertAdjacentHTML('beforeend',FOOT)}
 function render0(){
   const nav=$('#nav');
+  if(S.recover){nav.hidden=true;$('#app').innerHTML=`<div class="welcome"><div class="big">New password</div><p style="margin:10px 0 24px">Choose a new password for your journal.</p></div><div class="card"><form data-form="newpass"><label>New password</label><input type="password" name="password" minlength="8" required><button class="btn" type="submit">Save new password</button></form></div>`;return}
   if(!DB.user){nav.hidden=true;$('#app').innerHTML=vWelcome();return}
   if(!S.profile){nav.hidden=true;$('#app').innerHTML=`<div class="welcome"><div class="big">Nearly there</div></div><div class="card"><form data-form="onboard"><label>What shall I call you?</label><input name="name" required><label>When is baby due?</label><input type="date" name="due_date"><button class="btn" type="submit">Start my journal</button></form></div>`;return}
   nav.hidden=false;
@@ -310,6 +311,7 @@ document.addEventListener('click',async e=>{
   const a=b.dataset.a,d=b.dataset;
   if(a==='tab'){S.tab=d.k;scrollTo(0,0)}
   else if(a==='sub'){S.sub[d.g]=d.k;if(d.k==='book')S.ch=null}
+  else if(a==='forgot'){e.preventDefault();const em=(document.querySelector('form[data-form=auth] input[name=email]')||{}).value;if(!em){toast('Type your email in the box first, then tap Forgot my password.');return}const r=await sb.auth.resetPasswordForEmail(em.trim(),{redirectTo:location.origin+'/hellobaby/'});toast(r.error?r.error.message:'Check your emails for a link to choose a new password.');return}
   else if(a==='chapter'){S.ch=Number(d.i)<0?null:Number(d.i);window.scrollTo(0,0)}
   else if(a==='go'){S.tab=d.tab;S.sub[d.g]=d.k;scrollTo(0,0)}
   else if(a==='toggle'){
@@ -340,10 +342,11 @@ document.addEventListener('submit',async e=>{
     if(t==='auth'){
       const mode=e.submitter&&e.submitter.value;
       const r=mode==='up'?await sb.auth.signUp({email:row.email,password:row.password}):await sb.auth.signInWithPassword({email:row.email,password:row.password});
-      if(r.error){toast(r.error.message);return}
+      if(r.error){toast(r.error.message==='Invalid login credentials'?'That email and password do not match. Tap Forgot my password if you are stuck.':r.error.message);return}
       if(!r.data.session){toast('Check your emails to confirm your account, then sign in.');return}
       DB.user=r.data.session.user;await loadAll();
     }
+    else if(t==='newpass'){const r=await sb.auth.updateUser({password:row.password});if(r.error){toast(r.error.message);return}S.recover=false;history.replaceState(null,'',location.pathname);const{data}=await sb.auth.getSession();DB.user=data.session.user;await loadAll();toast('Password changed. Welcome back.')}
     else if(t==='onboard'){S.profile={name:row.name,due_date:row.due_date||null};await DB.saveProfile(S.profile);S.profile=await DB.getProfile();if(!rows('bag_items').length)await seed();await loadAll()}
     else if(t==='profile'){S.profile={...S.profile,...row,due_date:row.due_date||null};await DB.saveProfile(S.profile);S.profile=await DB.getProfile()}
     else{
@@ -361,6 +364,7 @@ document.addEventListener('submit',async e=>{
   if(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY){
     await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
     sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
+    sb.auth.onAuthStateChange((ev)=>{if(ev==='PASSWORD_RECOVERY'){S.recover=true;render()}});
     const{data}=await sb.auth.getSession();
     if(data.session){DB.user=data.session.user;await loadAll()}
   }else{
