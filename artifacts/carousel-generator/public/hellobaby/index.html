@@ -72,6 +72,7 @@ nav button.on{color:var(--rose-d);font-weight:700}
 details summary{cursor:pointer;color:var(--rose-d);font-weight:700;padding:4px 0}
 .note{font-size:.8rem;color:var(--soft);text-align:center;margin-top:18px}
 .ebook p{margin:0 0 12px;line-height:1.65}.ebook h4{margin:18px 0 8px;font-size:1rem;color:var(--rose)}.ebook ul,.ebook ol{margin:0 0 12px 20px;line-height:1.6}.ebook li{margin-bottom:4px}
+.foot{font-size:.75rem;color:var(--soft);text-align:center;margin:26px 0 0;font-style:italic}
 </style>
 </head>
 <body>
@@ -287,7 +288,9 @@ function vWelcome(){
 
 /* ---------- render ---------- */
 const NAV=[['home','🏠','Home'],['diary','📖','My Diary'],['baby','👶','My Baby'],['plan','🗓️','Planning'],['me','💗','Me']];
-function render(){
+const FOOT='<p class="foot">This app was made for Isabella and her baby by Nana 2026</p>';
+function render(){render0();$('#app').insertAdjacentHTML('beforeend',FOOT)}
+function render0(){
   const nav=$('#nav');
   if(!DB.user){nav.hidden=true;$('#app').innerHTML=vWelcome();return}
   if(!S.profile){nav.hidden=true;$('#app').innerHTML=`<div class="welcome"><div class="big">Nearly there</div></div><div class="card"><form data-form="onboard"><label>What shall I call you?</label><input name="name" required><label>When is baby due?</label><input type="date" name="due_date"><button class="btn" type="submit">Start my journal</button></form></div>`;return}
