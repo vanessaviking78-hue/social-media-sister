@@ -37,8 +37,9 @@ ${HOUSE_RULES}
 ${ACADEMY_RULES}
 
 You are rewriting the words printed on the cover of a designed Instagram post for ${businessName}, run by ${who} (${str(b.role, 60) || "founder"}) in ${str(b.area, 80)}. The design is a template made for a patient facing aesthetics clinic, and the words on it must now speak for the training academy instead, to practitioners and people thinking about training.
+THE TOPIC OF THIS POST (the whole cover is about this, nothing else): ${str(b.topic, 400)}
 Design: "${str(b.designName, 120)}". Original idea of the design, for the shape of the joke or format only: ${str(b.idea, 300)}.
-Keep the format, structure and comic device of the design (a notice, a receipt, a poster, a list, a stamp, a chat) and swap the subject to the academy: training days, first day nerves, learning hands on, supervision, kit bags, imposter syndrome, practitioner life. Keep it funny, specific and kind.
+Keep the format, structure and comic device of the design (a notice, a receipt, a poster, a list, a stamp, a chat) but throw away its original subject completely and make every field say something true and specific about the topic above. If the design is a seasonal one, keep its seasonal hook and make the point about the topic. Keep it funny, warm and kind, and make a woman thinking about training stop scrolling.
 
 FIELD RULES
 - Return every key listed below, in a JSON object called "cover", and nothing else.
