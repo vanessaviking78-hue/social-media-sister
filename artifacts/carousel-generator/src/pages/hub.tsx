@@ -5,6 +5,7 @@ import { LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } fro
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
+import { Dashboard } from "@/components/dashboard";
 
 const TOOLS = [
 {
@@ -1053,6 +1054,7 @@ return (
 
 {/* Grid */}
 <main className="max-w-5xl mx-auto px-6 py-12">
+<Dashboard />
 <p className="text-muted-foreground text-base mb-10">Pick a tool to get started.</p>
 
 {/* Group tabs */}
