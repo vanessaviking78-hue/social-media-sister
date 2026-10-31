@@ -35,9 +35,6 @@ function label(g: EG, text: string, x: number, y: number, size: number, colour: 
   ctx.restore();
 }
 
-// "THE SKIN EDIT / 01"
-const tag = (g: EG, n: number) => `${tx(g, "tag")} / ${String(n).padStart(2, "0")}`;
-
 // Head words in the headline font, regular weight
 type HO = { max: number; min?: number; colour: string; hi?: string; align?: CanvasTextAlign; lh?: number };
 const head = (g: EG, x: number, y: number, w: number, h: number, o: HO) =>
@@ -106,7 +103,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     head(g, 32, 120, 176, 230, { max: 35, colour: k(g, "ink") });
     rect(g, 33, 354, 109, 1.2, k(g, "accent"));
     sub(g, 33, 372, 150, 40, 9.5, k(g, "ink"));
-    label(g, tag(g, 1), 32, 453, 7.5, k(g, "ink"), { weight: 800, spacing: 1.6 });
   },
 
   // 2 You deserve to be in the photograph (film frame)
@@ -117,7 +113,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     rect(g, 0, 249, W, 1, "rgba(0,0,0,0.07)");
     rect(g, 0, 250, W, 1, "rgba(255,255,255,0.5)");
     rect(g, 199, 0, 1, H, "rgba(0,0,0,0.05)");
-    label(g, tag(g, 2), 200, 28, 7, k(g, "ink"), { align: "center", spacing: 1.2 });
     crosshair(g, 380, 20, 8, rgba(g.p.ink, 0.7));
     card(g, 75, 58, 250, 280, k(g, "soft"), true);
     photoRect(g, 90, 74, 218, 254);
@@ -141,7 +136,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     rect(g, 289, 8, 1.1, 484, rgba(g.p.ink, 0.8));
     rect(g, 36, 38, 1, 430, rgba(g.p.ink, 0.75));
     rect(g, 0, 474, W, 26, tone(g, "page", -0.06));
-    upright(g, `${tx(g, "tag")} / 03`.toUpperCase(), 20, 196, 6.6, k(g, "ink"), 700);
     head(g, 62, 88, 224, 215, { max: 36, colour: k(g, "ink"), lh: 1.04 });
     rect(g, 62, 318, 42, 1.2, k(g, "ink"));
     sub(g, 62, 340, 160, 40, 10, k(g, "ink"));
@@ -161,7 +155,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     poly(g, [...edge, [393, 497], [3, 497]], k(g, "dark"), { shadow: false });
     crosshair(g, 28, 30, 9, rgba(g.p.ink, 0.75));
     target(g, 28, 30, 5, rgba(g.p.ink, 0.75));
-    upright(g, tag(g, 4).toUpperCase(), 24, 232, 6.8, k(g, "ink"), 700);
     head(g, 44, 288, 340, 112, { max: 30, colour: k(g, "light"), lh: 1.05 });
     rect(g, 45, 427, 110, 1.1, k(g, "accent"));
     sub(g, 45, 440, 200, 40, 9.5, k(g, "light"));
@@ -174,18 +167,15 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     rect(g, 12, 0, 1, H, rgba(g.p.ink, 0.28));
     rect(g, 0, 46, 232, 1, rgba(g.p.ink, 0.35));
     rect(g, 0, 480, 232, 1, rgba(g.p.ink, 0.35));
-    label(g, tag(g, 5), 26, 28, 7, k(g, "ink"), { spacing: 1 });
     headCond(g, 26, 118, 200, 250, { max: 40, colour: k(g, "ink"), lh: 0.98 }, 0.74);
     rect(g, 26, 391, 114, 1.1, k(g, "ink"));
     sub(g, 26, 404, 190, 34, 9, k(g, "ink"));
-    label(g, tx(g, "foot"), 26, 464, 6, k(g, "ink"), { spacing: 1 });
   },
 
   // 6 What if the question isn't how to look younger?
   (g) => {
     fill(g, "page");
     grain(g, 16);
-    label(g, tag(g, 6), 20, 20, 7, k(g, "ink"), { spacing: 1 });
     rect(g, 20, 40, 360, 1, rgba(g.p.ink, 0.35));
     headCond(g, 20, 78, 210, 235, { max: 44, colour: k(g, "ink"), lh: 0.98 }, 0.7);
     // photo with a hard shadow
@@ -205,7 +195,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     head(g, 34, 345, 200, 118, { max: 29, colour: k(g, "light"), lh: 1.05 });
     sub(g, 258, 396, 120, 44, 9.5, k(g, "ink"));
     rect(g, 258, 449, 114, 1, rgba(g.p.ink, 0.5));
-    label(g, tag(g, 7), 260, 458, 6, k(g, "ink"), { spacing: 1 });
   },
 
   // 8 Before we discuss what could change, tell me what you want to keep
@@ -215,7 +204,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     frame(g, 10, 10, 380, 480, rgba(g.p.ink, 0.5));
     rect(g, 199.5, 8, 1, 38, rgba(g.p.ink, 0.6));
     rect(g, 140, 42, 120, 1, rgba(g.p.ink, 0.45));
-    label(g, tag(g, 8), 200, 31, 6.4, k(g, "ink"), { align: "center", spacing: 1 });
     head(g, 40, 62, 320, 146, { max: 36, colour: k(g, "ink"), align: "center", lh: 1.03 });
     // taped corner and an L of ink on the left
     rect(g, 36, 322, 86, 132, rgba(g.p.ink, 0.07));
@@ -270,7 +258,6 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     ctx.restore();
     sub(g, 254, 366, 124, 44, 8.6, k(g, "ink"));
     rect(g, 22, 455, 358, 1, rgba(g.p.ink, 0.45));
-    label(g, tag(g, 9), 22, 466, 6.6, k(g, "ink"), { spacing: 1 });
   },
 
   // 10 What makes you feel most like yourself?
@@ -294,9 +281,8 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     g.slots.push({ i: 0, x: 125 * S, y: 65 * S, w: 150 * S, h: 210 * S, rot: 0 });
     headCond(g, 40, 288, 320, 112, { max: 50, colour: k(g, "ink"), align: "center", lh: 1.0 }, 0.7);
     sub(g, 40, 414, 320, 26, 12.5, k(g, "ink"), "center");
-    label(g, tag(g, 10), 200, 463, 6.4, k(g, "ink"), { align: "center", spacing: 1.2 });
   },
 ];
 
 // keeps the compiler honest about helpers used in some layouts only
-void circle; void polyPath; void photoPoly; void H;
+void circle; void polyPath; void photoPoly; void H; void label;

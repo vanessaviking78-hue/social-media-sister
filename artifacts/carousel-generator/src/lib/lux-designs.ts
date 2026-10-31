@@ -35,21 +35,20 @@ export const LUX_LABELS: { key: EKey; label: string }[] = [
 
 type SlideDef = { name: string; fields: [string, string, string, number?][] };
 
-const TAG = (v: string): [string, string, string, number?] => ["tag", "Small label", v, 1];
 const HEAD = (v: string, rows = 3): [string, string, string, number?] => ["head", "Headline", v, rows];
 const SUB = (v: string, rows = 2): [string, string, string, number?] => ["sub", "Line underneath", v, rows];
 
 export const LUX_SLIDE_DEFS: SlideDef[] = [ // one per cover design
-  { name: "Opener, half portrait", fields: [TAG("THE SKIN EDIT"), HEAD("When did you start looking at yourself so critically?", 3), SUB("A gentler conversation can begin with noticing.")] },
-  { name: "Film frame", fields: [TAG("NOTES ON CONFIDENCE"), HEAD("You deserve to be in the photograph.", 2), SUB("Not a future version of yourself. This life, as it is."), ["film", "Film edge print", "KODAK PORTRA 400", 1]] },
-  { name: "Consultation", fields: [TAG("THE CONSULTATION SERIES"), HEAD("A good consultation is allowed to end with no treatment.", 3), SUB("Trust is knowing the conversation comes first."), ["box", "Boxed note", "COMPLIMENTARY CONSULTATIONS AVAILABLE IN-CLINIC", 2]] },
-  { name: "Dark block", fields: [TAG("NOTES ON CONFIDENCE"), HEAD("Your life is happening now. Not after a treatment.", 3), SUB("There is no before picture required for being present.")] },
-  { name: "Side panel", fields: [TAG("THE SKIN EDIT"), HEAD("You see one detail.\n\nYour practitioner sees the whole picture.", 5), SUB("Proportion, context and you come first."), ["foot", "Tiny footer", "TS E05", 1]] },
-  { name: "Question and portrait", fields: [TAG("NOTES ON CONFIDENCE"), HEAD("What if the question isn't how to look younger?", 3), SUB("Tell us what feeling like yourself means to you.")] },
-  { name: "Big photo and dark box", fields: [TAG("THE SKIN EDIT"), HEAD("This face has been there for all of it.", 3), SUB("Every expression is part of the story.")] },
-  { name: "Keepsake photograph", fields: [TAG("THE CONSULTATION SERIES"), HEAD("Before we discuss what could change, tell me what you want to keep.", 4), SUB("What would you *never* want to lose?", 1)] },
-  { name: "Tilted print", fields: [TAG("NOTES ON CONFIDENCE"), HEAD("You were never meant to look like somebody else's photograph.", 4), SUB("Comparison edits out the person who makes you, you.")] },
-  { name: "Your turn", fields: [TAG("THE SKIN EDIT"), HEAD("What makes you feel most like yourself?", 2), SUB("We'd love to hear your answer.", 1)] },
+  { name: "Opener, half portrait", fields: [HEAD("When did you start looking at yourself so critically?", 3), SUB("A gentler conversation can begin with noticing.")] },
+  { name: "Film frame", fields: [HEAD("You deserve to be in the photograph.", 2), SUB("Not a future version of yourself. This life, as it is."), ["film", "Film edge print", "KODAK PORTRA 400", 1]] },
+  { name: "Consultation", fields: [HEAD("A good consultation is allowed to end with no treatment.", 3), SUB("Trust is knowing the conversation comes first."), ["box", "Boxed note", "COMPLIMENTARY CONSULTATIONS AVAILABLE IN-CLINIC", 2]] },
+  { name: "Dark block", fields: [HEAD("Your life is happening now. Not after a treatment.", 3), SUB("There is no before picture required for being present.")] },
+  { name: "Side panel", fields: [HEAD("You see one detail.\n\nYour practitioner sees the whole picture.", 5), SUB("Proportion, context and you come first.")] },
+  { name: "Question and portrait", fields: [HEAD("What if the question isn't how to look younger?", 3), SUB("Tell us what feeling like yourself means to you.")] },
+  { name: "Big photo and dark box", fields: [HEAD("This face has been there for all of it.", 3), SUB("Every expression is part of the story.")] },
+  { name: "Keepsake photograph", fields: [HEAD("Before we discuss what could change, tell me what you want to keep.", 4), SUB("What would you *never* want to lose?", 1)] },
+  { name: "Tilted print", fields: [HEAD("You were never meant to look like somebody else's photograph.", 4), SUB("Comparison edits out the person who makes you, you.")] },
+  { name: "Your turn", fields: [HEAD("What makes you feel most like yourself?", 2), SUB("We'd love to hear your answer.", 1)] },
 ];
 
 export const LUX_FIELDS: LField[][] = LUX_SLIDE_DEFS.map((d) => d.fields.map(([key, label, , rows]) => ({ key, label, rows })));
