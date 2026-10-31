@@ -66,6 +66,7 @@ import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import FreeSample from "@/pages/free-sample";
 import SamplePublic from "@/pages/sample-public";
 import SampleRequest from "@/pages/sample-request";
+import PackOrder from "@/pages/pack-order";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -306,6 +307,7 @@ function AppContent() {
   const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
   const [isSamplePublic, samplePublicParams] = useRoute("/sample/:slug");
   const [isSampleRequest] = useRoute("/getmysample");
+  const [isPackOrder] = useRoute("/getmyposts");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -417,6 +419,9 @@ function AppContent() {
   }
   if (isClientBankView && clientBankViewParams?.clientSlug) {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
+  }
+  if (isPackOrder) {
+    return <PackOrder />;
   }
   if (isSampleRequest) {
     return <SampleRequest />;

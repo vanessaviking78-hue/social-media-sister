@@ -72,11 +72,14 @@ export const monthKey = (d = new Date()): string => `${d.getFullYear()}-${String
 // How many designs each bank holds, so a test can check the banks are big enough to rotate.
 export const BANK_SIZES = { treatment: TREATMENTS.length, unique: UNIQUE.length, empower: EMPOWER.length, lux: LUX_COVERS };
 
-export function buildPackPlan(size: PackSize, handle: string, month: string = monthKey()): PackItem[] {
+// treatmentIds: the treatment designs the clinic ticked. Treatment posts only use those, and if none are ticked they
+// use the whole bank.
+export function buildPackPlan(size: PackSize, handle: string, month: string = monthKey(), treatmentIds: string[] = []): PackItem[] {
   const split = PACK_SPLIT[size];
   const rand = rng(hashSeed(`${handle.trim().toLowerCase().replace(/^@/, "")}|${month}`));
 
-  const treatments = take(TREATMENTS.map((d) => d.id), split.treatment, rand);
+  const ticked = TREATMENTS.map((d) => d.id).filter((id) => treatmentIds.includes(id));
+  const treatments = take(ticked.length ? ticked : TREATMENTS.map((d) => d.id), split.treatment, rand);
   const tweets = take(Array.from({ length: 40 }, (_, i) => String(i)), split.tweet, rand);
   const portraits = take(Array.from({ length: 24 }, (_, i) => String(i)), split.portrait, rand);
 
