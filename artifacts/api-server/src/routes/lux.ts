@@ -67,16 +67,15 @@ The house voice above is the voice for everything you write.
 
 ${voice}
 
-THIS IS A LUX CAROUSEL: ten quiet, elegant slides in a magazine style. It is the calm, honest side of aesthetics for women over 35: noticing, confidence, being in the photograph, the consultation done properly. Soft and reassuring with the odd dry line. Warm, never preachy, never a sales pitch.
-THEME OF THIS CAROUSEL: ${n.theme || "feeling like yourself, honest consultations and being present in your own life"}.
-${n.fresh ? `
-SLIDE WORDS. Write fresh words for all ten slides on that theme. Each slide has a headline (a short sentence of 4 to 12 words, one thought, no more than two sentences) and one small line under it (max 12 words). Slide 1 opens with a gentle question or observation. Slide 10 asks the reader one warm question she will want to answer in the comments. Across the ten, mix the feel: some about noticing and self-image, some about the consultation being allowed to end with no treatment, some about being present in your own life. Never promise a result and never say a treatment is needed.
-` : `
-The slides are already written, this is what they say:
+THIS IS A LUX CAROUSEL: three quiet, elegant slides in a magazine style. Slide 1 is the cover, slides 2 and 3 are full photographs with a few words laid over them. It is the calm, honest side of aesthetics for women over 35: noticing, confidence, being in the photograph, the consultation done properly. Soft and reassuring with the odd dry line. Warm, never preachy, never a sales pitch.
+${n.theme ? `THEME: ${n.theme}.\n` : ""}THE COVER (slide 1) SAYS:
 """
 ${n.onImage}
 """
-`}
+${n.fresh ? `This cover is being written fresh. Write a new cover headline (a short sentence of 4 to 12 words, one thought) and a small line under it (max 12 words) in the same quiet style and on the same idea as the cover above, but in different words.
+` : ""}SLIDES 2 AND 3. Carry on from the cover so the three read as one thought that builds, in my voice, on the same idea. Each is 1 to 3 short sentences, max 28 words, plain conversational words, written to sit over a photograph. Slide 2 deepens the cover. Slide 3 lands it with something warm and true. Never promise a result and never say a treatment is needed.
+THE CTA: ONE short, warm question for the last slide, easy to answer in a few words in the comments. Max 14 words. Never Comment WORD, never DM me, never a website.
+
 WHO SHE IS TALKING TO: ${n.audience || "women aged 35 plus who want honesty, humour and nobody pushing them"}. Use the consumer psychology of women over 35: they want to feel seen, they save what sounds like a real person, they are tired of being sold to. Stealth sales only: she quietly thinks of ${who} as the person she wants to book a conversation with. Treatments are not the point, the woman is.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
 CAPTION: max 100 words. It must ADD to the slides, never repeat them word for word. The first line is a hook that lands inside 3 seconds, specific and human, never a rhetorical question. Then short lines. It ends with ONE closing question that is easy and fun to answer in the comments. Never Comment WORD, never DM me, never a website.
@@ -92,7 +91,7 @@ WRITING RULES (non-negotiable)
 - Plain conversational words. No exclamation marks. No emojis.
 
 Return JSON only, in exactly this shape:
-{ ${n.fresh ? `"slides": [ { "head": "...", "sub": "..." } ten of these, `: ""}"caption": "...", "hashtags": ["5 tags"] }`;
+{ "slide2": "...", "slide3": "...", "cta": "...", "caption": "...", "hashtags": ["5 tags"]${n.fresh ? `, "cover": { "head": "...", "sub": "..." }` : ""} }`;
 }
 
 router.post("/lux/copy", async (req: Request, res: Response) => {
@@ -125,20 +124,24 @@ router.post("/lux/copy", async (req: Request, res: Response) => {
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt(notes) + profileCtx },
-        { role: "user", content: `Write the ${notes.fresh ? "slide words and caption" : "caption"} for the LUX carousel for ${notes.businessName}.` },
+        { role: "user", content: `Write the slide words and caption for the LUX carousel for ${notes.businessName}.` },
       ],
       temperature: 0.9,
-      max_tokens: 1500,
+      max_tokens: 1200,
       response_format: { type: "json_object" },
     });
     const raw = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!raw) throw new Error("Nothing came back, try again");
     const j = JSON.parse(raw);
-    const slides = notes.fresh && Array.isArray(j.slides)
-      ? j.slides.slice(0, 10).map((s: Record<string, unknown>) => ({ head: clean(s?.head, 140), sub: clean(s?.sub, 90) }))
+    const slide2 = clean(j.slide2, 220);
+    const slide3 = clean(j.slide3, 220);
+    const cta = clean(j.cta, 120);
+    if (!slide2 || !slide3 || !cta) throw new Error("The slide words came back incomplete, try again");
+    const cover = notes.fresh && j.cover && typeof j.cover === "object"
+      ? { head: clean((j.cover as Record<string, unknown>).head, 140), sub: clean((j.cover as Record<string, unknown>).sub, 90) }
       : undefined;
-    if (notes.fresh && (!slides || slides.length < 10 || slides.some((s: { head: string }) => !s.head))) throw new Error("The slide words came back incomplete, try again");
-    res.json({ slides, caption: clean(j.caption, 900), hashtags: fiveTags(j.hashtags, notes.area) });
+    if (notes.fresh && (!cover || !cover.head)) throw new Error("The cover words came back incomplete, try again");
+    res.json({ cover, slide2, slide3, cta, caption: clean(j.caption, 900), hashtags: fiveTags(j.hashtags, notes.area) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "LUX copy failed";
     req.log?.error({ err }, "lux: copy error");

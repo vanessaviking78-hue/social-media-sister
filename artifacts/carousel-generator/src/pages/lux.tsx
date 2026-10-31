@@ -13,10 +13,10 @@ import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-m
 import { usePresets } from "@/lib/use-presets";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
-import { type Fill } from "@/lib/basic-covers";
+import { fillTokens, type Fill } from "@/lib/basic-covers";
 import { DEFAULT_FOCUS, LOGO_POSITIONS, type Focus, type LogoPos, type Slot } from "@/lib/xmas-designs";
 import {
-  FOILS, LUX_FIELDS, LUX_LABELS, LUX_PALETTE, LUX_SLIDES, LUX_SLIDE_DEFS, XH, XW, drawLux, leftoverPlaceholders, luxDefaults, resolveLuxText,
+  FOILS, LUX_COVERS, LUX_FIELDS, LUX_LABELS, LUX_PALETTE, LUX_SLIDES, LUX_SLIDE_DEFS, XH, XW, drawLux, drawLuxPhotoSlide, leftoverPlaceholders, luxDefaults, resolveLuxText,
   type EKey, type EMetal, type EPalette,
 } from "@/lib/lux-designs";
 
@@ -29,9 +29,11 @@ type PoolPhoto = { id: string; file: File; url: string };
 
 type Post = {
   id: string;
-  theme: string;
+  cover: number; // which of the ten cover designs this carousel opens with
   fresh: boolean;
-  slides: Record<string, string>[];
+  text: Record<string, string>; // the words on the cover
+  slides: string[]; // the words on photo slides 2 and 3
+  cta: string; // the question on the last slide
   photos: (number | null)[];
   focus: Record<string, Focus>;
   caption: string;
@@ -44,7 +46,7 @@ type Post = {
 };
 
 type ClientSettings = {
-  owner: string; role: string; area: string; headFont: string; bodyFont: string; logoPos: LogoPos; gpal?: Partial<EPalette>; gmetal?: EMetal;
+  owner: string; role: string; area: string; headFont: string; bodyFont: string; logoPos: LogoPos; gpal?: Partial<EPalette>; gmetal?: EMetal; scrim?: number;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -112,6 +114,7 @@ type Look = {
   logoPos: LogoPos;
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
+  scrim: number;
 };
 
 const fk = (n: number) => `s${n}`;
@@ -123,17 +126,36 @@ async function renderSlide(post: Post, n: number, look: Look, canvas: HTMLCanvas
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const pi = post.photos[n];
   const p = pi != null ? look.pool[pi] ?? null : null;
-  return drawLux(ctx, {
-    slide: n,
-    text: resolveLuxText(n, post.slides[n] ?? {}, look.fill),
-    palette: { ...LUX_PALETTE, ...look.gpal, ...(post.palette ?? {}) },
-    metal: { ...look.gmetal, ...(post.metal ?? {}) },
-    headFont: look.headFont,
+  const palette = { ...LUX_PALETTE, ...look.gpal, ...(post.palette ?? {}) };
+  const photo = p ? await getBitmap(p) : null;
+  const focus = post.focus[fk(n)] ?? DEFAULT_FOCUS;
+  const logoPos = post.logoPos ?? look.logoPos;
+  if (n === 0) {
+    return drawLux(ctx, {
+      cover: post.cover,
+      text: resolveLuxText(post.cover, post.text, look.fill),
+      palette,
+      metal: { ...look.gmetal, ...(post.metal ?? {}) },
+      headFont: look.headFont,
+      bodyFont: look.bodyFont,
+      photo,
+      focus,
+      logo: look.logo,
+      logoPos,
+    });
+  }
+  const last = n === LUX_SLIDES - 1;
+  return drawLuxPhotoSlide(ctx, {
+    text: fillTokens(post.slides[n - 1] ?? "", look.fill),
+    cta: last ? fillTokens(post.cta, look.fill) : "",
+    palette,
     bodyFont: look.bodyFont,
-    photo: p ? await getBitmap(p) : null,
-    focus: post.focus[fk(n)] ?? DEFAULT_FOCUS,
+    photo,
+    focus,
+    scrim: look.scrim,
     logo: look.logo,
-    logoPos: post.logoPos ?? look.logoPos,
+    logoPos,
+    arrow: !last,
   });
 }
 
@@ -225,17 +247,6 @@ function SlidePreview({ post, n, look, onFocus, onPick }: { post: Post; n: numbe
 }
 
 // ---------------------------------------------------------------------------
-// The four carousels made for every client
-// ---------------------------------------------------------------------------
-
-const THEMES = [
-  { name: "The template words", theme: "", fresh: false },
-  { name: "Being seen as you are", theme: "being in the photograph, noticing how critically we look at ourselves, and feeling like yourself", fresh: true },
-  { name: "The honest consultation", theme: "consultations done properly: listening first, being allowed to say no treatment, proportion and trust", fresh: true },
-  { name: "Not after a treatment", theme: "living your life now, comparison and social media faces, keeping what makes you look like you", fresh: true },
-];
-
-// ---------------------------------------------------------------------------
 // Fonts list and colour box
 // ---------------------------------------------------------------------------
 
@@ -325,6 +336,7 @@ export default function Lux() {
   const [logoPos, setLogoPos] = useState<LogoPos>("off");
   const [gpal, setGpal] = useState<Partial<EPalette>>({});
   const [gmetal, setGmetal] = useState<EMetal>({});
+  const [scrim, setScrim] = useState(35);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [fontsTick, setFontsTick] = useState(0);
 
@@ -355,9 +367,9 @@ export default function Lux() {
     return () => window.removeEventListener(FONTS_CHANGED_EVENT, bump);
   }, []);
 
-  const makePost = (t: (typeof THEMES)[number]): Post => ({
-    id: uid(), theme: t.theme, fresh: t.fresh, slides: luxDefaults(), photos: Array(LUX_SLIDES).fill(null), focus: {},
-    caption: "", hashtags: [], selected: true, busy: false,
+  const makePost = (cover: number): Post => ({
+    id: uid(), cover, fresh: false, text: luxDefaults(cover), slides: ["", ""], cta: "",
+    photos: Array(LUX_SLIDES).fill(null), focus: {}, caption: "", hashtags: [], selected: true, busy: false,
   });
 
   // every empty slide picks up the next photo, so dropping photos in fills the lot
@@ -391,17 +403,18 @@ export default function Lux() {
     setGpal(saved.gpal ?? {});
     setGmetal(saved.gmetal ?? {});
     setLogoPos(saved.logoPos ?? "off");
-    setPosts(spread(THEMES.map(makePost), pool.length));
+    setScrim(saved.scrim ?? 35);
+    setPosts(spread(Array.from({ length: LUX_COVERS }, (_, i) => makePost(i)), pool.length));
   };
 
   useEffect(() => {
     if (!presetId) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") as Record<string, ClientSettings>;
-      all[String(presetId)] = { owner, role, area, headFont, bodyFont, logoPos, gpal, gmetal };
+      all[String(presetId)] = { owner, role, area, headFont, bodyFont, logoPos, gpal, gmetal, scrim };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [presetId, owner, role, area, headFont, bodyFont, logoPos, gpal, gmetal]);
+  }, [presetId, owner, role, area, headFont, bodyFont, logoPos, gpal, gmetal, scrim]);
 
   useEffect(() => {
     let live = true;
@@ -445,20 +458,19 @@ export default function Lux() {
   };
 
   const fill: Fill = useMemo(() => ({ owner: owner.trim(), clinic: clinic.trim(), area: area.trim(), role: role.trim() }), [owner, clinic, area, role]);
-  const look: Look = useMemo(() => ({ fill, gpal, gmetal, headFont, bodyFont, logoPos, logo, pool }), [fill, gpal, gmetal, headFont, bodyFont, logoPos, logo, pool]);
+  const look: Look = useMemo(() => ({ fill, gpal, gmetal, headFont, bodyFont, logoPos, logo, pool, scrim }), [fill, gpal, gmetal, headFont, bodyFont, logoPos, logo, pool, scrim]);
 
   const patchPost = (id: string, change: Partial<Post> | ((p: Post) => Partial<Post>)) =>
     setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...(typeof change === "function" ? change(p) : change) } : p)));
-  const setText = (id: string, n: number, key: string, value: string) =>
-    patchPost(id, (p) => ({ slides: p.slides.map((s, i) => (i === n ? { ...s, [key]: value } : s)) }));
+  const setText = (id: string, key: string, value: string) => patchPost(id, (p) => ({ text: { ...p.text, [key]: value } }));
+  const setSlide = (id: string, i: number, value: string) => patchPost(id, (p) => ({ slides: p.slides.map((s, k) => (k === i ? value : s)) }));
   const setPostColour = (id: string, key: EKey, value: string) => patchPost(id, (p) => ({ palette: { ...(p.palette ?? {}), [key]: value } }));
   const setPostMetal = (id: string, key: EKey, on: boolean) => patchPost(id, (p) => ({ metal: { ...(p.metal ?? {}), [key]: on } }));
   const setPostFoil = (id: string, key: EKey, hex: string) =>
     patchPost(id, (p) => ({ palette: { ...(p.palette ?? {}), [key]: hex }, metal: { ...(p.metal ?? {}), [key]: true } }));
 
   // words and captions
-  const onSlides = (post: Post) =>
-    post.slides.map((_, n) => { const r = resolveLuxText(n, post.slides[n], fill); return [r.head, r.sub].filter(Boolean).join(" / "); }).join("\n");
+  const onCover = (post: Post) => { const r = resolveLuxText(post.cover, post.text, fill); return [r.head, r.sub].filter(Boolean).join(" / "); };
 
   const writeCopy = async (post: Post) => {
     if (!preset) { toast.error("Choose a client first"); return; }
@@ -474,9 +486,9 @@ export default function Lux() {
           area: area.trim(),
           audience: preset.targetAudience ?? "",
           brandNotes: preset.brandNotes ?? "",
-          theme: post.theme,
+          theme: "",
           fresh: post.fresh,
-          onImage: onSlides(post),
+          onImage: onCover(post),
         }),
       });
       const data = await r.json().catch(() => ({}));
@@ -484,11 +496,13 @@ export default function Lux() {
       const foot = preset.captionFootnote?.trim();
       let caption: string = noDashes(data.caption ?? "");
       if (foot && !caption.includes(foot)) caption += `\n\n${foot}`;
-      const fresh: { head: string; sub: string }[] | undefined = Array.isArray(data.slides) ? data.slides : undefined;
+      const cover = post.fresh && data.cover && typeof data.cover === "object" ? (data.cover as { head?: string; sub?: string }) : null;
       patchPost(post.id, (p) => ({
         busy: false, caption, hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
-        slides: fresh ? p.slides.map((s, i) => ({ ...s, head: noDashes(fresh[i]?.head ?? s.head), sub: noDashes(fresh[i]?.sub ?? s.sub) })) : p.slides,
-        // the words are now written, so a rewrite of the caption alone keeps them
+        text: cover ? { ...p.text, head: noDashes(cover.head ?? p.text.head), sub: noDashes(cover.sub ?? p.text.sub) } : p.text,
+        slides: [data.slide2, data.slide3].map((x) => noDashes(x ?? "")),
+        cta: noDashes(data.cta ?? ""),
+        // the cover words are now written, so a rewrite keeps them
         fresh: false,
       }));
     } catch (e) {
@@ -530,7 +544,10 @@ export default function Lux() {
   };
 
   const fullCaption = (p: Post) => `${p.caption.trim()}\n\n${p.hashtags.join(" ")}`.trim();
-  const placeholdersIn = (p: Post) => [...new Set(p.slides.flatMap((_, n) => leftoverPlaceholders(resolveLuxText(n, p.slides[n], fill))))];
+  const placeholdersIn = (p: Post) => [...new Set([
+    ...leftoverPlaceholders(resolveLuxText(p.cover, p.text, fill)),
+    ...leftoverPlaceholders({ s2: fillTokens(p.slides[0] ?? "", fill), s3: fillTokens(p.slides[1] ?? "", fill), cta: fillTokens(p.cta, fill) }),
+  ])];
 
   const download = async () => {
     if (!selected.length) { toast.error("Tick at least one carousel first"); return; }
@@ -559,8 +576,8 @@ export default function Lux() {
     if (!preset) { toast.error("Choose a client first"); return; }
     if (!selected.length) { toast.error("Tick at least one carousel first"); return; }
     if (!clinic.trim() || !area.trim()) { toast.error("Fill in the business name and area first, so no placeholder goes out."); return; }
-    const noWords = selected.filter((p) => !p.caption.trim());
-    if (noWords.length) { toast.error(`${noWords.length} ticked carousel${noWords.length > 1 ? "s have" : " has"} no caption yet. Press Write first.`); return; }
+    const noWords = selected.filter((p) => !p.caption.trim() || p.slides.some((t) => !t.trim()) || !p.cta.trim());
+    if (noWords.length) { toast.error(`${noWords.length} ticked carousel${noWords.length > 1 ? "s have" : " has"} no words yet. Press Write first.`); return; }
     const noPhoto = selected.filter((p) => p.photos.some((v) => v == null));
     if (noPhoto.length) { toast.error(`${noPhoto.length} ticked carousel${noPhoto.length > 1 ? "s have" : " has"} slides with no photo yet. Add approved photos first.`); return; }
     const left = selected.filter((p) => placeholdersIn(p).length);
@@ -595,7 +612,7 @@ export default function Lux() {
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <Gem className="w-5 h-5 text-stone-300" />
         <h1 className="font-bold text-lg">LUX</h1>
-        <span className="text-sm text-muted-foreground">Ten slide carousels, 1080 x 1350 each</span>
+        <span className="text-sm text-muted-foreground">Ten covers, each opening its own carousel, 1080 x 1350</span>
       </header>
 
       <main className="max-w-[1500px] mx-auto px-4 py-6 space-y-6">
@@ -684,6 +701,11 @@ export default function Lux() {
               </Select>
               <span className="text-muted-foreground">{preset?.logoUrl ? "uses this client's logo" : "this client has no logo saved"}</span>
             </label>
+            <label className="flex items-center gap-2">
+              Photo dimming on slides 2 and 3
+              <input type="range" min={0} max={70} value={scrim} onChange={(e) => setScrim(Number(e.target.value))} />
+              <span className="text-muted-foreground w-8">{scrim}%</span>
+            </label>
             <Button variant="outline" size="sm" onClick={() => fontFileRef.current?.click()}><Type className="w-4 h-4 mr-1.5" /> Upload fonts</Button>
             <input ref={fontFileRef} type="file" accept=".otf,.ttf,.woff,.woff2" multiple className="hidden"
               onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) void addFonts(fs); }} />
@@ -693,7 +715,7 @@ export default function Lux() {
         <section className="rounded-2xl border border-border/30 p-5 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="font-semibold">Photos</h2>
-            <span className="text-sm text-muted-foreground">Add approved photos and every slide without one picks one up. Drag a photo inside a slide to move it, double click to put it back.</span>
+            <span className="text-sm text-muted-foreground">Add approved photos and every slide without one picks one up. Each carousel has three photos, the cover and two full photo slides. Drag a photo inside a slide to move it, double click to put it back.</span>
             <div className="ml-auto flex flex-wrap gap-2">
               <ApprovedImagesPicker clientName={preset?.name} onAddImages={addToPool} skipBackgroundRemoval large label="Add approved photos" />
               <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-1.5" /> Upload from my device</Button>
@@ -702,7 +724,7 @@ export default function Lux() {
             </div>
           </div>
           {pool.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No photos yet. Every slide has a photo, so ten photos make a carousel with no repeats. Your photos stay exactly as they are.</p>
+            <p className="text-sm text-muted-foreground">No photos yet. Every slide has a photo, so thirty photos make all ten carousels with no repeats. Your photos stay exactly as they are.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {pool.map((p, i) => (
@@ -716,7 +738,7 @@ export default function Lux() {
         </section>
 
         <section className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">All {THEMES.length} carousels are made when you choose a client. Untick any you do not want.</p>
+          <p className="text-sm text-muted-foreground">All {LUX_COVERS} carousels are made when you choose a client, one for each cover. Untick any you do not want.</p>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => setPosts((l) => { const all = l.every((x) => x.selected); return l.map((p) => ({ ...p, selected: !all })); })}>Tick / untick all</Button>
             <Button onClick={writeAll} disabled={!!busy || !selected.length}>
@@ -732,22 +754,22 @@ export default function Lux() {
         </section>
 
         {posts.length === 0 && (
-          <p className="text-muted-foreground text-sm">Choose a client and {THEMES.length} ten slide carousels are made for you, then add their approved photos. The first uses the template's own words. The others get fresh words in the same style when you press Write. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Scheduling puts them on every Tuesday at 8pm, starting with the next one, and you can move any date.</p>
+          <p className="text-muted-foreground text-sm">Choose a client and {LUX_COVERS} carousels are made for you, one for each LUX cover, then add their approved photos. Each is the cover plus two full photo slides with the words laid over them, the last one ending on a question. Press Write and slides 2 and 3, the question and the caption are written to carry on from the cover. Tick Write fresh cover words if you want new words on the cover too. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Scheduling puts them on every Tuesday at 8pm, starting with the next one, and you can move any date.</p>
         )}
         <div className="space-y-6">
           {posts.map((post, pi) => {
             const mine = { ...LUX_PALETTE, ...gpal, ...(post.palette ?? {}) };
-            const t = THEMES[pi % THEMES.length];
+            const fields = LUX_FIELDS[post.cover];
             return (
               <article key={post.id} className="rounded-2xl border border-border/30 p-4 space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <input type="checkbox" checked={post.selected} onChange={(e) => patchPost(post.id, { selected: e.target.checked })} />
                   <h2 className="font-semibold">{pi + 1}.</h2>
-                  <span className="font-semibold">{t.name}</span>
-                  <span className="text-xs text-muted-foreground">{post.fresh ? "Fresh slide words are written with the caption" : "Slide words as they are below"}</span>
+                  <span className="font-semibold">{LUX_SLIDE_DEFS[post.cover].name}</span>
+                  <span className="text-xs text-muted-foreground">Cover, then two photo slides</span>
                   <label className="flex items-center gap-1.5 text-xs">
                     <input type="checkbox" checked={post.fresh} onChange={(e) => patchPost(post.id, { fresh: e.target.checked })} />
-                    Write fresh slide words
+                    Write fresh cover words
                   </label>
                   <div className="ml-auto">
                     <Button size="sm" variant="outline" disabled={post.busy || !!busy} onClick={() => writeCopy(post)}>
@@ -766,6 +788,35 @@ export default function Lux() {
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className="space-y-3">
+                    {[0, 1].map((i) => (
+                      <label key={i} className="block">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Slide {i + 2} words</span>
+                        <Textarea rows={3} value={post.slides[i]} onChange={(e) => setSlide(post.id, i, e.target.value)} placeholder={i === 0 ? "Press Write and I will carry on from the cover" : undefined} />
+                      </label>
+                    ))}
+                    <label className="block">
+                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Slide 3 question (the engagement CTA)</span>
+                      <Input value={post.cta} onChange={(e) => patchPost(post.id, { cta: e.target.value })} />
+                    </label>
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-muted-foreground">Change the words on the cover</summary>
+                      <div className="mt-3 grid gap-2">
+                        {fields.map((fd) => (
+                          <label key={fd.key} className="block">
+                            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{fd.label}</span>
+                            {(fd.rows ?? 1) > 1 ? (
+                              <Textarea rows={Math.min(fd.rows ?? 2, 3)} value={post.text[fd.key] ?? ""} onChange={(e) => setText(post.id, fd.key, e.target.value)} />
+                            ) : (
+                              <Input value={post.text[fd.key] ?? ""} onChange={(e) => setText(post.id, fd.key, e.target.value)} />
+                            )}
+                          </label>
+                        ))}
+                        {post.cover === 2 && <p className="text-[11px] text-muted-foreground">The boxed note on this cover says consultations are complimentary. Change it if that is not true for this clinic.</p>}
+                      </div>
+                    </details>
+                  </div>
+
                   <div className="space-y-3">
                     <label className="block">
                       <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Caption</span>
@@ -799,30 +850,6 @@ export default function Lux() {
                       </div>
                     </details>
                   </div>
-
-                  <details className="text-sm">
-                    <summary className="cursor-pointer text-muted-foreground">Change the words on any slide</summary>
-                    <div className="mt-3 space-y-4 max-h-[520px] overflow-y-auto pr-2">
-                      {LUX_FIELDS.map((fields, n) => (
-                        <div key={n} className="space-y-2">
-                          <p className="text-xs font-semibold">Slide {n + 1}: {LUX_SLIDE_DEFS[n].name}</p>
-                          <div className="grid gap-2">
-                            {fields.map((fd) => (
-                              <label key={fd.key} className="block">
-                                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{fd.label}</span>
-                                {(fd.rows ?? 1) > 1 ? (
-                                  <Textarea rows={Math.min(fd.rows ?? 2, 3)} value={post.slides[n]?.[fd.key] ?? ""} onChange={(e) => setText(post.id, n, fd.key, e.target.value)} />
-                                ) : (
-                                  <Input value={post.slides[n]?.[fd.key] ?? ""} onChange={(e) => setText(post.id, n, fd.key, e.target.value)} />
-                                )}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                      <p className="text-[11px] text-muted-foreground">The boxed note on slide 3 says consultations are complimentary. Change it if that is not true for this clinic.</p>
-                    </div>
-                  </details>
                 </div>
               </article>
             );
