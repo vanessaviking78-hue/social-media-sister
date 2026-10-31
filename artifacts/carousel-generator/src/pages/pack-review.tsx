@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Copy, ExternalLink, RefreshCw, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Copy, ExternalLink, RefreshCw, Send, Download, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
+import { usePresets } from "@/lib/use-presets";
 import { buildPackPlan, PACK_PRICE, type PackSize } from "@/lib/pack-plan";
 import { applyCopy, skeleton, treatmentIdsFor, type CopyResult, type CopySpec } from "@/lib/pack-build";
-import { renderPackPost, type PackClient, type PackPost } from "@/lib/pack-engine";
-import { brandPalette, loadImage, prepareLogo, textLogo } from "@/lib/sample-post";
+import { renderPackPost, renderPackSlide, type PackClient, type PackPost } from "@/lib/pack-engine";
+import { DEFAULT_FOCUS } from "@/lib/month-engine";
+import { brandPalette, loadImage, prepareLogo, textLogo, transparentLogo } from "@/lib/sample-post";
 import type { PoolPhoto } from "@/lib/month-engine";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -54,6 +56,12 @@ export default function PackReview() {
   const [link, setLink] = useState("");
   const clientRef = useRef<PackClient | null>(null);
   const [runKey, setRunKey] = useState(0);
+  const { presets } = usePresets();
+  const [presetId, setPresetId] = useState("");
+  const [startDate, setStartDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [every, setEvery] = useState(2);
+  const [postTime, setPostTime] = useState("18:15");
+  const [showSchedule, setShowSchedule] = useState(false);
 
   useEffect(() => {
     if (!draftId) {
@@ -102,7 +110,9 @@ export default function PackReview() {
     }
     const main = hexOk(pack.mainHex) ? pack.mainHex : "#1f3a5f";
     const accent = hexOk(pack.accentHex) ? pack.accentHex : "#c9a27a";
-    const palette = brandPalette(main, prepared.palette);
+    // The logo always goes on with no background box, straight onto the photo or the colour.
+    const clearLogo = transparentLogo(prepared.logo);
+    const palette = { ...brandPalette(main, prepared.palette), tile: "rgba(0,0,0,0)" };
 
     const pool: PoolPhoto[] = [];
     for (const [i, ph] of (d.data!.photos ?? []).entries()) {
@@ -120,7 +130,7 @@ export default function PackReview() {
       return;
     }
 
-    const logoImg = await loadImage(prepared.logo.toDataURL("image/png")).catch(() => null);
+    const logoImg = await loadImage(clearLogo.toDataURL("image/png")).catch(() => null);
     const owner = pack.clinicianName || "";
     const client: PackClient = {
       businessName: d.clinicName,
@@ -137,7 +147,7 @@ export default function PackReview() {
       logo: logoImg,
       pool,
       handle: d.handle,
-      portraitLogo: prepared.logo,
+      portraitLogo: clearLogo,
       portraitPalette: palette,
     };
     clientRef.current = client;
@@ -203,6 +213,51 @@ export default function PackReview() {
     current = final;
   };
 
+  // Dragging a photo moves it inside its box. The drag is turned into a new focus point for that slide and
+  // just that slide is drawn again.
+  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number]; w: number; h: number } | null>(null);
+  const redrawTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const postsRef = useRef<PackPost[]>([]);
+  postsRef.current = posts;
+
+  const startFocus = (p: PackPost, i: number): [number, number] =>
+    (p.focus?.[`f${i}`] as [number, number] | undefined) ?? (p.kind === "portrait" ? [0.5, 0] : (DEFAULT_FOCUS as [number, number]));
+
+  const redrawSlide = (n: number, i: number) => {
+    if (redrawTimer.current) clearTimeout(redrawTimer.current);
+    redrawTimer.current = setTimeout(async () => {
+      const client = clientRef.current;
+      const post = postsRef.current.find((p) => p.n === n);
+      if (!client || !post) return;
+      const cv = document.createElement("canvas");
+      await renderPackSlide(post, i, client, cv, 0.4);
+      setPreviews((pv) => {
+        const list = [...(pv[n] ?? [])];
+        list[i] = cv.toDataURL("image/jpeg", 0.8);
+        return { ...pv, [n]: list };
+      });
+    }, 60);
+  };
+
+  const onDown = (e: React.PointerEvent<HTMLImageElement>, p: PackPost, i: number) => {
+    if (p.kind === "tweet") return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const r = (e.target as HTMLElement).getBoundingClientRect();
+    dragRef.current = { n: p.n, i, x: e.clientX, y: e.clientY, start: startFocus(p, i), w: r.width, h: r.height };
+  };
+  const onMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const fx = Math.max(0, Math.min(1, d.start[0] - (e.clientX - d.x) / d.w));
+    const fy = Math.max(0, Math.min(1, d.start[1] - (e.clientY - d.y) / d.h));
+    setPosts((ps) => ps.map((p) => (p.n === d.n ? { ...p, focus: { ...(p.focus ?? {}), [`f${d.i}`]: [fx, fy] as [number, number] } } : p)));
+    postsRef.current = postsRef.current.map((p) => (p.n === d.n ? { ...p, focus: { ...(p.focus ?? {}), [`f${d.i}`]: [fx, fy] as [number, number] } } : p));
+    redrawSlide(d.n, d.i);
+  };
+  const onUp = () => {
+    dragRef.current = null;
+  };
+
   const setCaption = (n: number, caption: string) => setPosts((ps) => ps.map((p) => (p.n === n ? { ...p, caption } : p)));
   const setTags = (n: number, hashtags: string) => setPosts((ps) => ps.map((p) => (p.n === n ? { ...p, hashtags } : p)));
 
@@ -261,6 +316,91 @@ export default function PackReview() {
     }
   };
 
+  const toBlob = (c: HTMLCanvasElement, type = "image/jpeg", q = 0.92): Promise<Blob> =>
+    new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not save a slide"))), type, q));
+
+  const download = async () => {
+    const client = clientRef.current;
+    if (!draft || !client || posts.length === 0) return;
+    setBusy(true);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      const lines: string[] = [];
+      for (const [i, p] of posts.entries()) {
+        setStatus(`Packing the posts... ${i + 1} of ${posts.length}`);
+        const cvs = await renderPackPost(p, client, 1);
+        for (const [k, c] of cvs.entries()) zip.file(`Post ${p.n}${cvs.length > 1 ? ` slide ${k + 1}` : ""}.jpg`, await toBlob(c));
+        lines.push(`POST ${p.n}\n\n${p.caption}\n\n${p.hashtags}`);
+      }
+      zip.file("Captions.txt", lines.join("\n\n----------\n\n"));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${draft.clinicName} Post Pack.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("Downloaded");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setStatus("");
+      setBusy(false);
+    }
+  };
+
+  const scheduleAll = async () => {
+    const client = clientRef.current;
+    if (!draft || !client || posts.length === 0) return;
+    if (!presetId) {
+      toast.error("Choose which client to schedule this for");
+      return;
+    }
+    setBusy(true);
+    let done = 0;
+    try {
+      for (const [i, p] of posts.entries()) {
+        setStatus(`Scheduling ${i + 1} of ${posts.length}`);
+        const cvs = await renderPackPost(p, client, 1);
+        const urls: string[] = [];
+        for (const [k, c] of cvs.entries()) urls.push(await uploadBlob(await toBlob(c), `pack-${p.n}-${k + 1}.jpg`));
+        const when = new Date(`${startDate}T${postTime}:00`);
+        when.setDate(when.getDate() + i * every);
+        const r = await fetch(`${API}/scheduler/posts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postType: urls.length > 1 ? "carousel" : "single-image",
+            content: {
+              caption: `${p.caption.trim()}\n\n${p.hashtags}`.trim(),
+              title: `Post ${p.n} · ${draft.clinicName}`,
+              platforms: ["instagram"],
+              imageUrls: urls,
+              sourceTool: "post-pack",
+            },
+            scheduledAt: when.toISOString(),
+            isTrial: false,
+            notes: "",
+            presetId: Number(presetId),
+          }),
+        });
+        if (!r.ok) {
+          const err = (await r.json().catch(() => ({ error: "Failed" }))) as { error?: string };
+          throw new Error(err.error || "Failed to schedule a post");
+        }
+        done++;
+      }
+      toast.success(`${done} posts scheduled.`);
+      setShowSchedule(false);
+    } catch (e: unknown) {
+      toast.error(`${done} scheduled, then it stopped: ${e instanceof Error ? e.message : "failed"}`);
+    } finally {
+      setStatus("");
+      setBusy(false);
+    }
+  };
+
   const retry = async () => {
     await fetch(`${API}/post-packs/drafts/${draftId}/retry`, { method: "POST" });
     setStatus("Making the Studio images again...");
@@ -306,13 +446,52 @@ export default function PackReview() {
 
         {posts.length > 0 && (
           <>
-            <button
-              onClick={publish}
-              disabled={busy || !!status}
-              className="mb-6 inline-flex items-center gap-2 bg-[#2b2320] text-white rounded-full px-5 py-2.5 text-sm disabled:opacity-50"
-            >
-              {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Publish to the clinic
-            </button>
+            <div className="flex flex-wrap gap-3 mb-2">
+              <button
+                onClick={publish}
+                disabled={busy || !!status}
+                className="inline-flex items-center gap-2 bg-[#2b2320] text-white rounded-full px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                {busy ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} Create the clinic's link
+              </button>
+              <button
+                onClick={download}
+                disabled={busy || !!status}
+                className="inline-flex items-center gap-2 border border-[#2b2320] rounded-full px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                <Download size={16} /> Download the lot
+              </button>
+              <button
+                onClick={() => setShowSchedule((v) => !v)}
+                disabled={busy || !!status}
+                className="inline-flex items-center gap-2 border border-[#2b2320] rounded-full px-5 py-2.5 text-sm disabled:opacity-50"
+              >
+                <CalendarClock size={16} /> Schedule
+              </button>
+            </div>
+            {showSchedule && (
+              <div className="bg-white border border-[#eaded6] rounded-lg p-4 mb-4 grid gap-3 sm:grid-cols-4 text-sm">
+                <label className="sm:col-span-4">Schedule for which client
+                  <select value={presetId} onChange={(e) => setPresetId(e.target.value)} className="block w-full border border-[#eaded6] rounded-md p-2 mt-1">
+                    <option value="">Choose a client</option>
+                    {presets.map((pr) => <option key={pr.id} value={String(pr.id)}>{pr.name}</option>)}
+                  </select>
+                </label>
+                <label>First post on
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="block w-full border border-[#eaded6] rounded-md p-2 mt-1" />
+                </label>
+                <label>At
+                  <input type="time" value={postTime} onChange={(e) => setPostTime(e.target.value)} className="block w-full border border-[#eaded6] rounded-md p-2 mt-1" />
+                </label>
+                <label>One post every
+                  <select value={every} onChange={(e) => setEvery(Number(e.target.value))} className="block w-full border border-[#eaded6] rounded-md p-2 mt-1">
+                    {[1, 2, 3, 7].map((n) => <option key={n} value={n}>{n === 1 ? "day" : `${n} days`}</option>)}
+                  </select>
+                </label>
+                <button onClick={scheduleAll} disabled={busy} className="self-end bg-[#2b2320] text-white rounded-md px-4 py-2.5 disabled:opacity-50">Schedule all {posts.length}</button>
+              </div>
+            )}
+            <p className="text-xs text-[#7a625a] mb-4">The link button saves the pack and makes the page the clinic opens. Drag any photo to move it inside its box.</p>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {posts.map((p) => (
                 <div key={p.n} className="bg-white border border-[#eaded6] rounded-xl p-3">
@@ -321,7 +500,18 @@ export default function PackReview() {
                     {(previews[p.n] ?? []).length === 0 ? (
                       <div className="h-48 w-full grid place-items-center text-xs text-[#a48c82]">Drawing...</div>
                     ) : (
-                      previews[p.n].map((src, i) => <img key={i} src={src} alt="" className="h-64 rounded-md shrink-0" />)
+                      previews[p.n].map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          draggable={false}
+                          onPointerDown={(e) => onDown(e, p, i)}
+                          onPointerMove={onMove}
+                          onPointerUp={onUp}
+                          className={`h-64 rounded-md shrink-0 ${p.kind === "tweet" ? "" : "cursor-grab touch-none"}`}
+                        />
+                      ))
                     )}
                   </div>
                   <textarea
