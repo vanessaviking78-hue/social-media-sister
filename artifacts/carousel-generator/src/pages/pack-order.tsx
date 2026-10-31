@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TREATMENTS } from "@/lib/treatment-designs";
+import { ALL_TREATMENTS, TREAT_GROUP, TREAT_GROUP_ORDER } from "@/lib/treatment-designs";
 import { PACK_PRICE, type PackSize } from "@/lib/pack-plan";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -32,7 +32,9 @@ const CSS = `
 .po-colours { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
 .po-colour { display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:10px; padding:8px 10px; font-size:14px; }
 .po-colour input { width:44px; height:36px; border:0; padding:0; background:transparent; cursor:pointer; }
-.po-ticks { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 12px; }
+.po-ticks { display:flex; flex-direction:column; gap:18px; }
+.po-group { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 12px; }
+.po-group > .po-lab { grid-column:1 / -1; color:var(--accent); }
 .po-check { display:flex; gap:10px; align-items:flex-start; font-size:15px; }
 .po-check input { margin-top:4px; width:20px; height:20px; flex:none; }
 .po-btn { font:inherit; cursor:pointer; border:0; background:var(--accent); color:var(--accent-ink); padding:12px 18px; border-radius:10px; font-weight:700; font-size:16px; min-height:48px; }
@@ -40,7 +42,7 @@ const CSS = `
 .po-error { color:#b3261e; font-size:15px; margin:0; }
 @media (prefers-color-scheme: dark) { .po-error { color:#ff9c93; } }
 .po-sig { color:var(--muted); font-size:14px; margin:0; }
-@media (max-width:520px) { .po-ticks { grid-template-columns:minmax(0,1fr); } }
+@media (max-width:520px) { .po-group { grid-template-columns:minmax(0,1fr); } }
 `;
 
 const ROLES = ["Nurse", "Injector", "Dentist", "Doctor", "Pharmacist", "Other"];
@@ -317,11 +319,16 @@ export default function PackOrder() {
             <legend>The treatments you offer</legend>
             <small>Tick any that apply. Your treatment posts only use these.</small>
             <div className="po-ticks">
-              {TREATMENTS.map((t) => (
-                <label className="po-check" key={t.id}>
-                  <input type="checkbox" checked={treatments.includes(t.name)} onChange={() => toggle(t.name)} />
-                  <span>{t.name}</span>
-                </label>
+              {TREAT_GROUP_ORDER.map((g) => (
+                <div key={g} className="po-group">
+                  <div className="po-lab">{g}</div>
+                  {ALL_TREATMENTS.filter((t) => TREAT_GROUP[t.id] === g).map((t) => (
+                    <label className="po-check" key={t.id}>
+                      <input type="checkbox" checked={treatments.includes(t.name)} onChange={() => toggle(t.name)} />
+                      <span>{t.name}</span>
+                    </label>
+                  ))}
+                </div>
               ))}
             </div>
           </fieldset>

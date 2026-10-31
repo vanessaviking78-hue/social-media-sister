@@ -27,7 +27,10 @@ export const T_PALETTE_LABELS: Record<keyof TPalette, string> = {
 // ---------------------------------------------------------------------------
 
 export type TreatId =
-  | "lip" | "cheek" | "chin" | "jaw" | "tear" | "temple" | "lower" | "lines" | "nose" | "profile";
+  | "lip" | "cheek" | "chin" | "jaw" | "tear" | "temple" | "lower" | "lines" | "nose" | "profile"
+  | "prp" | "prphair" | "poly" | "boost" | "collagen" | "meso"
+  | "needle" | "rfneedle" | "peel" | "biore" | "hydra" | "led" | "derma" | "hifu" | "rf" | "lhr" | "ipl" | "laser"
+  | "body" | "emsculpt";
 
 export type TextKey = "title" | "head" | "b1" | "b2" | "b3" | "b4" | "callout" | "small";
 
@@ -155,7 +158,77 @@ export const TREATMENTS: TreatDef[] = [
   },
 ];
 
-export const TREAT_BY_ID: Record<TreatId, TreatDef> = Object.fromEntries(TREATMENTS.map((t) => [t.id, t])) as Record<TreatId, TreatDef>;
+
+// ---------------------------------------------------------------------------
+// More treatments, used by the Post Pack. These are kept apart from the ten above so the live Treatments tool and
+// the Month tool carry on offering exactly what they did. No prescription only treatments, no wrinkle relaxing
+// injections and no vitamin infusions are written here, on purpose.
+// ---------------------------------------------------------------------------
+
+type Extra = [id: TreatId, name: string, idea: string, group: string, bullets: [string, string, string, string], small?: string, callout?: string, title?: string];
+
+const EXTRA: Extra[] = [
+  // Regenerative medicine
+  ["prp", "PRP Facial", "PRP facial, using your own platelets, patience and glow", "Regenerative", [
+    "telling everyone 'it's my own blood, actually'", "becoming oddly proud of your platelets", "being told to go easy on the face touching for a day or two", "learning that skin takes its own sweet time"], PLAY],
+  ["prphair", "PRP for Hair", "PRP for hair, a patient and consistent plan", "Regenerative", [
+    "checking your parting more often than your phone", "learning that hair has a growth cycle and it does not care about your plans", "turning up to your follow ups like a model student", "understanding that consistency beats impatience"], PLAY, "A proper consultation and suitability check come first."],
+  ["poly", "Polynucleotides", "polynucleotides, hydration and skin quality", "Regenerative", [
+    "becoming a person who says 'skin quality' in every conversation", "drinking more water than you have in your whole life", "being very smug about your glow in daylight", "asking 'is this a filter?' of your own selfie"], PLAY],
+  ["boost", "Skin Boosters", "skin boosters, hydration and a lit from within look", "Regenerative", [
+    "going shiny in a good way", "developing strong opinions about moisturiser", "realising skin quality and volume are not the same thing", "bringing the course plan to every appointment"], PLAY],
+  ["collagen", "Collagen Stimulators", "collagen stimulating treatments, slow and steady results", "Regenerative", [
+    "being told results build gradually, then checking the mirror daily anyway", "learning the difference between volume and stimulation", "having a mild existential crisis about waiting", "smiling at a photo from three months ago and then at today"], PLAY, "Slow and steady wins, and suitability is assessed in consultation."],
+  ["meso", "Mesotherapy", "mesotherapy, a skin nourishing course", "Regenerative", [
+    "saying the word 'mesotherapy' with total confidence by session two", "becoming a skincare ingredient list reader", "being asked 'what have you done?' and replying 'sleep'", "booking the next session before leaving the room"], PLAY],
+
+  // Skin treatments
+  ["needle", "Microneedling", "microneedling, downtime humour and glowing skin", "Skin", [
+    "looking like a tomato for a day and calling it 'skin in progress'", "avoiding the sun with the dedication of a vampire", "being forced to keep your hands off your face", "getting weirdly excited about a bottle of SPF"], PLAY, "Patch test, skin assessment and aftercare advice come first."],
+  ["rfneedle", "Radiofrequency Microneedling", "radiofrequency microneedling, planning and downtime", "Skin", [
+    "learning that 'radiofrequency' is not a radio station", "cancelling plans for the day after, calmly and without regret", "becoming loyal to a fragrance free cleanser", "being asked about your skin by people who never normally notice"], PLAY, "Suitability is assessed in consultation."],
+  ["peel", "Chemical Peels", "chemical peels, flaking and following the aftercare", "Skin", [
+    "peeling in places you were not expecting", "resisting the urge to help the peeling along", "applying SPF like your life depends on it", "telling people 'it's meant to do that'"], PLAY, "Skin assessment, suitability and aftercare advice come first."],
+  ["biore", "BioRePeel", "BioRePeel, a gentle peel with a peeling twist", "Skin", [
+    "being surprised at how tingly your own face can be", "peeling on day three like clockwork", "taking aftercare more seriously than your last holiday", "nodding along to the phrase 'let it come off naturally'"], PLAY, "Suitability is assessed in consultation."],
+  ["hydra", "Hydro Facial", "hydrating facial, deep cleanse and glow", "Skin", [
+    "being shocked at what came out of your pores", "walking out feeling like a new person", "becoming a person who owns a lip mask", "cancelling nothing, because there is no downtime"], PLAY],
+  ["led", "LED Light Therapy", "LED light therapy, relaxing colours and consistency", "Skin", [
+    "feeling like you are on a spaceship, but relaxed", "falling asleep under a very expensive nightlight", "learning that red light, blue light and consistency go together", "asking for the mask every single time"], PLAY],
+  ["derma", "Dermaplaning", "dermaplaning, smooth skin and makeup glide", "Skin", [
+    "discovering what your skin looks like with nothing on it", "having your makeup glide on like butter", "being told 'no, it doesn't make it grow back thicker'", "touching your cheek every ten minutes for the silky feeling"], PLAY],
+  ["hifu", "HIFU", "HIFU, ultrasound and patience", "Skin", [
+    "learning that ultrasound is not just for babies", "feeling a warm tingly buzz and saying 'that's a bit strange'", "waiting for results like it is Christmas Eve", "asking the mirror daily 'is it working yet?'"], PLAY, "Results vary and take time. Suitability is assessed in consultation."],
+  ["rf", "Radiofrequency Skin Tightening", "radiofrequency skin tightening, a warm and relaxing course", "Skin", [
+    "enjoying what feels like a hot stone massage for your face", "becoming obsessed with your jawline in side lighting", "learning that courses beat one-offs", "saying 'it was actually really relaxing' and meaning it"], PLAY],
+  ["lhr", "Laser Hair Removal", "laser hair removal, patch tests and shaving rules", "Skin", [
+    "forgetting to shave and being told so, kindly", "becoming a person who says 'patch test' as a greeting", "wearing SPF like a new personality", "saying goodbye to your razor collection one session at a time"], STD, "A patch test and a full suitability assessment come first. Results vary."],
+  ["ipl", "IPL and Pigmentation", "IPL for skin tone and pigmentation, sun care and patience", "Skin", [
+    "learning what the word 'pigmentation' really means", "discovering sun cream was a lifestyle all along", "watching your freckles do something unexpected", "being very strict with yourself about the hat"], PLAY, "Skin assessment and sun protection advice come first."],
+  ["laser", "Laser Skin Treatments", "laser skin treatments, downtime and honest aftercare", "Skin", [
+    "treating the aftercare sheet as sacred", "learning that results and downtime go hand in hand", "being asked 'have you been on holiday?' while pale and covered in moisturiser", "choosing a practitioner because of training, not a discount"], PLAY, "Suitability, risks and aftercare are covered in consultation."],
+
+  // Body
+  ["body", "Body Contouring", "body contouring, a realistic plan and healthy habits", "Body", [
+    "learning that 'quick fix' and 'sensible plan' are two different things", "discovering your jeans are exactly the same size as before, annoyingly", "being asked about your water intake with scary interest", "booking a consultation to ask questions rather than be sold to"], PLAY, "Results vary and are not a substitute for a healthy lifestyle."],
+  ["emsculpt", "Muscle Stimulation", "muscle stimulation treatments, a workout you lie down for", "Body", [
+    "feeling muscles you forgot you had", "saying 'I did 20,000 sit ups' without moving", "becoming mildly competitive about your abs", "walking more gingerly the next day"], PLAY, "Suitability is assessed in consultation."],
+];
+
+export const MORE_TREATMENTS: TreatDef[] = EXTRA.map(([id, name, idea, , bullets, small, callout], i) => ({
+  id, name, idea, layout: (i % 3) as 0 | 1 | 2, callout: callout ? "box" : "none",
+  defaults: d(name, bullets, small ?? STD, callout ?? ""),
+}));
+
+/** Every treatment the Post Pack can use, with the group it is shown under on the order form. */
+export const ALL_TREATMENTS: TreatDef[] = [...TREATMENTS, ...MORE_TREATMENTS];
+export const TREAT_GROUP: Record<string, string> = {
+  ...Object.fromEntries(TREATMENTS.map((t) => [t.id, "Filler and facial balancing"])),
+  ...Object.fromEntries(EXTRA.map((e) => [e[0], e[3]])),
+};
+export const TREAT_GROUP_ORDER = ["Filler and facial balancing", "Regenerative", "Skin", "Body"];
+
+export const TREAT_BY_ID: Record<TreatId, TreatDef> = Object.fromEntries(ALL_TREATMENTS.map((t) => [t.id, t])) as Record<TreatId, TreatDef>;
 
 export function fillTreat(text: string, v: Fill): string {
   return (text ?? "")

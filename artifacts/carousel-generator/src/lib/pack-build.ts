@@ -1,6 +1,6 @@
 // Turns a pack plan into posts ready to be written and drawn. No React, no drawing.
 
-import { TREAT_BY_ID, TREATMENTS } from "./treatment-designs";
+import { TREAT_BY_ID, ALL_TREATMENTS as TREATMENTS } from "./treatment-designs";
 import { UNIQUE_BY_ID, type UniId } from "./unique-designs";
 import { EMPOWER_BY_ID } from "./empower-designs";
 import { LUX_SLIDE_DEFS } from "./lux-designs";
