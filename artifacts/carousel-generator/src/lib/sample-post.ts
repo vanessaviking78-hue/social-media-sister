@@ -5,7 +5,7 @@ const W = 1080;
 const H = 1350;
 void BASE;
 
-export type PortraitPost = { look: "stylish" | "magazine"; headline: string; subtitle: string; zoom: boolean; photo: HTMLImageElement };
+export type PortraitPost = { look: "stylish" | "magazine"; headline: string; subtitle: string; zoom: boolean; photo: HTMLImageElement; focus?: [number, number] };
 
 export type Palette = { band: string; rule: string; ink: string; sub: string; accentHex: string; tile: string };
 
@@ -150,7 +150,7 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, family: string, we
   return { lines: wrapLines(ctx, text, maxw), size: min };
 }
 
-function drawPhoto(ctx: CanvasRenderingContext2D, img: HTMLImageElement, top: number, zoom: boolean) {
+function drawPhoto(ctx: CanvasRenderingContext2D, img: HTMLImageElement, top: number, zoom: boolean, focus: [number, number] = [0.5, 0]) {
   if (zoom) {
     const sx = img.width * 0.279;
     const sy = img.height * 0.172;
@@ -167,8 +167,77 @@ function drawPhoto(ctx: CanvasRenderingContext2D, img: HTMLImageElement, top: nu
   ctx.beginPath();
   ctx.rect(0, top, W, availH);
   ctx.clip();
-  ctx.drawImage(img, (W - dw) / 2, top, dw, dh);
+  ctx.drawImage(img, -(dw - W) * focus[0], top - (dh - availH) * focus[1], dw, dh);
   ctx.restore();
+}
+
+// Takes the background off a logo so it sits straight on a photo or a coloured block. The background is found by
+// flooding in from the edges, so white or pale parts inside the logo itself are kept.
+export function transparentLogo(src: HTMLCanvasElement): HTMLCanvasElement {
+  const w = src.width, h = src.height;
+  const out = document.createElement("canvas");
+  out.width = w;
+  out.height = h;
+  const ctx = out.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(src, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const at = (x: number, y: number) => (y * w + x) * 4;
+  const corners = [at(1, 1), at(w - 2, 1), at(1, h - 2), at(w - 2, h - 2)];
+  const bg = [0, 1, 2].map((k) => Math.round(corners.reduce((a, i) => a + d[i + k], 0) / 4));
+  const dist = (i: number) => (d[i + 3] < 30 ? 0 : Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]));
+  const TOL = 45, SOFT = 130;
+  const seen = new Uint8Array(w * h);
+  const stack: number[] = [];
+  const push = (x: number, y: number) => {
+    const k = y * w + x;
+    if (seen[k]) return;
+    if (dist(k * 4) <= TOL) { seen[k] = 1; stack.push(k); }
+  };
+  for (let x = 0; x < w; x++) { push(x, 0); push(x, h - 1); }
+  for (let y = 0; y < h; y++) { push(0, y); push(w - 1, y); }
+  while (stack.length) {
+    const k = stack.pop()!;
+    const x = k % w, y = (k / w) | 0;
+    if (x > 0) push(x - 1, y);
+    if (x < w - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < h - 1) push(x, y + 1);
+  }
+  // Small enclosed gaps (the middle of an o or an e) count as background too. Big enclosed areas are part of the design.
+  const maxHole = Math.round(w * h * 0.004);
+  for (let k0 = 0; k0 < w * h; k0++) {
+    if (seen[k0] || dist(k0 * 4) > TOL) continue;
+    const comp: number[] = [k0];
+    seen[k0] = 2;
+    for (let q = 0; q < comp.length && comp.length <= maxHole; q++) {
+      const k = comp[q];
+      const x = k % w, y = (k / w) | 0;
+      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const nk = ny * w + nx;
+        if (!seen[nk] && dist(nk * 4) <= TOL) { seen[nk] = 2; comp.push(nk); }
+      }
+    }
+    if (comp.length > maxHole) for (const k of comp) seen[k] = 3; // too big, keep it
+  }
+  for (let k = 0; k < w * h; k++) if (seen[k] === 3) seen[k] = 0;
+  const edge = new Uint8Array(w * h);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const k = y * w + x;
+    if (seen[k]) continue;
+    if (seen[k - 1] || seen[k + 1] || seen[k - w] || seen[k + w]) edge[k] = 1;
+  }
+  for (let k = 0; k < w * h; k++) {
+    const i = k * 4;
+    if (seen[k]) d[i + 3] = 0;
+    else if (edge[k]) {
+      const a = Math.max(0, Math.min(1, (dist(i) - TOL) / (SOFT - TOL)));
+      d[i + 3] = Math.round(d[i + 3] * a);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return out;
 }
 
 function drawLogoTile(ctx: CanvasRenderingContext2D, logo: HTMLCanvasElement, palette: Palette, xRight: number, yTop: number, tileH: number): number {
@@ -196,7 +265,7 @@ export function renderPost(post: PortraitPost, logo: HTMLCanvasElement, palette:
   const subtitle = post.subtitle.trim();
 
   if (post.look === "stylish") {
-    drawPhoto(ctx, post.photo, 0, post.zoom);
+    drawPhoto(ctx, post.photo, 0, post.zoom, post.focus);
     const bandH = 400;
     ctx.fillStyle = palette.band;
     ctx.fillRect(0, H - bandH, W, bandH);
@@ -223,7 +292,7 @@ export function renderPost(post: PortraitPost, logo: HTMLCanvasElement, palette:
     drawLogoTile(ctx, logo, palette, W - 40, 40, 190);
   } else {
     const stripH = 170;
-    drawPhoto(ctx, post.photo, stripH, post.zoom);
+    drawPhoto(ctx, post.photo, stripH, post.zoom, post.focus);
     ctx.fillStyle = palette.band;
     ctx.fillRect(0, 0, W, stripH);
     ctx.fillStyle = palette.rule;

@@ -27,6 +27,7 @@ export type PackPost = {
   caption: string;
   hashtags: string;
   photos: (number | null)[]; // positions in the pool
+  focus?: Record<string, Focus>; // where each slide's photo sits in its box, by slide number as "f0", "f1"...
 };
 
 export type PackClient = Client & {
@@ -119,16 +120,23 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
     mp.slides = post.slides;
     mp.cta = post.cta;
     mp.photos = post.photos;
+    mp.focus = {};
+    for (const [k, v] of Object.entries(post.focus ?? {})) {
+      const i = Number(k.slice(1));
+      mp.focus[i === 0 ? "c0" : `s${i + 1}`] = v;
+      if (i === 0) mp.focus.c1 = v;
+    }
     await renderMonthSlide(mp, n, client, canvas, scale);
     return;
   }
 
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
-  const focus: Focus = DEFAULT_FOCUS;
+  const focusFor = (i: number): Focus => post.focus?.[`f${i}`] ?? DEFAULT_FOCUS;
+  const focus: Focus = focusFor(n);
 
   if (post.kind === "portrait") {
     const photo = await imageFromDataUrl(c.pool[post.photos[0] ?? 0]?.url);
-    const url = renderPortrait({ look: post.look, headline: post.headline, subtitle: post.subtitle, zoom: false, photo }, c.portraitLogo, c.portraitPalette, c.area.split(",")[0].trim());
+    const url = renderPortrait({ look: post.look, headline: post.headline, subtitle: post.subtitle, zoom: false, photo, focus: post.focus?.f0 }, c.portraitLogo, c.portraitPalette, c.area.split(",")[0].trim());
     ctx.drawImage(await imageFromDataUrl(url), 0, 0, w, h);
     return;
   }
