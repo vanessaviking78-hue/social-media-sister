@@ -3,7 +3,7 @@ import multer from "multer";
 import { v4 as uuid } from "uuid";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { freeSampleDraftsTable } from "@workspace/db/schema";
+import { freeSampleDraftsTable, freeSamplesTable } from "@workspace/db/schema";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { saveSampleFile, needsRewrite, rewriteFlagged } from "../lib/freeSampleWorker";
 import { runPackDraft, type PackInput } from "../lib/packWorker";
@@ -244,6 +244,62 @@ Return JSON only: {"items":[{"n":0,"text":{},"slides":[],"cta":"","caption":""}]
   } catch (err: unknown) {
     req.log?.error({ err }, "post-packs copy failed");
     res.status(500).json({ error: "The words would not write, try again" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Publishing: the review page uploads every finished image, then saves the pack as a public page at /pack/<slug>.
+// It is stored in the same table as free samples, with a "pack-" slug, so the existing lookup route serves it.
+// ---------------------------------------------------------------------------
+
+const slugify = (s: string) =>
+  s.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+
+router.post("/post-packs/publish", async (req: Request, res: Response) => {
+  try {
+    const { clinicName, draftId, size, logoUrl, accent, posts } = req.body as {
+      clinicName?: string;
+      draftId?: string;
+      size?: number;
+      logoUrl?: string;
+      accent?: string;
+      posts?: { n: number; kind: string; images: string[]; caption: string; tags: string }[];
+    };
+    if (!clinicName?.trim() || !Array.isArray(posts) || posts.length === 0 || !SIZES.includes(Number(size) as 12 | 20 | 30)) {
+      res.status(400).json({ error: "clinicName, a pack size and the posts are required" });
+      return;
+    }
+    const base = `pack-${slugify(clinicName) || "clinic"}`;
+    let final = base;
+    for (let i = 2; i < 50; i++) {
+      const [exists] = await db.select().from(freeSamplesTable).where(eq(freeSamplesTable.slug, final));
+      if (!exists) break;
+      final = `${base}-${i}`;
+    }
+    await db.insert(freeSamplesTable).values({
+      slug: final,
+      clinicName: clinicName.trim(),
+      data: {
+        pack: true,
+        size: Number(size),
+        logoUrl: logoUrl ?? "",
+        accent: /^#[0-9a-fA-F]{6}$/.test(accent ?? "") ? accent : "#9a5a49",
+        posts: posts.map((p) => ({
+          n: p.n,
+          kind: str(p.kind, 20),
+          images: (p.images ?? []).map((u) => str(u, 400)).filter(Boolean),
+          caption: noDashes(p.caption),
+          tags: noDashes(p.tags),
+        })),
+      },
+    });
+    if (draftId) {
+      await db.update(freeSampleDraftsTable).set({ status: "published", slug: final, updatedAt: new Date() }).where(eq(freeSampleDraftsTable.id, draftId));
+    }
+    res.json({ slug: final });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "post-packs publish failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Publishing failed" });
   }
 });
 

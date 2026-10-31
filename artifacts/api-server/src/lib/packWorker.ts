@@ -96,7 +96,20 @@ export async function runPackDraft(id: string): Promise<void> {
       ...POOL.filter((p) => results.has(p.id)).map((p) => ({ url: results.get(p.id)!, source: "studio" as const })),
       ...pack.extraKeys.map((k) => ({ url: `/api/media/${k}`, source: "own" as const })),
     ];
-    await setDraft(id, { status: "ready", data: { photos, pack: { size: pack.size, month: pack.month } }, error: "" });
+    await setDraft(id, { status: "ready", data: {
+        photos,
+        pack: {
+          size: pack.size,
+          month: pack.month,
+          role: pack.role,
+          website: pack.website,
+          mainHex: pack.mainHex,
+          accentHex: pack.accentHex,
+          treatments: pack.treatments,
+          clinicianName: draft.clinicianName,
+          email: draft.email,
+        },
+      }, error: "" });
     await notifySampleReady({ clinicName: draft.clinicName, handle: draft.handle, link: appLink(`/post-pack?draft=${id}`), ok: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "The pack did not finish building";
