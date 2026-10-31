@@ -5,14 +5,12 @@ import { PACK_PRICE, type PackSize } from "@/lib/pack-plan";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 const CSS = `
-.po-root { --bg:#faf5f2; --card:#fffdfc; --ink:#2a1e1a; --muted:#6e5d56; --line:#ead9d0; --accent:#9a5a49; --accent-ink:#ffffff; --soft:#f6e6dc;
-  --display:"Instrument Serif", Georgia, serif; --body:"Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif;
+.po-root { --bg:#fde9ef; --card:#fff6f9; --ink:#2a1e1a; --muted:#6e5d56; --line:#f1c9d6; --accent:#9a5a49; --accent-ink:#ffffff; --soft:#fad7e2;
+  --display:"League Spartan", system-ui, sans-serif; --body:"League Spartan", system-ui, sans-serif;
   background:var(--bg); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.55; min-height:100vh; box-sizing:border-box;
   padding:40px 16px 56px; }
-@media (prefers-color-scheme: dark) {
-  .po-root { --bg:#181210; --card:#221915; --ink:#f6ebe6; --muted:#bba8a0; --line:#3d2f29; --soft:#2d211c; --accent:#e0a48f; --accent-ink:#1d0f0a; color-scheme:dark; }
-}
 .po-root * { box-sizing:border-box; }
+.po-root, .po-root * { font-family:"League Spartan", system-ui, sans-serif !important; font-weight:700 !important; }
 .po-wrap { max-width:620px; margin:0 auto; display:flex; flex-direction:column; gap:22px; }
 .po-from { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; }
 .po-h1 { font-family:var(--display); font-weight:400; font-size:clamp(36px,8vw,56px); line-height:1.05; margin:0; text-wrap:balance; }
@@ -131,7 +129,7 @@ export default function PackOrder() {
     // The two fonts the pack uses.
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Montserrat:wght@400;600;700&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Montserrat:wght@400;600;700&family=League+Spartan:wght@700;800&display=swap";
     document.head.appendChild(link);
     return () => link.remove();
   }, []);
