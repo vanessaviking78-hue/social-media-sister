@@ -67,6 +67,8 @@ import FreeSample from "@/pages/free-sample";
 import SamplePublic from "@/pages/sample-public";
 import SampleRequest from "@/pages/sample-request";
 import PackOrder from "@/pages/pack-order";
+import PackReview from "@/pages/pack-review";
+import PackPublic from "@/pages/pack-public";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -206,6 +208,7 @@ function ProtectedRouter() {
       <Route path="/selfie-carousels" component={SelfieCarousels} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/free-sample" component={FreeSample} />
+      <Route path="/post-pack" component={PackReview} />
       <Route path="/comic" component={ComicPage} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
@@ -307,6 +310,7 @@ function AppContent() {
   const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
   const [isSamplePublic, samplePublicParams] = useRoute("/sample/:slug");
   const [isSampleRequest] = useRoute("/getmysample");
+  const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
   const [isPackOrder] = useRoute("/getmyposts");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
@@ -422,6 +426,9 @@ function AppContent() {
   }
   if (isPackOrder) {
     return <PackOrder />;
+  }
+  if (isPackPublic && packPublicParams?.slug) {
+    return <PackPublic slug={packPublicParams.slug} />;
   }
   if (isSampleRequest) {
     return <SampleRequest />;
