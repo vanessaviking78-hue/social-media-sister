@@ -7,7 +7,7 @@
 // same clinic gets a fresh set next month.
 
 import { UNIQUE } from "./unique-designs";
-import { TREATMENTS } from "./treatment-designs";
+import { ALL_TREATMENTS as TREATMENTS } from "./treatment-designs";
 import { EMPOWER } from "./empower-designs";
 import { LUX_COVERS } from "./lux-designs";
 
