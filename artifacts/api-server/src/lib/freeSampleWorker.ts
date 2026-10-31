@@ -167,11 +167,11 @@ const NEGATIVE_PARALLEL = [
   /\b(?:journey|game.?changer|glow.?up|unlock|dive in|tapestry|elevate|faff|fluff)\b/i,
 ];
 
-function needsRewrite(text: string): boolean {
+export function needsRewrite(text: string): boolean {
   return NEGATIVE_PARALLEL.some((re) => re.test(text));
 }
 
-async function rewriteFlagged(posts: { headline: string; subtitle: string; caption: string }[]): Promise<void> {
+export async function rewriteFlagged(posts: { headline: string; subtitle: string; caption: string }[]): Promise<void> {
   for (let pass = 0; pass < 2; pass++) {
     const flagged = posts.map((p, i) => ({ p, i })).filter(({ p }) => needsRewrite(p.caption));
     if (flagged.length === 0) return;
