@@ -39,7 +39,7 @@ export type ListPage = { kicker: string; headline: string; intro: string; items:
 export type MagazinePostCopy = {
   cover: { kicker: string; title: string; tagline: string };
   pages: [FactPage, ListPage, ListPage];
-  cta: { lead: string; word: string; line: string };
+  cta: { lead: string; word: string; line: string; dm?: boolean };
   caption: string;
 };
 
@@ -527,7 +527,7 @@ export function drawCommentPage(brand: MagazineBrand & { qrUrl?: string }, copy:
   ctx.font = `700 34px ${SANS}`;
   (ctx as any).letterSpacing = "10px";
   ctx.textAlign = "center";
-  ctx.fillText("COMMENT", PAGE_W / 2 + 5, commentY + 30);
+  ctx.fillText(copy.dm ? "SEND ME A" : "COMMENT", PAGE_W / 2 + 5, commentY + 30);
   (ctx as any).letterSpacing = "0px";
 
   // the reply word in a big pill

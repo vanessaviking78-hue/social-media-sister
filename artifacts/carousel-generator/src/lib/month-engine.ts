@@ -9,6 +9,10 @@ import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, NOVEMBER_PALETTE_LA
 import { DEFAULT_PALETTES, DESIGNS as XMAS_DESIGNS, DESIGN_BY_ID as XMAS_BY_ID, drawXmas, resolveText as resolveXmasText } from "./xmas-designs";
 import { LUX_SLIDE_DEFS, LUX_PALETTE, LUX_LABELS, LUX_COVERS, LUX_SLIDES, luxDefaults, resolveLuxText, drawLux, drawLuxPhotoSlide } from "./lux-designs";
 import { EMPOWER, EMPOWER_BY_ID, resolveEmpowerText, drawEmpower } from "./empower-designs";
+import { MENS_SETS } from "./mens-sets";
+import { drawAllPostPages, MIN_PHOTOS, type MagazinePostCopy } from "./magazine-post-pages";
+import { setMagazineFonts, setMagazineSize, PAGE_W as MAG_W, PAGE_H as MAG_H } from "./magazine-pages";
+import { setFlipHandoff } from "./flip-handoff";
 import type { Fill, Focus, Slot } from "./basic-covers";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -17,7 +21,7 @@ export const H = 1350;
 export const DEFAULT_FOCUS: Focus = [0.5, 0.32];
 
 export type PoolPhoto = { id: string; file: File; url: string };
-export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower";
+export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower" | "mens" | "magazine";
 
 export type Client = {
   businessName: string;
@@ -61,17 +65,19 @@ export type MPost = {
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
-  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower",
+  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower", mens: "Men", magazine: "Magazine",
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",");
 
+const MENS_BY_ID: Record<string, (typeof MENS_SETS)[number]> = Object.fromEntries(MENS_SETS.map((m) => [m.id, m]));
+
 // How many images each kind of post makes, and how many photos it takes.
 export const slideCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : 1;
+  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "mens" ? (MENS_BY_ID[design]?.slides ?? 8) : 1;
 export const photoCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
+  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "mens" ? 0 : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
 
 // ---------------------------------------------------------------------------
 // Photos and fonts
@@ -140,6 +146,12 @@ export function makePost(tool: ToolId, design: string, n: number, when: string, 
   } else if (tool === "empower") {
     text = { ...EMPOWER_BY_ID[design].defaults };
     photos = [take(0)];
+  } else if (tool === "mens") {
+    text = {};
+    photos = [];
+  } else if (tool === "magazine") {
+    text = { copy: "" };
+    photos = Array.from({ length: MIN_PHOTOS }, (_, k) => take(k));
   } else {
     text = { ...XMAS_BY_ID[design as keyof typeof XMAS_BY_ID].defaults };
     photos = [take(0)];
@@ -158,6 +170,8 @@ export const designName = (p: MPost): string =>
     : p.tool === "november" ? NOVEMBER_BY_ID[p.design as keyof typeof NOVEMBER_BY_ID].name
     : p.tool === "lux" ? LUX_SLIDE_DEFS[Number(p.design)].name
     : p.tool === "empower" ? EMPOWER_BY_ID[p.design].name
+    : p.tool === "mens" ? (MENS_BY_ID[p.design]?.name ?? "Men")
+    : p.tool === "magazine" ? (p.design === "reel" ? "Magazine reel (9:16)" : "Magazine post (3:4)")
     : XMAS_BY_ID[p.design as keyof typeof XMAS_BY_ID].name;
 
 // The designs each tool can offer, in the order they rotate. Black Friday style posts are never included.
@@ -169,6 +183,8 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "november" ? NOVEMBER_DESIGNS.map((d) => d.id)
     : tool === "lux" ? Array.from({ length: LUX_COVERS }, (_, i) => String(i))
     : tool === "empower" ? EMPOWER.map((d) => d.id)
+    : tool === "mens" ? MENS_SETS.map((m) => m.id)
+    : tool === "magazine" ? ["post", "reel"]
     : XMAS_DESIGNS.filter((d) => d.group === (group ?? "xmas")).map((d) => d.id);
 
 // ---------------------------------------------------------------------------
@@ -198,6 +214,7 @@ export function brandPalette(tool: ToolId, brand: { main: string; accent: string
   const base = { paper: tint, red: accent, green: dark, tag: mixHex(accent, "#ffffff", 0.6), frame: mixHex(main, "#ffffff", 0.95), light: mixHex(main, "#ffffff", 0.94), ink: mixHex(dark, "#000000", 0.5) };
   if (tool === "treatments") return { navy: dark, coral: accent, lime: mixHex(accent, "#ffffff", 0.5), cream: tint };
   if (tool === "lux" || tool === "empower") return { page: tint, dark, accent, soft: mixHex(main, "#ffffff", 0.8), ink: mixHex(dark, "#000000", 0.5), light: mixHex(main, "#ffffff", 0.94) };
+  if (tool === "mens" || tool === "magazine") return {};
   if (tool === "basic") return { bg: dark };
   if (tool === "halloween") return { ...base, paper: mixHex(main, "#000000", 0.86), green: mixHex(main, "#000000", 0.74), tag: mixHex(main, "#ffffff", 0.8), frame: mixHex(main, "#ffffff", 0.88), ink: mixHex(main, "#000000", 0.88) };
   return base;
@@ -212,6 +229,7 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
   else if (post.tool === "lux") { base = { ...LUX_PALETTE }; labels = LUX_LABELS; }
   else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; base = { ...d.palette }; labels = d.labels; }
+  else if (post.tool === "mens" || post.tool === "magazine") { base = {}; labels = []; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
@@ -219,12 +237,83 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
 const palOf = <T,>(post: MPost, brand?: Client["brand"]): T => Object.fromEntries(colourFields(post, brand).map((f) => [f.key, f.value])) as T;
 
 // Draws slide n (0 is the cover) of a post onto the canvas at the given scale.
+// The men's slides are finished pictures kept in public/mens, so they are drawn as they are.
+const mensImages = new Map<string, Promise<HTMLImageElement | null>>();
+function mensImage(url: string): Promise<HTMLImageElement | null> {
+  let got = mensImages.get(url);
+  if (!got) {
+    got = new Promise((resolve) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = () => resolve(null); im.src = url; });
+    mensImages.set(url, got);
+  }
+  return got;
+}
+async function renderMens(post: MPost, n: number, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+  const set = MENS_BY_ID[post.design];
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, W, H);
+  const im = set ? await mensImage(`${BASE}/mens/${set.folder}/slide-${n + 1}.png`) : null;
+  if (im) ctx.drawImage(im, 0, 0, W, H);
+  else {
+    ctx.fillStyle = "#ffffff"; ctx.font = "600 44px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Men's slide not found", W / 2, H / 2);
+  }
+  return [];
+}
+
+// Magazine Post pages are made in one go (five pages from one set of words), so the last set is kept while the thumbnails draw.
+let magCache: { key: string; pages: HTMLCanvasElement[] } | null = null;
+export const emptyMagCopy = (): MagazinePostCopy => ({ cover: { kicker: "", title: "", tagline: "" }, pages: [{ kicker: "", headline: "", intro: "", facts: [{ label: "", text: "" }, { label: "", text: "" }, { label: "", text: "" }] }, { kicker: "", headline: "This is for you if...", intro: "", items: ["", "", "", "", ""] }, { kicker: "", headline: "Helps most with...", intro: "", items: ["", "", "", "", ""] }], cta: { lead: "Is this for you?", word: "DM", line: "", dm: true }, caption: "" });
+export function magazineCopyOf(post: MPost): MagazinePostCopy {
+  try { if (post.text.copy) return JSON.parse(post.text.copy) as MagazinePostCopy; } catch { /* fall through */ }
+  const e = emptyMagCopy();
+  e.cover.title = post.topic?.trim() ?? "";
+  return e;
+}
+async function magazinePages(post: MPost, c: Client): Promise<HTMLCanvasElement[]> {
+  const mainCol = c.brand?.main ?? "#14195c";
+  const accent = c.brand?.accent ?? "#c8553d";
+  const copy = magazineCopyOf(post);
+  const key = JSON.stringify([post.id, post.design, post.text.copy, post.topic, post.photos, mainCol, accent, c.headFont, c.bodyFont, c.businessName, c.pool.length]);
+  if (magCache?.key === key) return magCache.pages;
+  const photos: (CanvasImageSource | null)[] = [];
+  for (let k = 0; k < MIN_PHOTOS; k++) photos.push(await bmp(c, post.photos[k]));
+  const d = new Date(post.when);
+  const issue = d.toLocaleString("en-GB", { month: "long", year: "numeric" });
+  setMagazineFonts(c.headFont, c.bodyFont);
+  setMagazineSize(post.design === "reel" ? "reel" : "post");
+  let pages: HTMLCanvasElement[] = [];
+  try {
+    pages = drawAllPostPages({ clinicName: c.businessName || "Your clinic", colour: mainCol, accent, ctaButton: "", contact: "", issue, qrUrl: "" } as never,
+      { ...copy, cover: { ...copy.cover, title: copy.cover.title || post.topic?.trim() || "" } }, photos);
+  } finally { setMagazineSize("post"); setMagazineFonts(); }
+  magCache = { key, pages };
+  return pages;
+}
+async function renderMagazine(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+  const pages = await magazinePages(post, c);
+  const src = pages[Math.min(n, pages.length - 1)];
+  canvas.width = Math.round(src.width * scale);
+  canvas.height = Math.round(src.height * scale);
+  canvas.getContext("2d")!.drawImage(src, 0, 0, canvas.width, canvas.height);
+  return [];
+}
+
+// Reels go through Magazine Flip, which turns the pages into a video.
+export async function sendToFlip(post: MPost, c: Client): Promise<void> {
+  const cs = await renderPostImages(post, c, 1);
+  await setFlipHandoff({ canvases: cs, clientName: c.businessName, caption: post.caption, title: `${designName(post)} · ${c.businessName}`, size: post.design === "reel" ? "reel" : "post" });
+  window.open(`${BASE}/magazine`, "_blank");
+}
+
 export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
   const ctx = canvas.getContext("2d")!;
   canvas.width = Math.round(W * scale);
   canvas.height = Math.round(H * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const last = n === slideCount(post.tool, post.design) - 1;
+  if (post.tool === "mens") return renderMens(post, n, canvas, scale);
+  if (post.tool === "magazine") return renderMagazine(post, n, c, canvas, scale);
   const logo = c.logoPos === "off" ? null : c.logo;
   const corner = c.logoPos && c.logoPos !== "auto" && c.logoPos !== "off" ? c.logoPos : undefined;
 
@@ -331,6 +420,7 @@ export async function renderPostImages(post: MPost, c: Client, scale = 1): Promi
 // ---------------------------------------------------------------------------
 
 const onImageText = (post: MPost, c: Client): string => {
+  if (post.tool === "mens" || post.tool === "magazine") return "";
   if (post.tool === "lux") { const r = resolveLuxText(Number(post.design), post.text, c.fill); return [r.head, r.sub].filter(Boolean).join(" / "); }
   if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; const r = resolveEmpowerText(d, post.text, c.fill); return d.fields.map((f) => r[f.key]).filter(Boolean).join("\n"); }
   const rows = (fields: { key: string }[], r: Record<string, string>) => fields.map((f) => r[f.key]).filter(Boolean).join("\n");
@@ -412,7 +502,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   const academy = isAcademyClient(c);
   // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
   let coverText: Record<string, string> | null = null;
-  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower") {
+  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower" && post.tool !== "mens" && post.tool !== "magazine") {
     const fresh = await academyCover(post, c);
     if (Object.keys(fresh).length) { coverText = { ...post.text, ...fresh }; post = { ...post, text: coverText }; }
   }
@@ -433,6 +523,16 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
     data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
+  } else if (post.tool === "mens") {
+    const set = MENS_BY_ID[post.design];
+    data = await postJson("/api/mens/copy", { ...base, topic: [set?.topic ?? "", post.topic?.trim() ?? ""].filter(Boolean).join(". "), slides: set?.summary ?? "" });
+  } else if (post.tool === "magazine") {
+    const treatment = post.topic?.trim() ?? "";
+    if (!treatment) throw new Error("Add the treatment for the Magazine post in the plan first");
+    data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: "DM", style: "4" });
+    const copy: MagazinePostCopy = { ...(data as unknown as MagazinePostCopy), cta: { lead: "Is this for you?", word: "DM", line: "Drop me a DM to see if you're a good fit for this", dm: true } };
+    copy.caption = noDashes(copy.caption ?? "");
+    return { text: { ...post.text, copy: JSON.stringify(copy) }, slides: [], cta: "", caption: copy.caption + (c.footnote && !copy.caption.includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: [] };
   } else if (post.tool === "lux") {
     data = await postJson("/api/lux/copy", { ...base, theme: post.topic?.trim() ?? "", fresh: false, onImage: onImageText(post, c) });
     slides = [data.slide2, data.slide3];
@@ -477,6 +577,7 @@ export async function uploadPngs(dataUrls: string[], names: string[]): Promise<s
 }
 
 export async function schedulePost(post: MPost, c: Client, presetId: number): Promise<void> {
+  if (post.tool === "magazine" && post.design === "reel") throw new Error("A Magazine reel is made into a video in Magazine Flip. Press Open in Magazine Flip on that post, then untick it here");
   const cs = await renderPostImages(post, c, 1);
   const urls = await uploadPngs(cs.map((x) => x.toDataURL("image/png")), cs.map((_, i) => `month-${post.tool}-${post.design}-${i + 1}-${Date.now()}.png`));
   const body = {

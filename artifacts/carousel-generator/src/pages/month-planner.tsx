@@ -17,7 +17,7 @@ import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import {
-  TOOL_LABEL, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  TOOL_LABEL, sendToFlip, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
 } from "@/lib/month-engine";
 
@@ -129,17 +129,17 @@ const USED_DESIGNS_KEY = "month-designs-used-v1";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // "seasonal" is whichever pack fits the month (Halloween, November, Christmas, New Year), or Unique when there is none.
-type Choice = "treatments" | "empower" | "lux" | "unique" | "basic" | "seasonal";
+type Choice = "magazine" | "treatments" | "empower" | "lux" | "mens" | "unique" | "basic" | "seasonal";
 type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string };
 
 const CHOICE_LABEL: Record<Choice, string> = {
-  treatments: "Treatment", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
+  magazine: "Treatment magazine post", treatments: "Treatment", mens: "Men", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
 };
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
 
 // Monday is a treatment, Wednesday is the relatable and fun one, Friday is BASIC, Tuesday is the seasonal pack, Thursday is Unique.
-const DEFAULT_CHOICE: Record<number, Choice> = { 1: "treatments", 2: "seasonal", 3: "empower", 4: "unique", 5: "basic", 6: "unique", 0: "unique" };
+const DEFAULT_CHOICE: Record<number, Choice> = { 1: "magazine", 2: "seasonal", 3: "empower", 4: "unique", 5: "basic", 6: "unique", 0: "unique" };
 
 // Every day she could still post on in that month. The current month starts from now.
 function monthDays(year: number, month: number, hhmm: string): Date[] {
@@ -190,6 +190,7 @@ function buildFromSlots(slots: PlanSlot[], month: number, seed: number, hhmm: st
   return ticked.map((slot, i) => {
     const { tool, group } = toolFor(slot.choice, month);
     let design = slot.design;
+    if (design === "auto" && tool === "magazine") design = "post";
     if (design === "auto") {
       const list = designsFor(tool, group);
       const fresh = list.filter((id) => !taken.has(`${tool}:${id}`) && !usedBefore.includes(`${tool}:${id}`));
@@ -204,13 +205,13 @@ function buildFromSlots(slots: PlanSlot[], month: number, seed: number, hhmm: st
     post.topic = slot.topic.trim();
     cursor += photoCount(tool, design);
     post.scheduled = done.includes(slot.key);
-    post.selected = !post.scheduled;
+    post.selected = !post.scheduled && !(tool === "magazine" && design === "reel");
     return { kind: "post" as const, post };
   });
 }
 
 const photoIdxFor = (p: MPost, n: number): number =>
-  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" || p.tool === "lux" ? n : 0;
+  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" || p.tool === "lux" || p.tool === "magazine" ? n : 0;
 
 const SW = 1080, SH = 1350;
 const PROSPECT = "prospect";
@@ -826,8 +827,8 @@ export default function MonthPlanner() {
                       value={slot.topic}
                       disabled={!slot.on}
                       onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
-                      list={slot.choice === "treatments" && siteTreatments.length ? "month-site-treatments" : undefined}
-                      placeholder={slot.choice === "treatments" ? "Treatment or topic (optional)" : "Your own topic (optional)"}
+                      list={(slot.choice === "treatments" || slot.choice === "magazine") && siteTreatments.length ? "month-site-treatments" : undefined}
+                      placeholder={slot.choice === "magazine" ? "Treatment (needed)" : slot.choice === "treatments" ? "Treatment or topic (optional)" : "Your own topic (optional)"}
                       className="h-9"
                     />
                   </div>
@@ -905,7 +906,12 @@ export default function MonthPlanner() {
                   <span className="text-sm text-muted-foreground">{designName(p)}</span>
                   {p.scheduled && <span className="text-xs text-emerald-400">Scheduled</span>}
                   {!p.scheduled && new Date(p.when).getTime() <= Date.now() && <span className="text-xs text-amber-400">This date has passed</span>}
-                  <Button size="sm" variant="outline" className="ml-auto" disabled={p.busy || !!busy} onClick={() => rewrite(p)}>
+                  {p.tool === "magazine" && p.design === "reel" && (
+                    <Button size="sm" variant="outline" className="ml-auto" disabled={!p.caption.trim()} onClick={() => void sendToFlip(p, client)}>
+                      <ExternalLink className="w-4 h-4 mr-1.5" /> Open in Magazine Flip
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" className={p.tool === "magazine" && p.design === "reel" ? "" : "ml-auto"} disabled={p.busy || !!busy} onClick={() => rewrite(p)}>
                     {p.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />} Rewrite words
                   </Button>
                 </div>
