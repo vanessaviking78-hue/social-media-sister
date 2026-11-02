@@ -81,8 +81,8 @@ export const TOOL_LABEL: Record<ToolId, string> = {
 export const uid = () => Math.random().toString(36).slice(2, 10);
 const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",");
 
-// Stylish cover options 1 to 3, each with the editorial or the classic look on the photo slides.
-export const STYLISH_COVERS = ["band", "centred", "block"];
+// Stylish cover options, each with the editorial or the classic look on the photo slides. The block cover is left out.
+export const STYLISH_COVERS = ["band", "centred", "split", "plain", "paper", "dimmed", "stacked", "collage"];
 
 const MENS_BY_ID: Record<string, (typeof MENS_SETS)[number]> = Object.fromEntries(MENS_SETS.map((m) => [m.id, m]));
 
