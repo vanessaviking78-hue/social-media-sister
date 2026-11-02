@@ -134,7 +134,7 @@ function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "
 }
 
 function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
-  const { ink: INKCC, grey: GREYCC, bg: BGC } = inks(look);
+  const { ink: INKC, grey: GREYC, bg: BGC } = inks(look);
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
