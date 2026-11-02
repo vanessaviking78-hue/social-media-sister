@@ -150,22 +150,7 @@ export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, phot
   ctx.fillStyle = bottom;
   ctx.fillRect(0, gStart, PAGE_W, PAGE_H - gStart);
 
-  block(ctx, brand.clinicName || "Your clinic", {
-    x: PAGE_W / 2,
-    y: 70,
-    maxW: PAGE_W - 140,
-    maxLines: 1,
-    size: 100,
-    minSize: 48,
-    family: SERIF,
-    weight: "bold",
-    colour: "#ffffff",
-    align: "center",
-    upper: true,
-    tracking: 4,
-  });
-  ctx.fillStyle = brand.accent;
-  ctx.fillRect(PAGE_W / 2 - 60, 200, 120, 5);
+  // The clinic name used to sit at the top of the cover, with a short line under it. It is left off now.
 
   if (plan.cover[1] !== undefined) {
     const insetW = 280;
