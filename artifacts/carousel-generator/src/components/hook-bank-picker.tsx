@@ -117,7 +117,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
 
       {(open || inline) && (
         <div className="space-y-3 rounded-md border border-border/40 p-3">
-          <div className="space-y-1.5">
+          {!(inline && single) && (<div className="space-y-1.5">
             <Label htmlFor={`hook-start-${uid}`} className="text-xs font-medium">When will this pack be posted?</Label>
             <select
               id={`hook-start-${uid}`}
@@ -134,7 +134,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
             <p className="text-xs text-muted-foreground">
               Four weeks from that Monday. Seasonal hooks that do not fit these dates are greyed out so they cannot end up in the wrong month.
             </p>
-          </div>
+          </div>)}
 
           <div className="flex flex-wrap items-center gap-1.5">
             {[...(dayRows.length > 1 ? ["All"] : []), ...dayRows.map(d => d.day)].map(d => (
@@ -219,7 +219,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                       {items.map(h => {
                         const on = picked.includes(h.code);
                         const isUsed = used.includes(h.code);
-                        const t = hookTiming(h, start);
+                        const t = hookTiming(h, start, inline && single ? 1 : undefined);
                         const full = !single && !on && pickedHere >= d.cap;
                         const disabled = !on && (!t.ok || full || (maxTotal !== undefined && picked.length >= maxTotal));
                         return (

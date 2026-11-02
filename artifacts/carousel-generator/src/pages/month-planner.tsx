@@ -136,7 +136,7 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // "seasonal" is whichever pack fits the month (Halloween, November, Christmas, New Year), or Unique when there is none.
 type Choice = "stylish" | "bulk" | "xmas" | "tweet" | "magazine" | "treatments" | "empower" | "lux" | "mens" | "unique" | "basic" | "seasonal";
-type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string };
+type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string; hook?: string };
 
 const CHOICE_LABEL: Record<Choice, string> = {
   stylish: "Stylish (editorial)", bulk: "Bulk Carousel", xmas: "Christmas carousel", tweet: "Tweet Maker", magazine: "Treatment magazine post", treatments: "Treatment", mens: "Men", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
@@ -385,6 +385,7 @@ export default function MonthPlanner() {
   const [role, setRole] = useState("Owner");
   const [area, setArea] = useState("");
   const [hookModal, setHookModal] = useState(false);
+  const [hookRow, setHookRow] = useState<string | null>(null); // the day whose hook is being chosen
   const [approvedPool, setPool] = useState<PoolPhoto[]>([]);
   const [extras, setExtras] = useState<PoolPhoto[]>([]);
   const pool = useMemo(() => [...approvedPool, ...extras], [approvedPool, extras]);
@@ -615,6 +616,18 @@ export default function MonthPlanner() {
     }
   };
 
+  // The hooks ticked in the big window go onto the ticked days in order: treatment hooks on treatment days, the rest on the others.
+  const assignPicked = () => {
+    const isTreatHook = (code: string) => { const h = HOOKS.find((x) => x.code === code); return !!h && (h.day === "Monday" || /\[treatment\]/i.test(h.text)); };
+    const treat = hookPick.filter(isTreatHook), other = hookPick.filter((c) => !isTreatHook(c));
+    setSlots((l) => l.map((sl) => {
+      if (!sl.on) return sl;
+      const wantT = sl.choice === "magazine" || sl.choice === "treatments";
+      const code = wantT ? treat.shift() ?? other.shift() : other.shift() ?? treat.shift();
+      return code ? { ...sl, hook: code } : sl;
+    }));
+    setHookModal(false);
+  };
   const create = async () => {
     if (!preset) { toast.error("Choose a client first"); return; }
     if (!owner.trim() || !area.trim()) { toast.error("Add the owner's first name and the area first, so no placeholder goes out."); return; }
@@ -627,17 +640,14 @@ export default function MonthPlanner() {
       ? buildPlan(year, month, 1 + Math.floor(Math.random() * 40), hhmm, pool.length, doneList().filter((x): x is number => typeof x === "number"))
       : buildFromSlots(slots, month, preset.id, hhmm, pool.length, doneList(), readUsed(preset.id));
     // Hooks she picked go on the ticked days in order. Treatment hooks go to the treatment days, the rest to the other days.
-    if (!isProspect && hookPick.length) {
-      const codes = hookPick.filter((c) => HOOKS.some((h) => h.code === c));
-      const topics = slots.filter((s) => s.on && (s.choice === "magazine" || s.choice === "treatments") && s.topic.trim()).map((s) => s.topic.trim());
-      const left = pickedHookPayload(hookPick, topics, area).map((h, i) => ({ ...h, code: codes[i] }));
-      plan = plan.map((it) => {
-        if (it.kind !== "post" || !left.length) return it;
-        const wantT = it.post.tool === "magazine" || it.post.tool === "treatments";
-        let k = left.findIndex((h) => h.kind === (wantT ? "treatment" : "other"));
-        if (k < 0) k = 0;
-        const h = left.splice(k, 1)[0];
-        return { kind: "post" as const, post: { ...it.post, hook: h.text, hookCode: h.code } };
+    // The hook chosen for each day goes on that day.
+    if (!isProspect) {
+      const ticked = slots.filter((sl) => sl.on);
+      plan = plan.map((it, i) => {
+        const code = ticked[i]?.hook;
+        if (it.kind !== "post" || !code || !HOOKS.some((h) => h.code === code)) return it;
+        const h = pickedHookPayload([code], ticked[i].topic.trim(), area)[0];
+        return h ? { kind: "post" as const, post: { ...it.post, hook: h.text, hookCode: code } } : it;
       });
     }
     if (isProspect) {
@@ -871,8 +881,7 @@ export default function MonthPlanner() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Tick the days you are posting on, choose a tool for each one, then a topic from the list or type your own. Leave the list on "I choose a fresh one" and I pick a design this client has not had before.
-              A topic you type steers the words and the caption. The cover wording comes from the design, and you can change it on the post once it is made.
+              Tick the days you are posting on, choose a template for each one, then click the hook box to choose that day's slide 1 hook. Treatment posts also need the treatment. Everything else is optional.
             </p>
             <p className="text-xs text-muted-foreground">
               {!voice ? "Checking what this client has told me…"
@@ -889,7 +898,7 @@ export default function MonthPlanner() {
                 const { tool, group } = toolFor(slot.choice, month);
                 const weekend = date.getDay() === 0 || date.getDay() === 6;
                 return (
-                  <div key={slot.key} className={`grid items-center gap-2 py-2 sm:grid-cols-[130px_190px_minmax(0,1fr)_minmax(0,1fr)] ${slot.on ? "" : "opacity-50"}`}>
+                  <div key={slot.key} className={`grid items-center gap-2 py-2 sm:grid-cols-[130px_210px_minmax(0,1fr)] ${slot.on ? "" : "opacity-50"}`}>
                     <label className="flex items-center gap-2 text-sm">
                       <input type="checkbox" checked={slot.on} onChange={(e) => toggleSlot(slot.key, e.target.checked)} className="h-4 w-4 accent-violet-500" />
                       <span className={weekend ? "text-muted-foreground" : "font-medium"}>{DAY_NAMES[date.getDay()]} {d}</span>
@@ -905,38 +914,64 @@ export default function MonthPlanner() {
                         .filter((c) => (c !== "seasonal" || !!SEASONAL[month]) && (c !== "xmas" || month >= 10 || month === 0))
                         .map((c) => <option key={c} value={c}>{c === "seasonal" ? SEASONAL[month]?.name ?? "Seasonal" : CHOICE_LABEL[c]}</option>)}
                     </select>
-                    <select
-                      value={slot.design}
-                      disabled={!slot.on}
-                      onChange={(e) => patchSlot(slot.key, { design: e.target.value })}
-                      className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
-                      aria-label={`Design for ${slot.key}`}
-                    >
-                      <option value="auto">I choose a fresh one</option>
-                      {designsFor(tool, group).map((id) => <option key={id} value={id}>{designLabel(tool, id)}</option>)}
-                    </select>
                     <div className="space-y-1.5">
-                    <div className="flex gap-1.5">
-                      <Input
-                        value={slot.topic}
-                        disabled={!slot.on}
-                        onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
-                        list="month-site-treatments"
-                        placeholder={slot.choice === "magazine" ? "Treatment (needed)" : slot.choice === "treatments" ? "Treatment or topic (optional)" : "Your own topic (optional)"}
-                        className="h-9 min-w-0 flex-1"
-                      />
-                      <select
-                        value=""
-                        disabled={!slot.on}
-                        onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }}
-                        className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm"
-                        aria-label={`Pick a treatment for ${slot.key}`}
-                        title="Pick from every treatment"
+                      <button
+                        type="button"
+                        disabled={!slot.on || !preset}
+                        onClick={() => setHookRow(slot.key)}
+                        className="flex w-full items-center justify-between gap-2 rounded-md border border-border/40 bg-background px-3 py-1.5 text-left text-sm hover:border-border/70"
+                        title="Choose this day's slide 1 hook"
                       >
-                        <option value="">Treatments</option>
-                        {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    </div>
+                        <span className={`min-w-0 flex-1 truncate ${slot.hook ? "" : "text-muted-foreground"}`}>
+                          {slot.hook ? (pickedHookPayload([slot.hook], slot.topic.trim(), area)[0]?.text ?? "Choose a hook") : "Choose a hook"}
+                        </span>
+                        {slot.hook && <span role="button" tabIndex={0} className="shrink-0 text-xs text-muted-foreground underline" onClick={(e) => { e.stopPropagation(); patchSlot(slot.key, { hook: undefined }); }}>clear</span>}
+                      </button>
+                      {slot.on && (slot.choice === "magazine" || slot.choice === "treatments") && (
+                        <div className="flex gap-1.5">
+                          <Input
+                            value={slot.topic}
+                            onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
+                            list="month-site-treatments"
+                            placeholder={slot.choice === "magazine" ? "Treatment (needed)" : "Treatment"}
+                            className="h-9 min-w-0 flex-1"
+                          />
+                          <select
+                            value=""
+                            onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }}
+                            className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm"
+                            aria-label={`Pick a treatment for ${slot.key}`}
+                          >
+                            <option value="">Treatments</option>
+                            {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {slot.on && (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer select-none">More choices (design, topic)</summary>
+                          <div className="mt-1.5 space-y-1.5">
+                            <select
+                              value={slot.design}
+                              onChange={(e) => patchSlot(slot.key, { design: e.target.value })}
+                              className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
+                              aria-label={`Design for ${slot.key}`}
+                            >
+                              <option value="auto">I choose a fresh design</option>
+                              {designsFor(tool, group).map((id) => <option key={id} value={id}>{designLabel(tool, id)}</option>)}
+                            </select>
+                            {!(slot.choice === "magazine" || slot.choice === "treatments") && (
+                              <div className="flex gap-1.5">
+                                <Input value={slot.topic} onChange={(e) => patchSlot(slot.key, { topic: e.target.value })} list="month-site-treatments" placeholder="Your own topic or treatment (optional)" className="h-9 min-w-0 flex-1" />
+                                <select value="" onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }} className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm" aria-label={`Pick a treatment for ${slot.key}`}>
+                                  <option value="">Treatments</option>
+                                  {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </details>
+                      )}
                     </div>
                   </div>
                 );
@@ -946,6 +981,14 @@ export default function MonthPlanner() {
               <Button type="button" variant="outline" onClick={() => setHookModal(true)} disabled={!preset}>
                 Choose this month's hooks ({hookPick.length} of {tickedCount || MAX_POSTS} picked)
               </Button>
+              <Dialog open={hookRow !== null} onOpenChange={(o) => { if (!o) setHookRow(null); }}>
+                <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Choose the hook for {hookRow ? (() => { const [y, m, d] = hookRow.split("-").map(Number); const dt = new Date(y, m - 1, d); return `${DAY_NAMES[dt.getDay()]} ${d}`; })() : ""}</DialogTitle>
+                  </DialogHeader>
+                  <HookBankPicker inline single client={preset?.name ?? ""} picked={hookRow ? (slots.find((x) => x.key === hookRow)?.hook ? [slots.find((x) => x.key === hookRow)!.hook!] : []) : []} onChange={(codes) => { if (hookRow) patchSlot(hookRow, { hook: codes[0] }); if (codes.length) setHookRow(null); }} startDate={hookRow ?? hookStart} onStartDate={() => {}} />
+                </DialogContent>
+              </Dialog>
               <Dialog open={hookModal} onOpenChange={setHookModal}>
                 <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
                   <DialogHeader>
@@ -953,8 +996,8 @@ export default function MonthPlanner() {
                   </DialogHeader>
                   <HookBankPicker inline client={preset?.name ?? ""} maxPer={MAX_POSTS} maxTotal={tickedCount || MAX_POSTS} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
                   <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border/40 bg-background pt-3">
-                    <span className="text-sm text-muted-foreground">Hooks go on the ticked days in the order you tick them. Treatment hooks go to the treatment days.</span>
-                    <Button type="button" onClick={() => setHookModal(false)}>Done</Button>
+                    <span className="text-sm text-muted-foreground">They go on the ticked days in the order you tick them, treatment hooks on the treatment days. You can still change any day's hook afterwards.</span>
+                    <Button type="button" onClick={assignPicked}>Put them on the days</Button>
                   </div>
                 </DialogContent>
               </Dialog>
