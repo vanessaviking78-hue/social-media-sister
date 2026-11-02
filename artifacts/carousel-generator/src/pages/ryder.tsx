@@ -19,6 +19,15 @@ const W = 1080;
 const H = 1350;
 const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
+const LOOK_KEY = "ryder-look-v1";
+
+// How the wash and the writing look. Wash is white or black with an opacity slider; writing is auto, black or white.
+type Look = { wash: "white" | "black"; opacity: number; text: "auto" | "black" | "white" };
+const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto" };
+function inks(look: Look) {
+  const light = look.text === "white" || (look.text === "auto" && look.wash === "black");
+  return { ink: light ? "#ffffff" : INK, grey: light ? "#cfcfcf" : GREY, bg: look.wash === "black" ? "#0d0d0d" : "#ffffff" };
+}
 const FONT_KEY = "ryder-fonts-v2";
 const AREA_KEY = "ryder-area-v1";
 const SCHED_KEY = "ryder-scheduled-v1";
@@ -102,19 +111,21 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
 }
 
 // The white wash: clear at the top, solid white by the bottom third.
-function wash(ctx: CanvasRenderingContext2D, from: number) {
+function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
+  const o = Math.max(0, Math.min(100, look.opacity)) / 100;
+  const c = look.wash === "black" ? "13,13,13" : "255,255,255";
   const g = ctx.createLinearGradient(0, H * from, 0, H);
-  g.addColorStop(0, "rgba(255,255,255,0)");
-  g.addColorStop(0.45, "rgba(255,255,255,0.88)");
-  g.addColorStop(0.7, "rgba(255,255,255,0.98)");
-  g.addColorStop(1, "rgba(255,255,255,1)");
+  g.addColorStop(0, `rgba(${c},0)`);
+  g.addColorStop(0.45, `rgba(${c},${0.88 * o})`);
+  g.addColorStop(0.7, `rgba(${c},${0.98 * o})`);
+  g.addColorStop(1, `rgba(${c},${o})`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 }
 
-function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center") {
+function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center", color = GREY) {
   ctx.save();
-  ctx.fillStyle = GREY;
+  ctx.fillStyle = color;
   ctx.font = `600 22px "${f.body}", sans-serif`;
   spaced(ctx, 6);
   ctx.textAlign = align;
@@ -122,7 +133,8 @@ function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "
   ctx.restore();
 }
 
-function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null) {
+function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
+  const { ink: INKCC, grey: GREYCC, bg: BGC } = inks(look);
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
@@ -130,18 +142,18 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
 
   const LEFT = 100;
   if (n === 4) {
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = BGC;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = INK;
+    ctx.fillStyle = INKC;
     ctx.textAlign = "left";
     const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520, 84, 44, 1.2);
     const total = fit.lines.length * fit.px * 1.2;
     let y = (H - total) / 2 - 30;
     ctx.font = head(fit.px);
     for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.2; }
-    ctx.strokeStyle = INK; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = INKC; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(LEFT, y + 40); ctx.lineTo(LEFT + 120, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
-    clinicName(ctx, f, H - 120, "left");
+    clinicName(ctx, f, H - 120, "left", GREYC);
     return;
   }
 
@@ -149,7 +161,7 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
-    wash(ctx, 0.52);
+    wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
       let size = 120;
@@ -158,9 +170,9 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
-      drawTitle(ctx, tf.lf, layout, tf.style, 100, H - 175 - titleHeight(layout), "center", W - 200, INK);
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, H - 175 - titleHeight(layout), "center", W - 200, INKC);
     } else {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = INKC;
       ctx.textAlign = "center";
       const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330, 92, 46, 1.1);
       const total = fit.lines.length * fit.px * 1.1;
@@ -168,25 +180,25 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
     }
-    clinicName(ctx, f, H - 100);
+    clinicName(ctx, f, H - 100, "center", GREYC);
     return;
   }
 
-  wash(ctx, 0.3);
+  wash(ctx, 0.3, look);
   const text = post.slides[n - 1] || "";
-  ctx.fillStyle = INK;
+  ctx.fillStyle = INKC;
   ctx.textAlign = "left";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520, 40, 26, 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = H - 170 - total;
   ctx.font = body(fit.px);
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
-  ctx.fillStyle = GREY;
+  ctx.fillStyle = GREYC;
   ctx.font = body(22, 600);
   ctx.fillText(`${n + 1} / 5`, LEFT, H - 100);
 }
 
-function SlideCanvas({ post, n, photo, fonts, tf, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, fonts, tf, look, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; onClick?: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let live = true;
@@ -195,10 +207,10 @@ function SlideCanvas({ post, n, photo, fonts, tf, onClick }: { post: Post; n: nu
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
-      if (ctx) drawSlide(ctx, post, n, photo, fonts, tf);
+      if (ctx) drawSlide(ctx, post, n, photo, fonts, tf, look);
     })();
     return () => { live = false; };
-  }, [post, n, photo, fonts, tf]);
+  }, [post, n, photo, fonts, tf, look]);
   return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
@@ -220,6 +232,8 @@ export default function RyderPage() {
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "SuiteMofllig", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
+  const [look, setLook] = useState<Look>(() => { try { const r = localStorage.getItem(LOOK_KEY); if (r) return { ...DEFAULT_LOOK, ...JSON.parse(r) }; } catch { /* ignore */ } return DEFAULT_LOOK; });
+  useEffect(() => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* ignore */ } }, [look]);
   // the title look is saved in Font Lab; pick it up now and whenever she comes back to this tab
   useEffect(() => {
     let live = true;
@@ -322,7 +336,7 @@ export default function RyderPage() {
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
-      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow);
+      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, look);
       out.push(c);
     }
     return out;
@@ -395,6 +409,28 @@ export default function RyderPage() {
             <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Bedford" /></label>
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it.</p>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <div className="space-y-1">
+              <span className="text-white/60">Gradient colour</span>
+              <div className="flex gap-2">
+                {(["white", "black"] as const).map((c) => (
+                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-3 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
+                ))}
+              </div>
+            </div>
+            <label className="space-y-1 block">
+              <span className="text-white/60">Gradient strength: {look.opacity}%</span>
+              <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
+            </label>
+            <div className="space-y-1">
+              <span className="text-white/60">Writing colour</span>
+              <div className="flex gap-2">
+                {([["auto", "Match gradient"], ["black", "Black"], ["white", "White"]] as const).map(([v, label]) => (
+                  <button key={v} onClick={() => setLook((l) => ({ ...l, text: v }))} className={`flex-1 rounded-md border px-2 py-2 ${look.text === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPhotos(e.target.files); e.currentTarget.value = ""; }} />
@@ -457,7 +493,7 @@ export default function RyderPage() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={look} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
