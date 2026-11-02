@@ -195,7 +195,7 @@ export default function RyderPage() {
   const [typeId, setTypeId] = useState(RYDER_POST_TYPES[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "Cormorant Garamond", body: "Montserrat" });
-  const [area, setArea] = useState("");
+  const [area, setArea] = useState("Bedford");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -353,7 +353,7 @@ export default function RyderPage() {
           <div className="grid md:grid-cols-3 gap-3 text-sm">
             <label className="space-y-1 block"><span className="text-white/60">Heading font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.head} onChange={(e) => setFonts((f) => ({ ...f, head: e.target.value }))} /></label>
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
-            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="For example Harrogate" /></label>
+            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Bedford" /></label>
           </div>
           <p className="text-white/40 text-xs">Fonts show as soon as they are in the site's font list. Tell me the pair you choose and I will add them for good.</p>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
