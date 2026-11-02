@@ -9,7 +9,7 @@ import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, NOVEMBER_PALETTE_LA
 import { DEFAULT_PALETTES, DESIGNS as XMAS_DESIGNS, DESIGN_BY_ID as XMAS_BY_ID, drawXmas, resolveText as resolveXmasText } from "./xmas-designs";
 import { LUX_SLIDE_DEFS, LUX_PALETTE, LUX_LABELS, LUX_COVERS, LUX_SLIDES, luxDefaults, resolveLuxText, drawLux, drawLuxPhotoSlide } from "./lux-designs";
 import { EMPOWER, EMPOWER_BY_ID, resolveEmpowerText, drawEmpower } from "./empower-designs";
-import { MENS_SETS } from "./mens-sets";
+import { MENS_SETS, MENS_PHOTO_COUNT } from "./mens-sets";
 import { drawAllPostPages, MIN_PHOTOS, type MagazinePostCopy } from "./magazine-post-pages";
 import { setMagazineFonts, setMagazineSize, PAGE_W as MAG_W, PAGE_H as MAG_H } from "./magazine-pages";
 import { setFlipHandoff } from "./flip-handoff";
@@ -40,6 +40,7 @@ export type Client = {
   brand?: { main: string; accent: string } | null; // her brand colours, laid over every design's own colours
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
+  mensPool?: PoolPhoto[]; // the shared photos of men, for Men photo posts
 };
 
 export type MPost = {
@@ -73,11 +74,15 @@ const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s
 
 const MENS_BY_ID: Record<string, (typeof MENS_SETS)[number]> = Object.fromEntries(MENS_SETS.map((m) => [m.id, m]));
 
+// A Men post is either a finished set of slides, or a Unique design filled with the shared photos of men (design "u:<unique id>").
+export const isMenPhoto = (design: string) => design.startsWith("u:");
+const asUnique = (p: MPost): MPost => ({ ...p, tool: "unique", design: p.design.slice(2) });
+
 // How many images each kind of post makes, and how many photos it takes.
 export const slideCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "mens" ? (MENS_BY_ID[design]?.slides ?? 8) : 1;
+  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "mens" ? (isMenPhoto(design) ? 3 : MENS_BY_ID[design]?.slides ?? 8) : 1;
 export const photoCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "mens" ? 0 : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
+  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "mens" ? (isMenPhoto(design) ? 3 : 0) : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
 
 // ---------------------------------------------------------------------------
 // Photos and fonts
@@ -147,8 +152,8 @@ export function makePost(tool: ToolId, design: string, n: number, when: string, 
     text = { ...EMPOWER_BY_ID[design].defaults };
     photos = [take(0)];
   } else if (tool === "mens") {
-    text = {};
-    photos = [];
+    text = isMenPhoto(design) ? { ...UD.UNIQUE_BY_ID[design.slice(2) as UD.UniId].defaults } : {};
+    photos = isMenPhoto(design) ? [0, 1, 2].map((k) => (cursor + k) % MENS_PHOTO_COUNT) : [];
   } else if (tool === "magazine") {
     text = { copy: "" };
     photos = Array.from({ length: MIN_PHOTOS }, (_, k) => take(k));
@@ -170,7 +175,7 @@ export const designName = (p: MPost): string =>
     : p.tool === "november" ? NOVEMBER_BY_ID[p.design as keyof typeof NOVEMBER_BY_ID].name
     : p.tool === "lux" ? LUX_SLIDE_DEFS[Number(p.design)].name
     : p.tool === "empower" ? EMPOWER_BY_ID[p.design].name
-    : p.tool === "mens" ? (MENS_BY_ID[p.design]?.name ?? "Men")
+    : p.tool === "mens" ? (isMenPhoto(p.design) ? `${UD.UNIQUE_BY_ID[p.design.slice(2) as UD.UniId].name} (men photos)` : MENS_BY_ID[p.design]?.name ?? "Men")
     : p.tool === "magazine" ? (p.design === "reel" ? "Magazine reel (9:16)" : "Magazine post (3:4)")
     : XMAS_BY_ID[p.design as keyof typeof XMAS_BY_ID].name;
 
@@ -183,7 +188,7 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "november" ? NOVEMBER_DESIGNS.map((d) => d.id)
     : tool === "lux" ? Array.from({ length: LUX_COVERS }, (_, i) => String(i))
     : tool === "empower" ? EMPOWER.map((d) => d.id)
-    : tool === "mens" ? MENS_SETS.map((m) => m.id)
+    : tool === "mens" ? [...MENS_SETS.map((m) => m.id), ...UD.UNIQUE.map((d) => `u:${d.id}`)]
     : tool === "magazine" ? ["post", "reel"]
     : XMAS_DESIGNS.filter((d) => d.group === (group ?? "xmas")).map((d) => d.id);
 
@@ -221,6 +226,7 @@ export function brandPalette(tool: ToolId, brand: { main: string; accent: string
 }
 
 export function colourFields(post: MPost, brand?: { main: string; accent: string } | null): { key: string; label: string; value: string }[] {
+  if (post.tool === "mens" && isMenPhoto(post.design)) return colourFields(asUnique(post), brand);
   let base: Record<string, string>; let labels: { key: string; label: string }[];
   if (post.tool === "unique") { base = { ...UD.UNIQUE_BY_ID[post.design as UD.UniId].palette }; labels = UD.PALETTE_LABELS; }
   else if (post.tool === "treatments") { base = { ...TD.T_PALETTE }; labels = (Object.keys(TD.T_PALETTE_LABELS) as (keyof typeof TD.T_PALETTE_LABELS)[]).map((k) => ({ key: k, label: TD.T_PALETTE_LABELS[k] })); }
@@ -312,6 +318,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   canvas.height = Math.round(H * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const last = n === slideCount(post.tool, post.design) - 1;
+  if (post.tool === "mens" && isMenPhoto(post.design)) return renderSlide(asUnique(post), n, { ...c, pool: c.mensPool ?? [] }, canvas, scale);
   if (post.tool === "mens") return renderMens(post, n, canvas, scale);
   if (post.tool === "magazine") return renderMagazine(post, n, c, canvas, scale);
   const logo = c.logoPos === "off" ? null : c.logo;
@@ -523,6 +530,8 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
     data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
+  } else if (post.tool === "mens" && isMenPhoto(post.design)) {
+    return writeCopy({ ...asUnique(post), topic: ["men's aesthetics, written for men who think it is not for them", post.topic?.trim() ?? ""].filter(Boolean).join(": ") }, c);
   } else if (post.tool === "mens") {
     const set = MENS_BY_ID[post.design];
     data = await postJson("/api/mens/copy", { ...base, topic: [set?.topic ?? "", post.topic?.trim() ?? ""].filter(Boolean).join(". "), slides: set?.summary ?? "" });

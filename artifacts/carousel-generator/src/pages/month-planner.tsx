@@ -11,6 +11,7 @@ import { getBitmap } from "@/lib/month-engine";
 import { ALIGNS, type Align } from "@/lib/text-layout";
 import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
+import { MENS_PHOTO_COUNT, mensPhotoPath } from "@/lib/mens-sets";
 import { TREATMENT_BANK } from "@/lib/treatment-bank";
 import { useSiteTreatments } from "@/lib/use-site-treatments";
 import { fetchClientVoice, type ClientVoice } from "@/lib/client-voice";
@@ -342,6 +343,24 @@ export default function MonthPlanner() {
   const [pickBusy, setPickBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [slots, setSlots] = useState<PlanSlot[]>([]);
+  const [mensPool, setMensPool] = useState<PoolPhoto[]>([]);
+  const wantsMen = slots.some((s) => s.on && s.choice === "mens");
+  // The shared photos of men are only fetched once a day is set to Men.
+  useEffect(() => {
+    if (!wantsMen || mensPool.length) return;
+    let live = true;
+    (async () => {
+      const got: PoolPhoto[] = [];
+      for (let i = 0; i < MENS_PHOTO_COUNT; i++) {
+        try {
+          const file = await urlToFile(`${import.meta.env.BASE_URL.replace(/\/$/, "")}${mensPhotoPath(i)}`, 2000 + i);
+          got.push({ id: uid(), file, url: URL.createObjectURL(file) });
+        } catch { /* a missing photo is skipped */ }
+      }
+      if (live) setMensPool(got);
+    })();
+    return () => { live = false; };
+  }, [wantsMen, mensPool.length]);
   const [voice, setVoice] = useState<ClientVoice | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [swap, setSwap] = useState<{ postId: string; slide: number } | null>(null);
@@ -484,7 +503,8 @@ export default function MonthPlanner() {
     brand: brandOn ? { main: brandMain, accent: brandAccent } : null,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent, voice]);
+    mensPool,
+  }), [preset, owner, role, area, logo, pool, mensPool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent, voice]);
 
   const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const clientFonts: FontOpt[] = useMemo(
