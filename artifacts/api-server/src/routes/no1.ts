@@ -3,6 +3,9 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
 import { finalCta } from "../lib/hookBank";
+import { eq } from "drizzle-orm";
+import { db } from "@workspace/db";
+import { freeSamplesTable } from "@workspace/db/schema";
 
 // NO 1 BODY SCULPTING, Birmingham. Her own page, one carousel at a time.
 const router: IRouter = Router();
@@ -122,6 +125,82 @@ router.post("/no1/copy", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "The words would not write, try again";
     req.log?.error({ err }, "no1: copy error");
     res.status(500).json({ error: message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Her download page. Vanessa builds posts on /no1 and sends them here, one at a time. They all land on one
+// private link (shown by the same Pack page the clinics' packs use), so the client opens one address and
+// saves her slides and captions from it.
+// ---------------------------------------------------------------------------
+const PUBLISH_SLUG = "no1-body-sculpting-posts";
+type StoredPost = { n: number; kind: string; images: string[]; caption: string; tags: string; label?: string };
+type StoredData = { pack: true; size: number; logoUrl: string; accent: string; posts: StoredPost[] };
+
+async function loadRow() {
+  const [row] = await db.select().from(freeSamplesTable).where(eq(freeSamplesTable.slug, PUBLISH_SLUG));
+  return row;
+}
+
+async function saveData(data: StoredData) {
+  const row = await loadRow();
+  if (row) await db.update(freeSamplesTable).set({ data }).where(eq(freeSamplesTable.slug, PUBLISH_SLUG));
+  else await db.insert(freeSamplesTable).values({ slug: PUBLISH_SLUG, clinicName: CLINIC, data });
+}
+
+router.post("/no1/publish", async (req: Request, res: Response) => {
+  try {
+    const b = req.body as { label?: string; images?: string[]; caption?: string; tags?: string };
+    const images = (Array.isArray(b.images) ? b.images : []).map((u) => String(u ?? "").trim().slice(0, 400)).filter(Boolean);
+    if (images.length === 0) {
+      res.status(400).json({ error: "The slides are needed" });
+      return;
+    }
+    const row = await loadRow();
+    const existing = (row?.data as Partial<StoredData> | undefined) ?? {};
+    const posts = [...(existing.posts ?? [])];
+    const n = posts.reduce((m, p) => Math.max(m, p.n), 0) + 1;
+    posts.push({
+      n,
+      kind: "carousel",
+      label: clean(b.label, 120),
+      images,
+      caption: clean(b.caption, 1500),
+      tags: clean(b.tags, 300),
+    });
+    await saveData({ pack: true, size: posts.length, logoUrl: "/no1-logo.png", accent: "#1aa5bd", posts });
+    res.json({ n, total: posts.length });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "no1: publish error");
+    res.status(500).json({ error: err instanceof Error ? err.message : "That did not save, try again" });
+  }
+});
+
+router.post("/no1/unpublish", async (req: Request, res: Response) => {
+  try {
+    const n = Number((req.body as { n?: unknown }).n);
+    const row = await loadRow();
+    if (!row) {
+      res.json({ total: 0 });
+      return;
+    }
+    const data = row.data as StoredData;
+    const posts = (data.posts ?? []).filter((p) => p.n !== n);
+    await saveData({ ...data, size: posts.length, posts });
+    res.json({ total: posts.length });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "That did not remove, try again" });
+  }
+});
+
+router.get("/no1/published", async (_req: Request, res: Response) => {
+  try {
+    const row = await loadRow();
+    const posts = ((row?.data as Partial<StoredData> | undefined)?.posts ?? []).map((p) => ({ n: p.n, label: p.label ?? "", slides: p.images.length }));
+    res.set("Cache-Control", "no-store");
+    res.json({ slug: PUBLISH_SLUG, posts });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not load" });
   }
 });
 
