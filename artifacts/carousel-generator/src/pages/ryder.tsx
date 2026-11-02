@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
+import { drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { RYDER_CLINIC, RYDER_GROUPS, RYDER_POST_TYPES, type RyderPostType } from "@/lib/ryder-posts";
 
 // THE RYDER CLINIC, her own page. Photo first, a soft white wash over the bottom third.
@@ -24,6 +25,16 @@ const SCHED_KEY = "ryder-scheduled-v1";
 
 type Photo = { id: string; bmp: ImageBitmap; url: string };
 type Fonts = { head: string; body: string };
+type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
+
+async function loadTitleFont(): Promise<TitleFont> {
+  const style = readTitleStyle();
+  try {
+    return { lf: await loadSuiteFont(style.fontId), style };
+  } catch {
+    return null;
+  }
+}
 
 type Post = {
   id: string;
@@ -100,35 +111,36 @@ function wash(ctx: CanvasRenderingContext2D, from: number) {
   ctx.fillRect(0, 0, W, H);
 }
 
-function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number) {
+function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center") {
   ctx.save();
   ctx.fillStyle = GREY;
   ctx.font = `600 22px "${f.body}", sans-serif`;
   spaced(ctx, 6);
-  ctx.textAlign = "center";
-  ctx.fillText(RYDER_CLINIC.toUpperCase(), W / 2, y);
+  ctx.textAlign = align;
+  ctx.fillText(RYDER_CLINIC.toUpperCase(), align === "left" ? 100 : W / 2, y);
   ctx.restore();
 }
 
-function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts) {
+function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null) {
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
   const body = (px: number, w = 400) => `${w} ${px}px "${f.body}", sans-serif`;
 
+  const LEFT = 100;
   if (n === 4) {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    const fit = fitText(ctx, post.cta || "", (px) => head(px), 820, 520, 84, 44, 1.2);
+    ctx.textAlign = "left";
+    const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520, 84, 44, 1.2);
     const total = fit.lines.length * fit.px * 1.2;
     let y = (H - total) / 2 - 30;
     ctx.font = head(fit.px);
-    for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.2; }
+    for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.2; }
     ctx.strokeStyle = INK; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(W / 2 - 60, y + 40); ctx.lineTo(W / 2 + 60, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
-    clinicName(ctx, f, H - 120);
+    ctx.beginPath(); ctx.moveTo(LEFT, y + 40); ctx.lineTo(LEFT + 120, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
+    clinicName(ctx, f, H - 120, "left");
     return;
   }
 
@@ -137,13 +149,24 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
 
   if (n === 0) {
     wash(ctx, 0.52);
-    ctx.fillStyle = INK;
-    ctx.textAlign = "center";
-    const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330, 92, 46, 1.1);
-    const total = fit.lines.length * fit.px * 1.1;
-    let y = H - 175 - total;
-    ctx.font = head(fit.px);
-    for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
+    if (tf) {
+      // the title font: drawn glyph by glyph so wide spacing and curly letters work
+      let size = 120;
+      let layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
+      while (size > 50 && titleHeight(layout) > 330) {
+        size -= 4;
+        layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
+      }
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, H - 175 - titleHeight(layout), "center", W - 200, INK);
+    } else {
+      ctx.fillStyle = INK;
+      ctx.textAlign = "center";
+      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330, 92, 46, 1.1);
+      const total = fit.lines.length * fit.px * 1.1;
+      let y = H - 175 - total;
+      ctx.font = head(fit.px);
+      for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
+    }
     clinicName(ctx, f, H - 100);
     return;
   }
@@ -151,18 +174,18 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   wash(ctx, 0.3);
   const text = post.slides[n - 1] || "";
   ctx.fillStyle = INK;
-  ctx.textAlign = "center";
-  const fit = fitText(ctx, text, (px) => body(px), W - 220, 520, 40, 26, 1.55);
+  ctx.textAlign = "left";
+  const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520, 40, 26, 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = H - 170 - total;
   ctx.font = body(fit.px);
-  for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.55; }
+  for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
   ctx.fillStyle = GREY;
   ctx.font = body(22, 600);
-  ctx.fillText(`${n + 1} / 5`, W / 2, H - 100);
+  ctx.fillText(`${n + 1} / 5`, LEFT, H - 100);
 }
 
-function SlideCanvas({ post, n, photo, fonts, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, fonts, tf, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; onClick?: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let live = true;
@@ -171,10 +194,10 @@ function SlideCanvas({ post, n, photo, fonts, onClick }: { post: Post; n: number
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
-      if (ctx) drawSlide(ctx, post, n, photo, fonts);
+      if (ctx) drawSlide(ctx, post, n, photo, fonts, tf);
     })();
     return () => { live = false; };
-  }, [post, n, photo, fonts]);
+  }, [post, n, photo, fonts, tf]);
   return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
@@ -195,6 +218,15 @@ export default function RyderPage() {
   const [typeId, setTypeId] = useState(RYDER_POST_TYPES[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "Cormorant Garamond", body: "Montserrat" });
+  const [tf, setTf] = useState<TitleFont>(null);
+  // the title look is saved in Font Lab; pick it up now and whenever she comes back to this tab
+  useEffect(() => {
+    let live = true;
+    const load = () => { loadTitleFont().then((t) => live && setTf(t)); };
+    load();
+    window.addEventListener("focus", load);
+    return () => { live = false; window.removeEventListener("focus", load); };
+  }, []);
   const [area, setArea] = useState("Bedford");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -284,11 +316,12 @@ export default function RyderPage() {
 
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
+    const tfNow = await loadTitleFont();
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
-      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts);
+      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow);
       out.push(c);
     }
     return out;
@@ -350,6 +383,7 @@ export default function RyderPage() {
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <h2 className="font-semibold">1. Set up</h2>
+          <p className="text-white/60 text-sm">Title font: set in <Link href="/font-lab" className="underline">Font Lab</Link> (saved look is used on every cover). Subtitle and body fonts below are still to be confirmed.</p>
           <div className="grid md:grid-cols-3 gap-3 text-sm">
             <label className="space-y-1 block"><span className="text-white/60">Heading font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.head} onChange={(e) => setFonts((f) => ({ ...f, head: e.target.value }))} /></label>
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
@@ -418,7 +452,7 @@ export default function RyderPage() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
