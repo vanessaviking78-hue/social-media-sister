@@ -115,6 +115,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline">>; // this post only; empty means the page setting
 };
 
 const TEMPLATES = [{ id: "t1", name: "1. Photo with white wash" }];
@@ -413,7 +414,7 @@ export default function RyderPage() {
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
-      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, look, logo);
+      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, lookFor(post), logo);
       out.push(c);
     }
     return out;
@@ -430,6 +431,8 @@ export default function RyderPage() {
     zip.file("caption.txt", `${post.caption}\n\n${post.hashtags.join(" ")}\n`);
     saveAs(await zip.generateAsync({ type: "blob" }), `ryder-${t.id}.zip`);
   };
+
+  const lookFor = (post: Post): Look => ({ ...look, ...(post.look || {}) });
 
   // Pressing Schedule first asks: schedule it, or reject it with a reason.
   const [review, setReview] = useState<{ id: string; reason: string; rejecting: boolean } | null>(null);
@@ -505,7 +508,7 @@ export default function RyderPage() {
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it.</p>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
-              <span className="text-white/60">Gradient colour</span>
+              <span className="text-white/60">Gradient colour (the default for every post)</span>
               <div className="flex gap-2">
                 {(["white", "black", "brown", "beige"] as const).map((c) => (
                   <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
@@ -659,9 +662,40 @@ export default function RyderPage() {
                     )}
                   </div>
                 )}
+                <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-4 gap-3 text-xs items-end">
+                  <div className="space-y-1">
+                    <span className="text-white/60">This post: gradient</span>
+                    <div className="flex gap-1">
+                      {(["white", "black", "brown", "beige"] as const).map((c) => (
+                        <button key={c} onClick={() => patch(post.id, { look: { ...post.look, wash: c } })} className={`flex-1 rounded border px-1 py-1 capitalize ${lookFor(post).wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="space-y-1 block">
+                    <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
+                    <input type="range" min={0} max={100} step={5} value={lookFor(post).opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
+                  </label>
+                  <div className="space-y-1">
+                    <span className="text-white/60">Writing</span>
+                    <div className="flex gap-1">
+                      {([["auto", "Match"], ["black", "Black"], ["white", "White"]] as const).map(([v, label]) => (
+                        <button key={v} onClick={() => patch(post.id, { look: { ...post.look, text: v } })} className={`flex-1 rounded border px-1 py-1 ${lookFor(post).text === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-white/60">Headline</span>
+                    <div className="flex gap-1">
+                      {([["auto", "Writing colour"], ["silver", "Silver"]] as const).map(([v, label]) => (
+                        <button key={v} onClick={() => patch(post.id, { look: { ...post.look, headline: v } })} className={`flex-1 rounded border px-1 py-1 ${lookFor(post).headline === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                      ))}
+                    </div>
+                    {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
+                  </div>
+                </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={look} logo={logo} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
