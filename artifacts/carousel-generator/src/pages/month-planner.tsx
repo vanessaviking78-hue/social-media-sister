@@ -455,6 +455,18 @@ export default function MonthPlanner() {
     return () => { live = false; };
   }, [preset?.id, isProspect]); // eslint-disable-line react-hooks/exhaustive-deps
   const tickedCount = slots.filter((x) => x.on).length;
+  // Monday is always a treatment post.
+  useEffect(() => {
+    setSlots((l) => {
+      let changed = false;
+      const next = l.map((sl) => {
+        const [yy, mm, dd] = sl.key.split("-").map(Number);
+        if (new Date(yy, mm - 1, dd).getDay() === 1 && sl.choice !== "magazine" && sl.choice !== "treatments") { changed = true; return { ...sl, choice: "magazine" as Choice, design: "auto" }; }
+        return sl;
+      });
+      return changed ? next : l;
+    });
+  }, [slots]);
   const patchSlot = (key: string, change: Partial<PlanSlot>) => setSlots((l) => l.map((x) => (x.key === key ? { ...x, ...change } : x)));
   const toggleSlot = (key: string, on: boolean) => {
     if (on && tickedCount >= MAX_POSTS) { toast.error(`That is ${MAX_POSTS} days already. Untick one first.`); return; }
@@ -881,7 +893,7 @@ export default function MonthPlanner() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Tick the days you are posting on, choose a template for each one, then click the hook box to choose that day's slide 1 hook. Treatment posts also need the treatment. Everything else is optional.
+              Tick the days you are posting on. Mondays are always treatment posts. For each day choose the template and design, add a topic or treatment, then click the hook box to choose that day's slide 1 hook.
             </p>
             <p className="text-xs text-muted-foreground">
               {!voice ? "Checking what this client has told me…"
@@ -891,91 +903,107 @@ export default function MonthPlanner() {
               {siteTreatments.length > 0 ? ` Their website treatments are in the treatment topic list (${siteTreatments.length}).` : ""}
             </p>
             <datalist id="month-site-treatments">{[...siteTreatments, ...TREATMENT_BANK.filter((t) => !siteTreatments.some((x) => x.toLowerCase() === t.toLowerCase()))].map((t) => <option key={t} value={t} />)}</datalist>
-            <div className="divide-y divide-border/20">
-              {slots.map((slot) => {
-                const [y, m, d] = slot.key.split("-").map(Number);
-                const date = new Date(y, m - 1, d);
-                const { tool, group } = toolFor(slot.choice, month);
-                const weekend = date.getDay() === 0 || date.getDay() === 6;
-                return (
-                  <div key={slot.key} className={`grid items-center gap-2 py-2 sm:grid-cols-[130px_210px_minmax(0,1fr)] ${slot.on ? "" : "opacity-50"}`}>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input type="checkbox" checked={slot.on} onChange={(e) => toggleSlot(slot.key, e.target.checked)} className="h-4 w-4 accent-violet-500" />
-                      <span className={weekend ? "text-muted-foreground" : "font-medium"}>{DAY_NAMES[date.getDay()]} {d}</span>
-                    </label>
-                    <select
-                      value={slot.choice}
-                      disabled={!slot.on}
-                      onChange={(e) => patchSlot(slot.key, { choice: e.target.value as Choice, design: "auto" })}
-                      className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
-                      aria-label={`Tool for ${slot.key}`}
-                    >
-                      {(Object.keys(CHOICE_LABEL) as Choice[])
-                        .filter((c) => (c !== "seasonal" || !!SEASONAL[month]) && (c !== "xmas" || month >= 10 || month === 0))
-                        .map((c) => <option key={c} value={c}>{c === "seasonal" ? SEASONAL[month]?.name ?? "Seasonal" : CHOICE_LABEL[c]}</option>)}
-                    </select>
-                    <div className="space-y-1.5">
-                      <button
-                        type="button"
-                        disabled={!slot.on || !preset}
-                        onClick={() => setHookRow(slot.key)}
-                        className="flex w-full items-center justify-between gap-2 rounded-md border border-border/40 bg-background px-3 py-1.5 text-left text-sm hover:border-border/70"
-                        title="Choose this day's slide 1 hook"
-                      >
-                        <span className={`min-w-0 flex-1 truncate ${slot.hook ? "" : "text-muted-foreground"}`}>
-                          {slot.hook ? (pickedHookPayload([slot.hook], slot.topic.trim(), area)[0]?.text ?? "Choose a hook") : "Choose a hook"}
-                        </span>
-                        {slot.hook && <span role="button" tabIndex={0} className="shrink-0 text-xs text-muted-foreground underline" onClick={(e) => { e.stopPropagation(); patchSlot(slot.key, { hook: undefined }); }}>clear</span>}
-                      </button>
-                      {slot.on && (slot.choice === "magazine" || slot.choice === "treatments") && (
-                        <div className="flex gap-1.5">
-                          <Input
-                            value={slot.topic}
-                            onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
-                            list="month-site-treatments"
-                            placeholder={slot.choice === "magazine" ? "Treatment (needed)" : "Treatment"}
-                            className="h-9 min-w-0 flex-1"
-                          />
-                          <select
-                            value=""
-                            onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }}
-                            className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm"
-                            aria-label={`Pick a treatment for ${slot.key}`}
-                          >
-                            <option value="">Treatments</option>
-                            {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      {slot.on && (
-                        <details className="text-xs text-muted-foreground">
-                          <summary className="cursor-pointer select-none">More choices (design, topic)</summary>
-                          <div className="mt-1.5 space-y-1.5">
-                            <select
-                              value={slot.design}
-                              onChange={(e) => patchSlot(slot.key, { design: e.target.value })}
-                              className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
-                              aria-label={`Design for ${slot.key}`}
-                            >
-                              <option value="auto">I choose a fresh design</option>
-                              {designsFor(tool, group).map((id) => <option key={id} value={id}>{designLabel(tool, id)}</option>)}
-                            </select>
-                            {!(slot.choice === "magazine" || slot.choice === "treatments") && (
+            <div className="space-y-6">
+              {(() => {
+                const weeks = new Map<string, { monday: Date; list: PlanSlot[] }>();
+                for (const sl of slots) {
+                  const [yy, mm, dd] = sl.key.split("-").map(Number);
+                  const dt = new Date(yy, mm - 1, dd);
+                  const monday = new Date(yy, mm - 1, dd - ((dt.getDay() + 6) % 7));
+                  const wk = dayKey(monday);
+                  if (!weeks.has(wk)) weeks.set(wk, { monday, list: [] });
+                  weeks.get(wk)!.list.push(sl);
+                }
+                return Array.from(weeks.values()).map(({ monday, list }) => (
+                  <div key={dayKey(monday)} className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Week of {monday.getDate()} {MONTHS[monday.getMonth()]}</h3>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {list.map((slot) => {
+                        const [y, m, d] = slot.key.split("-").map(Number);
+                        const date = new Date(y, m - 1, d);
+                        const isMon = date.getDay() === 1;
+                        const { tool, group } = toolFor(slot.choice, month);
+                        const needsTreatment = slot.choice === "magazine" || slot.choice === "treatments";
+                        const hookText = slot.hook ? pickedHookPayload([slot.hook], slot.topic.trim(), area)[0]?.text : "";
+                        const label = "text-[10px] uppercase tracking-widest text-muted-foreground";
+                        return (
+                          <div key={slot.key} className={`space-y-2.5 rounded-xl border p-3 transition-colors ${isMon ? "border-amber-400/50 bg-amber-400/5" : "border-border/40 bg-muted/10"} ${slot.on ? "" : "opacity-40"}`}>
+                            <label className="flex items-center gap-2">
+                              <input type="checkbox" checked={slot.on} onChange={(e) => toggleSlot(slot.key, e.target.checked)} className="h-4 w-4 accent-violet-500" />
+                              <span className="text-lg font-semibold leading-none">{DAY_NAMES[date.getDay()]} {d}</span>
+                              {isMon && <span className="ml-auto rounded-full bg-amber-400/20 px-2 py-0.5 text-[11px] font-medium text-amber-300">Treatment day</span>}
+                            </label>
+                            <div className="space-y-1">
+                              <span className={label}>Template</span>
+                              <select
+                                value={slot.choice}
+                                disabled={!slot.on}
+                                onChange={(e) => patchSlot(slot.key, { choice: e.target.value as Choice, design: "auto" })}
+                                className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
+                                aria-label={`Template for ${slot.key}`}
+                              >
+                                {(Object.keys(CHOICE_LABEL) as Choice[])
+                                  .filter((c) => (isMon ? c === "magazine" || c === "treatments" : (c !== "seasonal" || !!SEASONAL[month]) && (c !== "xmas" || month >= 10 || month === 0)))
+                                  .map((c) => <option key={c} value={c}>{c === "seasonal" ? SEASONAL[month]?.name ?? "Seasonal" : CHOICE_LABEL[c]}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <span className={label}>Design</span>
+                              <select
+                                value={slot.design}
+                                disabled={!slot.on}
+                                onChange={(e) => patchSlot(slot.key, { design: e.target.value })}
+                                className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
+                                aria-label={`Design for ${slot.key}`}
+                              >
+                                <option value="auto">I choose a fresh one</option>
+                                {designsFor(tool, group).map((id) => <option key={id} value={id}>{designLabel(tool, id)}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <span className={label}>{needsTreatment ? "Treatment (needed)" : "Topic (optional)"}</span>
                               <div className="flex gap-1.5">
-                                <Input value={slot.topic} onChange={(e) => patchSlot(slot.key, { topic: e.target.value })} list="month-site-treatments" placeholder="Your own topic or treatment (optional)" className="h-9 min-w-0 flex-1" />
-                                <select value="" onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }} className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm" aria-label={`Pick a treatment for ${slot.key}`}>
+                                <Input
+                                  value={slot.topic}
+                                  disabled={!slot.on}
+                                  onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
+                                  list="month-site-treatments"
+                                  placeholder={needsTreatment ? "e.g. Cheek filler" : "Your own topic, or pick a treatment"}
+                                  className="h-9 min-w-0 flex-1"
+                                />
+                                <select
+                                  value=""
+                                  disabled={!slot.on}
+                                  onChange={(e) => { if (e.target.value) patchSlot(slot.key, { topic: e.target.value }); }}
+                                  className="h-9 w-28 shrink-0 rounded-md border border-border/40 bg-background px-1.5 text-sm"
+                                  aria-label={`Pick a treatment for ${slot.key}`}
+                                  title="Pick from every treatment"
+                                >
                                   <option value="">Treatments</option>
                                   {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
                                 </select>
                               </div>
-                            )}
+                            </div>
+                            <div className="space-y-1">
+                              <span className={label}>Slide 1 hook</span>
+                              <button
+                                type="button"
+                                disabled={!slot.on || !preset}
+                                onClick={() => setHookRow(slot.key)}
+                                className={`flex w-full items-start justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm ${hookText ? "border-sky-500/40 bg-sky-500/5" : "border-dashed border-border/50 text-muted-foreground hover:border-border/80"}`}
+                                title="Choose this day's slide 1 hook"
+                              >
+                                <span className="min-w-0 flex-1 line-clamp-3">{hookText || "Choose a hook"}</span>
+                                {hookText && <span role="button" tabIndex={0} className="shrink-0 text-xs text-muted-foreground underline" onClick={(e) => { e.stopPropagation(); patchSlot(slot.key, { hook: undefined }); }}>clear</span>}
+                              </button>
+                            </div>
                           </div>
-                        </details>
-                      )}
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
+                ));
+              })()}
             </div>
             <div className="space-y-2">
               <Button type="button" variant="outline" onClick={() => setHookModal(true)} disabled={!preset}>
