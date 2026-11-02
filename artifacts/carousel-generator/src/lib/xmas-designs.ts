@@ -1328,159 +1328,127 @@ const LAYOUTS: Partial<Record<DesignId, (g: G) => void>> = {
 
 
 // ---------------------------------------------------------------------------
-// Luxe: the thirty high end Christmas posts. Deep colour or ivory, hairline champagne gold foil,
-// generous space, nothing busy. Colours come from the palette so each client can change them.
+// Editorial: the thirty magazine style Christmas posts. Cream paper, blush or near black, one accent
+// colour, big serif headlines, hairline rules and an issue number like a glossy December edition.
+// Colours come from the palette (accent is the Red) so each client can change them.
 // ---------------------------------------------------------------------------
-
-const FOIL = "#d4af36";
 
 function spaced(ctx: Ctx, px: number) {
   (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`;
 }
-
-function luxStar(ctx: Ctx, x: number, y: number, r: number, colour: string) {
+function mixHex(a: string, b: string, t: number): string {
+  const [r1, g1, b1] = hexRgb(a), [r2, g2, b2] = hexRgb(b);
+  const q = (u: number, v: number) => Math.round(u + (v - u) * t).toString(16).padStart(2, "0");
+  return `#${q(r1, r2)}${q(g1, g2)}${q(b1, b2)}`;
+}
+function win(g: G, x: number, y: number, w: number, h: number, oval: boolean) {
+  const { ctx } = g;
+  g.slots.push({ i: 0, x, y, w, h, rot: 0 });
   ctx.save();
-  ctx.fillStyle = colour;
+  ctx.translate(x + w / 2, y + h / 2);
   ctx.beginPath();
-  for (let i = 0; i < 8; i++) {
-    const a = (Math.PI / 4) * i - Math.PI / 2;
-    const rr = i % 2 === 0 ? r : r * 0.28;
-    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
-  }
-  ctx.closePath();
-  ctx.fill();
+  if (oval) ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2); else ctx.rect(-w / 2, -h / 2, w, h);
+  ctx.clip();
+  drawPhoto(g, w, h);
   ctx.restore();
 }
-
-function ornament(g: G, cx: number, y: number, half: number) {
+function small(g: G, text: string, x: number, y: number, w: number, align: CanvasTextAlign, colour: string, size = 22, sp = 5) {
   const { ctx } = g;
   ctx.save();
-  ctx.strokeStyle = FOIL; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - 28, y); ctx.moveTo(cx + 28, y); ctx.lineTo(cx + half, y); ctx.stroke();
-  ctx.restore();
-  luxStar(ctx, cx, y, 14, FOIL);
-}
-
-function kickerText(g: G, text: string, x: number, y: number, w: number, align: CanvasTextAlign, colour: string) {
-  const { ctx } = g;
-  ctx.save();
-  ctx.font = `600 24px ${g.body}`;
-  ctx.fillStyle = colour;
-  spaced(ctx, 6);
+  ctx.font = `600 ${size}px ${g.body}`; ctx.fillStyle = colour; spaced(ctx, sp);
   const ls = wrap(ctx, (text ?? "").toUpperCase(), w);
-  const ax = align === "center" ? x + w / 2 : x;
-  lines(ctx, ls, ax, y, 34, align);
+  lines(ctx, ls, align === "center" ? x + w / 2 : align === "right" ? x + w : x, y, size + 10, align);
   ctx.restore();
 }
 
-function footerLine(g: G, text: string, cx: number, y: number, w: number, colour: string) {
-  textBox(g, text, cx - w / 2, y, w, 90, { font: "script", max: 40, min: 24, weight: 500, italic: true, colour, align: "center", lh: 1.2 });
-}
-
-function drawLuxe(g: G, look: { layout: string; tone: "dark" | "light" }) {
+function drawLuxe(g: G, look: { layout: string; tone: "cream" | "blush" | "ink" }, no: string) {
   const { ctx, c, t } = g;
-  const dark = look.tone === "dark";
-  const base = dark ? c.green : c.paper;
-  const ink = dark ? c.light : c.green;
-  const soft = dark ? rgba(c.light, 0.86) : rgba(c.green, 0.86);
+  const ink0 = shade(c.green, -0.7);
+  const isInk = look.tone === "ink";
+  const base = isInk ? ink0 : look.tone === "blush" ? mixHex(c.paper, c.red, 0.17) : c.paper;
+  const fg = isInk ? c.paper : ink0;
+  const soft = isInk ? rgba(c.paper, 0.88) : rgba(ink0, 0.86);
+  const acc = isInk ? mixHex(c.red, c.paper, 0.3) : c.red;
+  const onAcc = c.paper;
   ctx.fillStyle = base; ctx.fillRect(0, 0, XW, XH);
-  // a quiet glow in the middle so the colour has depth
-  const gl = ctx.createRadialGradient(XW / 2, XH * 0.42, 60, XW / 2, XH * 0.42, 900);
-  gl.addColorStop(0, dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)");
-  gl.addColorStop(1, dark ? "rgba(0,0,0,0.38)" : "rgba(120,100,60,0.10)");
-  ctx.fillStyle = gl; ctx.fillRect(0, 0, XW, XH);
+  const r = rand(11);
+  for (let i = 0; i < 700; i++) {
+    ctx.fillStyle = isInk ? `rgba(255,255,255,${0.012 + r() * 0.02})` : `rgba(120,90,60,${0.015 + r() * 0.025})`;
+    ctx.fillRect(r() * XW, r() * XH, 2 + r() * 3, 1 + r() * 2);
+  }
+  // running header like a magazine page
+  small(g, "The December edit", 70, 52, 500, "left", soft, 18, 5);
+  small(g, `No. ${no}`, XW - 570, 52, 500, "right", acc, 18, 5);
+  rule(g, 70, XW - 70, 92, fg, 1.5, 0.55);
 
   const L = look.layout;
-  if (L === "frame") {
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
-    ctx.lineWidth = 1.5; ctx.strokeRect(60, 60, XW - 120, XH - 120);
-    kickerText(g, t.kicker, 120, 130, 840, "center", FOIL);
-    ornament(g, XW / 2, 215, 200);
-    textBox(g, HU(g, t.headline), 130, 270, 820, 470, { font: "head", max: 104, min: 44, colour: ink, align: "center", lh: 1.08 });
-    ornament(g, XW / 2, 790, 200);
-    textBox(g, t.body, 140, 840, 800, 260, { font: "body", max: 36, min: 22, colour: soft, align: "center", lh: 1.4 });
-    footerLine(g, t.footer, XW / 2, 1150, 800, FOIL);
-  } else if (L === "panel") {
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 2; ctx.strokeRect(80, 80, XW - 160, XH - 160);
-    ctx.save();
-    ctx.translate(122, XH / 2); ctx.rotate(-Math.PI / 2);
-    ctx.font = `600 22px ${g.body}`; ctx.fillStyle = FOIL; spaced(ctx, 7); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText((t.kicker ?? "").toUpperCase(), 0, 0, 1000);
-    ctx.restore();
-    ctx.save(); ctx.strokeStyle = FOIL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(168, 150); ctx.lineTo(168, XH - 150); ctx.stroke(); ctx.restore();
-    luxStar(ctx, 230, 196, 22, FOIL);
-    textBox(g, HU(g, t.headline), 214, 260, 740, 520, { font: "head", max: 100, min: 44, colour: ink, align: "left", lh: 1.08 });
-    rule(g, 214, 454, 830, FOIL, 3);
-    textBox(g, t.body, 214, 870, 730, 250, { font: "body", max: 34, min: 22, colour: soft, align: "left", lh: 1.4 });
-    textBox(g, t.footer, 214, 1150, 730, 90, { font: "script", max: 38, min: 24, weight: 500, italic: true, colour: FOIL, align: "left", lh: 1.2 });
-  } else if (L === "arch") {
-    const ax = 170, aw = XW - 340, top = 120, bot = 930, r = aw / 2;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(ax, bot); ctx.lineTo(ax, top + r);
-    ctx.arc(XW / 2, top + r, r, Math.PI, 0, false);
-    ctx.lineTo(ax + aw, bot); ctx.closePath();
-    ctx.fillStyle = dark ? rgba(c.light, 0.06) : rgba(c.green, 0.06); ctx.fill();
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.stroke();
-    ctx.restore();
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(ax + 18, bot - 18); ctx.lineTo(ax + 18, top + r);
-    ctx.arc(XW / 2, top + r, r - 18, Math.PI, 0, false);
-    ctx.lineTo(ax + aw - 18, bot - 18); ctx.closePath();
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.restore();
-    luxStar(ctx, XW / 2, top + 76, 18, FOIL);
-    kickerText(g, t.kicker, ax + 40, top + 130, aw - 80, "center", FOIL);
-    textBox(g, HU(g, t.headline), ax + 50, top + 220, aw - 100, 500, { font: "head", max: 88, min: 40, colour: ink, align: "center", lh: 1.08 });
-    textBox(g, t.body, 150, 980, 780, 190, { font: "body", max: 32, min: 20, colour: soft, align: "center", lh: 1.38 });
-    // footer inside a gold pill
-    ctx.save();
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 2;
-    const py = 1170, ph = 110, pw = 800, px = (XW - pw) / 2;
-    ctx.beginPath(); ctx.roundRect(px, py, pw, ph, ph / 2); ctx.stroke();
-    ctx.restore();
-    textBox(g, t.footer, px + 40, py + 22, pw - 80, ph - 44, { font: "body", max: 36, min: 20, weight: 600, colour: FOIL, align: "center", lh: 1.15 });
-  } else if (L === "seal") {
-    const cy = 250;
-    ctx.save();
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(XW / 2, cy, 104, 0, Math.PI * 2); ctx.stroke();
-    ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(XW / 2, cy, 88, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
-    luxStar(ctx, XW / 2, cy, 44, FOIL);
-    kickerText(g, t.kicker, 120, 400, 840, "center", FOIL);
-    textBox(g, HU(g, t.headline), 120, 470, 840, 400, { font: "head", max: 96, min: 44, colour: ink, align: "center", lh: 1.08 });
-    ornament(g, XW / 2, 900, 160);
-    textBox(g, t.body, 150, 950, 780, 220, { font: "body", max: 34, min: 22, colour: soft, align: "center", lh: 1.4 });
-    footerLine(g, t.footer, XW / 2, 1200, 780, FOIL);
-  } else if (L === "photo") {
-    fullBleed(g);
-    const sh = ctx.createLinearGradient(0, 0, 0, XH);
-    sh.addColorStop(0, "rgba(0,0,0,0.45)"); sh.addColorStop(0.35, "rgba(0,0,0,0.05)"); sh.addColorStop(0.55, "rgba(0,0,0,0.35)"); sh.addColorStop(1, rgba(c.green, 0.94));
-    ctx.fillStyle = sh; ctx.fillRect(0, 0, XW, XH);
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
-    kickerText(g, t.kicker, 100, 100, 880, "center", FOIL);
-    textBox(g, HU(g, t.headline), 100, 790, 880, 270, { font: "head", max: 84, min: 40, colour: c.light, align: "center", lh: 1.08 });
-    textBox(g, t.body, 120, 1075, 840, 130, { font: "body", max: 28, min: 20, colour: rgba(c.light, 0.92), align: "center", lh: 1.35 });
-    textBox(g, t.footer, 120, 1215, 840, 70, { font: "script", max: 34, min: 22, weight: 500, italic: true, colour: FOIL, align: "center", lh: 1.2 });
+  if (L === "cover") {
+    textBox(g, t.kicker, 70, 120, 940, 80, { font: "script", max: 56, min: 28, weight: 600, italic: true, colour: acc, align: "center", lh: 1.15 });
+    ctx.strokeStyle = acc; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(XW / 2 + 14, 480 + 14, 330, 255, 0, 0, Math.PI * 2); ctx.stroke();
+    win(g, XW / 2 - 330, 225, 660, 510, true);
+    textBox(g, HU(g, t.headline), 80, 770, 920, 250, { font: "head", max: 80, min: 40, colour: fg, align: "center", lh: 1.06 });
+    textBox(g, t.body, 110, 1030, 860, 140, { font: "body", max: 28, min: 20, colour: soft, align: "center", lh: 1.35 });
+    ctx.fillStyle = acc; ctx.fillRect(70, 1195, XW - 140, 80);
+    textBox(g, t.footer, 100, 1222, XW - 200, 50, { font: "body", max: 30, min: 18, weight: 700, colour: onAcc, align: "center", lh: 1.1 });
+  } else if (L === "quote") {
+    ctx.font = `700 460px ${g.head}`; ctx.fillStyle = rgba(acc, 0.9); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("“", 60, 70);
+    textBox(g, HU(g, t.headline), 80, 360, 920, 420, { font: "head", max: 96, min: 44, colour: fg, align: "left", lh: 1.06 });
+    rule(g, 80, 200, 812, acc, 4);
+    small(g, t.kicker, 80, 836, 900, "left", acc, 22, 5);
+    textBox(g, t.body, 80, 900, 900, 230, { font: "body", max: 34, min: 22, colour: soft, align: "left", lh: 1.38 });
+    ctx.fillStyle = acc; ctx.fillRect(0, 1170, XW, 180);
+    textBox(g, t.footer, 90, 1215, XW - 180, 110, { font: "script", max: 46, min: 24, weight: 600, italic: true, colour: onAcc, align: "center", lh: 1.15 });
+  } else if (L === "split") {
+    ctx.fillStyle = ink0; ctx.fillRect(0, 100, XW, 560);
+    win(g, 0, 100, XW, 560, false);
+    ctx.fillStyle = acc; ctx.fillRect(70, 628, 520, 62);
+    small(g, t.kicker, 96, 646, 480, "left", onAcc, 20, 4);
+    textBox(g, HU(g, t.headline), 70, 740, 940, 290, { font: "head", max: 84, min: 40, colour: fg, align: "left", lh: 1.06 });
+    textBox(g, t.body, 70, 1040, 940, 150, { font: "body", max: 30, min: 20, colour: soft, align: "left", lh: 1.36 });
+    rule(g, 70, XW - 70, 1210, fg, 1.5, 0.55);
+    textBox(g, t.footer, 70, 1228, 940, 70, { font: "script", max: 40, min: 22, weight: 600, italic: true, colour: acc, align: "left", lh: 1.15 });
+  } else if (L === "bigtype") {
+    ctx.strokeStyle = acc; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(850 + 12, 275 + 12, 160, 160, 0, 0, Math.PI * 2); ctx.stroke();
+    win(g, 690, 115, 320, 320, true);
+    textBox(g, t.kicker, 70, 150, 570, 260, { font: "script", max: 50, min: 26, weight: 600, italic: true, colour: acc, align: "left", lh: 1.15 });
+    textBox(g, HU(g, t.headline), 70, 480, 940, 430, { font: "head", max: 118, min: 46, colour: fg, align: "left", lh: 1.03 });
+    rule(g, 70, 330, 940, acc, 6);
+    textBox(g, t.body, 70, 975, 940, 210, { font: "body", max: 34, min: 22, colour: soft, align: "left", lh: 1.38 });
+    luxDot(ctx, 84, 1236, acc);
+    textBox(g, t.footer, 116, 1216, 890, 60, { font: "body", max: 30, min: 20, weight: 700, colour: acc, align: "left", lh: 1.1 });
+  } else if (L === "window") {
+    ctx.fillStyle = acc; ctx.fillRect(70 + 24, 140 + 24, 450, 860);
+    win(g, 70, 140, 450, 860, false);
+    small(g, t.kicker, 580, 140, 430, "left", acc, 20, 4);
+    textBox(g, HU(g, t.headline), 580, 220, 430, 460, { font: "head", max: 68, min: 34, colour: fg, align: "left", lh: 1.06 });
+    rule(g, 580, 700, 706, acc, 4);
+    textBox(g, t.body, 580, 740, 430, 280, { font: "body", max: 28, min: 18, colour: soft, align: "left", lh: 1.36 });
+    rule(g, 70, XW - 70, 1085, fg, 1.5, 0.55);
+    textBox(g, t.footer, 70, 1115, 940, 110, { font: "script", max: 50, min: 26, weight: 600, italic: true, colour: acc, align: "center", lh: 1.15 });
+    rule(g, 70, XW - 70, 1250, fg, 1.5, 0.55);
   } else {
-    // list: each line sits on a hairline with a small gold diamond
-    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
-    kickerText(g, t.kicker, 120, 120, 840, "left", FOIL);
-    textBox(g, HU(g, t.headline), 120, 180, 840, 250, { font: "head", max: 84, min: 40, colour: ink, align: "left", lh: 1.08 });
+    textBox(g, t.kicker, 70, 124, 940, 50, { font: "script", max: 38, min: 22, weight: 600, italic: true, colour: acc, align: "left", lh: 1.15 });
+    textBox(g, HU(g, t.headline), 70, 180, 940, 250, { font: "head", max: 88, min: 40, colour: fg, align: "left", lh: 1.05 });
     const items = (t.body ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
     const n = Math.max(items.length, 1);
-    const top = 470, avail = 640, step = Math.min(132, avail / n);
+    const top = 460, step = Math.min(140, 690 / n);
     items.forEach((it, i) => {
       const y = top + i * step;
-      rule(g, 120, 960, y, FOIL, 1.5, 0.8);
-      ctx.save(); ctx.translate(140, y + step / 2); ctx.rotate(Math.PI / 4); ctx.fillStyle = FOIL; ctx.fillRect(-8, -8, 16, 16); ctx.restore();
-      textBox(g, it, 180, y + 12, 780, step - 24, { font: "body", max: 34, min: 20, weight: 500, colour: ink, align: "left", lh: 1.2 });
+      rule(g, 70, XW - 70, y, fg, 1.5, 0.5);
+      ctx.font = `400 ${Math.min(64, step * 0.5)}px ${g.head}`; ctx.fillStyle = acc; ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillText(String(i + 1).padStart(2, "0"), 70, y + step * 0.2);
+      textBox(g, it, 200, y + 14, 810, step - 28, { font: "body", max: 34, min: 20, weight: 500, colour: fg, align: "left", lh: 1.2 });
     });
-    rule(g, 120, 960, top + n * step, FOIL, 1.5, 0.8);
-    textBox(g, t.footer, 120, 1150, 840, 90, { font: "script", max: 38, min: 24, weight: 500, italic: true, colour: FOIL, align: "left", lh: 1.2 });
+    rule(g, 70, XW - 70, top + n * step, fg, 1.5, 0.5);
+    ctx.fillStyle = acc; ctx.fillRect(70, 1210, XW - 140, 70);
+    textBox(g, t.footer, 100, 1230, XW - 200, 44, { font: "body", max: 28, min: 18, weight: 700, colour: onAcc, align: "center", lh: 1.1 });
   }
+}
+function luxDot(ctx: Ctx, x: number, y: number, colour: string) {
+  ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
 }
 
 // the clinic name on the tag is a token already filled in by the caller
@@ -1541,7 +1509,7 @@ export function drawXmas(ctx: Ctx, d: DrawInput): Slot[] {
   ctx.save();
   ctx.textBaseline = "top";
   const lux = LUXE_DESIGNS.find((x) => x.id === d.design);
-  if (lux) drawLuxe(g, lux.look);
+  if (lux) drawLuxe(g, lux.look, String(d.design).replace(/\D/g, "").padStart(2, "0"));
   else LAYOUTS[d.design]!(g);
   if (d.logo && d.logoPos && d.logoPos !== "off") drawLogo(g, d.logo, d.logoPos);
   ctx.restore();
