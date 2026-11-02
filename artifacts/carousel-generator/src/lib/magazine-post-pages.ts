@@ -1,4 +1,4 @@
-// Draws the five Magazine Post pages onto 1080 x 1440 canvases:
+// Draws the five Magazine Post pages onto 1080 x 1440 canvases (1080 x 1920 in reel size):
 //   1. cover (the treatment name is the title)
 //   2, 3, 4. fact pages
 //   5. full photo page with "If this interests you, comment WORD"
@@ -13,6 +13,7 @@ import {
   INK,
   onColour,
   newCanvas,
+  pageExtra,
   drawCover,
   block,
   footer,
@@ -140,11 +141,14 @@ export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, phot
   top.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = top;
   ctx.fillRect(0, 0, PAGE_W, 340);
-  const bottom = ctx.createLinearGradient(0, 600, 0, PAGE_H);
+  // On the taller reel page the darkening starts lower, so the middle of the photo stays clear.
+  const E = pageExtra();
+  const gStart = 600 + E * 0.5;
+  const bottom = ctx.createLinearGradient(0, gStart, 0, PAGE_H);
   bottom.addColorStop(0, "rgba(0,0,0,0)");
   bottom.addColorStop(1, "rgba(0,0,0,0.82)");
   ctx.fillStyle = bottom;
-  ctx.fillRect(0, 600, PAGE_W, PAGE_H - 600);
+  ctx.fillRect(0, gStart, PAGE_W, PAGE_H - gStart);
 
   block(ctx, brand.clinicName || "Your clinic", {
     x: PAGE_W / 2,
@@ -167,7 +171,7 @@ export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, phot
     const insetW = 280;
     const insetH = 350;
     const ix = PAGE_W - 80 - insetW;
-    const iy = 420;
+    const iy = 420 + E * 0.3;
     ctx.save();
     ctx.translate(ix + insetW / 2, iy + insetH / 2);
     ctx.rotate((3 * Math.PI) / 180);
@@ -306,8 +310,10 @@ export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, ph
   const [c, ctx] = newCanvas();
   const iy = insideHeader(ctx, brand, page);
 
+  // The reel page is 480px taller: most of that goes to the photos, the rest spreads the facts out.
+  const E = pageExtra();
   const py = Math.max(iy + 32, 430);
-  const ph = 380;
+  const ph = 380 + E * 0.6;
   photoBlock(ctx, photos, idx, py, ph);
   ctx.fillStyle = brand.colour;
   ctx.fillRect(80, py + ph - 14, 70, 14);
@@ -349,7 +355,7 @@ export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, ph
       colour: pageInk,
       lineHeight: 1.36,
     });
-    fy += 132;
+    fy += 132 + (E * 0.4) / 3;
   });
 
   footer(ctx, brand, n, pageInk);
@@ -361,8 +367,9 @@ export function drawListPage(brand: MagazineBrand, page: ListPage, n: number, ph
   const [c, ctx] = newCanvas();
   const iy = insideHeader(ctx, brand, page);
 
+  const E = pageExtra();
   const py = Math.max(iy + 30, 420);
-  const ph = 320;
+  const ph = 320 + E * 0.5;
   photoBlock(ctx, photos, idx, py, ph);
   ctx.fillStyle = brand.colour;
   ctx.fillRect(80, py + ph - 14, 70, 14);
@@ -396,7 +403,7 @@ export function drawListPage(brand: MagazineBrand, page: ListPage, n: number, ph
       colour: pageInk,
       lineHeight: 1.28,
     });
-    ly += 96;
+    ly += 96 + (E * 0.5) / 5;
   }
 
   footer(ctx, brand, n, pageInk);
@@ -464,12 +471,13 @@ export function drawCommentPage(brand: MagazineBrand & { qrUrl?: string }, copy:
   top.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = top;
   ctx.fillRect(0, 0, PAGE_W, 260);
-  const bottom = ctx.createLinearGradient(0, 640, 0, PAGE_H);
+  const gStart = 640 + pageExtra() * 0.5;
+  const bottom = ctx.createLinearGradient(0, gStart, 0, PAGE_H);
   bottom.addColorStop(0, "rgba(0,0,0,0)");
   bottom.addColorStop(0.55, "rgba(0,0,0,0.72)");
   bottom.addColorStop(1, "rgba(0,0,0,0.88)");
   ctx.fillStyle = bottom;
-  ctx.fillRect(0, 640, PAGE_W, PAGE_H - 640);
+  ctx.fillRect(0, gStart, PAGE_W, PAGE_H - gStart);
 
   // With a booking link the QR card takes the top-right corner and the clinic
   // name moves to the left so the two never collide.

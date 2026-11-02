@@ -9,7 +9,7 @@ import { usePresets, presetWebsite } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
-import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, onColour, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
+import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, setMagazineSize, MAGAZINE_SIZES, onColour, METAL_BASE, type Metal, type MagazineSize, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { syncSharedFonts, FONTS_CHANGED_EVENT } from "@/lib/shared-fonts";
 import {
@@ -148,6 +148,13 @@ export default function MagazinePost() {
   setMagazineMetals({ [colour]: colourMetal, [accent]: accentMetal });
   // Other magazine tools share the page drawing code, so leave it flat when this page closes.
   useEffect(() => () => setMagazineMetals({}), []);
+  // Post size (1080 x 1440) or reel size (1080 x 1920). Set during render so every page drawn afterwards, whether
+  // for the preview, a download, a schedule or Magazine Flip, is the chosen height.
+  const [size, setSize] = useState<MagazineSize>("post");
+  setMagazineSize(size);
+  // Other magazine tools share the page drawing code, so put it back to post size when this page closes.
+  useEffect(() => () => setMagazineSize("post"), []);
+  const reel = size === "reel";
   const [contact, setContact] = useState("");
   const [qrLink, setQrLink] = useState("");
   const [qrReady, setQrReady] = useState(typeof window !== "undefined" && !!(window as any).qrcode);
@@ -312,7 +319,7 @@ export default function MagazinePost() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, pageBgColour, pageInkColour, contact, qrLink, qrReady, drafts, cur, activePage, serifFont, sansFont, fontTick, redrawTick]);
+  }, [clinicName, colour, accent, pageBgColour, pageInkColour, contact, qrLink, qrReady, drafts, cur, activePage, serifFont, sansFont, fontTick, redrawTick, size]);
 
   function hitAt(e: { clientX: number; clientY: number }) {
     const big = bigRef.current;
@@ -468,7 +475,7 @@ export default function MagazinePost() {
 
   function slugOf(dd: Draft, i: number) {
     const base = (dd.treatment.trim() || "magazine-post").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    return `${i + 1}-${base}`;
+    return `${i + 1}-${base}${reel ? "-reel" : ""}`;
   }
 
   // Why a post is not ready yet, or an empty string when it is.
@@ -517,6 +524,7 @@ export default function MagazinePost() {
         clientName: selectedClient?.name || clinicName.trim(),
         caption: dd.copy.caption?.trim() || undefined,
         title: dd.treatment.trim() ? `${dd.treatment.trim()} magazine post` : undefined,
+        size,
       });
       // Opens in its own tab so this page, with all four posts, stays exactly as it is.
       window.open("/magazine", "_blank", "noopener");
@@ -650,6 +658,28 @@ export default function MagazinePost() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.25fr] gap-8 items-start">
           {/* LEFT: the inputs */}
           <div className="space-y-7">
+            <section className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-zinc-500">Size</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Magazine post size">
+                {(Object.keys(MAGAZINE_SIZES) as MagazineSize[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => { setSize(k); setSelected(null); }}
+                    aria-pressed={size === k}
+                    className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                      size === k ? "border-fuchsia-500 bg-fuchsia-500/10 text-white" : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-fuchsia-500/50"
+                    }`}
+                  >
+                    {MAGAZINE_SIZES[k].label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-zinc-500">
+                {reel ? "Reel size fills the whole phone screen. Download the pages, or send them to Magazine Flip to turn them into a reel." : "Post size is the 3:4 carousel shape. Choose reel size for a full screen reel."} Your photos stay as they are and the pages re-fit.
+              </p>
+            </section>
+
             <section className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">1. The client</p>
               <label className="block">
@@ -945,13 +975,13 @@ export default function MagazinePost() {
               <canvas
                 ref={bigRef}
                 width={540}
-                height={720}
+                height={reel ? 960 : 720}
                 onPointerDown={onBigDown}
                 onPointerMove={onBigMove}
                 onPointerUp={onBigUp}
                 onPointerCancel={onBigUp}
                 style={{ touchAction: "none" }}
-                className="w-full max-w-sm aspect-[3/4] rounded-lg border border-zinc-800 bg-zinc-900"
+                className={`w-full ${reel ? "max-w-[260px] aspect-[9/16]" : "max-w-sm aspect-[3/4]"} rounded-lg border border-zinc-800 bg-zinc-900`}
                 aria-label="Large page preview. Drag a photo to move it, scroll to zoom."
               />
               <p className="text-[11px] text-zinc-500 mt-1.5">Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.</p>
@@ -985,8 +1015,8 @@ export default function MagazinePost() {
                       canvasRefs.current[i] = el;
                     }}
                     width={432}
-                    height={576}
-                    className="w-full aspect-[3/4] rounded-md border border-zinc-800 bg-zinc-900"
+                    height={reel ? 768 : 576}
+                    className={`w-full ${reel ? "aspect-[9/16]" : "aspect-[3/4]"} rounded-md border border-zinc-800 bg-zinc-900`}
                     aria-label={name}
                   />
                 ))}

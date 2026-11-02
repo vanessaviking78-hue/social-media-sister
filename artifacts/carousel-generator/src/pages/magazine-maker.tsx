@@ -12,6 +12,7 @@ import {
   DEFAULT_ADJUST,
   PAGE_W,
   PAGE_H,
+  setMagazineSize,
   type PhotoAdjust,
   type MagazineBrand,
   type MagazineCopy,
@@ -117,6 +118,8 @@ function Field({
 }
 
 export default function MagazineMaker() {
+  // Magazine Maker is post size only, whatever size another magazine tool left behind.
+  setMagazineSize("post");
   const [clinicName, setClinicName] = useState("");
   const [colour, setColour] = useState("#4a1942");
   const [accent, setAccent] = useState("#f0b8a4");

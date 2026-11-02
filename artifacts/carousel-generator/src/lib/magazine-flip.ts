@@ -1,7 +1,7 @@
 // Magazine flip-through animation.
 //
 // Four to sixteen pages go in: the front cover, up to fourteen middle pages
-// and a call to action. A 1080 x 1440 clip comes out where each page turns to
+// and a call to action. A 1080 x 1440 clip (or 1080 x 1920 for reel size) comes out where each page turns to
 // reveal the next, and the call to action is left holding on screen. The
 // clip runs 10 seconds for 4 pages, 12 seconds for 5 and about 2.7 seconds
 // longer for every page after that.
@@ -14,6 +14,16 @@ import { DOOR_W, DOOR_H, DOOR_FPS } from "./advent-door";
 
 export const MAG_W = DOOR_W;
 export const MAG_H = DOOR_H;
+// Post size is 3:4 and reel size is 9:16. The clip takes its size from the pages it is given, so either works.
+export type MagSizeKey = "post" | "reel";
+export const MAG_SIZES: Record<MagSizeKey, { w: number; h: number; label: string }> = {
+  post: { w: DOOR_W, h: DOOR_H, label: "Post size (1080 x 1440)" },
+  reel: { w: DOOR_W, h: 1920, label: "Reel size (1080 x 1920)" },
+};
+function sizeOf(pages: CanvasImageSource[]): { w: number; h: number } {
+  const p = pages[0] as HTMLCanvasElement | undefined;
+  return p && p.width && p.height ? { w: p.width, h: p.height } : { w: MAG_W, h: MAG_H };
+}
 export const MAG_FPS = DOOR_FPS;
 /** @deprecated kept for older callers; use magSecondsFor(pageCount) instead */
 export const MAG_SECONDS = 10;
@@ -79,15 +89,15 @@ function easeInOutCubic(x: number) {
 // Where the fold line of the turning page sits, s seconds after its turn
 // starts. It begins at the right edge (page flat), lifts a small tug at the
 // corner, then runs all the way across and off the left side.
-function foldAt(s: number): number {
-  if (s < -TUG_DURATION) return MAG_W;
+function foldAt(s: number, W: number): number {
+  if (s < -TUG_DURATION) return W;
   if (s < 0) {
     const k = (s + TUG_DURATION) / TUG_DURATION;
-    return MAG_W - 46 * Math.sin(k * Math.PI);
+    return W - 46 * Math.sin(k * Math.PI);
   }
   const k = Math.min(1, s / TURN_DURATION);
   const end = -CURL_RADIUS - 30;
-  return MAG_W + (end - MAG_W) * easeInOutCubic(k);
+  return W + (end - W) * easeInOutCubic(k);
 }
 
 // Which turn (if any) is in progress at time t, and which page is showing.
@@ -103,37 +113,38 @@ function stateAt(t: number, turnStarts: number[]): { turn: number; s: number } {
 }
 
 // A soft shadow down the spine so every page reads as part of a bound magazine.
-function drawSpine(ctx: CanvasRenderingContext2D) {
+function drawSpine(ctx: CanvasRenderingContext2D, H: number) {
   const g = ctx.createLinearGradient(0, 0, 70, 0);
   g.addColorStop(0, "rgba(0,0,0,0.20)");
   g.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 70, MAG_H);
+  ctx.fillRect(0, 0, 70, H);
 }
 
 // Draws one frame. t is seconds from the start.
 export function drawMagazineFrame(ctx: CanvasRenderingContext2D, pages: CanvasImageSource[], t: number) {
+  const { w: MAG_W, h: MAG_H } = sizeOf(pages);
   const st = stateAt(t, turnStartsFor(pages.length));
   ctx.clearRect(0, 0, MAG_W, MAG_H);
 
   if (st.turn < 0) {
     const pageNo = -1 - st.turn;
     ctx.drawImage(pages[pageNo], 0, 0, MAG_W, MAG_H);
-    drawSpine(ctx);
+    drawSpine(ctx, MAG_H);
     return;
   }
 
   const top = pages[st.turn];
   const under = pages[st.turn + 1];
   ctx.drawImage(under, 0, 0, MAG_W, MAG_H);
-  drawSpine(ctx);
+  drawSpine(ctx, MAG_H);
 
-  const f = foldAt(st.s);
+  const f = foldAt(st.s, MAG_W);
   const R = CURL_RADIUS;
 
   if (f >= MAG_W - 0.5) {
     ctx.drawImage(top, 0, 0, MAG_W, MAG_H);
-    drawSpine(ctx);
+    drawSpine(ctx, MAG_H);
     return;
   }
   if (f <= -R - 29) return;
@@ -213,6 +224,7 @@ export async function exportMagazineMp4(
     throw new Error("MP4 export needs Chrome or Edge (or Safari 16.4 and newer). Open this page in one of those.");
   }
   const { Muxer, ArrayBufferTarget } = await import("mp4-muxer");
+  const { w: MAG_W, h: MAG_H } = sizeOf(pages);
   const canvas = document.createElement("canvas");
   canvas.width = MAG_W;
   canvas.height = MAG_H;
