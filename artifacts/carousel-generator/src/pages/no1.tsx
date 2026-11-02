@@ -24,9 +24,53 @@ const FONT_CSS = `
 
 type Photo = { id: string; bmp: ImageBitmap; url: string };
 
+// Her logo sits on every slide of a post. x and y are the centre as a share of the slide, w is the width as a share of the slide.
+type LogoPlace = { on: boolean; x: number; y: number; w: number; white: boolean };
+const DEFAULT_LOGO: LogoPlace = { on: true, x: 0.76, y: 0.075, w: 0.3, white: false };
+const LOGO_RATIO = 234 / 1112;
+const LOGO_SRC = `${BASE}/no1-logo.png`;
+
+let LOGO: HTMLImageElement | null = null;
+let LOGO_WHITE: HTMLCanvasElement | null = null;
+let logoLoading: Promise<void> | null = null;
+
+function ensureLogo(): Promise<void> {
+  if (LOGO) return Promise.resolve();
+  if (!logoLoading) {
+    logoLoading = new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        LOGO = img;
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        const x = c.getContext("2d")!;
+        x.drawImage(img, 0, 0);
+        x.globalCompositeOperation = "source-in";
+        x.fillStyle = "#ffffff";
+        x.fillRect(0, 0, c.width, c.height);
+        LOGO_WHITE = c;
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = LOGO_SRC;
+    });
+  }
+  return logoLoading;
+}
+
+function drawLogo(ctx: CanvasRenderingContext2D, place: LogoPlace) {
+  if (!place.on || !LOGO) return;
+  const lw = place.w * W;
+  const lh = lw * LOGO_RATIO;
+  const src = place.white && LOGO_WHITE ? LOGO_WHITE : LOGO;
+  ctx.drawImage(src, place.x * W - lw / 2, place.y * H - lh / 2, lw, lh);
+}
+
 type Post = {
   id: string;
   typeId: string;
+  logo: LogoPlace;
   hook: string;
   slides: string[]; // slides 2 to 4
   cta: string;
@@ -99,6 +143,11 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, font: (px: number)
 }
 
 function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null) {
+  drawSlideBase(ctx, post, n, photo);
+  drawLogo(ctx, post.logo);
+}
+
+function drawSlideBase(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null) {
   const C = NO1_COLOURS;
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
@@ -176,12 +225,13 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   ctx.fillText(`${n + 1} / 5`, W - 120, cardY + cardH - 52);
 }
 
-function SlideCanvas({ post, n, photo, onClick }: { post: Post; n: number; photo: Photo | null; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, onClick, width = 150 }: { post: Post; n: number; photo: Photo | null; onClick?: () => void; width?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let live = true;
     (async () => {
       await ensureFonts();
+      await ensureLogo();
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
@@ -191,7 +241,76 @@ function SlideCanvas({ post, n, photo, onClick }: { post: Post; n: number; photo
       live = false;
     };
   }, [post, n, photo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+  return <canvas ref={ref} width={W} height={H} onClick={onClick} style={{ width }} className="h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+}
+
+// A bigger preview where the logo can be dragged and resized. It changes every slide of the post.
+function LogoEditor({ post, photoFor, onChange }: { post: Post; photoFor: (n: number) => Photo | null; onChange: (l: LogoPlace) => void }) {
+  const [slide, setSlide] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ mode: "move" | "size"; sx: number; sy: number; start: LogoPlace } | null>(null);
+  const VIEW = 300;
+  const L = post.logo;
+  const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
+
+  const begin = (mode: "move" | "size") => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    drag.current = { mode, sx: e.clientX, sy: e.clientY, start: { ...L } };
+  };
+  const move = (e: React.PointerEvent) => {
+    const d = drag.current;
+    const el = box.current;
+    if (!d || !el) return;
+    const r = el.getBoundingClientRect();
+    const dx = (e.clientX - d.sx) / r.width;
+    const dy = (e.clientY - d.sy) / r.height;
+    if (d.mode === "move") onChange({ ...d.start, x: clamp(d.start.x + dx, 0, 1), y: clamp(d.start.y + dy, 0, 1) });
+    else onChange({ ...d.start, w: clamp(d.start.w + dx * 2, 0.08, 0.95) });
+  };
+  const end = () => {
+    drag.current = null;
+  };
+
+  const lwPct = L.w * 100;
+  const lhPct = L.w * W * LOGO_RATIO / H * 100;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-white/60 text-sm">Logo</span>
+        <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={L.on} onChange={(e) => onChange({ ...L, on: e.target.checked })} />Show</label>
+        <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={L.white} onChange={(e) => onChange({ ...L, white: e.target.checked })} />White version</label>
+        <label className="flex items-center gap-2 text-sm">Size
+          <input type="range" min={8} max={95} value={Math.round(L.w * 100)} onChange={(e) => onChange({ ...L, w: Number(e.target.value) / 100 })} />
+        </label>
+        <Button size="sm" variant="ghost" onClick={() => onChange({ ...DEFAULT_LOGO })}>Reset</Button>
+        <div className="flex gap-1 ml-auto">
+          {[0, 1, 2, 3, 4].map((n) => (
+            <button key={n} onClick={() => setSlide(n)} className={`w-7 h-7 rounded text-xs border ${slide === n ? "bg-white text-black border-white" : "border-white/20"}`}>{n + 1}</button>
+          ))}
+        </div>
+      </div>
+      <p className="text-white/50 text-xs">Drag the logo to move it. Drag the round handle to make it bigger or smaller. It applies to all five slides.</p>
+      <div ref={box} className="relative select-none touch-none" style={{ width: VIEW }} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+        <SlideCanvas post={post} n={slide} photo={photoFor(slide)} width={VIEW} />
+        {L.on && (
+          <div
+            onPointerDown={begin("move")}
+            className="absolute border border-dashed border-pink-400/80 cursor-move"
+            style={{ left: `${L.x * 100 - lwPct / 2}%`, top: `${L.y * 100 - lhPct / 2}%`, width: `${lwPct}%`, height: `${lhPct}%` }}
+          >
+            <div
+              onPointerDown={begin("size")}
+              className="absolute -right-2 -bottom-2 w-4 h-4 rounded-full bg-pink-500 border-2 border-white cursor-nwse-resize"
+              aria-label="Resize logo"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function No1Page() {
@@ -200,9 +319,12 @@ export default function No1Page() {
   const [group, setGroup] = useState(NO1_GROUPS[0].id);
   const [typeId, setTypeId] = useState(NO1_POST_TYPES[0].id);
   const [done, setDone] = useState<Set<string>>(new Set());
+  // The last logo placement she chose, so every new post starts where she likes it.
+  const [logoDefault, setLogoDefault] = useState<LogoPlace>({ ...DEFAULT_LOGO });
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    ensureLogo();
     try {
       const raw = localStorage.getItem(DONE_KEY);
       if (raw) setDone(new Set(JSON.parse(raw)));
@@ -262,6 +384,7 @@ export default function No1Page() {
       {
         id: uid(),
         typeId: t.id,
+        logo: logoDefault,
         hook: t.label,
         slides: ["", "", ""],
         cta: "",
@@ -305,6 +428,7 @@ export default function No1Page() {
   const download = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
     await ensureFonts();
+    await ensureLogo();
     const zip = new JSZip();
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
@@ -393,6 +517,7 @@ export default function No1Page() {
                     <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
+                <LogoEditor post={post} photoFor={(n) => photoFor(post, n)} onChange={(l) => { setLogoDefault(l); patch(post.id, { logo: l }); }} />
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
                     <span className="text-white/60">Front slide</span>
