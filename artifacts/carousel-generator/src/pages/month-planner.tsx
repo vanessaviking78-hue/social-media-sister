@@ -821,6 +821,7 @@ export default function MonthPlanner() {
               <div className="ml-auto flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => setSlots(defaultSlots(year, month, hhmm).map((d) => ({ ...(slots.find((x) => x.key === d.key) ?? d), on: d.on })))}>Tick Monday to Friday</Button>
                 <Button size="sm" variant="outline" onClick={() => setSlots((l) => l.map((x) => ({ ...x, on: false })))}>Clear ticks</Button>
+                <Button size="sm" disabled={!preset} onClick={() => setHookModal(true)} title="Open the hook bank and tick this month's hooks">Choose hooks ({hookPick.length})</Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
