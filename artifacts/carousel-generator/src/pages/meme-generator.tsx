@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Sparkles, Loader2, Download, ShieldCheck, RefreshCcw, CalendarClock, PenLine } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, CalendarClock, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,17 +10,25 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { usePresets } from "@/lib/use-presets";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 import { FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
+import { PREMADE_MEMES, type PremadeMeme } from "@/lib/premade-memes";
 
 loadGoogleFonts();
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
-const H = 1440;
+const H = 1350;
+const BEDROSS = "'Bedross', sans-serif";
+const TEXT_COLOUR = "#ffffff";
+const AUDIENCES = ["All", "Menopause", "Mums of toddlers", "Mums of teens", "Busy mums", "ADHD", "Graceful", "Disgraceful"];
 
-const SUGGESTED = [
-  "brain fog", "the school run", "the 9pm sofa coma",
-  "hormones", "group chats", "husbands and the dishwasher",
-];
+const loadLogo = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Logo load failed"));
+    img.src = src;
+  });
 
 const noDashes = (t: string) =>
   t.replace(/(\d)–(\d)/g, "$1-$2").replace(/\s*[—–]\s*/g, ", ").replace(/,\s*,/g, ",");
@@ -46,27 +54,18 @@ function nextSlot(day: 6 | 0, hour: number): { date: string; time: string } {
   return { date: toDateInput(d), time: `${pad2(hour)}:00` };
 }
 
-const TEXT_COLOURS = [
-  { label: "White", value: "#ffffff" },
-  { label: "Cream", value: "#fff4dc" },
-  { label: "Black", value: "#111111" },
-  { label: "Hot pink", value: "#ff3d8b" },
-  { label: "Gold", value: "#f2c14e" },
-];
-
 export default function MemeGenerator() {
   const { presets } = usePresets();
   const [clientName, setClientName] = useState("");
   const [photo, setPhoto] = useState<HTMLImageElement | null>(null);
-  const [topic, setTopic] = useState("");
-  const [quotes, setQuotes] = useState<string[]>([]);
-  const [seen, setSeen] = useState<string[]>([]);
+  const [premadeId, setPremadeId] = useState<number | null>(null);
+  const [audience, setAudience] = useState("All");
+  const [logo, setLogo] = useState<HTMLImageElement | null>(null);
+  const [logoScale, setLogoScale] = useState(1);
   const [selected, setSelected] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [position, setPosition] = useState<"top" | "middle" | "bottom">("bottom");
-  const [fontSize, setFontSize] = useState(72);
-  const [fontValue, setFontValue] = useState("'Anton', sans-serif");
-  const [textColour, setTextColour] = useState("#ffffff");
+  const [position, setPosition] = useState<"top" | "bottom">("bottom");
+  const [fontSize, setFontSize] = useState(76);
+  const [fontValue, setFontValue] = useState(BEDROSS);
   const [caps, setCaps] = useState(false);
   const [fontTick, setFontTick] = useState(0);
   const [captions, setCaptions] = useState<string[]>([]);
@@ -94,34 +93,36 @@ export default function MemeGenerator() {
   const loadFile = (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please choose an image"); return; }
     const img = new Image();
-    img.onload = () => setPhoto(img);
+    img.onload = () => { setPhoto(img); setPremadeId(null); };
     img.onerror = () => toast.error("Could not load that image");
     img.src = URL.createObjectURL(file);
   };
 
-  const genQuotes = async (more = false) => {
-    if (!topic.trim()) { toast.error("Type a topic first"); return; }
-    setGenerating(true);
-    try {
-      const r = await fetch(`${BASE}/api/meme/lines`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, exclude: more ? seen : [], clientName }),
-      });
-      const d = await r.json().catch(() => ({})) as { quotes?: string[]; error?: string };
-      if (!r.ok || !d.quotes?.length) throw new Error(d.error || "Could not write quotes");
-      const out = d.quotes.map(noDashes);
-      setQuotes(out);
-      setSeen((prev) => (more ? [...prev, ...out] : out));
-      setSelected(out[0] ?? "");
+  const pickPremade = (m: PremadeMeme) => {
+    const img = new Image();
+    img.onload = () => {
+      setPhoto(img);
+      setPremadeId(m.id);
+      setSelected(m.text);
+      setPosition(m.pos);
+      setFontSize(m.size);
+      setFontValue(BEDROSS);
+      setCaps(false);
       setCaptions([]);
       setCaption("");
-    } catch (e: any) {
-      toast.error(e?.message || "Could not write quotes");
-    } finally {
-      setGenerating(false);
-    }
+    };
+    img.onerror = () => toast.error("Could not load that meme");
+    img.src = `${BASE}/${m.file}`;
   };
+
+  // The chosen client's transparent logo goes in the top right corner.
+  useEffect(() => {
+    const preset = presets.find((p) => p.name === clientName);
+    if (!preset?.logoUrl) { setLogo(null); return; }
+    let live = true;
+    loadLogo(preset.logoUrl).then((img) => { if (live) setLogo(img); }).catch(() => { if (live) setLogo(null); });
+    return () => { live = false; };
+  }, [clientName, presets]);
 
   const writeCaptions = async () => {
     const quote = selected.trim();
@@ -181,25 +182,33 @@ export default function MemeGenerator() {
       else { dw = W; dh = W / ar; dy = (H - dh) / 2; }
       ctx.drawImage(photo, dx, dy, dw, dh);
     }
+    const drawLogoTopRight = () => {
+      if (!logo) return;
+      const maxW = 260 * logoScale, maxH = 110 * logoScale, m = 40;
+      const sc = Math.min(maxW / logo.width, maxH / logo.height);
+      const w = logo.width * sc, h = logo.height * sc;
+      // Straight onto the photo with nothing behind it, so a transparent PNG stays transparent.
+      ctx.drawImage(logo, W - m - w, m, w, h);
+    };
+    const fontWeight = fontValue === BEDROSS ? 400 : 700;
     const raw = selected.trim();
-    if (!raw) return;
+    if (!raw) { drawLogoTopRight(); return; }
     const text = caps ? raw.toUpperCase() : raw;
-    const light = textColour.toLowerCase() !== "#111111";
+    const light = true;
 
     // A soft shade behind the words so they read on any photo.
-    const shadeTop = position === "top" ? 0 : position === "middle" ? H * 0.2 : H * 0.4;
-    const shadeH = position === "middle" ? H * 0.6 : H * 0.6;
+    const shadeTop = position === "top" ? 0 : H * 0.4;
+    const shadeH = H * 0.6;
     const g = ctx.createLinearGradient(0, shadeTop, 0, shadeTop + shadeH);
     const c = light ? "0,0,0" : "255,255,255";
     if (position === "top") { g.addColorStop(0, `rgba(${c},0.6)`); g.addColorStop(1, `rgba(${c},0)`); }
-    else if (position === "middle") { g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(0.5, `rgba(${c},0.5)`); g.addColorStop(1, `rgba(${c},0)`); }
     else { g.addColorStop(0, `rgba(${c},0)`); g.addColorStop(1, `rgba(${c},0.65)`); }
     ctx.fillStyle = g;
     ctx.fillRect(0, shadeTop, W, shadeH);
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.font = `700 ${fontSize}px ${fontValue}`;
+    ctx.font = `${fontWeight} ${fontSize}px ${fontValue}`;
     const maxW = W - 140;
     const wrapped: string[] = [];
     let cur = "";
@@ -211,24 +220,26 @@ export default function MemeGenerator() {
     if (cur) wrapped.push(cur);
     const lineH = fontSize * 1.18;
     const totalH = wrapped.length * lineH;
-    const top = position === "top" ? 90 : position === "middle" ? (H - totalH) / 2 : H - totalH - 110;
+    const logoBottom = logo ? 40 + Math.min((260 * logoScale) / logo.width, (110 * logoScale) / logo.height) * logo.height + 24 : 0;
+    const top = position === "top" ? Math.max(90, logoBottom) : H - totalH - 90;
     ctx.lineJoin = "round";
     ctx.lineWidth = Math.max(4, fontSize / 10);
     ctx.strokeStyle = light ? "rgba(0,0,0,0.8)" : "rgba(255,255,255,0.85)";
-    ctx.fillStyle = textColour;
+    ctx.fillStyle = TEXT_COLOUR;
     let y = top;
     for (const ln of wrapped) {
       ctx.strokeText(ln, W / 2, y);
       ctx.fillText(ln, W / 2, y);
       y += lineH;
     }
-  }, [photo, selected, fontSize, fontValue, textColour, caps, position]);
+    drawLogoTopRight();
+  }, [photo, selected, fontSize, fontValue, caps, position, logo, logoScale]);
 
   useEffect(() => {
     render();
     let live = true;
     const f = (document as { fonts?: { load?: (s: string) => Promise<unknown> } }).fonts;
-    if (f?.load) f.load(`700 64px ${fontValue}`).then(() => { if (live) render(); }).catch(() => {});
+    if (f?.load) f.load(`${fontValue === BEDROSS ? 400 : 700} 64px ${fontValue}`).then(() => { if (live) render(); }).catch(() => {});
     const t = setTimeout(render, 300);
     return () => { live = false; clearTimeout(t); };
   }, [render, fontValue, fontTick]);
@@ -267,7 +278,7 @@ export default function MemeGenerator() {
       const lib = await fetch(`${BASE}/api/library`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, postType: "single", caption: caption || selected, mediaUrl: url, metadata: { source: "meme", topic } }),
+        body: JSON.stringify({ clientName, postType: "single", caption: caption || selected, mediaUrl: url, metadata: { source: "meme", premadeId } }),
       });
       if (!lib.ok) throw new Error("Save failed");
       toast.success(`Saved to ${clientName}'s library`);
@@ -314,7 +325,7 @@ export default function MemeGenerator() {
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">Meme Maker</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Give it a topic, get five feral quotes, pick one, add a photo, write the caption, schedule it.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Pick a premade meme, choose the client, write the caption, schedule it.</p>
         </div>
       </header>
 
@@ -331,37 +342,25 @@ export default function MemeGenerator() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-semibold text-base">2. Give me a topic</h2>
-            <div className="flex gap-2">
-              <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. brain fog, the school run, hormones"
-                onKeyDown={(e) => { if (e.key === "Enter") genQuotes(false); }} />
-              <Button onClick={() => genQuotes(false)} disabled={generating} className="shrink-0">
-                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                <span className="ml-1.5">Give me 5</span>
-              </Button>
-            </div>
+            <h2 className="font-semibold text-base">2. Pick a premade meme <span className="text-xs font-normal text-muted-foreground">({PREMADE_MEMES.length} ready to go)</span></h2>
             <div className="flex flex-wrap gap-1.5">
-              {SUGGESTED.map((s) => (
-                <button key={s} onClick={() => setTopic(s)} className="text-xs rounded-full px-2.5 py-1 bg-muted/40 text-muted-foreground hover:text-foreground transition-colors">{s}</button>
+              {AUDIENCES.map((a) => (
+                <button key={a} onClick={() => setAudience(a)}
+                  className={`text-xs rounded-full px-2.5 py-1 transition-colors ${audience === a ? "bg-primary text-primary-foreground" : "bg-muted/40 text-muted-foreground hover:text-foreground"}`}>{a}</button>
               ))}
             </div>
-            {quotes.length > 0 && (
-              <div className="space-y-1.5 pt-1">
-                {quotes.map((q, i) => (
-                  <button key={i} onClick={() => { setSelected(q); setCaptions([]); setCaption(""); }}
-                    className={`w-full text-left text-sm rounded-lg px-3 py-2.5 border transition-colors ${selected === q ? "border-primary/60 bg-primary/5 text-foreground" : "border-border/30 text-muted-foreground hover:text-foreground"}`}>
-                    {q}
-                  </button>
-                ))}
-                <button onClick={() => genQuotes(true)} disabled={generating} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 pt-1">
-                  <RefreshCcw className="w-3 h-3" /> Five more, different ones
+            <div className="grid grid-cols-4 gap-2 max-h-[420px] overflow-y-auto pr-1">
+              {PREMADE_MEMES.filter((m) => audience === "All" || m.audience === audience).map((m) => (
+                <button key={m.id} onClick={() => pickPremade(m)} title={m.text}
+                  className={`relative rounded-lg overflow-hidden border-2 ${premadeId === m.id ? "border-primary" : "border-transparent hover:border-border/60"}`}>
+                  <img src={`${BASE}/${m.file}`} alt={m.text} loading="lazy" className="w-full aspect-[4/5] object-cover block" />
                 </button>
-              </div>
-            )}
+              ))}
+            </div>
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-semibold text-base">3. Add a photo <span className="text-xs font-normal text-muted-foreground">(optional)</span></h2>
+            <h2 className="font-semibold text-base">3. Or use your own photo <span className="text-xs font-normal text-muted-foreground">(optional)</span></h2>
             <div
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
@@ -401,26 +400,18 @@ export default function MemeGenerator() {
               </select>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <div className="flex items-center gap-1.5">
-                <Label className="text-xs text-muted-foreground">Text</Label>
-                {(["top", "middle", "bottom"] as const).map((p) => (
-                  <Button key={p} variant={position === p ? "default" : "outline"} size="sm" onClick={() => setPosition(p)} className="capitalize">{p}</Button>
-                ))}
-              </div>
               <Button variant={caps ? "default" : "outline"} size="sm" onClick={() => setCaps((v) => !v)}>CAPS</Button>
             </div>
             <div className="flex items-center gap-2">
               <Label className="text-xs text-muted-foreground">Size</Label>
               <input type="range" min={36} max={120} step={2} value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="flex-1 cursor-pointer" />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Label className="text-xs text-muted-foreground">Colour</Label>
-              {TEXT_COLOURS.map((c) => (
-                <button key={c.value} title={c.label} onClick={() => setTextColour(c.value)}
-                  className={`w-7 h-7 rounded-full border-2 ${textColour === c.value ? "border-primary" : "border-border/40"}`} style={{ background: c.value }} />
-              ))}
-              <input type="color" value={textColour} onChange={(e) => setTextColour(e.target.value)} className="w-7 h-7 rounded cursor-pointer bg-transparent" />
-            </div>
+            {logo && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Logo size</Label>
+                <input type="range" min={0.5} max={2} step={0.05} value={logoScale} onChange={(e) => setLogoScale(parseFloat(e.target.value))} className="flex-1 cursor-pointer" />
+              </div>
+            )}
           </section>
 
           <section className="space-y-2">
@@ -447,7 +438,7 @@ export default function MemeGenerator() {
 
         <div className="space-y-3 lg:sticky lg:top-6 self-start">
           <div className="rounded-xl overflow-hidden border border-border/30 bg-black/20">
-            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "3 / 4" }} />
+            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "1080 / 1350" }} />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={download} disabled={!selected.trim()} className="flex-1">
@@ -472,7 +463,7 @@ export default function MemeGenerator() {
             </Button>
             <p className="text-[11px] text-muted-foreground">Posts to Instagram for the chosen client at the chosen time, with the caption above.</p>
           </div>
-          <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
+          <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1350, ready for the grid.</p>
         </div>
       </div>
     </div>
