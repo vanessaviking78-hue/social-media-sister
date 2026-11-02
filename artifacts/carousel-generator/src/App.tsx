@@ -437,7 +437,7 @@ function AppContent() {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
   }
   if (isNo1Client) {
-    return <No1Page client />;
+    return <PackPublic slug="no1-body-sculpting-posts" />;
   }
   if (isPackOrder) {
     return <PackOrder />;

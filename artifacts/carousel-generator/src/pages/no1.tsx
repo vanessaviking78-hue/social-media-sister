@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Check, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, Download, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -313,7 +313,7 @@ function LogoEditor({ post, photoFor, onChange }: { post: Post; photoFor: (n: nu
   );
 }
 
-export default function No1Page({ client = false }: { client?: boolean }) {
+export default function No1Page() {
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(NO1_GROUPS[0].id);
@@ -322,20 +322,20 @@ export default function No1Page({ client = false }: { client?: boolean }) {
   // The last logo placement she chose, so every new post starts where she likes it.
   const [logoDefault, setLogoDefault] = useState<LogoPlace>({ ...DEFAULT_LOGO });
   const fileRef = useRef<HTMLInputElement>(null);
+  const [published, setPublished] = useState<{ n: number; label: string; slides: number }[]>([]);
+  const [sending, setSending] = useState<string | null>(null);
+
+  const loadPublished = async () => {
+    try {
+      const r = await fetch(`${BASE}/api/no1/published`, { cache: "no-store" });
+      if (r.ok) setPublished((await r.json()).posts ?? []);
+    } catch {
+      /* the list just stays as it was */
+    }
+  };
 
   useEffect(() => {
-    if (!client) return;
-    // Her private link should not turn up in search results.
-    const m = document.createElement("meta");
-    m.name = "robots";
-    m.content = "noindex,nofollow";
-    document.head.appendChild(m);
-    return () => {
-      m.remove();
-    };
-  }, [client]);
-
-  useEffect(() => {
+    loadPublished();
     ensureLogo();
     try {
       const raw = localStorage.getItem(DONE_KEY);
@@ -456,6 +456,56 @@ export default function No1Page({ client = false }: { client?: boolean }) {
     toast.success("Downloaded");
   };
 
+  // Draws the five slides, saves them and adds the post to her private download page.
+  const sendToHer = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    setSending(post.id);
+    try {
+      await ensureFonts();
+      await ensureLogo();
+      const images: string[] = [];
+      for (let n = 0; n < 5; n++) {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        drawSlide(c.getContext("2d")!, post, n, photoFor(post, n));
+        const blob: Blob | null = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.92));
+        if (!blob) throw new Error("A slide would not draw, try again");
+        const fd = new FormData();
+        fd.append("image", blob, `no1-${post.id}-${n + 1}.jpg`);
+        const up = await fetch(`${BASE}/api/free-samples/image`, { method: "POST", body: fd });
+        const d = await up.json().catch(() => ({}));
+        if (!up.ok || !d.url) throw new Error(d?.error || "A slide would not save, try again");
+        images.push(d.url);
+      }
+      const r = await fetch(`${BASE}/api/no1/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: t.label, images, caption: post.caption, tags: post.hashtags.join(" ") }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || "That did not send, try again");
+      markDone(t.id);
+      await loadPublished();
+      toast.success("Sent to her link");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "That did not send, try again");
+    } finally {
+      setSending(null);
+    }
+  };
+
+  const unpublish = async (n: number) => {
+    try {
+      await fetch(`${BASE}/api/no1/unpublish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n }) });
+      await loadPublished();
+    } catch {
+      toast.error("That did not remove, try again");
+    }
+  };
+
+  const herLink = `${window.location.origin}${BASE}/no1bodypostsready`;
+
   const doneCount = (g: string) => NO1_POST_TYPES.filter((t) => t.group === g && done.has(t.id)).length;
   const totalIn = (g: string) => NO1_POST_TYPES.filter((t) => t.group === g).length;
 
@@ -464,12 +514,33 @@ export default function No1Page({ client = false }: { client?: boolean }) {
       <style>{FONT_CSS}</style>
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-3">
-          {!client && <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>}
+          <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
             <h1 className="text-3xl" style={{ fontFamily: `"${HEAD}", serif` }}>{NO1_CLINIC}</h1>
-            <p className="text-white/60 text-sm">{client ? "Add your photos, pick a post, press Write it, then download your carousel and caption." : "Her own page. 44 carousel types, Hatcher on the front, Merriweather inside, no prices."}</p>
+            <p className="text-white/60 text-sm">Her own page. 44 carousel types, Hatcher on the front, Merriweather inside, no prices.</p>
           </div>
         </div>
+
+        <section className="rounded-xl border border-pink-500/30 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-semibold">Her link</h2>
+            <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard.writeText(herLink).then(() => toast.success("Link copied"), () => toast.error("Copy it by hand")); }}><Copy className="w-4 h-4 mr-2" />Copy her link</Button>
+          </div>
+          <p className="text-white/60 text-sm">{herLink}</p>
+          <p className="text-white/50 text-sm">Build a post below, press Send to her link, and it appears on her page ready to save. She sees every post you have sent.</p>
+          {published.length === 0 ? (
+            <p className="text-white/50 text-sm">Nothing sent yet.</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {published.map((p) => (
+                <li key={p.n} className="flex items-center justify-between gap-3 rounded bg-white/5 px-3 py-1.5">
+                  <span>Post {p.n}: {p.label || "Carousel"} <span className="text-white/40">({p.slides} slides)</span></span>
+                  <button className="text-white/60 hover:text-white" onClick={() => unpublish(p.n)} aria-label={`Take post ${p.n} off her link`}><Trash2 className="w-4 h-4" /></button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -521,6 +592,9 @@ export default function No1Page({ client = false }: { client?: boolean }) {
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    <Button size="sm" onClick={() => sendToHer(post)} disabled={!post.caption || sending === post.id}>
+                      {sending === post.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}Send to her link
+                    </Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
