@@ -131,22 +131,33 @@ function measure(
   return { size, lines, height: lines * size * o.lineHeight };
 }
 
+function tint(hex: string, a: number): string {
+  const h = (hex || "#000000").replace("#", "");
+  const f = h.length === 3 ? h.split("").map((x) => x + x).join("") : h.padEnd(6, "0");
+  const n = parseInt(f.slice(0, 6), 16) || 0;
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
 // PAGE 1: cover. The treatment name is the title.
 export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, photos: (CanvasImageSource | null)[], plan: PhotoPlan) {
   const [c, ctx] = newCanvas();
   drawCover(ctx, photos[plan.cover[0]] ?? null, 0, 0, PAGE_W, PAGE_H, plan.cover[0]);
 
   const top = ctx.createLinearGradient(0, 0, 0, 340);
-  top.addColorStop(0, "rgba(0,0,0,0.6)");
-  top.addColorStop(1, "rgba(0,0,0,0)");
+  top.addColorStop(0, tint(brand.colour, 0.85));
+  top.addColorStop(1, tint(brand.colour, 0));
+  // A soft wash of the page colour over the whole photo, so the colour choice is always visible.
+  ctx.fillStyle = tint(brand.colour, 0.22);
+  ctx.fillRect(0, 0, PAGE_W, PAGE_H);
   ctx.fillStyle = top;
   ctx.fillRect(0, 0, PAGE_W, 340);
   // On the taller reel page the darkening starts lower, so the middle of the photo stays clear.
   const E = pageExtra();
   const gStart = 600 + E * 0.5;
   const bottom = ctx.createLinearGradient(0, gStart, 0, PAGE_H);
-  bottom.addColorStop(0, "rgba(0,0,0,0)");
-  bottom.addColorStop(1, "rgba(0,0,0,0.82)");
+  bottom.addColorStop(0, tint(brand.colour, 0));
+  bottom.addColorStop(0.55, tint(brand.colour, 0.7));
+  bottom.addColorStop(1, tint(brand.colour, 0.95));
   ctx.fillStyle = bottom;
   ctx.fillRect(0, gStart, PAGE_W, PAGE_H - gStart);
 
@@ -200,7 +211,7 @@ export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, phot
     minSize: 70,
     family: SERIF,
     weight: "bold",
-    colour: "#ffffff",
+    colour: onColour(brand.colour),
     lineHeight: 1.02,
   });
   if (tagline) {

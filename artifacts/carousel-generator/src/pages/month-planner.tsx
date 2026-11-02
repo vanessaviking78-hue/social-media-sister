@@ -779,8 +779,9 @@ export default function MonthPlanner() {
         <span className="text-sm text-muted-foreground">Pick a client and a month, tick your days, choose a tool and topic for each, and I make them all together</span>
       </header>
       <main className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
-        <section className="rounded-2xl border border-border/30 p-5 space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <section className="rounded-2xl border border-border/30 bg-muted/5 p-6 space-y-5">
+          <h2 className="flex items-center gap-3 text-lg font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/20 text-sm text-violet-300">1</span> Who is it for, and which month?</h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5 lg:col-span-2">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Client</span>
               <Select value={clientId} onValueChange={setClientId}>
@@ -792,7 +793,7 @@ export default function MonthPlanner() {
               </Select>
             </div>
             {isProspect && (
-              <label className="space-y-1.5 block lg:col-span-5">
+              <label className="space-y-1.5 block lg:col-span-4">
                 <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Their clinic name</span>
                 <Input value={prospectName} onChange={(e) => setProspectName(e.target.value)} placeholder="e.g. Glow Aesthetics" />
               </label>
@@ -816,6 +817,10 @@ export default function MonthPlanner() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Area (also used for the 5 hashtags)</span>
               <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Town, City (the hashtags use this)" className={!area.trim() && preset ? "border-red-500/60" : ""} />
             </label>
+          </div>
+          <details className="group rounded-xl border border-border/30 bg-muted/10 p-4">
+            <summary className="cursor-pointer select-none text-sm font-medium text-muted-foreground group-open:text-foreground">Look and feel: fonts, spacing, logo and brand colours</summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Headline font</span>
               <Select value={headFont} onValueChange={setHeadFont}>
@@ -863,13 +868,17 @@ export default function MonthPlanner() {
                 <label className="flex items-center gap-1.5">Accent <input type="color" value={brandAccent} onChange={(e) => setBrandAccent(e.target.value)} className="h-7 w-9 rounded border border-border/40 bg-transparent" /></label>
               </div>
             </div>
-            <div className="flex items-end gap-3 lg:col-span-3">
+            <div className="flex flex-wrap items-end gap-3 lg:col-span-4">
               <Button variant="outline" onClick={() => logoFileRef.current?.click()} disabled={!preset}>{logo ? "Change logo" : "Upload logo"}</Button>
               <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} />
               {logo && <img src={logo.src} alt="" className="h-9 max-w-[120px] object-contain rounded bg-white/90 p-1" />}
               <Button variant="outline" onClick={() => fontFileRef.current?.click()}><Type className="w-4 h-4 mr-1.5" /> Upload fonts</Button>
               <input ref={fontFileRef} type="file" accept=".otf,.ttf,.woff,.woff2" multiple className="hidden"
                 onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) void addFonts(fs); }} />
+            </div>
+            </div>
+          </details>
+          <div className="flex flex-wrap items-center gap-3 border-t border-border/30 pt-4">
               <Button onClick={create} disabled={!preset || !!busy || poolBusy}>
                 {busy === "write" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
                 {items.length ? "Start this month again" : "Create the month"}
@@ -878,13 +887,12 @@ export default function MonthPlanner() {
                 {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} photo${pool.length === 1 ? "" : "s"} ready${approvedForClient.length > approvedPool.length ? ` of ${approvedForClient.length} approved` : ""}${poolFail ? `, ${poolFail} would not load` : ""}.`}
                 {preset && !season ? ` No seasonal pack for ${MONTHS[month]} yet, so those slots use Unique.` : ""}
               </span>
-            </div>
           </div>
         </section>
         {preset && !isProspect && (
-          <section className="rounded-2xl border border-border/30 p-5 space-y-4">
+          <section className="rounded-2xl border border-border/30 bg-muted/5 p-6 space-y-5">
             <div className="flex flex-wrap items-center gap-3">
-              <h2 className="font-semibold">Plan {MONTHS[month]}</h2>
+              <h2 className="flex items-center gap-3 text-lg font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/20 text-sm text-violet-300">2</span> Plan {MONTHS[month]}</h2>
               <span className={`text-sm ${tickedCount >= MAX_POSTS ? "text-amber-400" : "text-muted-foreground"}`}>{tickedCount} of {MAX_POSTS} days ticked</span>
               <div className="ml-auto flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" onClick={() => setSlots(defaultSlots(year, month, hhmm).map((d) => ({ ...(slots.find((x) => x.key === d.key) ?? d), on: d.on })))}>Tick Monday to Friday</Button>
@@ -916,7 +924,7 @@ export default function MonthPlanner() {
                 }
                 return Array.from(weeks.values()).map(({ monday, list }) => (
                   <div key={dayKey(monday)} className="space-y-2">
-                    <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Week of {monday.getDate()} {MONTHS[monday.getMonth()]}</h3>
+                    <h3 className="border-b border-border/30 pb-1.5 text-sm font-semibold tracking-wide text-violet-300">Week of {monday.getDate()} {MONTHS[monday.getMonth()]}</h3>
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {list.map((slot) => {
                         const [y, m, d] = slot.key.split("-").map(Number);
