@@ -19,6 +19,9 @@ type Props = {
   client?: string;
   // Raise the number of hooks that can be picked for each day (Month needs enough for every ticked day).
   maxPer?: number;
+  // Show the list straight away with no bar to open (used inside a pop up), and stop at this many picks in all.
+  inline?: boolean;
+  maxTotal?: number;
 };
 
 const SEASON_STYLE: Record<string, string> = {
@@ -47,7 +50,7 @@ function HookText({ text }: { text: string }) {
 
 // Every hook is a box in one big grid. Boxes already used for this client are removed from the list, and
 // can be shown again (crossed out) with the Show used switch, or put back with the arrow.
-export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "", maxPer }: Props) {
+export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "", maxPer, inline, maxTotal }: Props) {
   const uid = useId();
   const [used, setUsed] = useState<string[]>([]);
   const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
@@ -71,6 +74,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
 
   const toggle = (h: Hook) => {
     if (single) { onChange(picked.includes(h.code) ? [] : [h.code]); return; }
+    if (!picked.includes(h.code) && maxTotal !== undefined && picked.length >= maxTotal) return;
     onChange(picked.includes(h.code) ? picked.filter(c => c !== h.code) : [...picked, h.code]);
   };
   const flipUsed = (h: Hook, nowUsed: boolean) => {
@@ -81,10 +85,22 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
 
   const q = search.trim().toLowerCase();
   const visibleDays = dayRows.filter(d => dayFilter === "All" || dayFilter === d.day || dayRows.length === 1);
+  // In the pop up the list is split by theme, each with its own heading. Elsewhere it is split by day.
+  type Section = { key: string; label: string; test: (h: Hook) => boolean; cap: number };
+  const themeOrder = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal"];
+  const sections: Section[] = inline
+    ? [...themeOrder, "Original"].map(t => ({
+        key: t,
+        label: t === "Original" ? "My first hooks" : `${t} hooks`,
+        test: (h: Hook) => (t === "Original" ? !h.theme : h.theme === t) && (dayFilter === "All" || h.day === dayFilter),
+        cap: maxPer ?? 99,
+      }))
+    : visibleDays.map(d => ({ key: d.day, label: d.label, test: (h: Hook) => h.day === d.day, cap: maxPer ?? d.max }));
   const usedInView = visibleDays.reduce((n, d) => n + HOOKS.filter(h => h.day === d.day && used.includes(h.code)).length, 0);
 
   return (
     <div className="space-y-2">
+      {!inline && (<>
       <Label className="text-sm font-medium">
         Hook bank <span className="text-muted-foreground font-normal">({single ? "optional, pick one" : "optional, your own slide 1 hooks"})</span>
       </Label>
@@ -97,8 +113,9 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
         <span>{picked.length ? `${picked.length} hook${picked.length === 1 ? "" : "s"} picked` : single ? "Choose a hook from the bank" : "Choose hooks from the bank"}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
+      </>)}
 
-      {open && (
+      {(open || inline) && (
         <div className="space-y-3 rounded-md border border-border/40 p-3">
           <div className="space-y-1.5">
             <Label htmlFor={`hook-start-${uid}`} className="text-xs font-medium">When will this pack be posted?</Label>
@@ -179,19 +196,20 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
           )}
 
           <div className="space-y-5">
-            {visibleDays.map(d => {
+            {sections.map(d => {
               const items = HOOKS
-                .filter(h => h.day === d.day)
+                .filter(h => d.test(h))
                 .filter(h => theme === "All" || (theme === "Original" ? !h.theme : h.theme === theme))
                 .filter(h => !q || (h.text + " " + (h.group ?? "") + " " + h.season).toLowerCase().includes(q))
                 .filter(h => showUsed || !used.includes(h.code) || picked.includes(h.code));
-              const pickedHere = picked.filter(c => HOOKS.some(h => h.code === c && h.day === d.day)).length;
+              const pickedHere = picked.filter(c => HOOKS.some(h => h.code === c && d.test(h))).length;
+              if (inline && items.length === 0) return null;
               return (
-                <div key={d.day} className="space-y-2">
-                  <p className="text-xs font-semibold">
+                <div key={d.key} className="space-y-2">
+                  <p className={inline ? "border-b border-border/40 pb-1 text-base font-bold" : "text-xs font-semibold"}>
                     {d.label}{" "}
                     <span className="font-normal text-muted-foreground">
-                      ({items.length} to choose from{!single ? `, ${pickedHere} of ${maxPer ?? d.max} picked` : ""})
+                      ({items.length} to choose from{!single ? (inline ? `, ${pickedHere} picked` : `, ${pickedHere} of ${d.cap} picked`) : ""})
                     </span>
                   </p>
                   {items.length === 0 ? (
@@ -202,8 +220,8 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                         const on = picked.includes(h.code);
                         const isUsed = used.includes(h.code);
                         const t = hookTiming(h, start);
-                        const full = !single && !on && pickedHere >= (maxPer ?? d.max);
-                        const disabled = !on && (!t.ok || full);
+                        const full = !single && !on && pickedHere >= d.cap;
+                        const disabled = !on && (!t.ok || full || (maxTotal !== undefined && picked.length >= maxTotal));
                         return (
                           <label
                             key={h.code}

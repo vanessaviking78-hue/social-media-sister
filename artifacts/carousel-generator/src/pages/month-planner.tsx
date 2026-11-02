@@ -13,8 +13,9 @@ import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
 import { MENS_PHOTO_COUNT, mensPhotoPath } from "@/lib/mens-sets";
 import HookBankPicker from "@/components/hook-bank-picker";
-import { HOOKS, packStarts, isoDate, pickedHookPayload, hookTiming } from "@/lib/hook-bank";
-import { markHooksUsed, getUsedHooks } from "@/lib/hook-used";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { HOOKS, packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
+import { markHooksUsed } from "@/lib/hook-used";
 import { TREATMENT_BANK } from "@/lib/treatment-bank";
 import { useSiteTreatments } from "@/lib/use-site-treatments";
 import { fetchClientVoice, type ClientVoice } from "@/lib/client-voice";
@@ -135,7 +136,7 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // "seasonal" is whichever pack fits the month (Halloween, November, Christmas, New Year), or Unique when there is none.
 type Choice = "stylish" | "bulk" | "xmas" | "tweet" | "magazine" | "treatments" | "empower" | "lux" | "mens" | "unique" | "basic" | "seasonal";
-type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string; hook?: string };
+type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string };
 
 const CHOICE_LABEL: Record<Choice, string> = {
   stylish: "Stylish (editorial)", bulk: "Bulk Carousel", xmas: "Christmas carousel", tweet: "Tweet Maker", magazine: "Treatment magazine post", treatments: "Treatment", mens: "Men", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
@@ -337,6 +338,7 @@ export default function MonthPlanner() {
   const [owner, setOwner] = useState("");
   const [role, setRole] = useState("Owner");
   const [area, setArea] = useState("");
+  const [hookModal, setHookModal] = useState(false);
   const [approvedPool, setPool] = useState<PoolPhoto[]>([]);
   const [extras, setExtras] = useState<PoolPhoto[]>([]);
   const pool = useMemo(() => [...approvedPool, ...extras], [approvedPool, extras]);
@@ -394,16 +396,6 @@ export default function MonthPlanner() {
   );
   const hhmm = (preset as unknown as { defaultPostTime?: string } | undefined)?.defaultPostTime ?? "18:15";
   const { treatments: siteTreatments } = useSiteTreatments(isProspect ? "" : ((preset as unknown as { websiteUrl?: string | null } | undefined)?.websiteUrl ?? ""));
-  // The hook bank for one day's row: hooks this client has not had, and seasonal ones only if they fit that date.
-  const usedHooksNow = getUsedHooks(preset?.name ?? "");
-  const hookChoicesFor = (key: string) => {
-    const [y, m, d] = key.split("-").map(Number);
-    const day = new Date(y, m - 1, d);
-    const ok = HOOKS.filter((h) => !usedHooksNow.includes(h.code) && hookTiming(h, day, 1).ok);
-    const by = new Map<string, typeof HOOKS>();
-    for (const h of ok) { const l = h.theme ?? "My first hooks"; by.set(l, [...(by.get(l) ?? []), h]); }
-    return Array.from(by, ([label, items]) => ({ label, items }));
-  };
   const allTreatments = [...siteTreatments, ...TREATMENT_BANK.filter((t) => !siteTreatments.some((x) => x.toLowerCase() === t.toLowerCase()))];
   // The planner starts from the usual week and is rebuilt when the client or the month changes.
   useEffect(() => { setSlots(!preset || isProspect ? [] : defaultSlots(year, month, hhmm)); }, [preset?.id, ym, hhmm, isProspect]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -589,22 +581,12 @@ export default function MonthPlanner() {
       ? buildPlan(year, month, 1 + Math.floor(Math.random() * 40), hhmm, pool.length, doneList().filter((x): x is number => typeof x === "number"))
       : buildFromSlots(slots, month, preset.id, hhmm, pool.length, doneList(), readUsed(preset.id));
     // Hooks she picked go on the ticked days in order. Treatment hooks go to the treatment days, the rest to the other days.
-    // A hook chosen on a day's own row goes on that day.
-    if (!isProspect) {
-      const ticked = slots.filter((s) => s.on);
-      plan = plan.map((it, i) => {
-        const code = ticked[i]?.hook;
-        if (it.kind !== "post" || !code || !HOOKS.some((h) => h.code === code)) return it;
-        const h = pickedHookPayload([code], ticked[i].topic.trim(), area)[0];
-        return h ? { kind: "post" as const, post: { ...it.post, hook: h.text, hookCode: code } } : it;
-      });
-    }
     if (!isProspect && hookPick.length) {
       const codes = hookPick.filter((c) => HOOKS.some((h) => h.code === c));
       const topics = slots.filter((s) => s.on && (s.choice === "magazine" || s.choice === "treatments") && s.topic.trim()).map((s) => s.topic.trim());
       const left = pickedHookPayload(hookPick, topics, area).map((h, i) => ({ ...h, code: codes[i] }));
       plan = plan.map((it) => {
-        if (it.kind !== "post" || !left.length || it.post.hookCode) return it;
+        if (it.kind !== "post" || !left.length) return it;
         const wantT = it.post.tool === "magazine" || it.post.tool === "treatments";
         let k = left.findIndex((h) => h.kind === (wantT ? "treatment" : "other"));
         if (k < 0) k = 0;
@@ -908,28 +890,27 @@ export default function MonthPlanner() {
                         {allTreatments.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
                     </div>
-                      <select
-                        value={slot.hook ?? ""}
-                        disabled={!slot.on}
-                        onChange={(e) => patchSlot(slot.key, { hook: e.target.value || undefined })}
-                        className="h-9 w-full rounded-md border border-border/40 bg-background px-2 text-sm"
-                        aria-label={`Hook for ${slot.key}`}
-                        title="Pick a slide 1 hook from the hook bank for this day"
-                      >
-                        <option value="">Slide 1 hook: none, or use my picks above</option>
-                        {slot.on && hookChoicesFor(slot.key).map((g) => (
-                          <optgroup key={g.label} label={g.label}>
-                            {g.items.map((h) => <option key={h.code} value={h.code}>{h.text.length > 90 ? `${h.text.slice(0, 88)}...` : h.text}</option>)}
-                          </optgroup>
-                        ))}
-                      </select>
                     </div>
                   </div>
                 );
               })}
             </div>
             <div className="space-y-2">
-              <HookBankPicker client={preset?.name ?? ""} maxPer={MAX_POSTS} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+              <Button type="button" variant="outline" onClick={() => setHookModal(true)} disabled={!preset}>
+                Choose this month's hooks ({hookPick.length} of {tickedCount || MAX_POSTS} picked)
+              </Button>
+              <Dialog open={hookModal} onOpenChange={setHookModal}>
+                <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Tick the hooks for {preset?.name ?? "this client"}'s month ({hookPick.length} of {tickedCount || MAX_POSTS})</DialogTitle>
+                  </DialogHeader>
+                  <HookBankPicker inline client={preset?.name ?? ""} maxPer={MAX_POSTS} maxTotal={tickedCount || MAX_POSTS} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+                  <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border/40 bg-background pt-3">
+                    <span className="text-sm text-muted-foreground">Hooks go on the ticked days in the order you tick them. Treatment hooks go to the treatment days.</span>
+                    <Button type="button" onClick={() => setHookModal(false)}>Done</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               {hookPick.length > 0 && <p className="text-sm text-muted-foreground">{hookPick.length} hook{hookPick.length === 1 ? "" : "s"} picked. They go on the ticked days in the order you picked them, treatment hooks on the treatment days, and are crossed off for this client once the post is scheduled.</p>}
             </div>
             <div className="flex flex-wrap items-center gap-3">
