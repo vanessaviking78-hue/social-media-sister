@@ -219,7 +219,6 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     ctx.fillStyle = INKC;
     ctx.strokeStyle = INKC; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(LEFT, y + 40); ctx.lineTo(LEFT + 120, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
-    clinicName(ctx, f, H - 120, "left", GREYC);
     return;
   }
 
@@ -261,9 +260,6 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   let y = H - 170 - total;
   ctx.font = body(fit.px);
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
-  ctx.fillStyle = GREYC;
-  ctx.font = body(22, 600);
-  ctx.fillText(`${n + 1} / 5`, LEFT, H - 100);
 }
 
 function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void }) {
