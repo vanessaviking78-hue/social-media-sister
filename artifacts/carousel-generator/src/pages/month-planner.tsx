@@ -11,6 +11,7 @@ import { getBitmap } from "@/lib/month-engine";
 import { ALIGNS, type Align } from "@/lib/text-layout";
 import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
+import { TREATMENT_BANK } from "@/lib/treatment-bank";
 import { useSiteTreatments } from "@/lib/use-site-treatments";
 import { fetchClientVoice, type ClientVoice } from "@/lib/client-voice";
 import { useApprovedImages, sameClientName } from "@/lib/use-approval";
@@ -789,7 +790,7 @@ export default function MonthPlanner() {
                   : `${preset.name} has not filled in Getting to know you, Client Question or Homework yet, so the words come from their preset and brand notes only.`}
               {siteTreatments.length > 0 ? ` Their website treatments are in the treatment topic list (${siteTreatments.length}).` : ""}
             </p>
-            {siteTreatments.length > 0 && <datalist id="month-site-treatments">{siteTreatments.map((t) => <option key={t} value={t} />)}</datalist>}
+            <datalist id="month-site-treatments">{[...siteTreatments, ...TREATMENT_BANK.filter((t) => !siteTreatments.some((x) => x.toLowerCase() === t.toLowerCase()))].map((t) => <option key={t} value={t} />)}</datalist>
             <div className="divide-y divide-border/20">
               {slots.map((slot) => {
                 const [y, m, d] = slot.key.split("-").map(Number);
@@ -827,7 +828,7 @@ export default function MonthPlanner() {
                       value={slot.topic}
                       disabled={!slot.on}
                       onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
-                      list={(slot.choice === "treatments" || slot.choice === "magazine") && siteTreatments.length ? "month-site-treatments" : undefined}
+                      list={slot.choice === "treatments" || slot.choice === "magazine" ? "month-site-treatments" : undefined}
                       placeholder={slot.choice === "magazine" ? "Treatment (needed)" : slot.choice === "treatments" ? "Treatment or topic (optional)" : "Your own topic (optional)"}
                       className="h-9"
                     />
