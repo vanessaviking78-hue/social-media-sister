@@ -3,6 +3,7 @@
 // Every colour comes from the Palette, so every colour can be changed per client.
 
 import { fillTokens, type Fill } from "./basic-covers";
+import { LUXE_DESIGNS } from "./xmas-luxe-data";
 
 export const XW = 1080;
 export const XH = 1350;
@@ -54,7 +55,7 @@ export const DEFAULT_FOCUS: Focus = [0.5, 0.35];
 
 export type DesignId =
   | "party" | "wish" | "things" | "morning" | "naughty" | "dinner" | "woman" | "face" | "closed" | "merry"
-  | "nycover" | "nyleaving" | "nyageing" | "nynothanks" | "nypractitioner" | "nypatient" | "nyskin" | "nyfour" | "nycompare" | "nypokemon";
+  | `lx${number}` | "nycover" | "nyleaving" | "nyageing" | "nynothanks" | "nypractitioner" | "nypatient" | "nyskin" | "nyfour" | "nycompare" | "nypokemon";
 
 export type FieldDef = { key: string; label: string; rows?: number };
 
@@ -273,6 +274,7 @@ export const DESIGNS: Design[] = [
   },
 ];
 
+DESIGNS.push(...(LUXE_DESIGNS as unknown as Design[]));
 export const DESIGN_BY_ID: Record<DesignId, Design> = Object.fromEntries(DESIGNS.map((d) => [d.id, d])) as Record<DesignId, Design>;
 
 // ---------------------------------------------------------------------------
@@ -814,7 +816,7 @@ function tickRows(g: G, keys: string[], x: number, y: number, w: number, step: n
 // The ten designs
 // ---------------------------------------------------------------------------
 
-const LAYOUTS: Record<DesignId, (g: G) => void> = {
+const LAYOUTS: Partial<Record<DesignId, (g: G) => void>> = {
   party(g) {
     const { ctx, c, t } = g;
     bg(g);
@@ -1324,6 +1326,163 @@ const LAYOUTS: Record<DesignId, (g: G) => void> = {
   },
 };
 
+
+// ---------------------------------------------------------------------------
+// Luxe: the thirty high end Christmas posts. Deep colour or ivory, hairline champagne gold foil,
+// generous space, nothing busy. Colours come from the palette so each client can change them.
+// ---------------------------------------------------------------------------
+
+const FOIL = "#d4af36";
+
+function spaced(ctx: Ctx, px: number) {
+  (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`;
+}
+
+function luxStar(ctx: Ctx, x: number, y: number, r: number, colour: string) {
+  ctx.save();
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (Math.PI / 4) * i - Math.PI / 2;
+    const rr = i % 2 === 0 ? r : r * 0.28;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function ornament(g: G, cx: number, y: number, half: number) {
+  const { ctx } = g;
+  ctx.save();
+  ctx.strokeStyle = FOIL; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - 28, y); ctx.moveTo(cx + 28, y); ctx.lineTo(cx + half, y); ctx.stroke();
+  ctx.restore();
+  luxStar(ctx, cx, y, 14, FOIL);
+}
+
+function kickerText(g: G, text: string, x: number, y: number, w: number, align: CanvasTextAlign, colour: string) {
+  const { ctx } = g;
+  ctx.save();
+  ctx.font = `600 24px ${g.body}`;
+  ctx.fillStyle = colour;
+  spaced(ctx, 6);
+  const ls = wrap(ctx, (text ?? "").toUpperCase(), w);
+  const ax = align === "center" ? x + w / 2 : x;
+  lines(ctx, ls, ax, y, 34, align);
+  ctx.restore();
+}
+
+function footerLine(g: G, text: string, cx: number, y: number, w: number, colour: string) {
+  textBox(g, text, cx - w / 2, y, w, 90, { font: "script", max: 40, min: 24, weight: 500, italic: true, colour, align: "center", lh: 1.2 });
+}
+
+function drawLuxe(g: G, look: { layout: string; tone: "dark" | "light" }) {
+  const { ctx, c, t } = g;
+  const dark = look.tone === "dark";
+  const base = dark ? c.green : c.paper;
+  const ink = dark ? c.light : c.green;
+  const soft = dark ? rgba(c.light, 0.86) : rgba(c.green, 0.86);
+  ctx.fillStyle = base; ctx.fillRect(0, 0, XW, XH);
+  // a quiet glow in the middle so the colour has depth
+  const gl = ctx.createRadialGradient(XW / 2, XH * 0.42, 60, XW / 2, XH * 0.42, 900);
+  gl.addColorStop(0, dark ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.55)");
+  gl.addColorStop(1, dark ? "rgba(0,0,0,0.38)" : "rgba(120,100,60,0.10)");
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, XW, XH);
+
+  const L = look.layout;
+  if (L === "frame") {
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
+    ctx.lineWidth = 1.5; ctx.strokeRect(60, 60, XW - 120, XH - 120);
+    kickerText(g, t.kicker, 120, 130, 840, "center", FOIL);
+    ornament(g, XW / 2, 215, 200);
+    textBox(g, HU(g, t.headline), 130, 270, 820, 470, { font: "head", max: 104, min: 44, colour: ink, align: "center", lh: 1.08 });
+    ornament(g, XW / 2, 790, 200);
+    textBox(g, t.body, 140, 840, 800, 260, { font: "body", max: 36, min: 22, colour: soft, align: "center", lh: 1.4 });
+    footerLine(g, t.footer, XW / 2, 1150, 800, FOIL);
+  } else if (L === "panel") {
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 2; ctx.strokeRect(80, 80, XW - 160, XH - 160);
+    ctx.save();
+    ctx.translate(122, XH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.font = `600 22px ${g.body}`; ctx.fillStyle = FOIL; spaced(ctx, 7); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText((t.kicker ?? "").toUpperCase(), 0, 0, 1000);
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle = FOIL; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(168, 150); ctx.lineTo(168, XH - 150); ctx.stroke(); ctx.restore();
+    luxStar(ctx, 230, 196, 22, FOIL);
+    textBox(g, HU(g, t.headline), 214, 260, 740, 520, { font: "head", max: 100, min: 44, colour: ink, align: "left", lh: 1.08 });
+    rule(g, 214, 454, 830, FOIL, 3);
+    textBox(g, t.body, 214, 870, 730, 250, { font: "body", max: 34, min: 22, colour: soft, align: "left", lh: 1.4 });
+    textBox(g, t.footer, 214, 1150, 730, 90, { font: "script", max: 38, min: 24, weight: 500, italic: true, colour: FOIL, align: "left", lh: 1.2 });
+  } else if (L === "arch") {
+    const ax = 170, aw = XW - 340, top = 120, bot = 930, r = aw / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(ax, bot); ctx.lineTo(ax, top + r);
+    ctx.arc(XW / 2, top + r, r, Math.PI, 0, false);
+    ctx.lineTo(ax + aw, bot); ctx.closePath();
+    ctx.fillStyle = dark ? rgba(c.light, 0.06) : rgba(c.green, 0.06); ctx.fill();
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(ax + 18, bot - 18); ctx.lineTo(ax + 18, top + r);
+    ctx.arc(XW / 2, top + r, r - 18, Math.PI, 0, false);
+    ctx.lineTo(ax + aw - 18, bot - 18); ctx.closePath();
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.restore();
+    luxStar(ctx, XW / 2, top + 76, 18, FOIL);
+    kickerText(g, t.kicker, ax + 40, top + 130, aw - 80, "center", FOIL);
+    textBox(g, HU(g, t.headline), ax + 50, top + 220, aw - 100, 500, { font: "head", max: 88, min: 40, colour: ink, align: "center", lh: 1.08 });
+    textBox(g, t.body, 150, 980, 780, 190, { font: "body", max: 32, min: 20, colour: soft, align: "center", lh: 1.38 });
+    // footer inside a gold pill
+    ctx.save();
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 2;
+    const py = 1170, ph = 110, pw = 800, px = (XW - pw) / 2;
+    ctx.beginPath(); ctx.roundRect(px, py, pw, ph, ph / 2); ctx.stroke();
+    ctx.restore();
+    textBox(g, t.footer, px + 40, py + 22, pw - 80, ph - 44, { font: "body", max: 36, min: 20, weight: 600, colour: FOIL, align: "center", lh: 1.15 });
+  } else if (L === "seal") {
+    const cy = 250;
+    ctx.save();
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(XW / 2, cy, 104, 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(XW / 2, cy, 88, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    luxStar(ctx, XW / 2, cy, 44, FOIL);
+    kickerText(g, t.kicker, 120, 400, 840, "center", FOIL);
+    textBox(g, HU(g, t.headline), 120, 470, 840, 400, { font: "head", max: 96, min: 44, colour: ink, align: "center", lh: 1.08 });
+    ornament(g, XW / 2, 900, 160);
+    textBox(g, t.body, 150, 950, 780, 220, { font: "body", max: 34, min: 22, colour: soft, align: "center", lh: 1.4 });
+    footerLine(g, t.footer, XW / 2, 1200, 780, FOIL);
+  } else if (L === "photo") {
+    fullBleed(g);
+    const sh = ctx.createLinearGradient(0, 0, 0, XH);
+    sh.addColorStop(0, "rgba(0,0,0,0.45)"); sh.addColorStop(0.35, "rgba(0,0,0,0.05)"); sh.addColorStop(0.55, "rgba(0,0,0,0.35)"); sh.addColorStop(1, rgba(c.green, 0.94));
+    ctx.fillStyle = sh; ctx.fillRect(0, 0, XW, XH);
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
+    kickerText(g, t.kicker, 100, 100, 880, "center", FOIL);
+    textBox(g, HU(g, t.headline), 100, 790, 880, 270, { font: "head", max: 84, min: 40, colour: c.light, align: "center", lh: 1.08 });
+    textBox(g, t.body, 120, 1075, 840, 130, { font: "body", max: 28, min: 20, colour: rgba(c.light, 0.92), align: "center", lh: 1.35 });
+    textBox(g, t.footer, 120, 1215, 840, 70, { font: "script", max: 34, min: 22, weight: 500, italic: true, colour: FOIL, align: "center", lh: 1.2 });
+  } else {
+    // list: each line sits on a hairline with a small gold diamond
+    ctx.strokeStyle = FOIL; ctx.lineWidth = 3; ctx.strokeRect(44, 44, XW - 88, XH - 88);
+    kickerText(g, t.kicker, 120, 120, 840, "left", FOIL);
+    textBox(g, HU(g, t.headline), 120, 180, 840, 250, { font: "head", max: 84, min: 40, colour: ink, align: "left", lh: 1.08 });
+    const items = (t.body ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const n = Math.max(items.length, 1);
+    const top = 470, avail = 640, step = Math.min(132, avail / n);
+    items.forEach((it, i) => {
+      const y = top + i * step;
+      rule(g, 120, 960, y, FOIL, 1.5, 0.8);
+      ctx.save(); ctx.translate(140, y + step / 2); ctx.rotate(Math.PI / 4); ctx.fillStyle = FOIL; ctx.fillRect(-8, -8, 16, 16); ctx.restore();
+      textBox(g, it, 180, y + 12, 780, step - 24, { font: "body", max: 34, min: 20, weight: 500, colour: ink, align: "left", lh: 1.2 });
+    });
+    rule(g, 120, 960, top + n * step, FOIL, 1.5, 0.8);
+    textBox(g, t.footer, 120, 1150, 840, 90, { font: "script", max: 38, min: 24, weight: 500, italic: true, colour: FOIL, align: "left", lh: 1.2 });
+  }
+}
+
 // the clinic name on the tag is a token already filled in by the caller
 function fillBrackets(s: string) { return s; }
 
@@ -1381,7 +1540,9 @@ export function drawXmas(ctx: Ctx, d: DrawInput): Slot[] {
   };
   ctx.save();
   ctx.textBaseline = "top";
-  LAYOUTS[d.design](g);
+  const lux = LUXE_DESIGNS.find((x) => x.id === d.design);
+  if (lux) drawLuxe(g, lux.look);
+  else LAYOUTS[d.design]!(g);
   if (d.logo && d.logoPos && d.logoPos !== "off") drawLogo(g, d.logo, d.logoPos);
   ctx.restore();
   return g.slots;
