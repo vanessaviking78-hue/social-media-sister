@@ -454,6 +454,8 @@ export default function Scheduler() {
   const dragPostRef = React.useRef<ScheduledPost | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [rescheduling, setRescheduling] = useState(false);
+  // The Client Bank panel beside the Preview Feed: parked posts with no date, dragged onto a day to schedule them.
+  const [bankOpen, setBankOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -557,16 +559,25 @@ export default function Scheduler() {
   // Reschedule a post to a new calendar date, keeping its original time of day.
   async function handleReschedule(post: ScheduledPost, newDate: string) {
     const [y, m, d] = newDate.split("-").map(Number);
+    const fromBank = post.status === "draft";
     const updated = new Date(post.scheduledAt);
     updated.setFullYear(y, m - 1, d);
-    if (fmtISO(updated) === fmtISO(new Date(post.scheduledAt))) return; // dropped on its own day
+    if (!fromBank && fmtISO(updated) === fmtISO(new Date(post.scheduledAt))) return; // dropped on its own day
+    if (fromBank) {
+      // A banked post goes out at a sensible time on the day it lands on, unless it was banked with a time already.
+      if (Number.isNaN(updated.getTime())) updated.setTime(new Date(y, m - 1, d, 9, 0).getTime());
+      if (updated.getTime() < Date.now() && fmtISO(updated) <= fmtISO(new Date())) {
+        if (fmtISO(updated) < fmtISO(new Date())) { toast.error("That day has already gone. Drop it on today or a day coming up."); return; }
+        updated.setTime(Date.now() + 15 * 60 * 1000);
+      }
+    }
     setRescheduling(true);
     try {
       await apiFetch(`/api/scheduler/posts/${post.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ scheduledAt: updated.toISOString() }),
+        body: JSON.stringify(fromBank ? { scheduledAt: updated.toISOString(), status: "pending" } : { scheduledAt: updated.toISOString() }),
       });
-      toast.success(`Moved to ${updated.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+      toast.success(`${fromBank ? "Scheduled for" : "Moved to"} ${updated.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
       load();
     } catch (e: any) {
       toast.error(e.message || "Could not reschedule");
@@ -687,6 +698,8 @@ export default function Scheduler() {
     if (filterClient !== "all" && p.clientName !== filterClient) return false;
     return true;
   });
+  // The Client Bank: posts parked with no date, for the chosen client (or everyone's).
+  const bankPosts = posts.filter((p) => p.status === "draft" && (filterClient === "all" || p.clientName === filterClient));
   const feedDays = getMonthDays(feedYear, feedMonth);
   const prevFeedMonth = () => { if (feedMonth === 0) { setFeedMonth(11); setFeedYear(feedYear - 1); } else setFeedMonth(feedMonth - 1); };
   const nextFeedMonth = () => { if (feedMonth === 11) { setFeedMonth(0); setFeedYear(feedYear + 1); } else setFeedMonth(feedMonth + 1); };
@@ -819,10 +832,43 @@ export default function Scheduler() {
                 </Button>
                 <Button variant="ghost" size="sm" onClick={feedToday} className="text-zinc-400 hover:text-white">Today</Button>
               </div>
-              <p className="text-xs text-zinc-500">Drag a post onto another day to reschedule it. Days with nothing queued show blank.</p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-zinc-500 hidden md:block">Drag a post onto another day to reschedule it. Open the Client Bank to drag a parked post onto a day.</p>
+                <button
+                  onClick={() => setBankOpen((o) => !o)}
+                  title="Client Bank: posts waiting for a date"
+                  className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-colors whitespace-nowrap ${bankOpen ? "bg-pink-600 border-pink-500 text-white" : "border-zinc-700 text-zinc-300 hover:text-white hover:border-pink-500/60"}`}
+                >
+                  <Archive size={14} /> Client Bank
+                  <span className="bg-black/40 rounded-full px-1.5 text-[10px]">{bankPosts.length}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-zinc-800 overflow-hidden">
+            <div className="flex gap-3 items-start">
+            {bankOpen && (
+              <aside className="w-56 shrink-0 sticky top-4 max-h-[85vh] overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900 p-2.5 space-y-2">
+                <p className="text-[11px] text-zinc-400 leading-snug">
+                  {filterClient === "all" ? "Every client's parked posts." : `${filterClient}'s parked posts.`} Drag one onto a day to schedule it.
+                </p>
+                {bankPosts.length === 0 ? (
+                  <p className="text-xs text-zinc-500 py-6 text-center">Nothing in the bank{filterClient === "all" ? "" : " for this client"}.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {bankPosts.map((post) => (
+                      <FeedCard
+                        key={post.id}
+                        post={post}
+                        draggable
+                        onDragStart={(e) => handleFeedDragStart(e, post)}
+                        onDelete={() => handleDelete(post.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </aside>
+            )}
+            <div className="rounded-xl border border-zinc-800 overflow-hidden flex-1 min-w-0">
               <div className="grid grid-cols-7 bg-zinc-900">
                 {WEEKDAY_LABELS.map((d) => (
                   <div key={d} className="px-2 py-2 text-center text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
@@ -874,6 +920,7 @@ export default function Scheduler() {
                   );
                 })}
               </div>
+            </div>
             </div>
             {rescheduling && (
               <p className="text-xs text-zinc-500 flex items-center gap-1.5"><RefreshCw size={11} className="animate-spin" /> Saving new date…</p>
