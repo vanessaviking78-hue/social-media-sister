@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
-import { drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
+import { SUITE_FONTS, fontById, injectSuiteFontCss, drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { RYDER_CLINIC, RYDER_GROUPS, RYDER_POST_TYPES, type RyderPostType } from "@/lib/ryder-posts";
 
 // THE RYDER CLINIC, her own page. Photo first, a soft white wash over the bottom third.
@@ -19,7 +19,7 @@ const W = 1080;
 const H = 1350;
 const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
-const FONT_KEY = "ryder-fonts-v1";
+const FONT_KEY = "ryder-fonts-v2";
 const AREA_KEY = "ryder-area-v1";
 const SCHED_KEY = "ryder-scheduled-v1";
 
@@ -58,6 +58,7 @@ const TYPE_BY_ID = new Map(RYDER_POST_TYPES.map((t) => [t.id, t]));
 
 async function ensureFonts(f: Fonts) {
   loadGoogleFonts();
+  injectSuiteFontCss();
   try {
     await Promise.all([document.fonts.load(`400 60px "${f.head}"`), document.fonts.load(`600 60px "${f.head}"`), document.fonts.load(`400 30px "${f.body}"`), document.fonts.load(`600 30px "${f.body}"`)]);
   } catch {
@@ -217,7 +218,7 @@ export default function RyderPage() {
   const [group, setGroup] = useState(RYDER_GROUPS[0].id);
   const [typeId, setTypeId] = useState(RYDER_POST_TYPES[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
-  const [fonts, setFonts] = useState<Fonts>({ head: "Cormorant Garamond", body: "Montserrat" });
+  const [fonts, setFonts] = useState<Fonts>({ head: "SuiteMofllig", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
   // the title look is saved in Font Lab; pick it up now and whenever she comes back to this tab
   useEffect(() => {
@@ -383,13 +384,17 @@ export default function RyderPage() {
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <h2 className="font-semibold">1. Set up</h2>
-          <p className="text-white/60 text-sm">Title font: set in <Link href="/font-lab" className="underline">Font Lab</Link> (saved look is used on every cover). Subtitle and body fonts below are still to be confirmed.</p>
+          <p className="text-white/60 text-sm">Cover title: {tf ? fontById(tf.style.fontId).name : "loading"}, spacing {tf ? tf.style.tracking : ""}, set in <Link href="/font-lab" className="underline">Font Lab</Link>. Subtitle and body fonts are still to be confirmed.</p>
           <div className="grid md:grid-cols-3 gap-3 text-sm">
-            <label className="space-y-1 block"><span className="text-white/60">Heading font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.head} onChange={(e) => setFonts((f) => ({ ...f, head: e.target.value }))} /></label>
+            <label className="space-y-1 block"><span className="text-white/60">Heading font (last slide and page heading)</span>
+              <select className="w-full bg-white/5 rounded p-2" value={fonts.head} onChange={(e) => setFonts((f) => ({ ...f, head: e.target.value }))}>
+                {SUITE_FONTS.map((f) => <option key={f.id} value={f.family} className="text-black">{f.name}</option>)}
+              </select>
+            </label>
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
             <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Bedford" /></label>
           </div>
-          <p className="text-white/40 text-xs">Fonts show as soon as they are in the site's font list. Tell me the pair you choose and I will add them for good.</p>
+          <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it.</p>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPhotos(e.target.files); e.currentTarget.value = ""; }} />
