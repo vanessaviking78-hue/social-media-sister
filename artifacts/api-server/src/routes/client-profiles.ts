@@ -271,7 +271,7 @@ async function buildClientProfileContext(clientName: string): Promise<string> {
       if (clip(p.target_audience)) lines.push(`- Target audience: ${clip(p.target_audience)}`);
       if (clip(p.content_pillars)) lines.push(`- Content pillars: ${clip(p.content_pillars)}`);
       if (clip(p.brand_notes)) lines.push(`- Brand notes: ${clip(p.brand_notes)}`);
-      if (clip(p.voice_style)) lines.push(`- Their chosen voice leans: ${clip(p.voice_style, 60).replace(/-/g, " ")} (still written in my one house voice, this only tells you how warm, cheeky or polished to be)`);
+      if (clip(p.voice_style)) lines.push(`- Their chosen voice leans: ${clip(p.voice_style, 60).replace(/-/g, " ")} (this sets their tone)`);
       if (clip(p.newsletter_name)) lines.push(`- Newsletter name: ${clip(p.newsletter_name, 120)}`);
       if (clip(p.booking_link)) lines.push(`- Booking link (background only, never put a link or web address in any post): ${clip(p.booking_link, 200)}`);
       if (clip(p.caption_footnote, 400)) lines.push(`- Footnote that is added automatically under every one of their captions (never write it out, never repeat it and never contradict it): ${clip(p.caption_footnote, 400)}`);
@@ -293,7 +293,7 @@ async function buildClientProfileContext(clientName: string): Promise<string> {
   } catch { /* skip this part */ }
 
   if (!parts.length) return "";
-  return `\n\nWHAT I KNOW ABOUT THIS CLIENT (use it so the writing sounds like them, use their humour and their patients' worries, and respect any off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${parts.join("\n\n")}`;
+  return `\n\nWHAT I KNOW ABOUT THIS CLIENT (use it so the writing sounds like them, use their humour and their patients' worries, and respect any off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${parts.join("\n\n")}\n\nTONE COMES FROM THIS CLIENT, NOT FROM THE HOUSE VOICE: the house voice only supplies the structure (hooks, pillars, the closing question). Read how this person writes and talks in her own words above: formal or chatty, dry or silly, short or flowing, any regional words, what makes her laugh, what she cares about. Write in that register and at that level of humour, using her own interests, sayings and real details. Never use stock props (tea, kettle, biscuits, sofa). Two clients must never sound alike, so avoid generic openers and jokes that could sit on anyone's page.`;
 }
 
 const newToken = () => randomBytes(12).toString("hex");
