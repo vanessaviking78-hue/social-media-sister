@@ -27,8 +27,10 @@ router.get("/content-ticklist/:id", async (req: Request, res: Response) => {
 router.patch("/content-ticklist/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { key, value } = req.body as { key?: string; value?: boolean };
-    if (!key) {
+    const { key, keys, value } = req.body as { key?: string; keys?: string[]; value?: boolean };
+    // One key, or a list of keys to set together (the hook grid crosses out several hooks at once).
+    const list = Array.isArray(keys) ? keys.filter((k) => typeof k === "string" && k) : key ? [key] : [];
+    if (!list.length) {
       res.status(400).json({ error: "key required" });
       return;
     }
@@ -41,10 +43,9 @@ router.patch("/content-ticklist/:id", async (req: Request, res: Response) => {
     const nextState: Record<string, boolean> = {
       ...((existing?.state as Record<string, boolean>) ?? {}),
     };
-    if (value) {
-      nextState[key] = true;
-    } else {
-      delete nextState[key];
+    for (const k of list) {
+      if (value) nextState[k] = true;
+      else delete nextState[k];
     }
 
     if (existing) {

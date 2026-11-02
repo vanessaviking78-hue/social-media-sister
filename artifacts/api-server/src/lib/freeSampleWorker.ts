@@ -122,7 +122,7 @@ FOR EACH POST WRITE
 - headline: 2 to 4 words that will sit big on the photo, and subtitle: 3 to 8 words that finish the thought. Read together they are one hook line. No full stops. No month or year.
 - caption: the hook line first, then the story in short paragraphs separated by a blank line, then ONE closing question that relates to the post and is easy and fun to answer in the comments (for example "What reminds you of your childhood?"). Do NOT put hashtags in the caption. Never use Comment WORD, a reply word or any web address.
 - The only exception to the closing question is a post that is genuinely about one of the treatments given (only possible when treatments were given, normally the two Monday posts). Those end with exactly: Drop me a DM to see if you're a good fit for this.
-- Small believable personal details (the kettle, a quiet Tuesday, the school run, a biscuit tin). Never invent results, client names, statistics or numbers about the clinic.
+- Small believable personal details (the kettle, a quiet Tuesday, the school run, a muddy dog). Never invent results, client names, statistics or numbers about the clinic.
 - 120 to 190 words per caption. No emojis. No em dashes or en dashes anywhere. UK spelling.
 - Never use negative parallelism, rhetorical triplets, a tidy summing up ending, or the buzzwords journey, glow up, game changer, unlock, dive in, tapestry, elevate, faff, fluff.
 - No treatment specifics, prices, doses, results claims, guarantees, urgency or scarcity. Never mention a website or any web address.

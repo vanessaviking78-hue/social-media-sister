@@ -35,7 +35,7 @@ export const HOOKS: Hook[] = [
   { code: "NM9", day: "Monday", season: "", text: "I am answering your [treatment] questions in public, because someone else is wondering too. Drop yours below." },
   { code: "NM10", day: "Monday", season: "", text: "Nobody has ever asked a silly question about [treatment]. Prove me wrong in the comments." },
   { code: "NM11", day: "Monday", season: "", text: "Things people whisper about [treatment] in the coffee shop queue. Swipe, then tell me what you have heard." },
-  { code: "NM12", day: "Monday", season: "", text: "[Treatment], explained like we are sharing a plate of biscuits. Pull up a chair." },
+  { code: "NM12", day: "Monday", season: "", text: "[Treatment], explained like we are sharing a sofa and a blanket. Pull up a cushion." },
   { code: "NM13", day: "Monday", season: "Christmas", text: "Dear Santa, all I want is a calm, no pressure chat about [treatment] and a parking space. Which is harder to find?" },
   { code: "NM14", day: "Monday", season: "Christmas", text: "Party season is coming. If [treatment] has been on your mind, pop the kettle on and come for a chat first." },
   { code: "NW1", day: "Wednesday", season: "", text: "Name the first song you taped off the radio and I will guess your age. With love." },
@@ -328,7 +328,7 @@ export const HOOKS: Hook[] = [
   { code: "NS8", day: "Sunday", season: "", text: "To the woman reading this in the car, the loo or the pantry: I see you. Drop a heart." },
   { code: "NS9", day: "Sunday", season: "", text: "To the woman saving the good candle for a special occasion: today counts. Light it. Which scent?" },
   { code: "NS10", day: "Sunday", season: "", text: "To the woman who feels a bit behind: you are right on time. Tag the friend who makes you feel that way." },
-  { code: "NS11", day: "Sunday", season: "", text: "To the woman who needs a hug and a biscuit, in that order: here are both. What is your biscuit?" },
+  { code: "NS11", day: "Sunday", season: "", text: "To the woman who needs a hug and a lie down, in that order: here are both. What is your lie down?" },
   { code: "NS12", day: "Sunday", season: "", text: "To the woman who has held it together all week: it is Sunday. Hang the cape on the chair and have a sit." },
   { code: "NS13", day: "Sunday", season: "Christmas", text: "To the woman who runs Christmas like a small airport: who is making you a cuppa this year? Tag them." },
   { code: "NS14", day: "Sunday", season: "Christmas", text: "To the woman who buys, wraps and hides every present: you deserve one with your name on it." },
@@ -345,7 +345,7 @@ export const HOOKS: Hook[] = [
   { code: "NA11", day: "Any day", season: "", text: "Tell me one small thing that made you smile today. I collect them." },
   { code: "NA12", day: "Any day", season: "", text: "Which is harder: finding the end of the Sellotape or finding the telly remote?" },
   { code: "NA13", day: "Any day", season: "", text: "What is the thing you do for yourself that nobody knows about? Tell me. I won't tell." },
-  { code: "NA14", day: "Any day", season: "", text: "If your week was a biscuit, which biscuit would it be?" },
+  { code: "NA14", day: "Any day", season: "", text: "If your week was a film, which film would it be?" },
 ];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

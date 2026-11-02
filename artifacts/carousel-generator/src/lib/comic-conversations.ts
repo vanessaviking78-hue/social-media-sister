@@ -341,7 +341,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: The Premier Inn. She brought a kettle."),
     p("neutral", "neutral", "I: A kettle."),
     p("neutral", "happy", "P: For the sterile bit."),
-    p("smug", "horrified", "I: Lovely. Sterilised like a cup of tea. Does the aftercare come with a biscuit?"),
+    p("smug", "horrified", "I: Lovely. Sterilised like a cup of tea. Does the aftercare come with a bow?"),
   ]),
   c("dartboard", "The Dartboard", [
     p("neutral", "happy", "P: She’s set up in the back room of the Dog and Duck."),

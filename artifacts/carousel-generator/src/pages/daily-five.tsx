@@ -15,7 +15,7 @@ const MESSAGES = [
   "Two. Look at you, being useful.",
   "Three. Over halfway. Still not impressed.",
   "Four. Do not stop now, you absolute legend.",
-  "All five done! Go and have a biscuit.",
+  "All five done! Go and put your feet up.",
 ];
 
 type TasterSave = { day: string; ticked: string[] };
