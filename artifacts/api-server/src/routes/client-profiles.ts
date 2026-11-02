@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { clientVoice } from "../lib/houseRules";
 import { sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
@@ -193,7 +194,7 @@ export async function clientProfileContext(clientName?: string | null): Promise<
   const key = n.toLowerCase();
   const hit = ctxCache.get(key);
   if (hit && Date.now() - hit.at < CTX_TTL_MS) return hit.text;
-  const text = await buildClientProfileContext(n);
+  const text = (await buildClientProfileContext(n)) + clientVoice(n);
   ctxCache.set(key, { at: Date.now(), text });
   if (ctxCache.size > 200) ctxCache.delete(ctxCache.keys().next().value as string);
   return text;

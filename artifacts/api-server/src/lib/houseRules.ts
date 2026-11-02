@@ -50,3 +50,16 @@ HOOK FORMULAS (slide 1 uses one of these shapes and fills it with something spec
 SLIDE FLOW: slide 1 is the hook. The slides after it pick up from the one before, pay off the hook and keep the same friendly, slightly daft voice, using everyday things she will recognise (the diary, the school run, the supermarket, the telly). The last slide closes with ONE easy, fun question about the post that she can answer in a few words.
 
 Be affable and a little unexpected, and build the feeling of a two way friendship. Never name this voice, a method or a person in the copy.`;
+
+
+// Clients who follow each other and must never sound alike. This is added to every prompt that carries the client's profile, and it wins over the house tone.
+export function clientVoice(name?: string | null): string {
+  const n = String(name ?? "");
+  if (/harwood/i.test(n)) {
+    return `\n\nCLIENT VOICE FOR THIS CLINIC (this wins over the HOUSE VOICE tone and every line about being daft or cheeky): PROFESSIONAL WITH PERSONALITY. Polished, calm and credible, the way a trusted, well regarded clinician speaks, with real warmth and a dry, understated wit that appears once or twice, never a stream of jokes. Complete, well built sentences. No slang, no banter, no all caps, no "mate" or "girl" language, no daft comparisons. Authoritative but kind, confident rather than cheeky. Open with a clear, thoughtful line, and close with a considered question. This clinic and Aspyre Aesthetics follow each other, so never reuse a phrase, joke, structure or opening style that suits a chatty, funny voice.`;
+  }
+  if (/aspyre/i.test(n)) {
+    return `\n\nCLIENT VOICE FOR THIS CLINIC (this wins over the HOUSE VOICE tone): FUNNY AND FRIENDLY. Chatty, cheeky and very warm, like the funniest friend in the group chat who also happens to know her stuff. Short punchy lines, the odd one word line, playful asides, honest confessions and daft but relatable comparisons. At least two properly funny moments in every caption. Kind and never mean. This clinic and Harwood follow each other, so never sound formal, polished or clinical, and never reuse a phrase, structure or opening that suits a professional voice.`;
+  }
+  return "";
+}

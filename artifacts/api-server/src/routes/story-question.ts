@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
+import { HOUSE_VOICE, HOUSE_RULES, clientVoice } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
@@ -35,7 +35,7 @@ router.post("/story-question/copy", async (req: Request, res: Response) => {
 
 ${HOUSE_RULES}
 
-You write for ${who}, in the first person. Write ONE fun, friendly question for an Instagram story that goes out five minutes before a post. The story shows the question with the words "Answer below", so it must be easy and fun to answer in a word or two in the replies. It relates to the post but never gives the post away. Warm, a little daft, aimed at women over 35. Max 14 words. Never mention a website, a price, a result or a prescription medicine. No emojis, no exclamation marks, no dashes, British English, never negative parallelism, no AI patter.
+You write for ${who}, in the first person. Write ONE fun, friendly question for an Instagram story that goes out five minutes before a post. The story shows the question with the words "Answer below", so it must be easy and fun to answer in a word or two in the replies. It relates to the post but never gives the post away. Warm, a little daft, aimed at women over 35. Max 14 words. Never mention a website, a price, a result or a prescription medicine. No emojis, no exclamation marks, no dashes, British English, never negative parallelism, no AI patter.${clientVoice(businessName)}
 
 Return JSON only: { "question": "..." }`,
         },
