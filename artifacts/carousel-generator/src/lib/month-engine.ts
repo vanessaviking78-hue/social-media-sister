@@ -335,7 +335,13 @@ async function renderStylish(post: MPost, n: number, c: Client, canvas: HTMLCanv
   const style = {
     ...m.STYLISH_DEFAULT_STYLE, ...m.STYLISH_COVER_PRESETS[cover as keyof typeof m.STYLISH_COVER_PRESETS],
     ...(look === "classic" ? m.STYLISH_LOOK_CLASSIC : m.STYLISH_LOOK_EDITORIAL),
-    ...(c.brand ? { cvBlock: c.brand.main, cvBand: c.brand.main } : {}),
+    // The words follow the block they sit on: white on a dark brand colour, black on a light one. Covers with words over the photo are white.
+    ...(c.brand ? (() => {
+      const onBlock = lumOf(c.brand.main) < 0.55 ? "#ffffff" : "#000000";
+      return cover === "centred"
+        ? { cvBlock: c.brand.main, cvBand: c.brand.main, cvColour: "#ffffff", cvSubColour: "#ffffff" }
+        : { cvBlock: c.brand.main, cvBand: c.brand.main, cvColour: onBlock, cvSubColour: onBlock };
+    })() : {}),
     showLogo: !!c.logo && c.logoPos !== "off",
   } as typeof m.STYLISH_DEFAULT_STYLE;
   await ensureFonts(style.cvFont, style.cvSubFont, style.displayFont);
