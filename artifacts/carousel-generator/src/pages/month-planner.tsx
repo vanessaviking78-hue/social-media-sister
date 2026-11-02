@@ -131,11 +131,11 @@ const USED_DESIGNS_KEY = "month-designs-used-v1";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // "seasonal" is whichever pack fits the month (Halloween, November, Christmas, New Year), or Unique when there is none.
-type Choice = "xmas" | "tweet" | "magazine" | "treatments" | "empower" | "lux" | "mens" | "unique" | "basic" | "seasonal";
+type Choice = "stylish" | "bulk" | "xmas" | "tweet" | "magazine" | "treatments" | "empower" | "lux" | "mens" | "unique" | "basic" | "seasonal";
 type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string };
 
 const CHOICE_LABEL: Record<Choice, string> = {
-  xmas: "Christmas carousel", tweet: "Tweet Maker", magazine: "Treatment magazine post", treatments: "Treatment", mens: "Men", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
+  stylish: "Stylish (editorial)", bulk: "Bulk Carousel", xmas: "Christmas carousel", tweet: "Tweet Maker", magazine: "Treatment magazine post", treatments: "Treatment", mens: "Men", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
 };
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
@@ -213,7 +213,7 @@ function buildFromSlots(slots: PlanSlot[], month: number, seed: number, hhmm: st
 }
 
 const photoIdxFor = (p: MPost, n: number): number =>
-  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" || p.tool === "lux" || p.tool === "magazine" || p.tool === "xmas" ? n : 0;
+  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" || p.tool === "lux" || p.tool === "magazine" || p.tool === "xmas" || p.tool === "stylish" ? n : p.tool === "bulk" ? Math.min(n, 1) : 0;
 
 const SW = 1080, SH = 1350;
 const PROSPECT = "prospect";
@@ -503,6 +503,7 @@ export default function MonthPlanner() {
     brand: brandOn ? { main: brandMain, accent: brandAccent } : null,
     logo,
     pool,
+    preset,
     mensPool,
   }), [preset, owner, role, area, logo, pool, mensPool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent, voice]);
 

@@ -7,6 +7,9 @@ import JSZip from "jszip";
 import Papa from "papaparse";
 import { smartMapCsvHeaders, readFileAsText } from "@/lib/csv-format";
 import { toast } from "sonner";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
+import { markHooksUsed } from "@/lib/hook-used";
 
 import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
@@ -193,6 +196,8 @@ const [musicId, setMusicId] = useState<string | null>(null);
 const [editId, setEditId] = useState<string | null>(null);
 const [excluded, setExcluded] = useState<Set<string>>(new Set());
 const [csvParsed, setCsvParsed] = useState<PRow[]>([]);
+const [hookPick, setHookPick] = useState<string[]>([]);
+const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
 const [batchPresetId, setBatchPresetId] = useState<number | null>(null);
 const [broadcastMode, setBroadcastMode] = useState(false);
 const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Set());
@@ -347,6 +352,27 @@ update(id, { row, blocks, raw, slideImgs, presetId: preset ? preset.id : c.prese
 } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
 }
   
+// Puts the hooks she picked from the hook list on slide 1 of each carousel, in the order picked, and redraws them.
+async function applyHooksToCarousels() {
+const chosen = pickedHookPayload(hookPick);
+if (!chosen.length || !carousels.length) return;
+setBusy(true);
+try {
+let done = 0;
+for (let i = 0; i < carousels.length && i < chosen.length; i++) {
+const c = carousels[i];
+if (!c.blocks.some((b) => b.id === "hook")) continue;
+const blocks = c.blocks.map((b) => (b.id === "hook" ? { ...b, text: chosen[i].text } : b));
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
+update(c.id, { blocks, slideUrls, row: { ...c.row, hook: chosen[i].text } });
+done++;
+}
+markHooksUsed(presetFor(batchPresetId)?.name ?? "", hookPick.slice(0, done));
+toast.success(`${done} hook${done === 1 ? "" : "s"} put on slide 1, in the order you picked them`);
+setHookPick([]);
+} catch (e: any) { toast.error(e?.message || "Could not put the hooks on"); } finally { setBusy(false); }
+}
+
 async function fillInOrder() {
 for (let i = 0; i < carousels.length && i < csvParsed.length; i++) { await assignRow(carousels[i].id, i); }
 toast.success("Rows matched to carousels in order.");
@@ -536,6 +562,10 @@ onClose={() => setEditId(null)}
 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download selected (ZIP)</button>
 <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working..." : broadcastMode ? `Broadcast to ${broadcastPresetIds.size} client${broadcastPresetIds.size !== 1 ? "s" : ""}` : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
 </div>
+</div>
+<div className="space-y-2">
+<HookBankPicker client={presetFor(batchPresetId)?.name ?? ""} days={["Wednesday", "Friday", "Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+{hookPick.length > 0 && <button onClick={applyHooksToCarousels} disabled={busy} className="px-4 py-2 rounded-lg border border-sky-500/60 bg-sky-500/10 text-sm disabled:opacity-40">{`Put my ${hookPick.length} hook${hookPick.length === 1 ? "" : "s"} on slide 1 of the first ${Math.min(hookPick.length, carousels.length)} carousel${Math.min(hookPick.length, carousels.length) === 1 ? "" : "s"}`}</button>}
 </div>
 {broadcastMode && (
 <div className="border border-pink-500/40 rounded-xl bg-white/[0.03] p-4 space-y-2 mb-4">

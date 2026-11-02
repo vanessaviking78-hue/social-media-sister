@@ -5709,3 +5709,12 @@ export default function Stylish() {
     </div>
   );
 }
+
+// Shared with the Month tool, which draws Stylish covers and slides without opening this page.
+export {
+  renderSlide as stylishRenderSlide,
+  DEFAULT_STYLE as STYLISH_DEFAULT_STYLE,
+  COVER_PRESETS as STYLISH_COVER_PRESETS,
+  LOOK_EDITORIAL as STYLISH_LOOK_EDITORIAL,
+  LOOK_CLASSIC as STYLISH_LOOK_CLASSIC,
+};

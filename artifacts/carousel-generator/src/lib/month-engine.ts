@@ -23,7 +23,7 @@ export const H = 1350;
 export const DEFAULT_FOCUS: Focus = [0.5, 0.32];
 
 export type PoolPhoto = { id: string; file: File; url: string };
-export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower" | "mens" | "magazine" | "tweet";
+export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower" | "mens" | "magazine" | "tweet" | "stylish" | "bulk";
 
 export type Client = {
   businessName: string;
@@ -42,6 +42,7 @@ export type Client = {
   brand?: { main: string; accent: string } | null; // her brand colours, laid over every design's own colours
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
+  preset?: unknown; // the client's saved preset, for the tools that read its fonts and colours
   mensPool?: PoolPhoto[]; // the shared photos of men, for Men photo posts
 };
 
@@ -68,11 +69,14 @@ export type MPost = {
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
-  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower", mens: "Men", magazine: "Magazine", tweet: "Tweet",
+  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower", mens: "Men", magazine: "Magazine", tweet: "Tweet", stylish: "Stylish", bulk: "Bulk Carousel",
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",");
+
+// Stylish cover options 1 to 3, each with the editorial or the classic look on the photo slides.
+export const STYLISH_COVERS = ["band", "centred", "block"];
 
 const MENS_BY_ID: Record<string, (typeof MENS_SETS)[number]> = Object.fromEntries(MENS_SETS.map((m) => [m.id, m]));
 
@@ -82,9 +86,9 @@ const asUnique = (p: MPost): MPost => ({ ...p, tool: "unique", design: p.design.
 
 // How many images each kind of post makes, and how many photos it takes.
 export const slideCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : MENS_BY_ID[design]?.slides ?? 8) : 1;
+  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "stylish" || tool === "bulk" ? 4 : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : MENS_BY_ID[design]?.slides ?? 8) : 1;
 export const photoCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : 0) : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
+  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "stylish" ? 4 : tool === "bulk" ? 2 : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : 0) : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
 
 // ---------------------------------------------------------------------------
 // Photos and fonts
@@ -159,6 +163,12 @@ export function makePost(tool: ToolId, design: string, n: number, when: string, 
   } else if (tool === "magazine") {
     text = { copy: "" };
     photos = Array.from({ length: MIN_PHOTOS }, (_, k) => take(k));
+  } else if (tool === "stylish") {
+    text = { head: "", sub: "" };
+    photos = [0, 1, 2, 3].map(take);
+  } else if (tool === "bulk") {
+    text = { hook: "" };
+    photos = [take(0), take(1)];
   } else if (tool === "tweet") {
     text = { quote: "" };
     photos = [take(0)];
@@ -182,6 +192,8 @@ export const designName = (p: MPost): string =>
     : p.tool === "empower" ? EMPOWER_BY_ID[p.design].name
     : p.tool === "mens" ? (isMenPhoto(p.design) ? `${UD.UNIQUE_BY_ID[p.design.slice(2) as UD.UniId].name} (men photos)` : MENS_BY_ID[p.design]?.name ?? "Men")
     : p.tool === "tweet" ? "Tweet"
+    : p.tool === "stylish" ? `Stylish option ${STYLISH_COVERS.indexOf(p.design.split(":")[0]) + 1} (${p.design.split(":")[1] === "classic" ? "classic" : "editorial"})`
+    : p.tool === "bulk" ? (p.design === "cover" ? "Bulk, photo on slide 1 only" : "Bulk, photo behind every slide")
     : p.tool === "magazine" ? (p.design === "reel" ? "Magazine reel (9:16)" : "Magazine post (3:4)")
     : XMAS_BY_ID[p.design as keyof typeof XMAS_BY_ID].name;
 
@@ -197,6 +209,8 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "mens" ? [...MENS_SETS.map((m) => m.id), ...UD.UNIQUE.map((d) => `u:${d.id}`)]
     : tool === "magazine" ? ["post", "reel"]
     : tool === "tweet" ? ["tweet"]
+    : tool === "stylish" ? [...STYLISH_COVERS.map((c) => `${c}:editorial`), ...STYLISH_COVERS.map((c) => `${c}:classic`)]
+    : tool === "bulk" ? ["photo", "cover"]
     : XMAS_DESIGNS.filter((d) => d.group === (group ?? "xmas")).map((d) => d.id);
 
 // ---------------------------------------------------------------------------
@@ -226,7 +240,7 @@ export function brandPalette(tool: ToolId, brand: { main: string; accent: string
   const base = { paper: tint, red: accent, green: dark, tag: mixHex(accent, "#ffffff", 0.6), frame: mixHex(main, "#ffffff", 0.95), light: mixHex(main, "#ffffff", 0.94), ink: mixHex(dark, "#000000", 0.5) };
   if (tool === "treatments") return { navy: dark, coral: accent, lime: mixHex(accent, "#ffffff", 0.5), cream: tint };
   if (tool === "lux" || tool === "empower") return { page: tint, dark, accent, soft: mixHex(main, "#ffffff", 0.8), ink: mixHex(dark, "#000000", 0.5), light: mixHex(main, "#ffffff", 0.94) };
-  if (tool === "mens" || tool === "magazine" || tool === "tweet") return {};
+  if (tool === "mens" || tool === "magazine" || tool === "tweet" || tool === "stylish" || tool === "bulk") return {};
   if (tool === "basic") return { bg: dark };
   if (tool === "halloween") return { ...base, paper: mixHex(main, "#000000", 0.86), green: mixHex(main, "#000000", 0.74), tag: mixHex(main, "#ffffff", 0.8), frame: mixHex(main, "#ffffff", 0.88), ink: mixHex(main, "#000000", 0.88) };
   return base;
@@ -242,7 +256,7 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
   else if (post.tool === "lux") { base = { ...LUX_PALETTE }; labels = LUX_LABELS; }
   else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; base = { ...d.palette }; labels = d.labels; }
-  else if (post.tool === "mens" || post.tool === "magazine" || post.tool === "tweet") { base = {}; labels = []; }
+  else if (post.tool === "mens" || post.tool === "magazine" || post.tool === "tweet" || post.tool === "stylish" || post.tool === "bulk") { base = {}; labels = []; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
@@ -312,6 +326,45 @@ async function renderMagazine(post: MPost, n: number, c: Client, canvas: HTMLCan
   return [];
 }
 
+// Stylish covers and slides are drawn by the Stylish tool itself, loaded only when a post needs it.
+async function renderStylish(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+  const m = await import("../pages/stylish");
+  const [cover, look] = post.design.split(":");
+  const style = {
+    ...m.STYLISH_DEFAULT_STYLE, ...m.STYLISH_COVER_PRESETS[cover as keyof typeof m.STYLISH_COVER_PRESETS],
+    ...(look === "classic" ? m.STYLISH_LOOK_CLASSIC : m.STYLISH_LOOK_EDITORIAL),
+    ...(c.brand ? { cvBlock: c.brand.main, cvBand: c.brand.main } : {}),
+    showLogo: !!c.logo && c.logoPos !== "off",
+  } as typeof m.STYLISH_DEFAULT_STYLE;
+  await ensureFonts(style.cvFont, style.cvSubFont, style.displayFont);
+  const head = BC.fillTokens(post.text.head || post.topic?.trim() || "Your headline", c.fill);
+  const spec = n === 0 ? { kind: "cover" as const, text: head, sub: BC.fillTokens(post.text.sub ?? "", c.fill) }
+    : n === 3 ? { kind: "cta" as const, text: BC.fillTokens(post.cta, c.fill), sub: "" }
+    : { kind: "body" as const, text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), sub: "" };
+  const idx = post.photos[n];
+  const file = idx != null ? c.pool[idx]?.file ?? null : null;
+  const out = await m.stylishRenderSlide(spec, file, style, c.logo, (c.preset ?? { logoSize: 110 }) as never, scale, { index: n, total: 4 });
+  canvas.width = out.width; canvas.height = out.height;
+  canvas.getContext("2d")!.drawImage(out, 0, 0);
+  return [];
+}
+
+// Bulk Carousel slides come from the Bulk Carousel Creator's own drawing: a hook, two body slides and the question.
+async function renderBulk(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+  const m = await import("../pages/bulk-carousel");
+  const blocks = m.makeBlocks({ hook: BC.fillTokens(post.text.hook || post.topic?.trim() || "Your hook", c.fill), body1: post.slides[0] ?? "", body2: post.slides[1] ?? "", cta: BC.fillTokens(post.cta, c.fill) });
+  const load = async (i: number | null | undefined): Promise<HTMLImageElement | null> => {
+    const p = i == null ? null : c.pool[i] ?? null;
+    return p ? await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = p.url; }) : null;
+  };
+  const cover = await load(post.photos[0]);
+  const body = post.design === "cover" ? null : await load(post.photos[1]) ?? cover;
+  const url = m.renderSlideCanvas(n + 1, blocks, cover, body ?? (post.design === "cover" ? null : cover), c.logo, (c.preset ?? {}) as never, scale);
+  const im = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+  if (im) { canvas.width = im.width; canvas.height = im.height; canvas.getContext("2d")!.drawImage(im, 0, 0); }
+  return [];
+}
+
 // Reels go through Magazine Flip, which turns the pages into a video.
 export async function sendToFlip(post: MPost, c: Client): Promise<void> {
   const cs = await renderPostImages(post, c, 1);
@@ -328,6 +381,8 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   if (post.tool === "mens" && isMenPhoto(post.design)) return renderSlide(asUnique(post), n, { ...c, pool: c.mensPool ?? [] }, canvas, scale);
   if (post.tool === "mens") return renderMens(post, n, canvas, scale);
   if (post.tool === "magazine") return renderMagazine(post, n, c, canvas, scale);
+  if (post.tool === "stylish") return renderStylish(post, n, c, canvas, scale);
+  if (post.tool === "bulk") return renderBulk(post, n, c, canvas, scale);
   if (post.tool === "tweet") {
     canvas.width = Math.round(TW * scale); canvas.height = Math.round(TH * scale);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
@@ -447,7 +502,7 @@ export async function renderPostImages(post: MPost, c: Client, scale = 1): Promi
 // ---------------------------------------------------------------------------
 
 const onImageText = (post: MPost, c: Client): string => {
-  if (post.tool === "tweet") return "";
+  if (post.tool === "tweet" || post.tool === "stylish" || post.tool === "bulk") return "";
   if (post.tool === "mens" || post.tool === "magazine") return "";
   if (post.tool === "lux") { const r = resolveLuxText(Number(post.design), post.text, c.fill); return [r.head, r.sub].filter(Boolean).join(" / "); }
   if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; const r = resolveEmpowerText(d, post.text, c.fill); return d.fields.map((f) => r[f.key]).filter(Boolean).join("\n"); }
@@ -530,7 +585,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   const academy = isAcademyClient(c);
   // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
   let coverText: Record<string, string> | null = null;
-  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower" && post.tool !== "mens" && post.tool !== "magazine" && post.tool !== "tweet" && post.tool !== "xmas") {
+  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower" && post.tool !== "mens" && post.tool !== "magazine" && post.tool !== "tweet" && post.tool !== "xmas" && post.tool !== "stylish" && post.tool !== "bulk") {
     const fresh = await academyCover(post, c);
     if (Object.keys(fresh).length) { coverText = { ...post.text, ...fresh }; post = { ...post, text: coverText }; }
   }
@@ -551,6 +606,17 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
     data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
+  } else if (post.tool === "stylish" || post.tool === "bulk") {
+    const key = post.tool === "stylish" ? "head" : "hook";
+    const fields = post.tool === "stylish"
+      ? [{ key: "head", label: "Cover headline", words: 5, current: post.text.head || post.topic?.trim() || "A headline" }, { key: "sub", label: "Cover subtitle", words: 6, current: post.text.sub ?? "" }]
+      : [{ key: "hook", label: "Slide 1 hook", words: 9, current: post.text.hook || post.topic?.trim() || "A hook" }];
+    data = await postJson("/api/unique/copy", { ...base, idea: withTopic(post.tool === "stylish" ? "a stylish editorial carousel with a short punchy cover headline" : "a swipe carousel that opens on one strong hook", post), cover: "", fresh: true, fields });
+    slides = [data.slide2, data.slide3];
+    const fresh: Record<string, string> = { ...post.text };
+    for (const f of fields) { const v = (data.cover as Record<string, unknown> | undefined)?.[f.key]; if (typeof v === "string" && v.trim()) fresh[f.key] = noDashes(v); }
+    coverText = fresh;
+    void key;
   } else if (post.tool === "tweet") {
     data = await postJson("/api/tweet-post/copy", { ...base, designName: "Tweet", idea: post.topic?.trim() ?? "", onImage: "" });
     return { text: { ...post.text, quote: noDashes(data.quote ?? "") }, slides: [], cta: "", caption: noDashes(data.caption ?? "") + (c.footnote && !String(data.caption ?? "").includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: Array.isArray(data.hashtags) ? data.hashtags : [] };
