@@ -649,6 +649,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: word, style: "4", hook: post.hook?.trim() || undefined });
     const copy: MagazinePostCopy = { ...(data as unknown as MagazinePostCopy), cta: { lead: "Want to know more?", word, line: `Comment ${word} for more info` } };
     copy.caption = noDashes(copy.caption ?? "");
+    if (!copy.caption.includes(copy.cta.line)) copy.caption = `${copy.caption.trimEnd()}\n\n${copy.cta.line}`;
     return { text: { ...post.text, copy: JSON.stringify(copy) }, slides: [], cta: "", caption: copy.caption + (c.footnote && !copy.caption.includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: [] };
   } else if (post.tool === "lux") {
     data = await postJson("/api/lux/copy", { ...base, theme: post.topic?.trim() ?? "", fresh: false, onImage: onImageText(post, c) });
@@ -664,6 +665,8 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? academyIdea(post) : withTopic(def.idea, post), onImage: onImageText(post, c) });
   }
   let caption = noDashes(data.caption ?? "");
+  // A treatment post's caption closes on the same line as the last slide.
+  if (/^Comment /.test(String(data.cta ?? "")) && !caption.includes(String(data.cta))) caption = `${caption.trimEnd()}\n\n${data.cta}`;
   if (c.footnote && !caption.includes(c.footnote)) caption += `\n\n${c.footnote}`;
   return {
     ...(coverText ? { text: coverText } : {}),
