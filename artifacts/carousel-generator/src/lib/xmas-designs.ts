@@ -222,7 +222,7 @@ export const DESIGNS: Design[] = [
     defaults: {
       headline: "My New Year's resolutions", sub: "as your practitioner.",
       i1: "keep saying no when no is the right answer", i2: "explain the why", i3: "never chase trends with your face",
-      i4: "make room for your questions", i5: "remember subtle is still a result", i6: "keep the kettle operational.",
+      i4: "make room for your questions", i5: "remember subtle is still a result", i6: "keep the diary honest.",
     },
   },
   {

@@ -35,7 +35,7 @@ COMPLIANCE (UK, non-negotiable)
 - Never use the word "safe" in a claim. No medical claims, no guaranteed results, no before and after promises, no superlatives (best, number one, guaranteed).
 - No pressure tactics and no urgency language (no "limited spaces", "book now before it's gone").
 - Frame treatment as consultation and possibility: "may help", "can improve".
-- Make it personal, never corporate: she should feel she has followed me for years and I am chatting to her in the kitchen. Small, believable personal details, never invented results, names or numbers. Build a warm two way friendship so she wants to reply.
+- Make it personal, never corporate: she should feel she has followed me for years and I am chatting to her like a friend. Small, believable personal details, never invented results, names or numbers. Build a warm two way friendship so she wants to reply.
 ${HOOK_RULES}`;
 
 export function clean(text: unknown, max: number): string {

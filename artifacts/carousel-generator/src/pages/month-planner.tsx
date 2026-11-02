@@ -709,7 +709,7 @@ export default function MonthPlanner() {
         ok++;
         toast.loading(`Scheduling ${ok} of ${ready.length}`, { id: toastId });
       }
-      toast.success(`${ok} posts scheduled. Go and put the kettle on.`, { id: toastId });
+      toast.success(`${ok} posts scheduled.`, { id: toastId });
     } catch (e) {
       toast.error(`${ok} scheduled, then it stopped: ${e instanceof Error ? e.message : "failed"}`, { id: toastId });
     } finally {

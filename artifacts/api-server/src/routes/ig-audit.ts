@@ -439,7 +439,7 @@ function analyse(profile: Profile, media: Media[]) {
 // Sales write-up (prospect facing)
 // ---------------------------------------------------------------------------
 const STYLE_DIRECTIVES: Record<string, string> = {
-  northern: "Northern grit Vanessa style. Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. Like talking to your best mate over a brew. Short punchy sentences mixed with the odd longer one.",
+  northern: "Northern grit Vanessa style. Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. Like talking to your best mate. Short punchy sentences mixed with the odd longer one.",
   springsteen: "Storytelling in the manner of a great American storyteller, but written in British English: whimsical, small scenes, a shop window at closing time, a Friday night, someone doing their best against the odds. Warm and a little romantic about ordinary people. Never mention songs, lyrics, albums or the man's name.",
   dawn: "Dawn French style: funny, blunt, self-deprecating, warm, gloriously cheeky. Say the awkward thing out loud and make them laugh while you do it.",
   professional: "Professional but with personality. Polished and credible, still warm and human, with the odd wry aside. No jargon.",

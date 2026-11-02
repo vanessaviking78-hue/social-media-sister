@@ -53,7 +53,7 @@ WRITING RULES (non-negotiable)
 - Never use negative parallelism in any form: no "it's not X, it's Y", "not just X but Y", "less X, more Y", "no X, no Y, just Z", "don't X, do Y", "isn't about X, it's about Y". State the positive point directly.
 - EVERY caption ends with one short, genuine question that relates to that post and invites a comment (for example a question about her own memory, her own experience or her own opinion on what the post is about). The question is the very last line of the caption itself, and the hashtag line sits on its own after it.
 - Humanise everything. Write like a real woman in her own voice, with specific details, small asides and the odd imperfect sentence. No AI patter, no neat summing up line, no tidy moral at the end.
-- Make it personal, never corporate. Write to one woman as if she has followed me for years and I am chatting to her in the kitchen. Small, believable personal details (the kettle, the diary, a quiet Tuesday, something a patient said, never invented results, names or numbers) so she feels she knows me. Build that friendly, two way feeling so she wants to reply.
+- Make it personal, never corporate. Write to one woman as if she has followed me for years and I am chatting to her like a friend. Small, believable personal details (the diary, a quiet Tuesday, something a patient said, never invented results, names or numbers) so she feels she knows me. Build that friendly, two way feeling so she wants to reply.
 ${HOOK_RULES}`;
 
 

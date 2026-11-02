@@ -99,7 +99,7 @@ export const NOVEMBER_DESIGNS: NovDesign[] = [
     defaults: {
       report: "Report No. 11/10", headline: "November\nStatus\nReport",
       l1: "Christmas shopping:", v1: "Started in theory", l2: "Skin routine:", v2: "Mostly behaving", l3: "Central heating:", v3: "Aggressive",
-      l4: "Motivation after 4pm:", v4: "Missing", l5: "Magnifying mirror:", v5: "Still not invited", l6: "Practitioner:", v6: "Needs a cup of tea",
+      l4: "Motivation after 4pm:", v4: "Missing", l5: "Magnifying mirror:", v5: "Still not invited", l6: "Practitioner:", v6: "Needs a lie down",
       sticker: "End of Month\nCheck-in", ticket: "December,\nPlease Approach Slowly.", stub: "Handle\nwith\nCareful\nOptimism",
     },
   },

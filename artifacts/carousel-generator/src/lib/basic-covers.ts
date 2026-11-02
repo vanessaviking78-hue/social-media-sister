@@ -151,7 +151,7 @@ export const COVERS: CoverDef[] = [
     idea: "the human behind the clinic, remembering the little things about her patients",
     fields: [f("headline", "Headline", 8, 2), f("i1", "Note line 1", 6), f("i2", "Note line 2", 6), f("i3", "Note line 3", 6), f("footer", "Bottom panel", 22, 3)],
     defaults: {
-      headline: "There's a person behind this clinic.", i1: "I remember your name.", i2: "I remember what worried you.", i3: "I remember how you take your tea.",
+      headline: "There's a person behind this clinic.", i1: "I remember your name.", i2: "I remember what worried you.", i3: "I remember what made you laugh.",
       footer: "Come for the consultation. Stay because I remembered the story you told me six months ago.",
     },
   },
@@ -178,7 +178,7 @@ export const COVERS: CoverDef[] = [
     idea: "a big warm statement over a full photo, inviting her to come as she is",
     fields: [f("headline", "Headline", 5, 2), f("sub", "Line under it", 22, 3), f("footer", "Small line at the bottom", 6)],
     defaults: {
-      headline: "Come as you are.", sub: "No make-up needed. No script. Just a proper chat and a cuppa with me at {clinic}.", footer: "{area}",
+      headline: "Come as you are.", sub: "No make-up needed. No script. Just a proper chat with me at {clinic}.", footer: "{area}",
     },
   },
   {

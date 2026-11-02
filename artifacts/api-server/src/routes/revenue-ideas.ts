@@ -24,7 +24,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 // word has to follow. Kept consistent with the Content Generator's own
 // Northern Grit tone and clinic compliance rules, since this is going out
 // under the same brand.
-const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman — direct, warm, working-class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew. First person where it reads naturally, as if Vanessa is speaking straight to the clinic owner.";
+const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman — direct, warm, working-class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate. First person where it reads naturally, as if Vanessa is speaking straight to the clinic owner.";
 
 const COMPLIANCE_RULES = `
 COMPLIANCE (non-negotiable, every single word)

@@ -755,7 +755,19 @@ async function academyCover(post: MPost, c: Client): Promise<Record<string, stri
 
 // Writes the slide words, question and caption for one post. Returns what to merge into the post.
 // Writes the post, then a fun question for the story that goes out 5 minutes before it.
+// No emojis in any caption, slide or story, whatever the writer returns.
+const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu;
+const noEmoji = <T,>(v: T): T =>
+  typeof v === "string" ? (v.replace(EMOJI, "").replace(/[ \t]{2,}/g, " ").replace(/ +([.,!?])/g, "$1").trim() as unknown as T)
+  : Array.isArray(v) ? (v.map(noEmoji) as unknown as T)
+  : v && typeof v === "object" ? (Object.fromEntries(Object.entries(v as object).map(([k, x]) => [k, noEmoji(x)])) as T)
+  : v;
+
 export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>> {
+  return noEmoji(await writeCopyWithStory(post, c));
+}
+
+async function writeCopyWithStory(post: MPost, c: Client): Promise<Partial<MPost>> {
   const out = await writeCopyInner(post, c);
   try {
     const words = [out.text?.hook ?? post.text.hook ?? post.hook ?? "", ...(out.slides ?? post.slides), out.caption ?? ""].filter(Boolean).join("\n");
@@ -880,7 +892,7 @@ export async function schedulePost(post: MPost, c: Client, presetId: number): Pr
   const body = {
     postType: urls.length > 1 ? "carousel" : "single-image",
     content: {
-      caption: `${post.caption.trim()}\n\n${post.hashtags.join(" ")}`.trim(),
+      caption: noEmoji(`${post.caption.trim()}\n\n${post.hashtags.join(" ")}`.trim()),
       title: `${designName(post)} · ${c.businessName}`,
       platforms: ["instagram"],
       imageUrls: urls,

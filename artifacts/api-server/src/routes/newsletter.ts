@@ -51,7 +51,7 @@ export const SLOTS = [
     slot: "bts",
     label: "Behind the Scenes",
     brief:
-      "A warm, human, slightly funny peek behind the clinic door linked to this topic. 60 to 100 words. Real details: the team, the kettle, the diary, the playlist, the new chair. This is the bit that makes patients feel like they know the clinic.",
+      "A warm, human, slightly funny peek behind the clinic door linked to this topic. 60 to 100 words. Real details: the team, the diary, the playlist, the new chair. This is the bit that makes patients feel like they know the clinic.",
   },
   {
     slot: "sell",

@@ -23,7 +23,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 router.use("/competitor-scout", requireAuth);
 
-const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew. This is Vanessa writing DIRECTLY TO the clinic owner, second person throughout, using 'you' and 'your', never 'the clinic' or 'they' or 'this client'. It should read exactly like an email or message Vanessa has sat down and written herself, addressed to them by name, personal and warm, encouraging and empowering, never talking them down or making them feel behind.";
+const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate. This is Vanessa writing DIRECTLY TO the clinic owner, second person throughout, using 'you' and 'your', never 'the clinic' or 'they' or 'this client'. It should read exactly like an email or message Vanessa has sat down and written herself, addressed to them by name, personal and warm, encouraging and empowering, never talking them down or making them feel behind.";
 
 const COMPLIANCE_RULES = `
 COMPLIANCE (non-negotiable, every single word)
