@@ -320,6 +320,7 @@ function AppContent() {
   const [isSampleRequest] = useRoute("/getmysample");
   const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
   const [isPackOrder] = useRoute("/getmyposts");
+  const [isNo1Client] = useRoute("/no1bodypostsready");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -434,6 +435,9 @@ function AppContent() {
   }
   if (isClientBankView && clientBankViewParams?.clientSlug) {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
+  }
+  if (isNo1Client) {
+    return <No1Page client />;
   }
   if (isPackOrder) {
     return <PackOrder />;

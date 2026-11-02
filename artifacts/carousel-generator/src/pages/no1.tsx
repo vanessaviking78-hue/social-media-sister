@@ -313,7 +313,7 @@ function LogoEditor({ post, photoFor, onChange }: { post: Post; photoFor: (n: nu
   );
 }
 
-export default function No1Page() {
+export default function No1Page({ client = false }: { client?: boolean }) {
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(NO1_GROUPS[0].id);
@@ -322,6 +322,18 @@ export default function No1Page() {
   // The last logo placement she chose, so every new post starts where she likes it.
   const [logoDefault, setLogoDefault] = useState<LogoPlace>({ ...DEFAULT_LOGO });
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!client) return;
+    // Her private link should not turn up in search results.
+    const m = document.createElement("meta");
+    m.name = "robots";
+    m.content = "noindex,nofollow";
+    document.head.appendChild(m);
+    return () => {
+      m.remove();
+    };
+  }, [client]);
 
   useEffect(() => {
     ensureLogo();
@@ -452,10 +464,10 @@ export default function No1Page() {
       <style>{FONT_CSS}</style>
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-3">
-          <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
+          {!client && <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>}
           <div>
             <h1 className="text-3xl" style={{ fontFamily: `"${HEAD}", serif` }}>{NO1_CLINIC}</h1>
-            <p className="text-white/60 text-sm">Her own page. 44 carousel types, Hatcher on the front, Merriweather inside, no prices.</p>
+            <p className="text-white/60 text-sm">{client ? "Add your photos, pick a post, press Write it, then download your carousel and caption." : "Her own page. 44 carousel types, Hatcher on the front, Merriweather inside, no prices."}</p>
           </div>
         </div>
 
