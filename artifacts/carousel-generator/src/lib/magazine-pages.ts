@@ -4,7 +4,23 @@
 // so every drawing helper here just crops them again to whatever box it needs.
 
 export const PAGE_W = 1080;
-export const PAGE_H = 1440;
+
+// Two page sizes: post (1080 x 1440, 3:4) and reel (1080 x 1920, 9:16). PAGE_H is a live binding, so every
+// page drawn after setMagazineSize() is the new height. Tools that do not choose a size stay on post size,
+// and any tool that switches to reel puts it back to post when it closes.
+export type MagazineSize = "post" | "reel";
+export const MAGAZINE_SIZES: Record<MagazineSize, { w: number; h: number; label: string }> = {
+  post: { w: 1080, h: 1440, label: "Post size (1080 x 1440)" },
+  reel: { w: 1080, h: 1920, label: "Reel size (1080 x 1920)" },
+};
+export let PAGE_H = MAGAZINE_SIZES.post.h;
+export function setMagazineSize(size: MagazineSize = "post") {
+  PAGE_H = MAGAZINE_SIZES[size].h;
+}
+// How much taller the page is than a post page (0 for a post). Layouts use it to share the extra height out.
+export function pageExtra(): number {
+  return PAGE_H - MAGAZINE_SIZES.post.h;
+}
 
 export type MagazineCopy = {
   cover: { headline: string; lines: [string, string, string] };

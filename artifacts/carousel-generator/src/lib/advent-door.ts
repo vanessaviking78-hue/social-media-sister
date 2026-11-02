@@ -47,13 +47,14 @@ export function loadImageFromFile(file: File): Promise<HTMLImageElement> {
 
 // Centre crops any upload to exactly 1080 x 1440, the same as CSS
 // object-fit: cover, so nothing is ever squashed or letterboxed.
-export function coverToCanvas(img: HTMLImageElement): HTMLCanvasElement {
+// Pass a width and height to crop to another size, for example 1080 x 1920 for reels.
+export function coverToCanvas(img: HTMLImageElement, outW: number = DOOR_W, outH: number = DOOR_H): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  canvas.width = DOOR_W;
-  canvas.height = DOOR_H;
+  canvas.width = outW;
+  canvas.height = outH;
   const ctx = canvas.getContext("2d")!;
   const srcRatio = img.naturalWidth / img.naturalHeight;
-  const dstRatio = DOOR_W / DOOR_H;
+  const dstRatio = outW / outH;
   let sw = img.naturalWidth;
   let sh = img.naturalHeight;
   let sx = 0;
@@ -65,7 +66,7 @@ export function coverToCanvas(img: HTMLImageElement): HTMLCanvasElement {
     sh = img.naturalWidth / dstRatio;
     sy = (img.naturalHeight - sh) / 2;
   }
-  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, DOOR_W, DOOR_H);
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
   return canvas;
 }
 

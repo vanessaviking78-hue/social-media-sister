@@ -10,8 +10,8 @@ import { nthPostingSlot } from "@/lib/schedule";
 import { downloadAllImages } from "@/lib/download-images";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
-  MAG_W,
-  MAG_H,
+  MAG_SIZES,
+  type MagSizeKey,
   MAG_MIN_PAGES,
   MAG_MAX_PAGES,
   magSecondsFor,
@@ -21,13 +21,21 @@ import {
   exportMagazineMp4,
 } from "@/lib/magazine-flip";
 
-type Slot = { canvas: HTMLCanvasElement; thumb: string; name: string };
+// src is the photo as it was added, so switching between post and reel size can crop it again for the new shape.
+type Slot = { canvas: HTMLCanvasElement; thumb: string; name: string; src: HTMLImageElement };
+
+function makeSlot(img: HTMLImageElement, name: string, size: MagSizeKey): Slot {
+  const sz = MAG_SIZES[size];
+  const canvas = coverToCanvas(img, sz.w, sz.h);
+  return { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name, src: img };
+}
 
 function UploadSlot({
   step,
   title,
   hint,
   slot,
+  aspect,
   onFile,
   onClear,
 }: {
@@ -35,6 +43,7 @@ function UploadSlot({
   title: string;
   hint: string;
   slot: Slot | null;
+  aspect: string;
   onFile: (f: File | undefined) => void;
   onClear: () => void;
 }) {
@@ -46,7 +55,7 @@ function UploadSlot({
       </p>
       {slot ? (
         <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900">
-          <img src={slot.thumb} alt={title} className="w-full aspect-[3/4] object-cover" />
+          <img src={slot.thumb} alt={title} className={`w-full ${aspect} object-cover`} />
           <button
             onClick={onClear}
             className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-zinc-200 hover:text-white"
@@ -68,7 +77,7 @@ function UploadSlot({
             setOver(false);
             onFile(e.dataTransfer.files?.[0]);
           }}
-          className={`flex flex-col items-center justify-center aspect-[3/4] border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-colors ${
+          className={`flex flex-col items-center justify-center ${aspect} border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-colors ${
             over ? "border-fuchsia-500 bg-fuchsia-500/5" : "border-zinc-800 hover:border-fuchsia-500/60"
           }`}
         >
@@ -92,6 +101,9 @@ function UploadSlot({
 
 export default function Magazine() {
   const [slots, setSlots] = useState<(Slot | null)[]>(Array.from({ length: MAG_MIN_PAGES }, () => null));
+  const [size, setSize] = useState<MagSizeKey>("post");
+  const sz = MAG_SIZES[size];
+  const aspect = size === "reel" ? "aspect-[9/16]" : "aspect-[3/4]";
   const [progress, setProgress] = useState<number | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
@@ -132,10 +144,10 @@ export default function Magazine() {
     if (!file) return;
     try {
       const img = await loadImageFromFile(file);
-      const canvas = coverToCanvas(img);
+      const slot = makeSlot(img, file.name, size);
       setSlots((prev) => {
         const next = [...prev];
-        next[index] = { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: file.name };
+        next[index] = slot;
         return next;
       });
       setVideoUrl(null);
@@ -143,7 +155,7 @@ export default function Magazine() {
     } catch (e: any) {
       toast.error(e?.message || "Couldn't read that image, try another file");
     }
-  }, []);
+  }, [size]);
 
   // Pick up to 16 images in one go. They fill the empty pages in order and the
   // magazine grows (before the call to action) if there are more images than gaps.
@@ -162,8 +174,7 @@ export default function Magazine() {
       for (const f of use) {
         try {
           const img = await loadImageFromFile(f);
-          const canvas = coverToCanvas(img);
-          loaded.push({ canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: f.name });
+          loaded.push(makeSlot(img, f.name, size));
         } catch {
           toast.error(`Couldn't read ${f.name}, so I skipped it`);
         }
@@ -181,7 +192,7 @@ export default function Magazine() {
       setVideoUrl(null);
       startRef.current = performance.now();
     },
-    [slots]
+    [slots, size]
   );
 
   const clear = (index: number) => {
@@ -201,11 +212,13 @@ export default function Magazine() {
       const h = await takeFlipHandoff();
       if (cancelled || !h || !h.images.length) return;
       const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.images.length));
+      // Pages sent from Magazine Post arrive in the size they were made in.
+      const handoffSize: MagSizeKey = h.size === "reel" ? "reel" : "post";
+      setSize(handoffSize);
       setSlots(Array.from({ length: n }, (_, i) => {
         const img = h.images[i];
         if (!img) return null;
-        const canvas = coverToCanvas(img);
-        return { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: `Cover ${i + 1}` };
+        return makeSlot(img, `Cover ${i + 1}`, handoffSize);
       }));
       const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
       setFileName(`${clean || "Client"}-Preview`);
@@ -218,6 +231,15 @@ export default function Magazine() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Switching between post and reel size crops every page you have added again for the new shape.
+  const changeSize = (next: MagSizeKey) => {
+    if (next === size) return;
+    setSize(next);
+    setSlots((prev) => prev.map((s) => (s ? makeSlot(s.src, s.name, next) : s)));
+    setVideoUrl(null);
+    startRef.current = performance.now();
+  };
 
   // Live preview: plays the same frames the MP4 will use, then loops after a pause.
   useEffect(() => {
@@ -329,17 +351,37 @@ export default function Magazine() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Flip
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add the front cover, up to fourteen middle pages and a call to action, {MAG_MAX_PAGES} images at the most. The pages turn one by one and the last page stays on screen. 1080 x 1440, {magSecondsFor(pageCount)} seconds, MP4.
+              Add the front cover, up to fourteen middle pages and a call to action, {MAG_MAX_PAGES} images at the most. The pages turn one by one and the last page stays on screen. {sz.w} x {sz.h}, {magSecondsFor(pageCount)} seconds, MP4.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
           <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-xs uppercase tracking-widest text-zinc-500">Size</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Magazine size">
+                {(Object.keys(MAG_SIZES) as MagSizeKey[]).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => changeSize(k)}
+                    aria-pressed={size === k}
+                    className={`px-3 py-2 rounded-lg border text-sm transition-colors ${
+                      size === k ? "border-fuchsia-500 bg-fuchsia-500/10 text-white" : "border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-fuchsia-500/50"
+                    }`}
+                  >
+                    {MAG_SIZES[k].label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-zinc-500">Reel size fills the whole phone screen. Pages you have already added are cropped again to fit when you switch.</p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               {labels.map((label, i) => (
                 <UploadSlot
                   key={i}
+                  aspect={aspect}
                   step={i + 1}
                   title={label}
                   hint={hints[i]}
@@ -382,9 +424,9 @@ export default function Magazine() {
 
           <div className="space-y-2 lg:sticky lg:top-6">
             <p className="text-xs uppercase tracking-widest text-zinc-500">{pageCount + 1}. Preview</p>
-            <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 aspect-[3/4] max-w-sm mx-auto lg:max-w-none">
+            <div className={`rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 ${aspect} ${size === "reel" ? "max-w-[260px] mx-auto" : "max-w-sm mx-auto lg:max-w-none"}`}>
               {ready ? (
-                <canvas ref={previewRef} width={MAG_W} height={MAG_H} className="w-full h-full" />
+                <canvas ref={previewRef} width={sz.w} height={sz.h} className="w-full h-full" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-center text-sm text-zinc-500 px-6">
                   {filled} of {pageCount} pages added. Add them all and your magazine will start turning here.
