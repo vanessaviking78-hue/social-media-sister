@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
+import { finalCta } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -85,9 +86,9 @@ ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
 ${coverBlock}
 
 SLIDES 2 AND 3 sit over a full bleed photo, so they must be short enough to read in a few seconds.
-- "slide2": continues straight on from the cover. It picks up the idea the cover started and goes one level deeper, with a small, believable, specific detail from the treatment room or consultation chair, said in plain words. 28 to 40 words.
-- "slide3": lands the point with warmth and a little humour, so she feels she already knows ${who}. 24 to 36 words.
-- "cta": ONE short question for the last slide that is easy and fun to answer in a few words in the comments, relating to the post (for example What would you ask me if you were not worried about sounding silly?). Max 16 words. Never Comment WORD, never DM me, never a website.
+- "slide2": continues straight on from the cover. It picks up the idea the cover started and goes one level deeper, with a small, believable, specific detail from the treatment room or consultation chair, said in plain words. EXACTLY three sentences, friendly but informative.
+- "slide3": lands the point with warmth and a little humour, so she feels she already knows ${who}. EXACTLY three sentences, friendly but informative.
+- "cta": leave this as an empty string. The last slide is set for you.
 - "caption": the Instagram caption, max 110 words. The first line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not already say. It ends with ONE closing question relating to the post (it can be the cta question or a close cousin of it).
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.
 
@@ -157,7 +158,7 @@ router.post("/basic-posts/copy", async (req: Request, res: Response) => {
     const out: Record<string, unknown> = {
       slide2: clean(j.slide2, 320),
       slide3: clean(j.slide3, 280),
-      cta: clean(j.cta, 140),
+      cta: finalCta(b.ctaTreatment),
       caption: clean(j.caption, 900),
       hashtags: fiveTags(j.hashtags, notes.area),
     };

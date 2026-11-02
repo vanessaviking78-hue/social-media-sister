@@ -54,3 +54,10 @@ export function splitHook(text: string): { first: string; second: string } {
   const mid = Math.round(words.length / 2);
   return { first: words.slice(0, mid).join(" "), second: words.slice(mid).join(" ") };
 }
+
+// The last slide of every carousel. A treatment post asks her to comment the treatment name for more info,
+// any other post asks her to tag a friend. Written here so every writing tool ends the same way.
+export function finalCta(treatment: unknown): string {
+  const t = String(treatment ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+  return t ? `Comment ${t.toUpperCase()} for more info` : "Tag a friend who will get it";
+}

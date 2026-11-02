@@ -319,7 +319,7 @@ export default function ClientStylish() {
     setPackWindows(hooksRef.current.filter(h => h.season).map(h => {
       const hk = HOOKS.find(x => x.code === h.code);
       const t = hk && packStart ? hookTiming(hk, packStart) : { ok: true as boolean, from: undefined, to: undefined };
-      return { row: h.row, season: SEASON_WINDOWS[h.season as "Halloween" | "Bonfire" | "Christmas"].label, from: t.from, to: t.to };
+      return { row: h.row, season: SEASON_WINDOWS[h.season as Exclude<typeof h.season, "">].label, from: t.from, to: t.to };
     }));
     setFromApproved(useApproved);
     if (useApproved) {

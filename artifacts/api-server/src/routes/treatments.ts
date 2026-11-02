@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
+import { finalCta } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -78,11 +79,11 @@ ${n.bullets.map((b) => `- ${b}`).join("\n")}${n.callout ? `\nExtra note on the c
 WHO SHE IS TALKING TO: ${n.audience || "women aged 35 plus who are curious but wary, who want honesty, time to ask questions and nobody pushing them"}. Use the consumer psychology of women over 35: they want to feel seen and safe, they save and share what sounds like a real person, they are tired of being sold to, and they trust the person who tells them the truth. Stealth sales only.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
 THE SLIDES (each carries on from the one before, same playful voice as the cover, with a believable specific detail from the consultation room, in plain words):
-- "slide2": the honest bit the cover does not say. What really happens first: the conversation, looking at her whole face, time to ask questions, and that I may suggest a different plan or say not today. 26 to 38 words.
-- "slide3": who this treatment can suit and who it may not, said warmly with a little humour. No promises. 24 to 36 words.
-- "slide4": what to ask any practitioner before booking (training, how they handle the unexpected, how long the consultation is), framed as questions she is allowed to ask me. 24 to 36 words.
-- "slide5": the landing. Warm, a touch funny, invites a conversation with no pressure. 14 to 24 words.
-- "cta": ONE short fun question for the last slide that is easy to answer in a few words in the comments, relating to the post (for example Which side effect have you already got?). Max 14 words. Never Comment WORD, never DM me, never a website.
+- "slide2": the honest bit the cover does not say. What really happens first: the conversation, looking at her whole face, time to ask questions, and that I may suggest a different plan or say not today. EXACTLY three sentences, friendly but informative.
+- "slide3": who this treatment can suit and who it may not, said warmly with a little humour. No promises. EXACTLY three sentences, friendly but informative.
+- "slide4": what to ask any practitioner before booking (training, how they handle the unexpected, how long the consultation is), framed as questions she is allowed to ask me. EXACTLY three sentences, friendly but informative.
+- "slide5": the landing. Warm, a touch funny, invites a conversation with no pressure. EXACTLY three sentences, friendly but informative.
+- "cta": leave this as an empty string. The last slide is set for you.
 - "caption": the Instagram caption, max 110 words. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not say. It MUST end with this exact final line on its own: Drop me a DM to see if you're a good fit for this
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.
 
@@ -155,7 +156,7 @@ router.post("/treatments/copy", async (req: Request, res: Response) => {
       slide3: clean(j.slide3, 280),
       slide4: clean(j.slide4, 280),
       slide5: clean(j.slide5, 200),
-      cta: clean(j.cta, 120),
+      cta: finalCta("ctaTreatment" in b ? b.ctaTreatment : b.treatment),
       caption,
       hashtags: fiveTags(j.hashtags, notes.area),
     });
