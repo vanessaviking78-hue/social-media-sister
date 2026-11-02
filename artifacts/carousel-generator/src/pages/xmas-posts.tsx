@@ -13,7 +13,8 @@ import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-m
 import { usePresets } from "@/lib/use-presets";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
-import { type Fill } from "@/lib/basic-covers";
+import { type Fill, fillTokens } from "@/lib/basic-covers";
+import { drawUniPhotoSlide } from "@/lib/unique-designs";
 import {
   DEFAULT_FOCUS, DEFAULT_PALETTES, DESIGNS, DESIGN_BY_ID, GROUPS, LOGO_POSITIONS, PALETTE_LABELS_BY_GROUP, XH, XW,
   drawXmas, leftoverPlaceholders, resolveText,
@@ -27,12 +28,19 @@ const DEFAULT_BODY = "'Poppins', sans-serif";
 
 type PoolPhoto = { id: string; file: File; url: string };
 
+// Each post is a carousel: the Christmas design is slide 1, then two photo slides with words and a closing question.
+const SLIDES = 3;
+
 type Post = {
   id: string;
   design: DesignId;
   text: Record<string, string>;
   photo: number | null;
   focus: Focus;
+  more: [number | null, number | null]; // photos for slides 2 and 3
+  moreFocus: [Focus, Focus];
+  slides: string[];
+  cta: string;
   caption: string;
   hashtags: string[];
   selected: boolean;
@@ -114,13 +122,23 @@ type Look = {
   pool: PoolPhoto[];
 };
 
-async function renderPost(post: Post, look: Look, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+async function renderPost(post: Post, look: Look, canvas: HTMLCanvasElement, scale: number, n = 0): Promise<Slot[]> {
   const ctx = canvas.getContext("2d")!;
   canvas.width = Math.round(XW * scale);
   canvas.height = Math.round(XH * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const p = post.photo != null ? look.pool[post.photo] ?? null : null;
   const def = DESIGN_BY_ID[post.design];
+  if (n > 0) {
+    const idx = post.more[n - 1];
+    const ph = idx != null ? look.pool[idx] ?? null : null;
+    const last = n === SLIDES - 1;
+    return drawUniPhotoSlide(ctx, {
+      text: fillTokens(post.slides[n - 1] ?? "", look.fill), cta: last ? fillTokens(post.cta, look.fill) : "",
+      palette: { ...look.palettes[def.group], ...(post.palette ?? {}) }, bodyFont: look.bodyFont,
+      photo: ph ? await getBitmap(ph) : null, focus: post.moreFocus[n - 1], scrim: 35, logo: look.logo, arrow: !last,
+    } as never);
+  }
   return drawXmas(ctx, {
     design: post.design,
     text: resolveText(def, post.text, look.fill),
@@ -139,7 +157,9 @@ async function renderPost(post: Post, look: Look, canvas: HTMLCanvasElement, sca
 // One preview canvas, draggable
 // ---------------------------------------------------------------------------
 
-function Preview({ post, look, onFocus }: { post: Post; look: Look; onFocus: (f: Focus) => void }) {
+function Preview({ post, look, n, onFocus }: { post: Post; look: Look; n: number; onFocus: (f: Focus) => void }) {
+  const phIdx = n === 0 ? post.photo : post.more[n - 1];
+  const focusNow = n === 0 ? post.focus : post.moreFocus[n - 1];
   const ref = useRef<HTMLCanvasElement>(null);
   const slots = useRef<Slot[]>([]);
   const drag = useRef<{ slot: Slot; x: number; y: number; f: Focus; ox: number; oy: number } | null>(null);
@@ -151,7 +171,7 @@ function Preview({ post, look, onFocus }: { post: Post; look: Look; onFocus: (f:
       await ensureFonts(look.headFont, look.bodyFont);
       if (my !== run.current || !ref.current) return;
       const c = document.createElement("canvas");
-      const s = await renderPost(post, look, c, 0.45);
+      const s = await renderPost(post, look, c, 0.45, n);
       if (my !== run.current || !ref.current) return;
       slots.current = s;
       const out = ref.current;
@@ -161,7 +181,7 @@ function Preview({ post, look, onFocus }: { post: Post; look: Look; onFocus: (f:
     }, 60);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [post, look]);
+  }, [post, look, n]);
 
   const hit = (px: number, py: number): Slot | null => {
     for (const s of slots.current) {
@@ -182,12 +202,12 @@ function Preview({ post, look, onFocus }: { post: Post; look: Look; onFocus: (f:
   const onDown = async (e: React.PointerEvent) => {
     const p = toCanvas(e);
     const slot = hit(p.x, p.y);
-    if (!slot || post.photo == null) return;
-    const ph = look.pool[post.photo];
+    if (!slot || phIdx == null) return;
+    const ph = look.pool[phIdx];
     const bmp = ph ? await getBitmap(ph) : null;
     if (!bmp) return;
     const sc = Math.max(slot.w / bmp.width, slot.h / bmp.height);
-    drag.current = { slot, x: p.x, y: p.y, f: post.focus, ox: bmp.width * sc - slot.w, oy: bmp.height * sc - slot.h };
+    drag.current = { slot, x: p.x, y: p.y, f: focusNow, ox: bmp.width * sc - slot.w, oy: bmp.height * sc - slot.h };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -297,7 +317,7 @@ async function uploadPngs(dataUrls: string[], names: string[]): Promise<string[]
 
 const freshPosts = (): Post[] =>
   DESIGNS.map((d) => ({
-    id: uid(), design: d.id, text: { ...d.defaults }, photo: null, focus: DEFAULT_FOCUS, caption: "", hashtags: [], selected: true, busy: false,
+    id: uid(), design: d.id, text: { ...d.defaults }, photo: null, focus: DEFAULT_FOCUS, more: [null, null], moreFocus: [DEFAULT_FOCUS, DEFAULT_FOCUS], slides: ["", ""], cta: "", caption: "", hashtags: [], selected: true, busy: false,
   }));
 
 // ---------------------------------------------------------------------------
@@ -324,7 +344,7 @@ export default function XmasPosts() {
 
   const [pool, setPool] = useState<PoolPhoto[]>([]);
   const [posts, setPosts] = useState<Post[]>(freshPosts);
-  const [chooser, setChooser] = useState<string | null>(null);
+  const [chooser, setChooser] = useState<{ id: string; slot: number } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleStart, setScheduleStart] = useState("");
@@ -420,13 +440,13 @@ export default function XmasPosts() {
         while (used.has(next) && next < pool.length) next++;
         const pick = next < pool.length ? next : list.indexOf(p) % pool.length;
         used.add(pick);
-        return { ...p, photo: pick, focus: DEFAULT_FOCUS };
+        return { ...p, photo: pick, focus: DEFAULT_FOCUS, more: p.more.map((m, k) => (m != null && m < pool.length ? m : (pick + k + 1) % pool.length)) as Post["more"] };
       });
     });
   }, [pool.length]);
   const removeFromPool = (i: number) => {
     setPool((old) => old.filter((_, k) => k !== i));
-    setPosts((list) => list.map((p) => ({ ...p, photo: p.photo == null || p.photo === i ? null : p.photo > i ? p.photo - 1 : p.photo })));
+    setPosts((list) => list.map((p) => ({ ...p, photo: p.photo == null || p.photo === i ? null : p.photo > i ? p.photo - 1 : p.photo, more: p.more.map((m) => (m == null || m === i ? null : m > i ? m - 1 : m)) as Post["more"] })));
   };
 
   const fill: Fill = useMemo(() => ({ owner: owner.trim(), clinic: clinic.trim(), area: area.trim(), role: role.trim() }), [owner, clinic, area, role]);
@@ -449,7 +469,8 @@ export default function XmasPosts() {
     const def = DESIGN_BY_ID[post.design];
     patchPost(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/xmas-posts/copy`, {
+      const t = resolveText(def, post.text, fill);
+      const r = await fetch(`${BASE}/api/unique/copy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -459,17 +480,21 @@ export default function XmasPosts() {
           area: area.trim(),
           audience: preset.targetAudience ?? "",
           brandNotes: preset.brandNotes ?? "",
-          designName: def.name,
-          idea: def.idea,
-          onImage: onImageText(post),
+          idea: `Christmas and the festive season, a funny honest carousel. ${def.idea}`,
+          cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"),
+          fresh: false,
+          fields: [],
         }),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data?.error || "The caption would not write, try again");
+      if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       const foot = preset.captionFootnote?.trim();
       let caption: string = noDashes(data.caption ?? "");
       if (foot && !caption.includes(foot)) caption += `\n\n${foot}`;
-      patchPost(post.id, { busy: false, caption, hashtags: Array.isArray(data.hashtags) ? data.hashtags : [] });
+      patchPost(post.id, {
+        busy: false, caption, hashtags: Array.isArray(data.hashtags) ? data.hashtags : [],
+        slides: [data.slide2, data.slide3].map((x) => noDashes(x ?? "")), cta: noDashes(data.cta ?? ""),
+      });
     } catch (e) {
       patchPost(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The caption would not write, try again");
@@ -498,12 +523,14 @@ export default function XmasPosts() {
     setBusy(null);
   };
 
-  const renderFull = async (post: Post): Promise<HTMLCanvasElement> => {
+  const renderFull = async (post: Post, n = 0): Promise<HTMLCanvasElement> => {
     await ensureFonts(headFont, bodyFont);
     const c = document.createElement("canvas");
-    await renderPost(post, look, c, 1);
+    await renderPost(post, look, c, 1, n);
     return c;
   };
+  const setFocusFor = (post: Post, n: number, f: Focus) =>
+    patchPost(post.id, n === 0 ? { focus: f } : { moreFocus: (n === 1 ? [f, post.moreFocus[1]] : [post.moreFocus[0], f]) as Post["moreFocus"] });
 
   const fullCaption = (p: Post) => `${p.caption.trim()}\n\n${p.hashtags.join(" ")}`.trim();
   const placeholdersIn = (p: Post) => leftoverPlaceholders(resolveText(DESIGN_BY_ID[p.design], p.text, fill));
@@ -515,13 +542,15 @@ export default function XmasPosts() {
       const zip = new JSZip();
       for (const post of selected) {
         const name = `${String(posts.indexOf(post) + 1).padStart(2, "0")}-${post.design}`;
-        const c = await renderFull(post);
-        const blob = await new Promise<Blob | null>((res) => c.toBlob((b) => res(b), "image/png"));
-        if (blob) zip.file(`${name}.png`, blob);
+        for (let n = 0; n < SLIDES; n++) {
+          const c = await renderFull(post, n);
+          const blob = await new Promise<Blob | null>((res) => c.toBlob((b) => res(b), "image/png"));
+          if (blob) zip.file(`${name}-slide-${n + 1}.png`, blob);
+        }
         if (post.caption.trim()) zip.file(`${name}-caption.txt`, fullCaption(post));
       }
       saveAs(await zip.generateAsync({ type: "blob" }), `xmas-posts-${(clinic || "client").replace(/\s+/g, "")}-${Date.now()}.zip`);
-      toast.success(`${selected.length} post${selected.length !== 1 ? "s" : ""} downloaded at 1080 x 1350`);
+      toast.success(`${selected.length} post${selected.length !== 1 ? "s" : ""} downloaded, 3 slides each at 1080 x 1350`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
     } finally {
@@ -533,9 +562,9 @@ export default function XmasPosts() {
     if (!preset) { toast.error("Choose a client first"); return; }
     if (!selected.length) { toast.error("Tick at least one post first"); return; }
     if (!clinic.trim() || !area.trim()) { toast.error("Fill in the business name and area first, so no placeholder goes out."); return; }
-    const noWords = selected.filter((p) => !p.caption.trim());
-    if (noWords.length) { toast.error(`${noWords.length} ticked post${noWords.length > 1 ? "s have" : " has"} no caption yet. Press Write first.`); return; }
-    const noPhoto = selected.filter((p) => p.photo == null);
+    const noWords = selected.filter((p) => !p.caption.trim() || p.slides.some((x) => !x.trim()));
+    if (noWords.length) { toast.error(`${noWords.length} ticked post${noWords.length > 1 ? "s have" : " has"} no caption or slide words yet. Press Write first.`); return; }
+    const noPhoto = selected.filter((p) => p.photo == null || p.more.some((m) => m == null));
     if (noPhoto.length) { toast.error(`${noPhoto.length} ticked post${noPhoto.length > 1 ? "s have" : " has"} no photo yet. Add approved photos first.`); return; }
     const left = selected.filter((p) => placeholdersIn(p).length);
     if (left.length) {
@@ -549,9 +578,10 @@ export default function XmasPosts() {
       const items: SchedulePostPayload[] = [];
       for (const [k, post] of selected.entries()) {
         toast.loading(`Getting post ${k + 1} of ${selected.length} ready`, { id: toastId });
-        const c = await renderFull(post);
-        const [url] = await uploadPngs([c.toDataURL("image/png")], [`xmas-${post.design}-${Date.now()}.png`]);
-        items.push({ title: `${DESIGN_BY_ID[post.design].name} · ${clinic}`, caption: fullCaption(post), imageUrls: [url] });
+        const cs: HTMLCanvasElement[] = [];
+        for (let n = 0; n < SLIDES; n++) cs.push(await renderFull(post, n));
+        const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, n) => `xmas-${post.design}-${n + 1}-${Date.now()}.png`));
+        items.push({ title: `${DESIGN_BY_ID[post.design].name} · ${clinic}`, caption: fullCaption(post), imageUrls: urls });
       }
       toast.dismiss(toastId);
       setScheduleItems(items);
@@ -564,7 +594,7 @@ export default function XmasPosts() {
     }
   };
 
-  const chooserPost = chooser ? posts.find((p) => p.id === chooser) : null;
+  const chooserPost = chooser ? posts.find((p) => p.id === chooser.id) : null;
   const cardFont = { fontFamily: "inherit" };
 
   return (
@@ -573,7 +603,7 @@ export default function XmasPosts() {
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <TreePine className="w-5 h-5 text-red-400" />
         <h1 className="font-bold text-lg">Xmas Posts</h1>
-        <span className="text-sm text-muted-foreground">Twenty posts, one image each, 1080 x 1350</span>
+        <span className="text-sm text-muted-foreground">Twenty carousels, three slides each, 1080 x 1350</span>
         <Link href="/xmas-month" className="ml-auto text-sm text-muted-foreground underline hover:text-foreground">Back to Xmas Month</Link>
       </header>
 
@@ -666,7 +696,7 @@ export default function XmasPosts() {
             </div>
           </div>
           {pool.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No photos yet. Ten posts need ten photos, and the Christmas ones look best with warm, smiling, festive pictures.</p>
+            <p className="text-sm text-muted-foreground">No photos yet. Every carousel uses three photos, and the Christmas ones look best with warm, smiling, festive pictures.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {pool.map((p, i) => (
@@ -733,13 +763,23 @@ export default function XmasPosts() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+                <div className="grid gap-4">
                   <div className="space-y-2">
-                    <Preview post={post} look={look} onFocus={(f) => patchPost(post.id, { focus: f })} />
-                    <button type="button" onClick={() => setChooser(post.id)} className="flex w-full items-center gap-2 text-xs rounded-lg border border-border/40 px-2 py-1 hover:border-border">
-                      {ph ? <img src={ph.url} alt="" className="h-9 w-7 object-cover rounded" /> : <span className="h-9 w-7 rounded bg-muted/40" />}
-                      Change photo
-                    </button>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Array.from({ length: SLIDES }, (_, n) => {
+                        const idx = n === 0 ? post.photo : post.more[n - 1];
+                        const sp = idx != null ? pool[idx] : null;
+                        return (
+                          <div key={n} className="space-y-1">
+                            <Preview post={post} look={look} n={n} onFocus={(f) => setFocusFor(post, n, f)} />
+                            <button type="button" onClick={() => setChooser({ id: post.id, slot: n })} className="flex w-full items-center gap-1.5 text-[11px] rounded-lg border border-border/40 px-1.5 py-1 hover:border-border">
+                              {sp ? <img src={sp.url} alt="" className="h-7 w-5 object-cover rounded" /> : <span className="h-7 w-5 rounded bg-muted/40" />}
+                              Slide {n + 1} photo
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                     <details className="text-xs">
                       <summary className="cursor-pointer text-muted-foreground">Colours and logo for this post only</summary>
                       <div className="mt-2 space-y-2">
@@ -771,6 +811,16 @@ export default function XmasPosts() {
                         </label>
                       ))}
                     </div>
+                    {post.slides.map((sw, i) => (
+                      <label key={i} className="block">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Slide {i + 2} words</span>
+                        <Textarea rows={2} value={sw} onChange={(e) => patchPost(post.id, { slides: post.slides.map((x, k) => (k === i ? e.target.value : x)) })} placeholder={i === 0 ? "Press Write and I will carry on from the cover" : undefined} />
+                      </label>
+                    ))}
+                    <label className="block">
+                      <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Last slide question</span>
+                      <Input value={post.cta} onChange={(e) => patchPost(post.id, { cta: e.target.value })} />
+                    </label>
                     <label className="block">
                       <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Caption</span>
                       <Textarea rows={6} value={post.caption} onChange={(e) => patchPost(post.id, { caption: e.target.value })} placeholder="Press Write caption" />
@@ -796,7 +846,11 @@ export default function XmasPosts() {
             ) : (
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {pool.map((p, i) => (
-                  <button key={p.id} type="button" onClick={() => { patchPost(chooserPost.id, { photo: i, focus: DEFAULT_FOCUS }); setChooser(null); }}>
+                  <button key={p.id} type="button" onClick={() => {
+                    if (chooser!.slot === 0) patchPost(chooserPost.id, { photo: i, focus: DEFAULT_FOCUS });
+                    else patchPost(chooserPost.id, { more: (chooser!.slot === 1 ? [i, chooserPost.more[1]] : [chooserPost.more[0], i]) as Post["more"], moreFocus: (chooser!.slot === 1 ? [DEFAULT_FOCUS, chooserPost.moreFocus[1]] : [chooserPost.moreFocus[0], DEFAULT_FOCUS]) as Post["moreFocus"] });
+                    setChooser(null);
+                  }}>
                     <img src={p.url} alt="" className="w-full aspect-[3/4] object-cover rounded-md border border-border/30 hover:border-red-400" />
                   </button>
                 ))}
@@ -810,7 +864,7 @@ export default function XmasPosts() {
         <ScheduleModal
           presetId={preset.id}
           presetName={preset.name}
-          postType="single-image"
+          postType="carousel"
           posts={scheduleItems}
           perPostCaptions
           initialScheduledAt={scheduleStart}

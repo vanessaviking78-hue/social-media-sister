@@ -13,6 +13,8 @@ import { MENS_SETS, MENS_PHOTO_COUNT } from "./mens-sets";
 import { drawAllPostPages, MIN_PHOTOS, type MagazinePostCopy } from "./magazine-post-pages";
 import { setMagazineFonts, setMagazineSize, PAGE_W as MAG_W, PAGE_H as MAG_H } from "./magazine-pages";
 import { setFlipHandoff } from "./flip-handoff";
+import { drawTweetCard, TW, TH } from "./tweet-card";
+import { tweetStats } from "./pack-engine";
 import type { Fill, Focus, Slot } from "./basic-covers";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -21,7 +23,7 @@ export const H = 1350;
 export const DEFAULT_FOCUS: Focus = [0.5, 0.32];
 
 export type PoolPhoto = { id: string; file: File; url: string };
-export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower" | "mens" | "magazine";
+export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower" | "mens" | "magazine" | "tweet";
 
 export type Client = {
   businessName: string;
@@ -66,7 +68,7 @@ export type MPost = {
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
-  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower", mens: "Men", magazine: "Magazine",
+  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower", mens: "Men", magazine: "Magazine", tweet: "Tweet",
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -80,9 +82,9 @@ const asUnique = (p: MPost): MPost => ({ ...p, tool: "unique", design: p.design.
 
 // How many images each kind of post makes, and how many photos it takes.
 export const slideCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "mens" ? (isMenPhoto(design) ? 3 : MENS_BY_ID[design]?.slides ?? 8) : 1;
+  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? 5 : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : MENS_BY_ID[design]?.slides ?? 8) : 1;
 export const photoCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "mens" ? (isMenPhoto(design) ? 3 : 0) : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
+  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "magazine" ? MIN_PHOTOS : tool === "xmas" ? 3 : tool === "mens" ? (isMenPhoto(design) ? 3 : 0) : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
 
 // ---------------------------------------------------------------------------
 // Photos and fonts
@@ -157,9 +159,12 @@ export function makePost(tool: ToolId, design: string, n: number, when: string, 
   } else if (tool === "magazine") {
     text = { copy: "" };
     photos = Array.from({ length: MIN_PHOTOS }, (_, k) => take(k));
+  } else if (tool === "tweet") {
+    text = { quote: "" };
+    photos = [take(0)];
   } else {
     text = { ...XMAS_BY_ID[design as keyof typeof XMAS_BY_ID].defaults };
-    photos = [take(0)];
+    photos = [take(0), take(1), take(2)];
   }
   return {
     id: uid(), n, when, tool, design, text, photos, focus: {}, slides: [], cta: "", caption: "", hashtags: [],
@@ -176,6 +181,7 @@ export const designName = (p: MPost): string =>
     : p.tool === "lux" ? LUX_SLIDE_DEFS[Number(p.design)].name
     : p.tool === "empower" ? EMPOWER_BY_ID[p.design].name
     : p.tool === "mens" ? (isMenPhoto(p.design) ? `${UD.UNIQUE_BY_ID[p.design.slice(2) as UD.UniId].name} (men photos)` : MENS_BY_ID[p.design]?.name ?? "Men")
+    : p.tool === "tweet" ? "Tweet"
     : p.tool === "magazine" ? (p.design === "reel" ? "Magazine reel (9:16)" : "Magazine post (3:4)")
     : XMAS_BY_ID[p.design as keyof typeof XMAS_BY_ID].name;
 
@@ -190,6 +196,7 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "empower" ? EMPOWER.map((d) => d.id)
     : tool === "mens" ? [...MENS_SETS.map((m) => m.id), ...UD.UNIQUE.map((d) => `u:${d.id}`)]
     : tool === "magazine" ? ["post", "reel"]
+    : tool === "tweet" ? ["tweet"]
     : XMAS_DESIGNS.filter((d) => d.group === (group ?? "xmas")).map((d) => d.id);
 
 // ---------------------------------------------------------------------------
@@ -219,7 +226,7 @@ export function brandPalette(tool: ToolId, brand: { main: string; accent: string
   const base = { paper: tint, red: accent, green: dark, tag: mixHex(accent, "#ffffff", 0.6), frame: mixHex(main, "#ffffff", 0.95), light: mixHex(main, "#ffffff", 0.94), ink: mixHex(dark, "#000000", 0.5) };
   if (tool === "treatments") return { navy: dark, coral: accent, lime: mixHex(accent, "#ffffff", 0.5), cream: tint };
   if (tool === "lux" || tool === "empower") return { page: tint, dark, accent, soft: mixHex(main, "#ffffff", 0.8), ink: mixHex(dark, "#000000", 0.5), light: mixHex(main, "#ffffff", 0.94) };
-  if (tool === "mens" || tool === "magazine") return {};
+  if (tool === "mens" || tool === "magazine" || tool === "tweet") return {};
   if (tool === "basic") return { bg: dark };
   if (tool === "halloween") return { ...base, paper: mixHex(main, "#000000", 0.86), green: mixHex(main, "#000000", 0.74), tag: mixHex(main, "#ffffff", 0.8), frame: mixHex(main, "#ffffff", 0.88), ink: mixHex(main, "#000000", 0.88) };
   return base;
@@ -235,7 +242,7 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
   else if (post.tool === "lux") { base = { ...LUX_PALETTE }; labels = LUX_LABELS; }
   else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; base = { ...d.palette }; labels = d.labels; }
-  else if (post.tool === "mens" || post.tool === "magazine") { base = {}; labels = []; }
+  else if (post.tool === "mens" || post.tool === "magazine" || post.tool === "tweet") { base = {}; labels = []; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
@@ -321,6 +328,13 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   if (post.tool === "mens" && isMenPhoto(post.design)) return renderSlide(asUnique(post), n, { ...c, pool: c.mensPool ?? [] }, canvas, scale);
   if (post.tool === "mens") return renderMens(post, n, canvas, scale);
   if (post.tool === "magazine") return renderMagazine(post, n, c, canvas, scale);
+  if (post.tool === "tweet") {
+    canvas.width = Math.round(TW * scale); canvas.height = Math.round(TH * scale);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    const photo = await bmp(c, post.photos[0]);
+    drawTweetCard(ctx, { name: c.businessName, handle: "@" + c.businessName.toLowerCase().replace(/[^a-z0-9]/g, ""), quote: post.text.quote || post.topic?.trim() || "Write the tweet with Rewrite words", stats: tweetStats(post.n), background: photo, profilePhoto: c.logo ?? photo, logo: null });
+    return [];
+  }
   const logo = c.logoPos === "off" ? null : c.logo;
   const corner = c.logoPos && c.logoPos !== "auto" && c.logoPos !== "off" ? c.logoPos : undefined;
 
@@ -396,6 +410,12 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     });
   }
 
+  if (post.tool === "xmas" && n > 0) {
+    return UD.drawUniPhotoSlide(ctx, {
+      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post, c.brand), bodyFont: c.bodyFont,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
+    } as never);
+  }
   const photo = await bmp(c, post.photos[0]);
   const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner ?? ("off" as const) };
   if (post.tool === "halloween") {
@@ -427,6 +447,7 @@ export async function renderPostImages(post: MPost, c: Client, scale = 1): Promi
 // ---------------------------------------------------------------------------
 
 const onImageText = (post: MPost, c: Client): string => {
+  if (post.tool === "tweet") return "";
   if (post.tool === "mens" || post.tool === "magazine") return "";
   if (post.tool === "lux") { const r = resolveLuxText(Number(post.design), post.text, c.fill); return [r.head, r.sub].filter(Boolean).join(" / "); }
   if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; const r = resolveEmpowerText(d, post.text, c.fill); return d.fields.map((f) => r[f.key]).filter(Boolean).join("\n"); }
@@ -509,7 +530,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   const academy = isAcademyClient(c);
   // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
   let coverText: Record<string, string> | null = null;
-  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower" && post.tool !== "mens" && post.tool !== "magazine") {
+  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower" && post.tool !== "mens" && post.tool !== "magazine" && post.tool !== "tweet" && post.tool !== "xmas") {
     const fresh = await academyCover(post, c);
     if (Object.keys(fresh).length) { coverText = { ...post.text, ...fresh }; post = { ...post, text: coverText }; }
   }
@@ -529,6 +550,13 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
     data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
+    slides = [data.slide2, data.slide3];
+  } else if (post.tool === "tweet") {
+    data = await postJson("/api/tweet-post/copy", { ...base, designName: "Tweet", idea: post.topic?.trim() ?? "", onImage: "" });
+    return { text: { ...post.text, quote: noDashes(data.quote ?? "") }, slides: [], cta: "", caption: noDashes(data.caption ?? "") + (c.footnote && !String(data.caption ?? "").includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: Array.isArray(data.hashtags) ? data.hashtags : [] };
+  } else if (post.tool === "xmas") {
+    const def = XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
+    data = await postJson("/api/unique/copy", { ...base, idea: `Christmas and the festive season, a funny honest carousel. ${academy ? academyIdea(post) : withTopic(def.idea, post)}`, cover: onImageText(post, c), fresh: false, fields: [] });
     slides = [data.slide2, data.slide3];
   } else if (post.tool === "mens" && isMenPhoto(post.design)) {
     return writeCopy({ ...asUnique(post), topic: ["men's aesthetics, written for men who think it is not for them", post.topic?.trim() ?? ""].filter(Boolean).join(": ") }, c);

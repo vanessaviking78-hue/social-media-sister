@@ -10,8 +10,8 @@ export type MensSet = {
   summary: string; // what the slides say, used so the caption adds something new
 };
 
-// Photos of men shared by every client, kept in public/mens/photos as man-1.jpg to man-10.jpg. Men posts built as photo posts draw on these.
-export const MENS_PHOTO_COUNT = 10;
+// Photos of men shared by every client, kept in public/mens/photos as man-1.jpg to man-11.jpg. Men posts built as photo posts draw on these.
+export const MENS_PHOTO_COUNT = 11;
 export const mensPhotoPath = (i: number) => `/mens/photos/man-${(i % MENS_PHOTO_COUNT) + 1}.jpg`;
 
 export const MENS_SETS: MensSet[] = [
