@@ -23,7 +23,7 @@ import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import {
-  TOOL_LABEL, sendToFlip, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  TOOL_LABEL, METALS, coverEditFields, renderStory, STORY_W, sendToFlip, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
 } from "@/lib/month-engine";
 
@@ -323,6 +323,51 @@ function Thumb({ post, n, client, onSwap, onFocus, onText }: { post: MPost; n: n
           Reset words
         </button>
       )}
+    </div>
+  );
+}
+
+// The story that goes out 5 minutes before a post: drag the picture, change the question, or switch it off.
+function StoryEditor({ post, client, onChange }: { post: MPost; client: Client; onChange: (s: NonNullable<MPost["story"]>) => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const run = useRef(0);
+  const drag = useRef<{ x: number; y: number; dx: number; dy: number } | null>(null);
+  const st = post.story ?? { q: "", on: true, dx: 0, dy: 0 };
+  useEffect(() => {
+    const my = ++run.current;
+    const t = setTimeout(async () => {
+      const c = document.createElement("canvas");
+      await renderStory(post, client, c, 0.2);
+      if (my !== run.current || !ref.current) return;
+      ref.current.width = c.width; ref.current.height = c.height;
+      ref.current.getContext("2d")!.drawImage(c, 0, 0);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [post, client]);
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current; if (!d || !ref.current) return;
+    const k = STORY_W / ref.current.getBoundingClientRect().width;
+    onChange({ ...st, dx: Math.max(-400, Math.min(400, Math.round(d.dx + (e.clientX - d.x) * k))), dy: Math.max(-300, Math.min(700, Math.round(d.dy + (e.clientY - d.y) * k))) });
+  };
+  return (
+    <div className="mt-3 flex flex-wrap items-start gap-4 rounded-lg border border-border/30 p-3">
+      <div className="space-y-1">
+        <canvas ref={ref} width={216} height={384} style={{ width: 144, aspectRatio: "9 / 16", touchAction: "none" }}
+          className={`rounded-lg border border-border/30 bg-muted/20 cursor-grab active:cursor-grabbing ${st.on ? "" : "opacity-40"}`}
+          onPointerDown={(e) => { drag.current = { x: e.clientX, y: e.clientY, dx: st.dx, dy: st.dy }; (e.target as HTMLElement).setPointerCapture(e.pointerId); }}
+          onPointerMove={onMove} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} />
+        <p className="text-[11px] text-muted-foreground">Drag the picture</p>
+      </div>
+      <div className="min-w-[240px] flex-1 space-y-2">
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={st.on} disabled={post.scheduled} onChange={(e) => onChange({ ...st, on: e.target.checked })} />
+          Also post a story 5 minutes before this post
+        </label>
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Story question (it says Answer below)</span>
+          <Textarea rows={2} value={st.q} disabled={post.scheduled} onChange={(e) => onChange({ ...st, q: e.target.value })} placeholder="Writing the story question…" />
+        </label>
+      </div>
     </div>
   );
 }
@@ -999,6 +1044,16 @@ export default function MonthPlanner() {
                     <label key={f.key} className="flex items-center gap-1.5">
                       <input type="color" value={/^#[0-9a-f]{6}$/i.test(f.value) ? f.value : "#000000"} onChange={(e) => patchPost(p.id, { pal: { ...(p.pal ?? {}), [f.key]: e.target.value } })} className="h-6 w-8 rounded border border-border/40 bg-transparent" />
                       {f.label}
+                      <select
+                        value={METALS.find((m) => m.hex === f.value.toLowerCase())?.hex ?? ""}
+                        onChange={(e) => e.target.value && patchPost(p.id, { pal: { ...(p.pal ?? {}), [f.key]: e.target.value } })}
+                        className="h-6 rounded border border-border/40 bg-background px-1 text-[11px]"
+                        title="Metallic colour"
+                        aria-label={`Metallic colour for ${f.label}`}
+                      >
+                        <option value="">Metallic</option>
+                        {METALS.map((m) => <option key={m.id} value={m.hex}>{m.label}</option>)}
+                      </select>
                     </label>
                   ))}
                   {p.pal && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined })}>reset colours</button>}
@@ -1008,6 +1063,16 @@ export default function MonthPlanner() {
                     <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} onFocus={(key, f) => patchPost(p.id, { focus: { ...p.focus, [key]: f } })} onText={(key, v) => { const tp = { ...(p.textPos ?? {}) }; if (v) tp[key] = v; else delete tp[key]; patchPost(p.id, { textPos: tp }); }} />
                   ))}
                 </div>
+                {coverEditFields(p).length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {coverEditFields(p).map((f) => (
+                      <label key={f.key} className="block">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Cover: {f.label}</span>
+                        <Input value={f.value} disabled={p.scheduled} onChange={(e) => patchPost(p.id, { text: { ...p.text, [f.key]: e.target.value } })} />
+                      </label>
+                    ))}
+                  </div>
+                )}
                 <div className="grid gap-3 lg:grid-cols-2">
                   <div className="space-y-2">
                     {p.slides.map((s, i) => (
@@ -1029,6 +1094,7 @@ export default function MonthPlanner() {
                     {p.hashtags.length > 0 && <p className="text-sm text-violet-300 break-words mt-1">{p.hashtags.join(" ")}</p>}
                   </label>
                 </div>
+              {!isProspect && <StoryEditor post={p} client={client} onChange={(story) => patchPost(p.id, { story })} />}
               </article>
             );
           })}

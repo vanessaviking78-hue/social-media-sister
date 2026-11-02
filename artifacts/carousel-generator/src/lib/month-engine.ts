@@ -68,6 +68,7 @@ export type MPost = {
   hook?: string; // a hook from the hook bank, used word for word
   hookCode?: string; // its code, so it can be crossed off once the post is scheduled
   topic?: string; // her own topic or angle for this post, typed or picked in the planner
+  story?: { q: string; on: boolean; dx: number; dy: number }; // the story that goes out 5 minutes before: its question, whether it is on, and where the picture sits
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
@@ -381,6 +382,7 @@ export async function sendToFlip(post: MPost, c: Client): Promise<void> {
 }
 
 export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
+  installMetal();
   const ctx = canvas.getContext("2d")!;
   canvas.width = Math.round(W * scale);
   canvas.height = Math.round(H * scale);
@@ -493,6 +495,121 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   return drawXmas(ctx, { design: d.id, text: resolveXmasText(d, post.text, c.fill), palette: palOf<never>(post, c.brand), ...common } as never);
 }
 
+// ---------------------------------------------------------------------------
+// Metallic colours. A metallic colour is stored as a plain hex, so every design keeps working, and drawn as
+// a shimmering gradient wherever that exact hex is used for text or a shape.
+// ---------------------------------------------------------------------------
+export const METALS: { id: string; label: string; hex: string; stops: [number, string][] }[] = [
+  { id: "gold", label: "Gold", hex: "#d4af36", stops: [[0, "#8a6a12"], [0.28, "#f6e08a"], [0.5, "#d4af36"], [0.72, "#fff0b0"], [1, "#9c7a1a"]] },
+  { id: "silver", label: "Silver", hex: "#c0c0c1", stops: [[0, "#7d7f84"], [0.28, "#f4f5f7"], [0.5, "#c0c0c1"], [0.72, "#ffffff"], [1, "#868990"]] },
+  { id: "rosegold", label: "Rose gold", hex: "#b76e7a", stops: [[0, "#8a4a54"], [0.28, "#f1c1c4"], [0.5, "#b76e7a"], [0.72, "#f9d9d5"], [1, "#94505b"]] },
+  { id: "bronze", label: "Bronze", hex: "#cd7f33", stops: [[0, "#7a4515"], [0.28, "#efb26b"], [0.5, "#cd7f33"], [0.72, "#f6c58a"], [1, "#82481a"]] },
+  { id: "copper", label: "Copper", hex: "#b87334", stops: [[0, "#6f3f17"], [0.28, "#e3a06b"], [0.5, "#b87334"], [0.72, "#efb88a"], [1, "#78431b"]] },
+  { id: "champagne", label: "Champagne", hex: "#f7e7ce", stops: [[0, "#cdb79a"], [0.28, "#fffaf0"], [0.5, "#f7e7ce"], [0.72, "#ffffff"], [1, "#d3bfa2"]] },
+  { id: "green", label: "Metallic green", hex: "#2e8b58", stops: [[0, "#14522f"], [0.28, "#7fd6a2"], [0.5, "#2e8b58"], [0.72, "#a6e8c1"], [1, "#17582f"]] },
+  { id: "blue", label: "Metallic blue", hex: "#2f6fbe", stops: [[0, "#143d78"], [0.28, "#8bb9ee"], [0.5, "#2f6fbe"], [0.72, "#b3d2f6"], [1, "#16417f"]] },
+  { id: "red", label: "Metallic red", hex: "#b3262b", stops: [[0, "#6e1014"], [0.28, "#ea7a7e"], [0.5, "#b3262b"], [0.72, "#f3a1a4"], [1, "#721218"]] },
+];
+const METAL_BY_HEX = new Map(METALS.map((m) => [m.hex, m]));
+export const metalOf = (hex: string | undefined) => METAL_BY_HEX.get((hex ?? "").toLowerCase());
+let metalInstalled = false;
+export function installMetal() {
+  if (metalInstalled || typeof CanvasRenderingContext2D === "undefined") return;
+  metalInstalled = true;
+  const proto = CanvasRenderingContext2D.prototype;
+  for (const prop of ["fillStyle", "strokeStyle"] as const) {
+    const d = Object.getOwnPropertyDescriptor(proto, prop);
+    if (!d?.set || !d.get) continue;
+    const set = d.set;
+    Object.defineProperty(proto, prop, {
+      configurable: true,
+      enumerable: d.enumerable,
+      get: d.get,
+      set(this: CanvasRenderingContext2D, v: unknown) {
+        const m = typeof v === "string" ? METAL_BY_HEX.get(v.toLowerCase()) : undefined;
+        if (!m) { set.call(this, v); return; }
+        const k = this.getTransform().a || 1;
+        const w = this.canvas.width / k, h = this.canvas.height / k;
+        const g = this.createLinearGradient(0, 0, w, h);
+        m.stops.forEach(([o, col]) => g.addColorStop(o, col));
+        set.call(this, g);
+      },
+    });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The story that goes out 5 minutes before a post: a fun question and the words "Answer below",
+// with the post's cover tucked in beside it. She can drag the picture and change the words.
+// ---------------------------------------------------------------------------
+export const STORY_W = 1080, STORY_H = 1920;
+export async function renderStory(post: MPost, c: Client, canvas: HTMLCanvasElement, scale = 1): Promise<void> {
+  installMetal();
+  await ensureFonts(c.headFont, c.bodyFont);
+  const bg = c.brand?.main ?? "#2b2230";
+  const accent = c.brand?.accent ?? "#e8b4c0";
+  const dark = lumOf(bg) < 0.55;
+  const ink = dark ? "#ffffff" : "#1d1a1f";
+  canvas.width = Math.round(STORY_W * scale);
+  canvas.height = Math.round(STORY_H * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, STORY_W, STORY_H);
+  ctx.fillStyle = accent; ctx.globalAlpha = 0.16; ctx.beginPath(); ctx.arc(STORY_W, 0, 520, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(0, STORY_H, 460, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  // The cover, a little tilted like a card dropped on the table.
+  const cv = document.createElement("canvas");
+  await renderSlide(post, 0, c, cv, 0.62);
+  const cw = 670, chh = (cv.height / cv.width) * cw;
+  const st = post.story ?? { q: "", on: true, dx: 0, dy: 0 };
+  ctx.save();
+  ctx.translate(STORY_W / 2 + st.dx, 190 + chh / 2 + st.dy);
+  ctx.rotate((-3 * Math.PI) / 180);
+  ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+  ctx.drawImage(cv, -cw / 2, -chh / 2, cw, chh);
+  ctx.restore();
+  // The question.
+  const q = (st.q || "Go on, tell me your answer").trim();
+  ctx.fillStyle = ink; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  let size = 80;
+  let lines: string[] = [];
+  for (; size >= 50; size -= 4) {
+    ctx.font = `700 ${size}px "${c.headFont}", serif`;
+    lines = []; let cur = "";
+    for (const w of q.split(/\s+/)) { const t = cur ? `${cur} ${w}` : w; if (ctx.measureText(t).width > 880 && cur) { lines.push(cur); cur = w; } else cur = t; }
+    if (cur) lines.push(cur);
+    if (lines.length <= 4) break;
+  }
+  const lh = size * 1.18;
+  let y = 1340;
+  for (const l of lines) { ctx.fillText(l, STORY_W / 2, y); y += lh; }
+  // Answer below.
+  const label = "ANSWER BELOW";
+  ctx.font = `700 40px "${c.bodyFont}", sans-serif`;
+  const pw = ctx.measureText(label).width + 110, py = Math.max(y + 30, 1640);
+  ctx.fillStyle = accent;
+  ctx.beginPath(); ctx.roundRect(STORY_W / 2 - pw / 2, py, pw, 96, 48); ctx.fill();
+  ctx.fillStyle = lumOf(accent) < 0.55 ? "#ffffff" : "#1d1a1f";
+  ctx.textBaseline = "middle"; ctx.fillText(`${label}  ↓`, STORY_W / 2, py + 50);
+}
+
+// The cover words a post can have changed on the cover, with what each says now.
+export function coverEditFields(post: MPost): { key: string; label: string; value: string }[] {
+  if (post.tool === "mens" && isMenPhoto(post.design)) return coverEditFields(asUnique(post));
+  let fields: { key: string; label: string }[] = []; let defaults: Record<string, string> = {};
+  try {
+    if (post.tool === "unique") { const d = UD.UNIQUE_BY_ID[post.design as UD.UniId]; fields = d.fields; defaults = d.defaults; }
+    else if (post.tool === "treatments") { fields = TD.FIELDS; defaults = TD.TREAT_BY_ID[post.design as TD.TreatId].defaults as Record<string, string>; }
+    else if (post.tool === "basic") { const d = BC.COVER_BY_ID[post.design as BC.CoverId]; fields = d.fields; defaults = d.defaults; }
+    else if (post.tool === "halloween") { const d = HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]; fields = d.fields; defaults = d.defaults as Record<string, string>; }
+    else if (post.tool === "november") { const d = NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]; fields = d.fields; defaults = d.defaults as Record<string, string>; }
+    else if (post.tool === "xmas") { const d = XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID]; fields = d.fields; defaults = d.defaults as Record<string, string>; }
+    else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; fields = d.fields; defaults = d.defaults as Record<string, string>; }
+    else if (post.tool === "stylish") fields = [{ key: "head", label: "Cover headline" }, { key: "sub", label: "Cover subtitle" }];
+    else if (post.tool === "bulk") fields = [{ key: "hook", label: "Slide 1 hook" }];
+  } catch { fields = []; }
+  return fields.map((f) => ({ key: f.key, label: f.label, value: post.text[f.key] ?? defaults[f.key] ?? "" }));
+}
+
 export async function renderPostImages(post: MPost, c: Client, scale = 1): Promise<HTMLCanvasElement[]> {
   await ensureFonts(c.headFont, c.bodyFont);
   const out: HTMLCanvasElement[] = [];
@@ -589,7 +706,19 @@ async function academyCover(post: MPost, c: Client): Promise<Record<string, stri
 }
 
 // Writes the slide words, question and caption for one post. Returns what to merge into the post.
+// Writes the post, then a fun question for the story that goes out 5 minutes before it.
 export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>> {
+  const out = await writeCopyInner(post, c);
+  try {
+    const words = [out.text?.hook ?? post.text.hook ?? post.hook ?? "", ...(out.slides ?? post.slides), out.caption ?? ""].filter(Boolean).join("\n");
+    const sq = await postJson("/api/story-question/copy", { businessName: c.businessName, topic: post.topic ?? "", post: words });
+    const q = noDashes(String(sq.question ?? "")).trim();
+    if (q) return { ...out, story: { on: post.story?.on ?? true, dx: post.story?.dx ?? 0, dy: post.story?.dy ?? 0, q } };
+  } catch { /* no question, she can type her own */ }
+  return out;
+}
+
+async function writeCopyInner(post: MPost, c: Client): Promise<Partial<MPost>> {
   const base = {
     businessName: c.businessName, ownerName: c.ownerName, role: c.role, area: c.area, audience: c.audience, brandNotes: c.brandNotes,
     // The last slide: Comment TREATMENT for more info on a treatment post, Tag a friend on anything else.
@@ -638,7 +767,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     data = await postJson("/api/unique/copy", { ...base, idea: `Christmas and the festive season, a funny honest carousel. ${academy ? academyIdea(post) : withTopic(def.idea, post)}`, cover: onImageText(post, c), fresh: false, fields: [] });
     slides = [data.slide2, data.slide3];
   } else if (post.tool === "mens" && isMenPhoto(post.design)) {
-    return writeCopy({ ...asUnique(post), topic: ["men's aesthetics, written for men who think it is not for them", post.topic?.trim() ?? ""].filter(Boolean).join(": ") }, c);
+    return writeCopyInner({ ...asUnique(post), topic: ["men's aesthetics, written for men who think it is not for them", post.topic?.trim() ?? ""].filter(Boolean).join(": ") }, c);
   } else if (post.tool === "mens") {
     const set = MENS_BY_ID[post.design];
     data = await postJson("/api/mens/copy", { ...base, topic: [set?.topic ?? "", post.topic?.trim() ?? ""].filter(Boolean).join(". "), slides: set?.summary ?? "" });
@@ -718,6 +847,28 @@ export async function schedulePost(post: MPost, c: Client, presetId: number): Pr
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: "Failed" }));
     throw new Error(err.error || "Failed to schedule post");
+  }
+  // The story goes out 5 minutes before the post.
+  if (post.story?.on !== false && post.story?.q.trim()) {
+    const sc = document.createElement("canvas");
+    await renderStory(post, c, sc, 1);
+    const [storyUrl] = await uploadPngs([sc.toDataURL("image/png")], [`month-story-${post.tool}-${post.design}-${Date.now()}.png`]);
+    const sr = await fetch(`${BASE}/api/scheduler/posts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        postType: "story",
+        content: { caption: "", title: `${designName(post)} (story) · ${c.businessName}`, platforms: ["instagram"], imageUrls: [storyUrl], sourceTool: `month-${post.tool}-story` },
+        scheduledAt: new Date(new Date(post.when).getTime() - 5 * 60 * 1000).toISOString(),
+        isTrial: false,
+        notes: "",
+        presetId,
+      }),
+    });
+    if (!sr.ok) {
+      const err = await sr.json().catch(() => ({ error: "Failed" }));
+      throw new Error(`The post is booked but its story was not: ${err.error || "Failed to schedule story"}`);
+    }
   }
 }
 
