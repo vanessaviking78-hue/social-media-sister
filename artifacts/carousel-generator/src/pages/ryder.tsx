@@ -395,7 +395,7 @@ export default function RyderPage() {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, note: post.note, area }) });
+      const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, kind: t.kind, avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: post.note, area }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags });

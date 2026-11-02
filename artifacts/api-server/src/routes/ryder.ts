@@ -3,7 +3,6 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
 import { RYDER_TONE } from "./caption-generator";
-import { finalCta } from "../lib/hookBank";
 
 // THE RYDER CLINIC: her own page. Very professional, sincere, no humour, one carousel at a time.
 const router: IRouter = Router();
@@ -44,6 +43,28 @@ function fiveTags(raw: unknown, area: string): string[] {
   return out.map((t) => `#${t}`);
 }
 
+// The last slide line. Treatment posts always close on the DM line. Every other post gets an area line,
+// picked at random and kept different from the other posts she has already made.
+const TREATMENT_CTA = "If this sounds like something you'd be interested in, drop me a DM.";
+const AREA_CTAS = [
+  "If you're in {area} and would like to know more, follow along.",
+  "If you're in {area} and want clinical excellence with a smile, meet me in the DMs.",
+  "If you're in {area} and the surrounding areas and are looking for treatment with someone who cares, feel free to ask me any questions.",
+  "If you are near {area} and would like a considered conversation before deciding anything, my DMs are open.",
+  "If you live in or around {area} and have a question you have been meaning to ask, send me a message.",
+  "If you're in {area} and would like to talk it through with a doctor, I would love to hear from you in the DMs.",
+  "If you're in {area} and would like a little more information, come and say hello in the DMs.",
+  "If you are in {area} and the surrounding areas and want honest, unhurried advice, do get in touch.",
+];
+function pickCta(kind: string, area: string, avoid: string[]): string {
+  if (kind === "treatment") return TREATMENT_CTA;
+  const where = area || "your area";
+  const all = AREA_CTAS.map((t) => t.replace("{area}", where));
+  const fresh = all.filter((c) => !avoid.some((a) => a.trim().toLowerCase() === c.toLowerCase()));
+  const pool = fresh.length ? fresh : all;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function systemPrompt(brief: string, label: string, hasWord: boolean, area: string): string {
   return `${RYDER_TONE}
 
@@ -60,7 +81,7 @@ THE SLIDES
 - "hook": slide 1, the cover line. Maximum 12 words. Elegant, specific and sincere. It should make a woman over 35 stop and read. No puns.
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, calm, informative and warm, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
-- "caption": the Instagram caption, maximum 110 words. A first line that holds attention. Short, composed lines. It adds something the slides do not say and closes with a question that relates to the post. ${hasWord ? "Its final line is the comment line, which is added for you, so do not write it." : "Its final line is 'Tag a friend who will get it', which is added for you, so do not write it."}
+- "caption": the Instagram caption, maximum 110 words. A first line that holds attention. Short, composed lines. It adds something the slides do not say and closes with a question that relates to the post. Its final line is an invitation to get in touch, which is added for you, so do not write one.
 - "hashtags": exactly 5, lower case, no spaces${area ? `, each joining ${area} to a beauty, skin or wellbeing theme` : ""}.
 
 WRITING RULES (non-negotiable)
@@ -86,6 +107,8 @@ router.post("/ryder/copy", async (req: Request, res: Response) => {
     const word = str(b.word, 40);
     const note = str(b.note, 300);
     const area = str(b.area, 60);
+    const kind = str(b.kind, 20);
+    const avoid = Array.isArray(b.avoid) ? (b.avoid as unknown[]).map((x) => String(x ?? "")).slice(0, 60) : [];
     if (!brief || !label) {
       res.status(400).json({ error: "Pick a post first" });
       return;
@@ -104,17 +127,17 @@ router.post("/ryder/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(word);
+    const cta = pickCta(kind, area, avoid);
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l && !/^comment .* for more info\.?$/i.test(l) && !/^tag a friend who will get it\.?$/i.test(l))
+      .filter((l) => l && !/^comment .* for more info\.?$/i.test(l) && !/^tag a friend who will get it\.?$/i.test(l) && !/drop me a dm|meet me in the dms|follow along\.?$/i.test(l))
       .join("\n");
     res.json({
       hook: clean(j.hook, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: `${body}\n\n${cta}.`,
+      caption: `${body}\n\n${cta}`,
       hashtags: fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {

@@ -17,10 +17,14 @@ export type RyderPostType = {
   group: RyderGroup;
   label: string;
   brief: string;
-  word: string; // comment word for the last slide, empty means "Tag a friend who will get it"
+  word: string; // no longer used for the last slide, kept so old posts still load
+  kind: "treatment" | "area"; // treatment posts close on the DM line, the rest use a rotating area line
 };
 
-const p = (id: string, group: RyderGroup, label: string, brief: string, word = ""): RyderPostType => ({ id, group, label, brief, word });
+// Posts about a treatment, a consultation or booking in. They close on the DM line.
+const TREATMENT_IDS = new Set(["c1", "c2", "c3", "c4", "c5", "c6", "t3", "t5", "x1", "x3", "x4", "x5"]);
+
+const p = (id: string, group: RyderGroup, label: string, brief: string, word = ""): RyderPostType => ({ id, group, label, brief, word, kind: TREATMENT_IDS.has(id) ? "treatment" : "area" });
 
 export const RYDER_POST_TYPES: RyderPostType[] = [
   p("c1", "consult", "What happens at a first consultation", "A calm, reassuring walk through a first consultation with a doctor: time to talk, a proper medical history, honest advice, and no decision required on the day.", "CONSULTATION"),
