@@ -159,12 +159,12 @@ function monthDays(year: number, month: number, hhmm: string): Date[] {
   return out;
 }
 
-// Weekdays are ticked to begin with, up to 20, and she changes whatever she likes.
-function defaultSlots(year: number, month: number, hhmm: string): PlanSlot[] {
+// Nothing is ticked to begin with. The Monday to Friday button ticks up to 20 weekdays.
+function defaultSlots(year: number, month: number, hhmm: string, tickWeekdays = false): PlanSlot[] {
   let ticked = 0;
   return monthDays(year, month, hhmm).map((d) => {
     const dow = d.getDay();
-    const on = dow >= 1 && dow <= 5 && ticked < MAX_POSTS;
+    const on = tickWeekdays && dow >= 1 && dow <= 5 && ticked < MAX_POSTS;
     if (on) ticked++;
     return { key: dayKey(d), on, choice: DEFAULT_CHOICE[dow], design: "auto", topic: "" };
   });
@@ -230,6 +230,7 @@ function slotTarget(post: MPost, n: number, slot: Slot): { key: string; photo: n
     if (n === 0) return { key: `c${slot.i}`, photo: post.photos[slot.i] ?? null };
     return { key: `s${n + 1}`, photo: post.photos[n === 1 ? 2 : 3] ?? null };
   }
+  if (post.tool === "bulk") return n === 0 ? { key: "c0", photo: post.photos[0] ?? null } : { key: "s2", photo: post.photos[1] ?? null };
   if (n === 0) return { key: "c0", photo: post.photos[0] ?? null };
   return { key: `s${n + 1}`, photo: post.photos[n] ?? null };
 }
@@ -895,7 +896,7 @@ export default function MonthPlanner() {
               <h2 className="flex items-center gap-3 text-lg font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/20 text-sm text-violet-300">2</span> Plan {MONTHS[month]}</h2>
               <span className={`text-sm ${tickedCount >= MAX_POSTS ? "text-amber-400" : "text-muted-foreground"}`}>{tickedCount} of {MAX_POSTS} days ticked</span>
               <div className="ml-auto flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setSlots(defaultSlots(year, month, hhmm).map((d) => ({ ...(slots.find((x) => x.key === d.key) ?? d), on: d.on })))}>Tick Monday to Friday</Button>
+                <Button size="sm" variant="outline" onClick={() => setSlots(defaultSlots(year, month, hhmm, true).map((d) => ({ ...(slots.find((x) => x.key === d.key) ?? d), on: d.on })))}>Tick Monday to Friday</Button>
                 <Button size="sm" variant="outline" onClick={() => setSlots((l) => l.map((x) => ({ ...x, on: false })))}>Clear ticks</Button>
                 <Button size="sm" disabled={!preset} onClick={() => setHookModal(true)} title="Open the hook bank and tick this month's hooks">Choose hooks ({hookPick.length})</Button>
               </div>

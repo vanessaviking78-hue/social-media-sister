@@ -221,6 +221,16 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
 // Drawing
 // ---------------------------------------------------------------------------
 
+// A photo cropped to a slide's shape at the spot she dragged it to. The tools that draw their own pictures are handed this, so dragging works in all of them.
+function panCanvas(src: { width: number; height: number } & CanvasImageSource, f: Focus, w: number, h: number): HTMLCanvasElement {
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  const k = Math.max(w / src.width, h / src.height);
+  const dw = src.width * k, dh = src.height * k;
+  cv.getContext("2d")!.drawImage(src, -(dw - w) * f[0], -(dh - h) * f[1], dw, dh);
+  return cv;
+}
+
 const bmp = async (c: Client, i: number | null | undefined) => {
   const p = i == null ? null : c.pool[i] ?? null;
   return p ? await getBitmap(p) : null;
@@ -360,11 +370,19 @@ async function renderStylish(post: MPost, n: number, c: Client, canvas: HTMLCanv
     : n === 3 ? { kind: "cta" as const, text: BC.fillTokens(post.cta, c.fill), sub: "" }
     : { kind: "body" as const, text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), sub: "" };
   const idx = post.photos[n];
-  const file = idx != null ? c.pool[idx]?.file ?? null : null;
+  let file = idx != null ? c.pool[idx]?.file ?? null : null;
+  const fk = n === 0 ? "c0" : `s${n + 1}`;
+  if (file && post.focus[fk]) {
+    const b = await bmp(c, idx);
+    if (b) {
+      const blob = await new Promise<Blob | null>((r) => panCanvas(b, post.focus[fk], W, H).toBlob(r, "image/jpeg", 0.92));
+      if (blob) file = new File([blob], "photo.jpg", { type: "image/jpeg" });
+    }
+  }
   const out = await m.stylishRenderSlide(spec, file, style, c.logo, (c.preset ?? { logoSize: 110 }) as never, scale, { index: n, total: 4 });
   canvas.width = out.width; canvas.height = out.height;
   canvas.getContext("2d")!.drawImage(out, 0, 0);
-  return [];
+  return file ? [{ i: 0, x: 0, y: 0, w: W, h: H, rot: 0 }] : [];
 }
 
 // Bulk Carousel slides come from the Bulk Carousel Creator's own drawing: a hook, two body slides and the question.
@@ -375,12 +393,20 @@ async function renderBulk(post: MPost, n: number, c: Client, canvas: HTMLCanvasE
     const p = i == null ? null : c.pool[i] ?? null;
     return p ? await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = p.url; }) : null;
   };
-  const cover = await load(post.photos[0]);
-  const body = post.design === "cover" ? null : await load(post.photos[1]) ?? cover;
+  const loadPanned = async (i: number | null | undefined, key: string): Promise<HTMLImageElement | null> => {
+    const f = post.focus[key];
+    const b = f ? await bmp(c, i) : null;
+    if (!b) return load(i);
+    const url = panCanvas(b, f, W, H).toDataURL("image/jpeg", 0.92);
+    return await new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = url; });
+  };
+  const cover = await loadPanned(post.photos[0], "c0");
+  const body = post.design === "cover" ? null : await loadPanned(post.photos[1], "s2") ?? cover;
   const url = m.renderSlideCanvas(n + 1, blocks, cover, body ?? (post.design === "cover" ? null : cover), c.logo, (c.preset ?? {}) as never, scale);
   const im = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
   if (im) { canvas.width = im.width; canvas.height = im.height; canvas.getContext("2d")!.drawImage(im, 0, 0); }
-  return [];
+  const has = n === 0 ? cover : body;
+  return has ? [{ i: 0, x: 0, y: 0, w: W, h: H, rot: 0 }] : [];
 }
 
 // Reels go through Magazine Flip, which turns the pages into a video.
@@ -406,9 +432,10 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   if (post.tool === "tweet") {
     canvas.width = Math.round(TW * scale); canvas.height = Math.round(TH * scale);
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    const photo = await bmp(c, post.photos[0]);
+    let photo = await bmp(c, post.photos[0]);
+    if (photo && post.focus.c0) photo = await createImageBitmap(panCanvas(photo, post.focus.c0, TW, TH));
     drawTweetCard(ctx, { name: c.businessName, handle: "@" + c.businessName.toLowerCase().replace(/[^a-z0-9]/g, ""), quote: post.text.quote || post.topic?.trim() || "Write the tweet with Rewrite words", stats: tweetStats(post.n), background: photo, profilePhoto: c.logo ?? photo, logo: null });
-    return [];
+    return photo ? [{ i: 0, x: 0, y: 0, w: W, h: H, rot: 0 }] : [];
   }
   const logo = c.logoPos === "off" ? null : c.logo;
   const corner = c.logoPos && c.logoPos !== "auto" && c.logoPos !== "off" ? c.logoPos : undefined;
