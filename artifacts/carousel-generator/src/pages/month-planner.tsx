@@ -1125,10 +1125,8 @@ export default function MonthPlanner() {
               <h3 className="font-semibold">Choose from {preset?.name}'s approved photos</h3>
               <button type="button" className="ml-auto" onClick={() => setSwap(null)}><X className="w-5 h-5" /></button>
             </div>
-            <label className="flex items-center gap-2 text-sm mb-3">
-              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
-              Show every approved photo, from all clients and batches ({allApproved.length})
-            </label>
+            <p className="text-xs text-muted-foreground mb-2">{preset?.name}'s approved photos ({pool.length}). Tap one to use it.</p>
+            {pool.length === 0 && <p className="text-sm text-muted-foreground mb-2">None approved for {preset?.name} yet, so every approved photo is below.</p>}
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {pool.map((ph, i) => (
                 <button key={ph.id} type="button" onClick={() => {
@@ -1141,9 +1139,10 @@ export default function MonthPlanner() {
                 </button>
               ))}
             </div>
-            {showAll && (
-              <div className="mt-4">
-                <p className="text-xs text-muted-foreground mb-2">{pickBusy ? "Getting that photo…" : "All approved photos. Tap one to use it."}</p>
+            {(
+              <div className="mt-5 border-t border-border/30 pt-3">
+                <p className="text-sm font-medium mb-1">Every approved photo, all clients and batches ({allApproved.length})</p>
+                <p className="text-xs text-muted-foreground mb-2">{pickBusy ? "Getting that photo…" : "Tap one to use it."}</p>
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {allApproved.map((a) => (
                     <button key={a.id} type="button" disabled={pickBusy} title={`${a.clientName} · ${a.batchName}`} onClick={async () => {
