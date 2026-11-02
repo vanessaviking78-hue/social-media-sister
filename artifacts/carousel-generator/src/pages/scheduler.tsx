@@ -1066,34 +1066,52 @@ export default function Scheduler() {
                 <p className="text-sm">Nothing waiting. Save a piece of content here from the Schedule dialog when you're not ready to commit to a date.</p>
               </div>
             )}
-            {!loading && waitingRoomPosts.map((post) => (
-              <div key={post.id} className={`rounded-xl overflow-hidden border ${isStoryType(post.postType) ? "bg-pink-950/40 border-pink-500/50" : "bg-zinc-900 border-zinc-800"}`}>
-                <div className="p-4 flex items-start gap-3">
-                  <div className="mt-0.5 shrink-0">
-                    {isStoryType(post.postType)
-                      ? <BookOpen size={16} className="text-pink-400" />
-                      : post.postType === "reel"
-                      ? <Film size={16} className="text-purple-400" />
-                      : <Layers size={16} className="text-blue-400" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-white text-sm">{post.clientName}</span>
-                      {statusBadge(post.status)}
-                    </div>
-                    <div className="text-xs text-zinc-400 mt-1 truncate">{post.content.title || "Untitled"}</div>
-                    <div className="text-xs text-zinc-500 mt-0.5 truncate">{post.content.caption?.slice(0, 80)}{(post.content.caption?.length ?? 0) > 80 ? "…" : ""}</div>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(post)} className="text-pink-400 hover:text-pink-300 gap-1 h-7 text-xs">
-                      <Calendar size={12} /> Schedule
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDelete(post.id)} className="text-red-400 hover:text-red-300 gap-1 h-7 text-xs">
-                      <Trash2 size={12} /> Delete
-                    </Button>
-                  </div>
+            {!loading && Array.from(waitingRoomPosts.reduce((m, p) => { (m.get(p.clientName) ?? m.set(p.clientName, []).get(p.clientName)!).push(p); return m; }, new Map<string, ScheduledPost[]>()).entries()).map(([clientName, list]) => (
+              <section key={clientName} className="space-y-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+                  {clientName}
+                  <span className="rounded-full bg-pink-600/30 px-2 py-0.5 text-[11px] font-normal text-pink-200">{list.length} waiting</span>
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {list.map((post) => {
+                    const imgs = post.content?.imageUrls ?? [];
+                    const story = isStoryType(post.postType);
+                    return (
+                      <div key={post.id} className={`overflow-hidden rounded-xl border ${story ? "border-pink-500/50 bg-pink-950/30" : "border-zinc-800 bg-zinc-900"}`}>
+                        {imgs.length > 0 ? (
+                          <div className="flex gap-1 overflow-x-auto bg-black/40 p-1.5">
+                            {imgs.map((u, i) => (
+                              <a key={i} href={u} target="_blank" rel="noreferrer" title="Open full size" className="shrink-0">
+                                <img src={u} alt="" loading="lazy" className={`h-56 w-auto rounded-md object-cover ${story ? "aspect-[9/16]" : "aspect-[4/5]"}`} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex h-40 items-center justify-center bg-zinc-800 text-zinc-500">
+                            {post.postType === "reel" ? <Film size={28} /> : <ImageIcon size={28} />}
+                          </div>
+                        )}
+                        <div className="space-y-2 p-3">
+                          <div className="flex items-center gap-2">
+                            {story ? <BookOpen size={14} className="text-pink-400" /> : post.postType === "reel" ? <Film size={14} className="text-purple-400" /> : <Layers size={14} className="text-blue-400" />}
+                            <span className="truncate text-sm font-medium text-white">{post.content.title || "Untitled"}</span>
+                            <span className="ml-auto shrink-0 text-[11px] text-zinc-500">{imgs.length} slide{imgs.length === 1 ? "" : "s"}</span>
+                          </div>
+                          <p className="line-clamp-3 text-xs text-zinc-400">{post.content.caption || "No caption"}</p>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => setEditing(post)} className="h-7 gap-1 text-xs text-pink-400 hover:text-pink-300">
+                              <Calendar size={12} /> Schedule
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(post.id)} className="h-7 gap-1 text-xs text-red-400 hover:text-red-300">
+                              <Trash2 size={12} /> Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
+              </section>
             ))}
           </div>
         ) : tab === "doubleposting" ? (
