@@ -23,11 +23,66 @@ const GREY = "#6a6a6a";
 const LOOK_KEY = "ryder-look-v1";
 
 // How the wash and the writing look. Wash is white or black with an opacity slider; writing is auto, black or white.
-type Look = { wash: "white" | "black"; opacity: number; text: "auto" | "black" | "white" };
-const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto" };
+type WashColour = "white" | "black" | "brown" | "beige";
+const WASHES: Record<WashColour, { rgb: string; bg: string; light: boolean }> = {
+  white: { rgb: "255,255,255", bg: "#ffffff", light: false },
+  black: { rgb: "13,13,13", bg: "#0d0d0d", light: true },
+  brown: { rgb: "74,52,38", bg: "#4a3426", light: true },
+  beige: { rgb: "232,220,200", bg: "#e8dcc8", light: false },
+};
+type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "white"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "silver" };
+const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
+
+// "Doctor" always has a capital D, wherever it appears in the writing.
+const fixDoctor = (t: string) => (t || "").replace(/\bdoctors?\b/gi, (m) => "D" + m.slice(1).toLowerCase());
+
+// The clinic logo, top right of every slide.
+function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, look: Look) {
+  if (!logo || !logo.naturalWidth) return;
+  const k = look.logoSize / 100;
+  const maxW = 210 * k;
+  const maxH = 100 * k;
+  const sc = Math.min(maxW / logo.naturalWidth, maxH / logo.naturalHeight);
+  const w = logo.naturalWidth * sc;
+  const h = logo.naturalHeight * sc;
+  const x = W - 60 - w;
+  const y = 60;
+  if (look.logoWhite) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w));
+    c.height = Math.max(1, Math.round(h));
+    const g = c.getContext("2d")!;
+    g.drawImage(logo, 0, 0, c.width, c.height);
+    g.globalCompositeOperation = "source-in";
+    g.fillStyle = "#ffffff";
+    g.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(c, x, y);
+  } else {
+    ctx.drawImage(logo, x, y, w, h);
+  }
+}
+
+function loadLogoImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("logo would not load"));
+    img.src = src;
+  });
+}
 function inks(look: Look) {
-  const light = look.text === "white" || (look.text === "auto" && look.wash === "black");
-  return { ink: light ? "#ffffff" : INK, grey: light ? "#cfcfcf" : GREY, bg: look.wash === "black" ? "#0d0d0d" : "#ffffff" };
+  const w = WASHES[look.wash] || WASHES.white;
+  const light = look.text === "white" || (look.text === "auto" && w.light);
+  return { ink: light ? "#ffffff" : INK, grey: light ? "#cfcfcf" : GREY, bg: w.bg };
+}
+
+// Metallic silver for the headline: a soft diagonal sheen from shadow grey to bright highlight.
+function silver(ctx: CanvasRenderingContext2D, y0: number, y1: number): CanvasGradient {
+  const g = ctx.createLinearGradient(100, y0, W - 100, y1);
+  const stops = ["#7d838a", "#e9ecef", "#9ba1a8", "#ffffff", "#858b92", "#d5d9dd", "#8a9097"];
+  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
+  return g;
 }
 const FONT_KEY = "ryder-fonts-v2";
 const AREA_KEY = "ryder-area-v1";
@@ -114,7 +169,7 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
 // The white wash: clear at the top, solid white by the bottom third.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
   const o = Math.max(0, Math.min(100, look.opacity)) / 100;
-  const c = look.wash === "black" ? "13,13,13" : "255,255,255";
+  const c = (WASHES[look.wash] || WASHES.white).rgb;
   const g = ctx.createLinearGradient(0, H * from, 0, H);
   g.addColorStop(0, `rgba(${c},0)`);
   g.addColorStop(0.45, `rgba(${c},${0.88 * o})`);
@@ -134,7 +189,15 @@ function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "
   ctx.restore();
 }
 
-function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
+function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK, logo: HTMLImageElement | null = null) {
+  const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
+  drawSlideBody(ctx, fixed, n, photo, f, tf, look);
+  drawLogo(ctx, logo, look);
+}
+
+function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
+  const ts = (look.titleSize || 100) / 100;
+  const bs = (look.bodySize || 100) / 100;
   const { ink: INKC, grey: GREYC, bg: BGC } = inks(look);
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
@@ -147,11 +210,13 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = INKC;
     ctx.textAlign = "left";
-    const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520, 84, 44, 1.2);
+    const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520 * Math.max(1, ts), Math.round(84 * ts), Math.round(44 * ts), 1.2);
     const total = fit.lines.length * fit.px * 1.2;
     let y = (H - total) / 2 - 30;
+    if (look.headline === "silver") ctx.fillStyle = silver(ctx, y, y + total);
     ctx.font = head(fit.px);
     for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.2; }
+    ctx.fillStyle = INKC;
     ctx.strokeStyle = INKC; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(LEFT, y + 40); ctx.lineTo(LEFT + 120, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
     clinicName(ctx, f, H - 120, "left", GREYC);
@@ -165,19 +230,21 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
     wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
-      let size = 120;
+      let size = Math.round(120 * ts);
       let layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
-      while (size > 50 && titleHeight(layout) > 330) {
+      while (size > Math.round(50 * ts) && titleHeight(layout) > 330 * Math.max(1, ts)) {
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
-      drawTitle(ctx, tf.lf, layout, tf.style, 100, H - 175 - titleHeight(layout), "center", W - 200, INKC);
+      const ty = H - 175 - titleHeight(layout);
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline === "silver" ? silver(ctx, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
-      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330, 92, 46, 1.1);
+      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
       let y = H - 175 - total;
+      if (look.headline === "silver") ctx.fillStyle = silver(ctx, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
     }
@@ -189,7 +256,7 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   const text = post.slides[n - 1] || "";
   ctx.fillStyle = INKC;
   ctx.textAlign = "left";
-  const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520, 40, 26, 1.55);
+  const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = H - 170 - total;
   ctx.font = body(fit.px);
@@ -199,7 +266,7 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   ctx.fillText(`${n + 1} / 5`, LEFT, H - 100);
 }
 
-function SlideCanvas({ post, n, photo, fonts, tf, look, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let live = true;
@@ -208,10 +275,10 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, onClick }: { post: Post;
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
-      if (ctx) drawSlide(ctx, post, n, photo, fonts, tf, look);
+      if (ctx) drawSlide(ctx, post, n, photo, fonts, tf, look, logo);
     })();
     return () => { live = false; };
-  }, [post, n, photo, fonts, tf, look]);
+  }, [post, n, photo, fonts, tf, look, logo]);
   return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
@@ -235,6 +302,18 @@ export default function RyderPage() {
   const [tf, setTf] = useState<TitleFont>(null);
   const [look, setLook] = useState<Look>(() => { try { const r = localStorage.getItem(LOOK_KEY); if (r) return { ...DEFAULT_LOOK, ...JSON.parse(r) }; } catch { /* ignore */ } return DEFAULT_LOOK; });
   useEffect(() => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* ignore */ } }, [look]);
+  const [logo, setLogo] = useState<HTMLImageElement | null>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    let live = true;
+    if (preset?.logoUrl) loadLogoImg(preset.logoUrl).then((i) => { if (live) setLogo(i); }).catch(() => undefined);
+    return () => { live = false; };
+  }, [preset?.id, preset?.logoUrl]);
+  const uploadLogo = (f: File | undefined) => {
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    loadLogoImg(url).then(setLogo).catch(() => toast.error("That logo could not be read. Try a PNG."));
+  };
   // the title look is saved in Font Lab; pick it up now and whenever she comes back to this tab
   useEffect(() => {
     let live = true;
@@ -323,7 +402,7 @@ export default function RyderPage() {
       const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, note: post.note, area }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: data.caption, hashtags: data.hashtags });
+      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -337,7 +416,7 @@ export default function RyderPage() {
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
-      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, look);
+      drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, look, logo);
       out.push(c);
     }
     return out;
@@ -414,8 +493,8 @@ export default function RyderPage() {
             <div className="space-y-1">
               <span className="text-white/60">Gradient colour</span>
               <div className="flex gap-2">
-                {(["white", "black"] as const).map((c) => (
-                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-3 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
+                {(["white", "black", "brown", "beige"] as const).map((c) => (
+                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
                 ))}
               </div>
             </div>
@@ -431,6 +510,35 @@ export default function RyderPage() {
                 ))}
               </div>
             </div>
+          </div>
+          <div className="space-y-1 text-sm">
+            <span className="text-white/60">Headline colour</span>
+            <div className="flex gap-2 max-w-sm">
+              {([["auto", "Same as writing"], ["silver", "Metallic silver"]] as const).map(([v, label]) => (
+                <button key={v} onClick={() => setLook((l) => ({ ...l, headline: v }))} className={`flex-1 rounded-md border px-2 py-2 ${look.headline === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <label className="space-y-1 block">
+              <span className="text-white/60">Title size: {look.titleSize}%</span>
+              <input type="range" min={60} max={160} step={5} value={look.titleSize} onChange={(e) => setLook((l) => ({ ...l, titleSize: Number(e.target.value) }))} className="w-full" />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-white/60">Writing size (slides 2 to 5): {look.bodySize}%</span>
+              <input type="range" min={60} max={160} step={5} value={look.bodySize} onChange={(e) => setLook((l) => ({ ...l, bodySize: Number(e.target.value) }))} className="w-full" />
+            </label>
+            <label className="space-y-1 block">
+              <span className="text-white/60">Logo size: {look.logoSize}%</span>
+              <input type="range" min={40} max={200} step={5} value={look.logoSize} onChange={(e) => setLook((l) => ({ ...l, logoSize: Number(e.target.value) }))} className="w-full" />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-white/60">Logo (top right): {logo ? "loaded" : "none found on her client preset"}</span>
+            <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { uploadLogo(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+            <Button size="sm" variant="secondary" onClick={() => logoFileRef.current?.click()}>{logo ? "Change logo" : "Upload logo"}</Button>
+            {logo && <Button size="sm" variant="outline" onClick={() => setLogo(null)}>Hide logo</Button>}
+            <label className="flex items-center gap-2"><input type="checkbox" checked={look.logoWhite} onChange={(e) => setLook((l) => ({ ...l, logoWhite: e.target.checked }))} /> Make the logo white</label>
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>
@@ -504,7 +612,7 @@ export default function RyderPage() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={look} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={look} logo={logo} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">

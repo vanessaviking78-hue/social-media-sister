@@ -241,7 +241,7 @@ export function drawTitle(
   y: number,
   align: "left" | "center",
   boxW: number,
-  color: string,
+  color: string | CanvasGradient,
 ) {
   const { size, lineHeight } = layout;
   const scale = size / lf.font.unitsPerEm;
@@ -256,7 +256,7 @@ export function drawTitle(
     for (const w of line.words) {
       for (const it of w.items) {
         const p = it.g.getPath(cx + it.x, base, size);
-        p.fill = color;
+        p.fill = color as string;
         p.draw(ctx);
       }
       cx += w.width + space;
