@@ -64,6 +64,7 @@ import HighlightCovers from "@/pages/highlight-covers";
 import SelfieCarousels from "@/pages/selfie-carousels";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import FreeSample from "@/pages/free-sample";
+import Landing from "@/pages/landing";
 import SamplePublic from "@/pages/sample-public";
 import SampleRequest from "@/pages/sample-request";
 import PackOrder from "@/pages/pack-order";
@@ -303,6 +304,7 @@ function AppContent() {
     const [isPublicRants] = useRoute("/rants");
     const [isCoffee] = useRoute("/coffee");
     const [isFreeCall] = useRoute("/freecall");
+    const [isLanding] = useRoute("/landing");
     const [isDailyFive] = useRoute("/dailytasks");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
@@ -408,6 +410,9 @@ function AppContent() {
     }
     if (isFreeCall) {
           return <FreeCall />;
+    }
+    if (isLanding) {
+          return <Landing />;
     }
     if (isDailyFive) {
           return <DailyFive />;
