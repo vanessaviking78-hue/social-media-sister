@@ -65,6 +65,8 @@ export type MPost = {
   group?: "xmas" | "newyear";
   pal?: Record<string, string>; // her own colour changes for this post
   textPos?: Record<string, [number, number]>; // where she has dragged the words on slides 2 onwards
+  hook?: string; // a hook from the hook bank, used word for word
+  hookCode?: string; // its code, so it can be crossed off once the post is scheduled
   topic?: string; // her own topic or angle for this post, typed or picked in the planner
 };
 
@@ -521,7 +523,10 @@ async function postJson(path: string, body: unknown): Promise<Record<string, any
 }
 
 // Her own topic for a post, folded into the idea the writer is given.
-const withTopic = (idea: string, post: MPost): string => (post.topic?.trim() ? `${idea}. The topic for this post, in my own words: "${post.topic.trim()}". Keep the whole post on this topic` : idea);
+const withTopic = (idea: string, post: MPost): string => {
+  const topic = post.topic?.trim() ? `${idea}. The topic for this post, in my own words: "${post.topic.trim()}". Keep the whole post on this topic` : idea;
+  return post.hook?.trim() ? `${topic}. The post opens with this hook, which I wrote: "${post.hook.trim()}". Start the caption with it word for word and carry on from it` : topic;
+};
 
 // A training academy uses the same designs as a clinic, so its cover words are rewritten from the academy's point of view.
 export const isAcademyClient = (c: Client): boolean => /academy/i.test(c.businessName);
@@ -615,8 +620,8 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
     slides = [data.slide2, data.slide3];
     const fresh: Record<string, string> = { ...post.text };
     for (const f of fields) { const v = (data.cover as Record<string, unknown> | undefined)?.[f.key]; if (typeof v === "string" && v.trim()) fresh[f.key] = noDashes(v); }
+    if (post.hook?.trim()) fresh[key] = post.hook.trim();
     coverText = fresh;
-    void key;
   } else if (post.tool === "tweet") {
     data = await postJson("/api/tweet-post/copy", { ...base, designName: "Tweet", idea: post.topic?.trim() ?? "", onImage: "" });
     return { text: { ...post.text, quote: noDashes(data.quote ?? "") }, slides: [], cta: "", caption: noDashes(data.caption ?? "") + (c.footnote && !String(data.caption ?? "").includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: Array.isArray(data.hashtags) ? data.hashtags : [] };
@@ -632,7 +637,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   } else if (post.tool === "magazine") {
     const treatment = post.topic?.trim() ?? "";
     if (!treatment) throw new Error("Add the treatment for the Magazine post in the plan first");
-    data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: "DM", style: "4" });
+    data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: "DM", style: "4", hook: post.hook?.trim() || undefined });
     const copy: MagazinePostCopy = { ...(data as unknown as MagazinePostCopy), cta: { lead: "Is this for you?", word: "DM", line: "Drop me a DM to see if you're a good fit for this", dm: true } };
     copy.caption = noDashes(copy.caption ?? "");
     return { text: { ...post.text, copy: JSON.stringify(copy) }, slides: [], cta: "", caption: copy.caption + (c.footnote && !copy.caption.includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: [] };

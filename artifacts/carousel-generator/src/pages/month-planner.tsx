@@ -12,6 +12,9 @@ import { ALIGNS, type Align } from "@/lib/text-layout";
 import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
 import { MENS_PHOTO_COUNT, mensPhotoPath } from "@/lib/mens-sets";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { HOOKS, packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
+import { markHooksUsed } from "@/lib/hook-used";
 import { TREATMENT_BANK } from "@/lib/treatment-bank";
 import { useSiteTreatments } from "@/lib/use-site-treatments";
 import { fetchClientVoice, type ClientVoice } from "@/lib/client-voice";
@@ -344,6 +347,8 @@ export default function MonthPlanner() {
   const [items, setItems] = useState<Item[]>([]);
   const [slots, setSlots] = useState<PlanSlot[]>([]);
   const [mensPool, setMensPool] = useState<PoolPhoto[]>([]);
+  const [hookPick, setHookPick] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
   const wantsMen = slots.some((s) => s.on && s.choice === "mens");
   // The shared photos of men are only fetched once a day is set to Men.
   useEffect(() => {
@@ -572,6 +577,20 @@ export default function MonthPlanner() {
     let plan: Item[] = isProspect
       ? buildPlan(year, month, 1 + Math.floor(Math.random() * 40), hhmm, pool.length, doneList().filter((x): x is number => typeof x === "number"))
       : buildFromSlots(slots, month, preset.id, hhmm, pool.length, doneList(), readUsed(preset.id));
+    // Hooks she picked go on the ticked days in order. Treatment hooks go to the treatment days, the rest to the other days.
+    if (!isProspect && hookPick.length) {
+      const codes = hookPick.filter((c) => HOOKS.some((h) => h.code === c));
+      const topics = slots.filter((s) => s.on && (s.choice === "magazine" || s.choice === "treatments") && s.topic.trim()).map((s) => s.topic.trim());
+      const left = pickedHookPayload(hookPick, topics).map((h, i) => ({ ...h, code: codes[i] }));
+      plan = plan.map((it) => {
+        if (it.kind !== "post" || !left.length) return it;
+        const wantT = it.post.tool === "magazine" || it.post.tool === "treatments";
+        let k = left.findIndex((h) => h.kind === (wantT ? "treatment" : "other"));
+        if (k < 0) k = 0;
+        const h = left.splice(k, 1)[0];
+        return { kind: "post" as const, post: { ...it.post, hook: h.text, hookCode: h.code } };
+      });
+    }
     if (isProspect) {
       // A free sample is 8 posts, shown on the page I hand over.
       const only = plan.filter((i) => i.kind === "post").slice(0, 8);
@@ -611,6 +630,7 @@ export default function MonthPlanner() {
     try {
       for (const p of ready) {
         await schedulePost(p, client, preset.id);
+        if (p.hookCode) markHooksUsed(preset.name, [p.hookCode]);
         patchPost(p.id, { scheduled: true, selected: false });
         markDone(p.when.slice(0, 10));
         if (!isProspect) rememberUsed(preset.id, p);
@@ -856,6 +876,10 @@ export default function MonthPlanner() {
                   </div>
                 );
               })}
+            </div>
+            <div className="space-y-2">
+              <HookBankPicker client={preset?.name ?? ""} maxPer={MAX_POSTS} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+              {hookPick.length > 0 && <p className="text-sm text-muted-foreground">{hookPick.length} hook{hookPick.length === 1 ? "" : "s"} picked. They go on the ticked days in the order you picked them, treatment hooks on the treatment days, and are crossed off for this client once the post is scheduled.</p>}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={create} disabled={!preset || !!busy || poolBusy || !tickedCount}>

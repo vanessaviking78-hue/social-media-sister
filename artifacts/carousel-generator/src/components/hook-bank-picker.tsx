@@ -17,6 +17,8 @@ type Props = {
   days?: string[];
   // The client these hooks are for. Hooks already used for them are crossed out so nothing is posted twice.
   client?: string;
+  // Raise the number of hooks that can be picked for each day (Month needs enough for every ticked day).
+  maxPer?: number;
 };
 
 const SEASON_STYLE: Record<string, string> = {
@@ -39,7 +41,7 @@ function HookText({ text }: { text: string }) {
 
 // Every hook is a box in one big grid. Boxes already used for this client are removed from the list, and
 // can be shown again (crossed out) with the Show used switch, or put back with the arrow.
-export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "" }: Props) {
+export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "", maxPer }: Props) {
   const uid = useId();
   const [used, setUsed] = useState<string[]>([]);
   const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
@@ -165,7 +167,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                   <p className="text-xs font-semibold">
                     {d.label}{" "}
                     <span className="font-normal text-muted-foreground">
-                      ({items.length} to choose from{!single ? `, ${pickedHere} of ${d.max} picked` : ""})
+                      ({items.length} to choose from{!single ? `, ${pickedHere} of ${maxPer ?? d.max} picked` : ""})
                     </span>
                   </p>
                   {items.length === 0 ? (
@@ -176,7 +178,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                         const on = picked.includes(h.code);
                         const isUsed = used.includes(h.code);
                         const t = hookTiming(h, start);
-                        const full = !single && !on && pickedHere >= d.max;
+                        const full = !single && !on && pickedHere >= (maxPer ?? d.max);
                         const disabled = !on && (!t.ok || full);
                         return (
                           <label
