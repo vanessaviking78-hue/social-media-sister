@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
+import { finalCta } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -73,8 +74,8 @@ ${n.theme ? `THEME: ${n.theme}.\n` : ""}THE COVER (slide 1) SAYS:
 ${n.onImage}
 """
 ${n.fresh ? `This cover is being written fresh. Write a new cover headline (a short sentence of 4 to 12 words, one thought) and a small line under it (max 12 words) in the same quiet style and on the same idea as the cover above, but in different words.
-` : ""}SLIDES 2 AND 3. Carry on from the cover so the three read as one thought that builds, in my voice, on the same idea. Each is 1 to 3 short sentences, max 28 words, plain conversational words, written to sit over a photograph. Slide 2 deepens the cover. Slide 3 lands it with something warm and true. Never promise a result and never say a treatment is needed.
-THE CTA: ONE short, warm question for the last slide, easy to answer in a few words in the comments. Max 14 words. Never Comment WORD, never DM me, never a website.
+` : ""}SLIDES 2 AND 3. Carry on from the cover so the three read as one thought that builds, in my voice, on the same idea. Each is EXACTLY three short sentences, friendly but informative, max 40 words, plain conversational words, written to sit over a photograph. Slide 2 deepens the cover. Slide 3 lands it with something warm and true. Never promise a result and never say a treatment is needed.
+THE CTA: leave "cta" as an empty string. The last slide is set for you.
 
 WHO SHE IS TALKING TO: ${n.audience || "women aged 35 plus who want honesty, humour and nobody pushing them"}. Use the consumer psychology of women over 35: they want to feel seen, they save what sounds like a real person, they are tired of being sold to. Stealth sales only: she quietly thinks of ${who} as the person she wants to book a conversation with. Treatments are not the point, the woman is.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
@@ -135,7 +136,7 @@ router.post("/lux/copy", async (req: Request, res: Response) => {
     const j = JSON.parse(raw);
     const slide2 = clean(j.slide2, 220);
     const slide3 = clean(j.slide3, 220);
-    const cta = clean(j.cta, 120);
+    const cta = finalCta(b.ctaTreatment);
     if (!slide2 || !slide3 || !cta) throw new Error("The slide words came back incomplete, try again");
     const cover = notes.fresh && j.cover && typeof j.cover === "object"
       ? { head: clean((j.cover as Record<string, unknown>).head, 140), sub: clean((j.cover as Record<string, unknown>).sub, 90) }

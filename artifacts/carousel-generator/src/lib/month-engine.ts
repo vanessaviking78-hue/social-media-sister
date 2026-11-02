@@ -592,6 +592,8 @@ async function academyCover(post: MPost, c: Client): Promise<Record<string, stri
 export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>> {
   const base = {
     businessName: c.businessName, ownerName: c.ownerName, role: c.role, area: c.area, audience: c.audience, brandNotes: c.brandNotes,
+    // The last slide: Comment TREATMENT for more info on a treatment post, Tag a friend on anything else.
+    ctaTreatment: post.topic?.trim() ?? "",
   };
   const academy = isAcademyClient(c);
   // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
@@ -643,8 +645,9 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   } else if (post.tool === "magazine") {
     const treatment = post.topic?.trim() ?? "";
     if (!treatment) throw new Error("Add the treatment for the Magazine post in the plan first");
-    data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: "DM", style: "4", hook: post.hook?.trim() || undefined });
-    const copy: MagazinePostCopy = { ...(data as unknown as MagazinePostCopy), cta: { lead: "Is this for you?", word: "DM", line: "Drop me a DM to see if you're a good fit for this", dm: true } };
+    const word = treatment.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16) || "INFO";
+    data = await postJson("/api/magazine-post/copy", { clinicName: c.businessName, treatment, replyWord: word, style: "4", hook: post.hook?.trim() || undefined });
+    const copy: MagazinePostCopy = { ...(data as unknown as MagazinePostCopy), cta: { lead: "Want to know more?", word, line: `Comment ${word} for more info` } };
     copy.caption = noDashes(copy.caption ?? "");
     return { text: { ...post.text, copy: JSON.stringify(copy) }, slides: [], cta: "", caption: copy.caption + (c.footnote && !copy.caption.includes(c.footnote) ? `\n\n${c.footnote}` : ""), hashtags: [] };
   } else if (post.tool === "lux") {

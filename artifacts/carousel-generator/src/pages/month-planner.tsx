@@ -581,7 +581,7 @@ export default function MonthPlanner() {
     if (!isProspect && hookPick.length) {
       const codes = hookPick.filter((c) => HOOKS.some((h) => h.code === c));
       const topics = slots.filter((s) => s.on && (s.choice === "magazine" || s.choice === "treatments") && s.topic.trim()).map((s) => s.topic.trim());
-      const left = pickedHookPayload(hookPick, topics).map((h, i) => ({ ...h, code: codes[i] }));
+      const left = pickedHookPayload(hookPick, topics, area).map((h, i) => ({ ...h, code: codes[i] }));
       plan = plan.map((it) => {
         if (it.kind !== "post" || !left.length) return it;
         const wantT = it.post.tool === "magazine" || it.post.tool === "treatments";

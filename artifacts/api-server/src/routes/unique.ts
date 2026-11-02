@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
+import { finalCta } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -71,9 +72,9 @@ ${n.cover}
 WHO SHE IS TALKING TO: ${n.audience || "women aged 35 plus who are curious but wary, who want honesty and nobody pushing them"}. Use the consumer psychology of women over 35: they want to feel seen and safe, they save and share what sounds like a real person, they are tired of being sold to. Stealth sales only.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
 Return these keys:
-- "slide2": carries on from the cover with the funny, honest point behind it, a believable specific detail, plain words. 22 to 34 words.
-- "slide3": the landing. Warm, a touch funny, a gentle invitation to a conversation with no pressure. 14 to 24 words.
-- "cta": ONE short fun question for the last slide, easy to answer in a few words in the comments. Max 14 words. Never Comment WORD, never DM me, never a website.
+- "slide2": carries on from the cover with the funny, honest point behind it, a believable specific detail, plain words. EXACTLY three sentences, friendly but informative, 30 to 48 words in all.
+- "slide3": the landing. Warm, a touch funny, a gentle invitation to a conversation with no pressure. EXACTLY three sentences, friendly but informative, 30 to 48 words in all.
+- "cta": leave this as an empty string. The last slide is set for you.
 - "caption": the Instagram caption, max 110 words, told as a short story from my point of view. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never a rhetorical question. Short punchy lines. It adds something the slides do not say. It MUST end with one engaging question on its own final line that is easy to answer in the comments.
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.${freshBlock}
 
@@ -145,7 +146,7 @@ router.post("/unique/copy", async (req: Request, res: Response) => {
     res.json({
       slide2: clean(j.slide2, 300),
       slide3: clean(j.slide3, 200),
-      cta: clean(j.cta, 120),
+      cta: finalCta(b.ctaTreatment),
       caption: clean(j.caption, 900),
       hashtags: fiveTags(j.hashtags, notes.area),
       ...(cover ? { cover } : {}),

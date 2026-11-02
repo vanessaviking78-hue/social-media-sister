@@ -25,6 +25,12 @@ const SEASON_STYLE: Record<string, string> = {
   Halloween: "text-orange-400",
   Bonfire: "text-red-400",
   Christmas: "text-emerald-400",
+  "Black Friday": "text-yellow-300",
+  "New Year": "text-sky-300",
+  "Valentine's": "text-pink-400",
+  "Mother's Day": "text-fuchsia-300",
+  Summer: "text-amber-300",
+  Weddings: "text-rose-300",
 };
 
 // The slot in a hook, [treatment], is shown highlighted so it is clear it fills in per clinic.
@@ -159,7 +165,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
             {visibleDays.map(d => {
               const items = HOOKS
                 .filter(h => h.day === d.day)
-                .filter(h => !q || h.text.toLowerCase().includes(q))
+                .filter(h => !q || (h.text + " " + (h.group ?? "") + " " + h.season).toLowerCase().includes(q))
                 .filter(h => showUsed || !used.includes(h.code) || picked.includes(h.code));
               const pickedHere = picked.filter(c => HOOKS.some(h => h.code === c && h.day === d.day)).length;
               return (
