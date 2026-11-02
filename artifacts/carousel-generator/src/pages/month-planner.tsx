@@ -225,6 +225,7 @@ const API = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api`;
 
 // Which photo and focus key a picture on slide n belongs to, so dragging it moves the right one.
 function slotTarget(post: MPost, n: number, slot: Slot): { key: string; photo: number | null } {
+  if (post.tool === "magazine") return { key: `m${slot.i}`, photo: post.photos[slot.i] ?? null };
   if (post.tool === "basic") {
     if (n === 0) return { key: `c${slot.i}`, photo: post.photos[slot.i] ?? null };
     return { key: `s${n + 1}`, photo: post.photos[n === 1 ? 2 : 3] ?? null };
@@ -286,7 +287,7 @@ function Thumb({ post, n, client, onSwap, onFocus, onText }: { post: MPost; n: n
     const bmp = ph ? await getBitmap(ph) : null;
     if (!bmp) return;
     const sc = Math.max(slot.w / bmp.width, slot.h / bmp.height);
-    drag.current = { slot, key: tg.key, x: p.x, y: p.y, f: post.focus[tg.key] ?? DEFAULT_FOCUS, ox: bmp.width * sc - slot.w, oy: bmp.height * sc - slot.h };
+    drag.current = { slot, key: tg.key, x: p.x, y: p.y, f: post.focus[tg.key] ?? (tg.key[0] === "m" ? ([0.5, 0.5] as Focus) : DEFAULT_FOCUS), ox: bmp.width * sc - slot.w, oy: bmp.height * sc - slot.h };
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
@@ -1056,7 +1057,16 @@ export default function MonthPlanner() {
                       </select>
                     </label>
                   ))}
-                  {p.pal && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined })}>reset colours</button>}
+                  {(["head", "body"] as const).map((k) => (
+                    <label key={k} className="flex items-center gap-1.5">
+                      {k === "head" ? "Headline font" : "Body font"}
+                      <Select value={p.fonts?.[k] ?? (k === "head" ? headFont : bodyFont)} onValueChange={(v) => patchPost(p.id, { fonts: { ...(p.fonts ?? {}), [k]: v } })}>
+                        <SelectTrigger className="h-7 w-40 bg-muted/30 border-border/40 text-xs"><SelectValue /></SelectTrigger>
+                        <FontList yours={yourFonts} library={libraryFonts} />
+                      </Select>
+                    </label>
+                  ))}
+                  {(p.pal || p.fonts) && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined, fonts: undefined })}>reset colours</button>}
                 </div>
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (

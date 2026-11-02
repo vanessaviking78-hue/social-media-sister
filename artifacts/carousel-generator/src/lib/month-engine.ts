@@ -11,7 +11,7 @@ import { LUX_SLIDE_DEFS, LUX_PALETTE, LUX_LABELS, LUX_COVERS, LUX_SLIDES, luxDef
 import { EMPOWER, EMPOWER_BY_ID, resolveEmpowerText, drawEmpower } from "./empower-designs";
 import { MENS_SETS, MENS_PHOTO_COUNT, MENS_STATIC_READY } from "./mens-sets";
 import { drawAllPostPages, MIN_PHOTOS, type MagazinePostCopy } from "./magazine-post-pages";
-import { setMagazineFonts, setMagazineSize, PAGE_W as MAG_W, PAGE_H as MAG_H } from "./magazine-pages";
+import { setMagazineFonts, setMagazineSize, getPhotoHits, PAGE_W as MAG_W, PAGE_H as MAG_H, type PhotoAdjust } from "./magazine-pages";
 import { setFlipHandoff } from "./flip-handoff";
 import { drawTweetCard, TW, TH } from "./tweet-card";
 import { tweetStats } from "./pack-engine";
@@ -67,6 +67,7 @@ export type MPost = {
   textPos?: Record<string, [number, number]>; // where she has dragged the words on slides 2 onwards
   hook?: string; // a hook from the hook bank, used word for word
   hookCode?: string; // its code, so it can be crossed off once the post is scheduled
+  fonts?: { head?: string; body?: string }; // her own fonts for this post
   topic?: string; // her own topic or angle for this post, typed or picked in the planner
   story?: { q: string; on: boolean; dx: number; dy: number }; // the story that goes out 5 minutes before: its question, whether it is on, and where the picture sits
 };
@@ -259,7 +260,9 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
   else if (post.tool === "lux") { base = { ...LUX_PALETTE }; labels = LUX_LABELS; }
   else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; base = { ...d.palette }; labels = d.labels; }
-  else if (post.tool === "mens" || post.tool === "magazine" || post.tool === "tweet" || post.tool === "stylish" || post.tool === "bulk") { base = {}; labels = []; }
+  else if (post.tool === "magazine") { base = { main: brand?.main ?? "#14195c", accent: brand?.accent ?? "#c8553d" }; labels = [{ key: "main", label: "Page colour" }, { key: "accent", label: "Accent colour" }]; }
+  else if (post.tool === "stylish") { base = { block: brand?.main ?? "#111111", text: "#ffffff" }; labels = [{ key: "block", label: "Cover colour" }, { key: "text", label: "Cover words" }]; }
+  else if (post.tool === "mens" || post.tool === "tweet" || post.tool === "bulk") { base = {}; labels = []; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
@@ -292,7 +295,7 @@ async function renderMens(post: MPost, n: number, canvas: HTMLCanvasElement, sca
 }
 
 // Magazine Post pages are made in one go (five pages from one set of words), so the last set is kept while the thumbnails draw.
-let magCache: { key: string; pages: HTMLCanvasElement[] } | null = null;
+let magCache: { key: string; pages: HTMLCanvasElement[]; hits: Slot[][] } | null = null;
 export const emptyMagCopy = (): MagazinePostCopy => ({ cover: { kicker: "", title: "", tagline: "" }, pages: [{ kicker: "", headline: "", intro: "", facts: [{ label: "", text: "" }, { label: "", text: "" }, { label: "", text: "" }] }, { kicker: "", headline: "This is for you if...", intro: "", items: ["", "", "", "", ""] }, { kicker: "", headline: "Helps most with...", intro: "", items: ["", "", "", "", ""] }], cta: { lead: "Is this for you?", word: "DM", line: "", dm: true }, caption: "" });
 export function magazineCopyOf(post: MPost): MagazinePostCopy {
   try { if (post.text.copy) return JSON.parse(post.text.copy) as MagazinePostCopy; } catch { /* fall through */ }
@@ -300,12 +303,12 @@ export function magazineCopyOf(post: MPost): MagazinePostCopy {
   e.cover.title = post.topic?.trim() ?? "";
   return e;
 }
-async function magazinePages(post: MPost, c: Client): Promise<HTMLCanvasElement[]> {
-  const mainCol = c.brand?.main ?? "#14195c";
-  const accent = c.brand?.accent ?? "#c8553d";
+async function magazinePages(post: MPost, c: Client): Promise<{ pages: HTMLCanvasElement[]; hits: Slot[][] }> {
+  const mainCol = post.pal?.main ?? c.brand?.main ?? "#14195c";
+  const accent = post.pal?.accent ?? c.brand?.accent ?? "#c8553d";
   const copy = magazineCopyOf(post);
-  const key = JSON.stringify([post.id, post.design, post.text.copy, post.topic, post.photos, mainCol, accent, c.headFont, c.bodyFont, c.businessName, c.pool.length]);
-  if (magCache?.key === key) return magCache.pages;
+  const key = JSON.stringify([post.id, post.design, post.text.copy, post.topic, post.photos, mainCol, accent, c.headFont, c.bodyFont, c.businessName, c.pool.length, Object.entries(post.focus).filter(([k]) => k[0] === "m")]);
+  if (magCache?.key === key) return magCache;
   const photos: (CanvasImageSource | null)[] = [];
   for (let k = 0; k < MIN_PHOTOS; k++) photos.push(await bmp(c, post.photos[k]));
   const d = new Date(post.when);
@@ -313,20 +316,24 @@ async function magazinePages(post: MPost, c: Client): Promise<HTMLCanvasElement[
   setMagazineFonts(c.headFont, c.bodyFont);
   setMagazineSize(post.design === "reel" ? "reel" : "post");
   let pages: HTMLCanvasElement[] = [];
+  let hits: Slot[][] = [];
+  // A photo she has dragged is panned: the focus she set becomes the pan the magazine pages use.
+  const adjusts: (PhotoAdjust | undefined)[] = Array.from({ length: MIN_PHOTOS }, (_, k) => { const f = post.focus[`m${k}`]; return f ? { zoom: 1, panX: 1 - 2 * f[0], panY: 1 - 2 * f[1] } : undefined; });
   try {
     pages = drawAllPostPages({ clinicName: c.businessName || "Your clinic", colour: mainCol, accent, ctaButton: "", contact: "", issue, qrUrl: "" } as never,
-      { ...copy, cover: { ...copy.cover, title: copy.cover.title || post.topic?.trim() || "" } }, photos);
+      { ...copy, cover: { ...copy.cover, title: copy.cover.title || post.topic?.trim() || "" } }, photos, adjusts);
+    for (const h of getPhotoHits()) (hits[h.page] ??= []).push({ i: h.slot, x: h.x, y: h.y, w: h.w, h: h.h, rot: 0 });
   } finally { setMagazineSize("post"); setMagazineFonts(); }
-  magCache = { key, pages };
-  return pages;
+  magCache = { key, pages, hits };
+  return magCache;
 }
 async function renderMagazine(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
-  const pages = await magazinePages(post, c);
+  const { pages, hits } = await magazinePages(post, c);
   const src = pages[Math.min(n, pages.length - 1)];
   canvas.width = Math.round(src.width * scale);
   canvas.height = Math.round(src.height * scale);
   canvas.getContext("2d")!.drawImage(src, 0, 0, canvas.width, canvas.height);
-  return [];
+  return post.design === "reel" ? [] : (hits[Math.min(n, pages.length - 1)] ?? []);
 }
 
 // Stylish covers and slides are drawn by the Stylish tool itself, loaded only when a post needs it.
@@ -344,6 +351,8 @@ async function renderStylish(post: MPost, n: number, c: Client, canvas: HTMLCanv
         : { cvBlock: c.brand.main, cvBand: c.brand.main, cvColour: onBlock, cvSubColour: onBlock };
     })() : {}),
     showLogo: !!c.logo && c.logoPos !== "off",
+    ...(post.pal?.block ? { cvBlock: post.pal.block, cvBand: post.pal.block } : {}),
+    ...(post.pal?.text ? { cvColour: post.pal.text, cvSubColour: post.pal.text } : {}),
   } as typeof m.STYLISH_DEFAULT_STYLE;
   await ensureFonts(style.cvFont, style.cvSubFont, style.displayFont);
   const head = BC.fillTokens(post.text.head || post.topic?.trim() || "Your headline", c.fill);
@@ -383,6 +392,7 @@ export async function sendToFlip(post: MPost, c: Client): Promise<void> {
 
 export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
   installMetal();
+  if (post.fonts?.head || post.fonts?.body) { c = { ...c, headFont: post.fonts.head || c.headFont, bodyFont: post.fonts.body || c.bodyFont }; await ensureFonts(c.headFont, c.bodyFont); }
   const ctx = canvas.getContext("2d")!;
   canvas.width = Math.round(W * scale);
   canvas.height = Math.round(H * scale);
@@ -545,6 +555,7 @@ export function installMetal() {
 export const STORY_W = 1080, STORY_H = 1920;
 export async function renderStory(post: MPost, c: Client, canvas: HTMLCanvasElement, scale = 1): Promise<void> {
   installMetal();
+  if (post.fonts?.head || post.fonts?.body) c = { ...c, headFont: post.fonts.head || c.headFont, bodyFont: post.fonts.body || c.bodyFont };
   await ensureFonts(c.headFont, c.bodyFont);
   const bg = c.brand?.main ?? "#2b2230";
   const accent = c.brand?.accent ?? "#e8b4c0";
@@ -611,6 +622,7 @@ export function coverEditFields(post: MPost): { key: string; label: string; valu
 }
 
 export async function renderPostImages(post: MPost, c: Client, scale = 1): Promise<HTMLCanvasElement[]> {
+  if (post.fonts?.head || post.fonts?.body) c = { ...c, headFont: post.fonts.head || c.headFont, bodyFont: post.fonts.body || c.bodyFont };
   await ensureFonts(c.headFont, c.bodyFont);
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < slideCount(post.tool, post.design); n++) {
