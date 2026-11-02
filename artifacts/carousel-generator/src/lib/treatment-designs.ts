@@ -4,6 +4,7 @@ import { drawAligned, drawCornerLogo, type Align, type CornerPos } from "./text-
 // the download and the scheduled image are always identical. No React in here.
 
 import { DEFAULT_FOCUS, headWeightFor, mix, type Fill, type Focus, type Slot } from "./basic-covers";
+import { washRgba, washAlpha } from "./slide-look";
 
 export const W = 1080;
 export const H = 1350;
@@ -552,6 +553,10 @@ export type PhotoSlideInput = {
   scrim: number;
   logo: HTMLImageElement | null;
   arrow: boolean;
+  tint?: string; // a colour wash over the photo
+  textColour?: string;
+  textScale?: number;
+
   align?: Align;
   logoCorner?: CornerPos;
   textDx?: number; // where she has dragged the words to
@@ -578,7 +583,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
     ctx.fillText("Choose a photo", W / 2, H / 2);
     ctx.textBaseline = "top";
   }
-  ctx.fillStyle = `rgba(0,0,0,${Math.max(0, Math.min(80, d.scrim)) / 100})`;
+  ctx.fillStyle = d.tint ? washRgba(d.tint, washAlpha(d.scrim)) : `rgba(0,0,0,${Math.max(0, Math.min(80, d.scrim)) / 100})`;
   ctx.fillRect(0, 0, W, H);
   const gr = ctx.createLinearGradient(0, H * 0.3, 0, H);
   gr.addColorStop(0, "rgba(0,0,0,0)");
@@ -587,7 +592,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   ctx.fillRect(0, H * 0.3, W, H * 0.7);
 
   const hasCta = !!d.cta?.trim();
-  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, d.spacing ?? 1.3);
+  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66 * (d.textScale ?? 1), 32 * Math.min(1, d.textScale ?? 1), d.spacing ?? 1.3);
   const bodyH = body.lines.length * body.lh;
 
   let pillW = 0, pillH = 0, ctaLines: string[] = [];
@@ -607,7 +612,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   ctx.translate(tdx, tdy);
 
   ctx.shadowColor = "rgba(0,0,0,0.42)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = d.textColour ?? "#ffffff";
   ctx.font = `600 ${body.size}px ${d.bodyFont}`;
   y = drawAligned(ctx, body.lines, y, body.lh, d.align, W);
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;

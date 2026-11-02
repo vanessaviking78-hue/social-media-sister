@@ -1148,6 +1148,28 @@ export default function MonthPlanner() {
                   ))}
                   {(p.pal || p.fonts) && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined, fonts: undefined })}>reset colours</button>}
                 </div>
+                {p.tool !== "mens" && p.tool !== "tweet" && (
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border/30 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Words on the slides</span>
+                    <label className="flex items-center gap-2">Line spacing {(p.spacing ?? spacing).toFixed(2)}
+                      <input type="range" min={0.9} max={1.8} step={0.05} value={p.spacing ?? spacing} onChange={(e) => patchPost(p.id, { spacing: Number(e.target.value) })} className="w-28" />
+                    </label>
+                    <span className="flex items-center gap-1">Size
+                      <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => patchPost(p.id, { textScale: Math.max(0.6, Math.round(((p.textScale ?? 1) - 0.1) * 10) / 10) })}>Smaller</Button>
+                      <Button size="sm" variant="outline" className="h-7 px-2" onClick={() => patchPost(p.id, { textScale: Math.min(1.6, Math.round(((p.textScale ?? 1) + 0.1) * 10) / 10) })}>Bigger</Button>
+                    </span>
+                    <span className="flex items-center gap-1">Move
+                      {([["Up", 0, -40], ["Down", 0, 40], ["Left", -40, 0], ["Right", 40, 0]] as const).map(([lab, dx, dy]) => (
+                        <Button key={lab} size="sm" variant="outline" className="h-7 px-2" onClick={() => {
+                          const tp = { ...(p.textPos ?? {}) };
+                          for (let k = 2; k <= count; k++) { const cur = tp[`t${k}`] ?? [0, 0]; tp[`t${k}`] = [Math.max(-120, Math.min(120, cur[0] + dx)), Math.max(-600, Math.min(600, cur[1] + dy))]; }
+                          patchPost(p.id, { textPos: tp });
+                        }}>{lab}</Button>
+                      ))}
+                    </span>
+                    {(p.spacing != null || p.textScale != null || p.textPos) && <button type="button" className="underline" onClick={() => patchPost(p.id, { spacing: undefined, textScale: undefined, textPos: undefined })}>reset words</button>}
+                  </div>
+                )}
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (
                     <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} onFocus={(key, f) => patchPost(p.id, { focus: { ...p.focus, [key]: f } })} onText={(key, v) => { const tp = { ...(p.textPos ?? {}) }; if (v) tp[key] = v; else delete tp[key]; patchPost(p.id, { textPos: tp }); }} />

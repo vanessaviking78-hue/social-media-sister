@@ -104,6 +104,13 @@ export type LuxPhotoInput = {
   logo: HTMLImageElement | null;
   logoPos?: LogoPos;
   arrow: boolean;
+  tint?: string;
+  textColour?: string;
+  textScale?: number;
+  spacing?: number;
+  align?: "left" | "center" | "right";
+  textDx?: number;
+  textDy?: number;
 };
 
 export function drawLuxPhotoSlide(ctx: Ctx, d: LuxPhotoInput): Slot[] {
@@ -121,5 +128,6 @@ export function drawLuxPhotoSlide(ctx: Ctx, d: LuxPhotoInput): Slot[] {
     logo: corner ? d.logo : null,
     logoCorner: corner,
     arrow: d.arrow,
+    tint: d.tint, textColour: d.textColour, textScale: d.textScale, spacing: d.spacing, align: d.align as never, textDx: d.textDx, textDy: d.textDy,
   });
 }

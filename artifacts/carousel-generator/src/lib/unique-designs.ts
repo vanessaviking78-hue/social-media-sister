@@ -10,6 +10,7 @@ import {
 } from "./xmas-designs";
 import { LAYOUTS_A } from "./unique-layouts-a";
 import { LAYOUTS_B } from "./unique-layouts-b";
+import { washRgba, washAlpha } from "./slide-look";
 
 export { XW as W, XH as H };
 
@@ -243,6 +244,10 @@ export type PhotoSlideInput = {
   scrim: number;
   logo: HTMLImageElement | null;
   arrow: boolean;
+  tint?: string; // a colour wash over the photo
+  textColour?: string;
+  textScale?: number;
+
   align?: Align;
   logoCorner?: CornerPos;
   textDx?: number; // where she has dragged the words to
@@ -283,7 +288,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
     ctx.fillText("Choose a photo", W / 2, H / 2);
     ctx.textBaseline = "top";
   }
-  ctx.fillStyle = `rgba(0,0,0,${Math.max(0, Math.min(80, d.scrim)) / 100})`;
+  ctx.fillStyle = d.tint ? washRgba(d.tint, washAlpha(d.scrim)) : `rgba(0,0,0,${Math.max(0, Math.min(80, d.scrim)) / 100})`;
   ctx.fillRect(0, 0, W, H);
   const gr = ctx.createLinearGradient(0, H * 0.3, 0, H);
   gr.addColorStop(0, "rgba(0,0,0,0)");
@@ -292,7 +297,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
   ctx.fillRect(0, H * 0.3, W, H * 0.7);
 
   const hasCta = !!d.cta?.trim();
-  const body = fitText(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, d.spacing ?? 1.3);
+  const body = fitText(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66 * (d.textScale ?? 1), 32 * Math.min(1, d.textScale ?? 1), d.spacing ?? 1.3);
   const bodyH = body.lines.length * body.lh;
   let pillW = 0, pillH = 0, ctaLines: string[] = [];
   const ctaSize = 38, ctaLh = 48;
@@ -310,7 +315,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
   ctx.translate(tdx, tdy);
 
   ctx.shadowColor = "rgba(0,0,0,0.42)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = d.textColour ?? "#ffffff";
   ctx.font = `600 ${body.size}px ${d.bodyFont}`;
   y = drawAligned(ctx, body.lines, y, body.lh, d.align, W);
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;

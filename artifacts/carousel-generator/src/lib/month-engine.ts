@@ -55,6 +55,8 @@ export type MPost = {
   text: Record<string, string>;
   photos: (number | null)[];
   focus: Record<string, Focus>;
+  spacing?: number; // line spacing for this post, over the page setting
+  textScale?: number; // size of the words on photo slides, 1 is as drawn
   slides: string[]; // words for the photo slides that follow the cover
   cta: string;
   caption: string;
@@ -275,8 +277,14 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "mens" || post.tool === "tweet" || post.tool === "bulk") { base = {}; labels = []; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
+  if (["unique", "treatments", "basic", "lux", "xmas"].includes(post.tool)) {
+    base = { ...base, slideTint: "#000000", slideText: "#ffffff" };
+    labels = [...labels, { key: "slideTint", label: "Photo slides colour wash" }, { key: "slideText", label: "Photo slides words" }];
+  }
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
 }
+// What each photo slide shows besides the picture: the colour wash, the colour and size of the words.
+const slideLook = (post: MPost, c: Client) => ({ tint: post.pal?.slideTint, textColour: post.pal?.slideText, textScale: post.textScale, spacing: post.spacing ?? c.spacing });
 const palOf = <T,>(post: MPost, brand?: Client["brand"]): T => Object.fromEntries(colourFields(post, brand).map((f) => [f.key, f.value])) as T;
 
 // Draws slide n (0 is the cover) of a post onto the canvas at the given scale.
@@ -360,6 +368,7 @@ async function renderStylish(post: MPost, n: number, c: Client, canvas: HTMLCanv
         ? { cvBlock: c.brand.main, cvBand: c.brand.main, cvColour: "#ffffff", cvSubColour: "#ffffff" }
         : { cvBlock: c.brand.main, cvBand: c.brand.main, cvColour: onBlock, cvSubColour: onBlock };
     })() : {}),
+    arrow: false,
     showLogo: !!c.logo && c.logoPos !== "off",
     ...(post.pal?.block ? { cvBlock: post.pal.block, cvBand: post.pal.block } : {}),
     ...(post.pal?.text ? { cvColour: post.pal.text, cvSubColour: post.pal.text } : {}),
@@ -402,7 +411,7 @@ async function renderBulk(post: MPost, n: number, c: Client, canvas: HTMLCanvasE
   };
   const cover = await loadPanned(post.photos[0], "c0");
   const body = post.design === "cover" ? null : await loadPanned(post.photos[1], "s2") ?? cover;
-  const url = m.renderSlideCanvas(n + 1, blocks, cover, body ?? (post.design === "cover" ? null : cover), c.logo, (c.preset ?? {}) as never, scale);
+  const url = m.renderSlideCanvas(n + 1, blocks, cover, body ?? (post.design === "cover" ? null : cover), c.logo, (c.preset ?? {}) as never, scale, false, post.spacing);
   const im = await new Promise<HTMLImageElement | null>((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
   if (im) { canvas.width = im.width; canvas.height = im.height; canvas.getContext("2d")!.drawImage(im, 0, 0); }
   const has = n === 0 ? cover : body;
@@ -450,7 +459,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     }
     return UD.drawUniPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post, c.brand), bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, ...slideLook(post, c), logo, logoCorner: corner, arrow: false, align: c.align, spacing: post.spacing ?? c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     });
   }
 
@@ -467,7 +476,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
       small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post, c.brand), bodyFont: c.bodyFont, headFont: c.headFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, ...slideLook(post, c), logo, logoCorner: corner, arrow: false, align: c.align, spacing: post.spacing ?? c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
 
@@ -487,7 +496,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return BC.drawPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: n === 2 ? BC.fillTokens(post.cta, c.fill) : "", colours,
       bodyFont: c.bodyFont, headFont: c.headFont, photo: await bmp(c, post.photos[idx]),
-      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: n === 1, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
+      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, ...slideLook(post, c), logo, logoCorner: corner, arrow: false, align: c.align, spacing: post.spacing ?? c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
 
@@ -501,7 +510,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     }
     return drawLuxPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette, bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoPos: corner, arrow: !last,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, ...slideLook(post, c), logo, logoPos: corner, arrow: false, align: c.align, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     });
   }
   if (post.tool === "empower") {
@@ -515,7 +524,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   if (post.tool === "xmas" && n > 0) {
     return UD.drawUniPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post, c.brand), bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, ...slideLook(post, c), logo, logoCorner: corner, arrow: false, align: c.align, spacing: post.spacing ?? c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
   const photo = await bmp(c, post.photos[0]);
