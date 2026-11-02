@@ -113,7 +113,7 @@ router.post("/lux/copy", async (req: Request, res: Response) => {
       role: str(b.role, 60),
       area: str(b.area, 80),
       audience: str(b.audience, 200),
-      brandNotes: str(b.brandNotes, 600),
+      brandNotes: str(b.brandNotes, 2000),
       theme: str(b.theme, 200),
       onImage: str(b.onImage, 2000),
       fresh: b.fresh === true,

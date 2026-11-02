@@ -131,7 +131,7 @@ router.post("/basic-posts/copy", async (req: Request, res: Response) => {
       role: str(b.role, 60),
       area: str(b.area, 80),
       audience: str(b.audience, 200),
-      brandNotes: str(b.brandNotes, 600),
+      brandNotes: str(b.brandNotes, 2000),
       coverName: str(b.coverName, 60),
       coverIdea: str(b.coverIdea, 200),
       cover: Object.fromEntries(fields.map((f) => [f.key, str(coverIn[f.key], 200)])),

@@ -121,7 +121,7 @@ router.post("/treatments/copy", async (req: Request, res: Response) => {
       role: str(b.role, 60),
       area: str(b.area, 80),
       audience: str(b.audience, 200),
-      brandNotes: str(b.brandNotes, 600),
+      brandNotes: str(b.brandNotes, 2000),
       treatment: str(b.treatment, 80) || "a treatment",
       headline: str(b.headline, 160),
       bullets: (Array.isArray(b.bullets) ? b.bullets : []).slice(0, 4).map((x) => str(x, 200)).filter(Boolean),

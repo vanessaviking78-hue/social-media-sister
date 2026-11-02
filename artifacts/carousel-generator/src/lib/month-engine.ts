@@ -7,6 +7,8 @@ import * as UD from "./unique-designs";
 import { HALLOWEEN_BY_ID, HALLOWEEN_DESIGNS, HALLOWEEN_PALETTE, HALLOWEEN_PALETTE_LABELS, drawHalloween, resolveHalText } from "./halloween-designs";
 import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, NOVEMBER_PALETTE_LABELS, drawNovember, resolveNovText } from "./november-designs";
 import { DEFAULT_PALETTES, DESIGNS as XMAS_DESIGNS, DESIGN_BY_ID as XMAS_BY_ID, drawXmas, resolveText as resolveXmasText } from "./xmas-designs";
+import { LUX_SLIDE_DEFS, LUX_PALETTE, LUX_LABELS, LUX_COVERS, LUX_SLIDES, luxDefaults, resolveLuxText, drawLux, drawLuxPhotoSlide } from "./lux-designs";
+import { EMPOWER, EMPOWER_BY_ID, resolveEmpowerText, drawEmpower } from "./empower-designs";
 import type { Fill, Focus, Slot } from "./basic-covers";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -15,7 +17,7 @@ export const H = 1350;
 export const DEFAULT_FOCUS: Focus = [0.5, 0.32];
 
 export type PoolPhoto = { id: string; file: File; url: string };
-export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas";
+export type ToolId = "unique" | "treatments" | "basic" | "halloween" | "november" | "xmas" | "lux" | "empower";
 
 export type Client = {
   businessName: string;
@@ -55,10 +57,11 @@ export type MPost = {
   group?: "xmas" | "newyear";
   pal?: Record<string, string>; // her own colour changes for this post
   textPos?: Record<string, [number, number]>; // where she has dragged the words on slides 2 onwards
+  topic?: string; // her own topic or angle for this post, typed or picked in the planner
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
-  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas",
+  unique: "Unique", treatments: "Treatment", basic: "BASIC", halloween: "Halloween", november: "November", xmas: "Christmas", lux: "Lux", empower: "Empower",
 };
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -66,9 +69,9 @@ const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s
 
 // How many images each kind of post makes, and how many photos it takes.
 export const slideCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : 1;
+  tool === "unique" ? 3 : tool === "basic" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : 1;
 export const photoCount = (tool: ToolId, design: string): number =>
-  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
+  tool === "unique" ? 3 : tool === "treatments" ? 5 : tool === "lux" ? LUX_SLIDES : tool === "basic" ? 2 + BC.COVER_BY_ID[design as BC.CoverId].photos : 1;
 
 // ---------------------------------------------------------------------------
 // Photos and fonts
@@ -131,6 +134,12 @@ export function makePost(tool: ToolId, design: string, n: number, when: string, 
   } else if (tool === "november") {
     text = { ...NOVEMBER_BY_ID[design as keyof typeof NOVEMBER_BY_ID].defaults };
     photos = [take(0)];
+  } else if (tool === "lux") {
+    text = { ...luxDefaults(Number(design)) };
+    photos = [take(0), take(1), take(2)];
+  } else if (tool === "empower") {
+    text = { ...EMPOWER_BY_ID[design].defaults };
+    photos = [take(0)];
   } else {
     text = { ...XMAS_BY_ID[design as keyof typeof XMAS_BY_ID].defaults };
     photos = [take(0)];
@@ -147,6 +156,8 @@ export const designName = (p: MPost): string =>
     : p.tool === "basic" ? BC.COVER_BY_ID[p.design as BC.CoverId].name
     : p.tool === "halloween" ? HALLOWEEN_BY_ID[p.design as keyof typeof HALLOWEEN_BY_ID].name
     : p.tool === "november" ? NOVEMBER_BY_ID[p.design as keyof typeof NOVEMBER_BY_ID].name
+    : p.tool === "lux" ? LUX_SLIDE_DEFS[Number(p.design)].name
+    : p.tool === "empower" ? EMPOWER_BY_ID[p.design].name
     : XMAS_BY_ID[p.design as keyof typeof XMAS_BY_ID].name;
 
 // The designs each tool can offer, in the order they rotate. Black Friday style posts are never included.
@@ -156,6 +167,8 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "basic" ? BC.COVERS.map((d) => d.id)
     : tool === "halloween" ? HALLOWEEN_DESIGNS.map((d) => d.id)
     : tool === "november" ? NOVEMBER_DESIGNS.map((d) => d.id)
+    : tool === "lux" ? Array.from({ length: LUX_COVERS }, (_, i) => String(i))
+    : tool === "empower" ? EMPOWER.map((d) => d.id)
     : XMAS_DESIGNS.filter((d) => d.group === (group ?? "xmas")).map((d) => d.id);
 
 // ---------------------------------------------------------------------------
@@ -184,6 +197,7 @@ export function brandPalette(tool: ToolId, brand: { main: string; accent: string
   const tint = mixHex(main, "#ffffff", 0.88);
   const base = { paper: tint, red: accent, green: dark, tag: mixHex(accent, "#ffffff", 0.6), frame: mixHex(main, "#ffffff", 0.95), light: mixHex(main, "#ffffff", 0.94), ink: mixHex(dark, "#000000", 0.5) };
   if (tool === "treatments") return { navy: dark, coral: accent, lime: mixHex(accent, "#ffffff", 0.5), cream: tint };
+  if (tool === "lux" || tool === "empower") return { page: tint, dark, accent, soft: mixHex(main, "#ffffff", 0.8), ink: mixHex(dark, "#000000", 0.5), light: mixHex(main, "#ffffff", 0.94) };
   if (tool === "basic") return { bg: dark };
   if (tool === "halloween") return { ...base, paper: mixHex(main, "#000000", 0.86), green: mixHex(main, "#000000", 0.74), tag: mixHex(main, "#ffffff", 0.8), frame: mixHex(main, "#ffffff", 0.88), ink: mixHex(main, "#000000", 0.88) };
   return base;
@@ -196,6 +210,8 @@ export function colourFields(post: MPost, brand?: { main: string; accent: string
   else if (post.tool === "basic") { base = { bg: BASIC_BG }; labels = [{ key: "bg", label: "Background" }]; }
   else if (post.tool === "halloween") { base = { ...HALLOWEEN_PALETTE }; labels = HALLOWEEN_PALETTE_LABELS; }
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
+  else if (post.tool === "lux") { base = { ...LUX_PALETTE }; labels = LUX_LABELS; }
+  else if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; base = { ...d.palette }; labels = d.labels; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
   if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
@@ -263,6 +279,27 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     } as never);
   }
 
+  if (post.tool === "lux") {
+    const palette = palOf<never>(post, c.brand);
+    if (n === 0) {
+      return drawLux(ctx, {
+        cover: Number(post.design), text: resolveLuxText(Number(post.design), post.text, c.fill), palette, metal: {},
+        headFont: c.headFont, bodyFont: c.bodyFont, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner,
+      });
+    }
+    return drawLuxPhotoSlide(ctx, {
+      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette, bodyFont: c.bodyFont,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoPos: corner, arrow: !last,
+    });
+  }
+  if (post.tool === "empower") {
+    const d = EMPOWER_BY_ID[post.design];
+    return drawEmpower(ctx, {
+      design: d.id, text: resolveEmpowerText(d, post.text, c.fill), palette: palOf<never>(post, c.brand), metal: {},
+      headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner ?? "off",
+    });
+  }
+
   const photo = await bmp(c, post.photos[0]);
   const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner ?? ("off" as const) };
   if (post.tool === "halloween") {
@@ -294,6 +331,8 @@ export async function renderPostImages(post: MPost, c: Client, scale = 1): Promi
 // ---------------------------------------------------------------------------
 
 const onImageText = (post: MPost, c: Client): string => {
+  if (post.tool === "lux") { const r = resolveLuxText(Number(post.design), post.text, c.fill); return [r.head, r.sub].filter(Boolean).join(" / "); }
+  if (post.tool === "empower") { const d = EMPOWER_BY_ID[post.design]; const r = resolveEmpowerText(d, post.text, c.fill); return d.fields.map((f) => r[f.key]).filter(Boolean).join("\n"); }
   const rows = (fields: { key: string }[], r: Record<string, string>) => fields.map((f) => r[f.key]).filter(Boolean).join("\n");
   if (post.tool === "halloween") { const d = HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]; return rows(d.fields, resolveHalText(d, post.text, c.fill)); }
   if (post.tool === "november") { const d = NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]; return rows(d.fields, resolveNovText(d, post.text, c.fill)); }
@@ -307,6 +346,9 @@ async function postJson(path: string, body: unknown): Promise<Record<string, any
   if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
   return data;
 }
+
+// Her own topic for a post, folded into the idea the writer is given.
+const withTopic = (idea: string, post: MPost): string => (post.topic?.trim() ? `${idea}. The topic for this post, in my own words: "${post.topic.trim()}". Keep the whole post on this topic` : idea);
 
 // A training academy uses the same designs as a clinic, so its cover words are rewritten from the academy's point of view.
 export const isAcademyClient = (c: Client): boolean => /academy/i.test(c.businessName);
@@ -370,7 +412,7 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   const academy = isAcademyClient(c);
   // First write only: the cover words come from the academy. A Rewrite later keeps whatever the cover says now.
   let coverText: Record<string, string> | null = null;
-  if (academy && !post.caption.trim()) {
+  if (academy && !post.caption.trim() && post.tool !== "lux" && post.tool !== "empower") {
     const fresh = await academyCover(post, c);
     if (Object.keys(fresh).length) { coverText = { ...post.text, ...fresh }; post = { ...post, text: coverText }; }
   }
@@ -379,24 +421,30 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   if (post.tool === "unique") {
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     const t = UD.resolveUniText(def, post.text, c.fill);
-    data = await postJson("/api/unique/copy", { ...base, idea: academy ? academyIdea(post) : def.idea, cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
+    data = await postJson("/api/unique/copy", { ...base, idea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
     slides = [data.slide2, data.slide3];
   } else if (post.tool === "treatments") {
     const def = TD.TREAT_BY_ID[post.design as TD.TreatId];
     const t = Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as Record<string, string>;
-    data = await postJson("/api/treatments/copy", { ...base, treatment: academy ? academyIdea(post) : def.idea, headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
+    data = await postJson("/api/treatments/copy", { ...base, treatment: academy ? academyIdea(post) : withTopic(def.idea, post), headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
     slides = [data.slide2, data.slide3, data.slide4, data.slide5];
   } else if (post.tool === "basic") {
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
-    data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : def.idea, cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
+    data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : withTopic(def.idea, post), cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
+  } else if (post.tool === "lux") {
+    data = await postJson("/api/lux/copy", { ...base, theme: post.topic?.trim() ?? "", fresh: false, onImage: onImageText(post, c) });
+    slides = [data.slide2, data.slide3];
+  } else if (post.tool === "empower") {
+    const def = EMPOWER_BY_ID[post.design];
+    data = await postJson("/api/empower/copy", { ...base, designName: def.name, idea: withTopic(def.idea, post), onImage: onImageText(post, c) });
   } else {
     const def = post.tool === "halloween" ? HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]
       : post.tool === "november" ? NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]
       : XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
     const path = post.tool === "halloween" ? "/api/halloween-posts/copy" : post.tool === "november" ? "/api/november-posts/copy" : "/api/xmas-posts/copy";
-    data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? academyIdea(post) : def.idea, onImage: onImageText(post, c) });
+    data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? academyIdea(post) : withTopic(def.idea, post), onImage: onImageText(post, c) });
   }
   let caption = noDashes(data.caption ?? "");
   if (c.footnote && !caption.includes(c.footnote)) caption += `\n\n${c.footnote}`;

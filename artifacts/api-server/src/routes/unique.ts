@@ -114,7 +114,7 @@ router.post("/unique/copy", async (req: Request, res: Response) => {
       role: str(b.role, 60),
       area: str(b.area, 80),
       audience: str(b.audience, 200),
-      brandNotes: str(b.brandNotes, 600),
+      brandNotes: str(b.brandNotes, 2000),
       idea: str(b.idea, 300) || "a playful notice",
       cover: str(b.cover, 1200),
       fresh: fresh && fields.length > 0,

@@ -11,6 +11,8 @@ import { getBitmap } from "@/lib/month-engine";
 import { ALIGNS, type Align } from "@/lib/text-layout";
 import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
+import { useSiteTreatments } from "@/lib/use-site-treatments";
+import { fetchClientVoice, type ClientVoice } from "@/lib/client-voice";
 import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
@@ -117,8 +119,98 @@ function buildPlan(year: number, month: number, seed: number, hhmm: string, pool
   return items;
 }
 
+
+// ---------------------------------------------------------------------------
+// The planner: she ticks the days she is posting on, then chooses a tool and a topic for each one.
+// ---------------------------------------------------------------------------
+
+const MAX_POSTS = 20;
+const USED_DESIGNS_KEY = "month-designs-used-v1";
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// "seasonal" is whichever pack fits the month (Halloween, November, Christmas, New Year), or Unique when there is none.
+type Choice = "treatments" | "empower" | "lux" | "unique" | "basic" | "seasonal";
+type PlanSlot = { key: string; on: boolean; choice: Choice; design: string; topic: string };
+
+const CHOICE_LABEL: Record<Choice, string> = {
+  treatments: "Treatment", empower: "Relatable and fun (Empower)", lux: "Lux", unique: "Unique", basic: "BASIC", seasonal: "Seasonal",
+};
+
+const dayKey = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+
+// Monday is a treatment, Wednesday is the relatable and fun one, Friday is BASIC, Tuesday is the seasonal pack, Thursday is Unique.
+const DEFAULT_CHOICE: Record<number, Choice> = { 1: "treatments", 2: "seasonal", 3: "empower", 4: "unique", 5: "basic", 6: "unique", 0: "unique" };
+
+// Every day she could still post on in that month. The current month starts from now.
+function monthDays(year: number, month: number, hhmm: string): Date[] {
+  const out: Date[] = [];
+  const now = Date.now();
+  const d = new Date(year, month, 1);
+  while (d.getMonth() === month) {
+    if (new Date(toLocal(d, hhmm)).getTime() > now) out.push(new Date(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+// Weekdays are ticked to begin with, up to 20, and she changes whatever she likes.
+function defaultSlots(year: number, month: number, hhmm: string): PlanSlot[] {
+  let ticked = 0;
+  return monthDays(year, month, hhmm).map((d) => {
+    const dow = d.getDay();
+    const on = dow >= 1 && dow <= 5 && ticked < MAX_POSTS;
+    if (on) ticked++;
+    return { key: dayKey(d), on, choice: DEFAULT_CHOICE[dow], design: "auto", topic: "" };
+  });
+}
+
+function toolFor(choice: Choice, month: number): { tool: ToolId; group?: "xmas" | "newyear" } {
+  if (choice !== "seasonal") return { tool: choice };
+  const season = SEASONAL[month];
+  return season ? { tool: season.tool, group: season.group } : { tool: "unique" };
+}
+
+const designLabel = (tool: ToolId, id: string): string => { try { return designName({ tool, design: id } as MPost); } catch { return id; } };
+
+const readUsed = (presetId: number): string[] => { try { return (JSON.parse(localStorage.getItem(USED_DESIGNS_KEY) || "{}") as Record<string, string[]>)[String(presetId)] ?? []; } catch { return []; } };
+const rememberUsed = (presetId: number, post: MPost) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(USED_DESIGNS_KEY) || "{}") as Record<string, string[]>;
+    all[String(presetId)] = [...new Set([...(all[String(presetId)] ?? []), `${post.tool}:${post.design}`])];
+    localStorage.setItem(USED_DESIGNS_KEY, JSON.stringify(all));
+  } catch { /* the memory is a convenience only */ }
+};
+
+// Turns the ticked days into posts. Designs she has not chosen are picked fresh: not used this month, and not used for this client before.
+function buildFromSlots(slots: PlanSlot[], month: number, seed: number, hhmm: string, poolLen: number, done: (number | string)[], usedBefore: string[]): Item[] {
+  const ticked = slots.filter((s) => s.on);
+  const taken = new Set<string>();
+  ticked.forEach((s) => { if (s.design !== "auto") { const { tool } = toolFor(s.choice, month); taken.add(`${tool}:${s.design}`); } });
+  let cursor = seed * 3;
+  return ticked.map((slot, i) => {
+    const { tool, group } = toolFor(slot.choice, month);
+    let design = slot.design;
+    if (design === "auto") {
+      const list = designsFor(tool, group);
+      const fresh = list.filter((id) => !taken.has(`${tool}:${id}`) && !usedBefore.includes(`${tool}:${id}`));
+      const unusedThisMonth = list.filter((id) => !taken.has(`${tool}:${id}`));
+      const pool = fresh.length ? fresh : unusedThisMonth.length ? unusedThisMonth : list;
+      design = pool[(seed + i) % pool.length];
+      taken.add(`${tool}:${design}`);
+    }
+    const [y, m, d] = slot.key.split("-").map(Number);
+    const when = toLocal(new Date(y, m - 1, d), hhmm);
+    const post = makePost(tool, design, i + 1, when, cursor, poolLen, group);
+    post.topic = slot.topic.trim();
+    cursor += photoCount(tool, design);
+    post.scheduled = done.includes(slot.key);
+    post.selected = !post.scheduled;
+    return { kind: "post" as const, post };
+  });
+}
+
 const photoIdxFor = (p: MPost, n: number): number =>
-  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" ? n : 0;
+  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" || p.tool === "lux" ? n : 0;
 
 const SW = 1080, SH = 1350;
 const PROSPECT = "prospect";
@@ -247,6 +339,8 @@ export default function MonthPlanner() {
   const [showAll, setShowAll] = useState(false);
   const [pickBusy, setPickBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
+  const [slots, setSlots] = useState<PlanSlot[]>([]);
+  const [voice, setVoice] = useState<ClientVoice | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [swap, setSwap] = useState<{ postId: string; slide: number } | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -272,6 +366,24 @@ export default function MonthPlanner() {
       : presets.find((p) => String(p.id) === clientId)),
     [isProspect, prospectName, presets, clientId],
   );
+  const hhmm = (preset as unknown as { defaultPostTime?: string } | undefined)?.defaultPostTime ?? "18:15";
+  const { treatments: siteTreatments } = useSiteTreatments(isProspect ? "" : ((preset as unknown as { websiteUrl?: string | null } | undefined)?.websiteUrl ?? ""));
+  // The planner starts from the usual week and is rebuilt when the client or the month changes.
+  useEffect(() => { setSlots(!preset || isProspect ? [] : defaultSlots(year, month, hhmm)); }, [preset?.id, ym, hhmm, isProspect]); // eslint-disable-line react-hooks/exhaustive-deps
+  // What this client has told me, so the words are written from who they really are.
+  useEffect(() => {
+    setVoice(null);
+    if (!preset || isProspect) return;
+    let live = true;
+    void fetchClientVoice(preset.id, preset.name).then((v) => { if (live) setVoice(v); });
+    return () => { live = false; };
+  }, [preset?.id, isProspect]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tickedCount = slots.filter((x) => x.on).length;
+  const patchSlot = (key: string, change: Partial<PlanSlot>) => setSlots((l) => l.map((x) => (x.key === key ? { ...x, ...change } : x)));
+  const toggleSlot = (key: string, on: boolean) => {
+    if (on && tickedCount >= MAX_POSTS) { toast.error(`That is ${MAX_POSTS} days already. Untick one first.`); return; }
+    patchSlot(key, { on });
+  };
   const { data: approvedData } = useApprovedImages("");
   const allApproved = useMemo(() => approvedData ?? [], [approvedData]);
 
@@ -359,7 +471,7 @@ export default function MonthPlanner() {
     role: role.trim(),
     area: area.trim(),
     audience: preset?.targetAudience ?? "",
-    brandNotes: preset?.brandNotes ?? "",
+    brandNotes: [preset?.brandNotes ?? "", voice?.text ?? ""].filter((x) => x.trim()).join("\n"),
     footnote: preset?.captionFootnote?.trim() ?? "",
     fill: { owner: owner.trim(), clinic: preset?.name ?? "", area: area.trim(), role: role.trim() },
     headFont,
@@ -370,7 +482,7 @@ export default function MonthPlanner() {
     brand: brandOn ? { main: brandMain, accent: brandAccent } : null,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent]);
+  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent, voice]);
 
   const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const clientFonts: FontOpt[] = useMemo(
@@ -403,10 +515,10 @@ export default function MonthPlanner() {
   };
 
   const bucket = `${clientId}:${year}-${month}`;
-  const doneList = (): number[] => { try { return (JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, number[]>)[bucket] ?? []; } catch { return []; } };
-  const markDone = (n: number) => {
+  const doneList = (): (number | string)[] => { try { return (JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, (number | string)[]>)[bucket] ?? []; } catch { return []; } };
+  const markDone = (n: number | string) => {
     try {
-      const all = JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, number[]>;
+      const all = JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, (number | string)[]>;
       all[bucket] = [...new Set([...(all[bucket] ?? []), n])];
       localStorage.setItem(DONE_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
@@ -433,7 +545,10 @@ export default function MonthPlanner() {
     if (isProspect && !prospectName.trim()) { toast.error("Add their clinic name first."); return; }
     if (!pool.length) { toast.error(isProspect ? "Add some of their photos first." : "This client has no approved photos yet. Approve some first."); return; }
     setSampleLink("");
-    let plan = buildPlan(year, month, isProspect ? 1 + Math.floor(Math.random() * 40) : preset.id, (preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", pool.length, doneList());
+    if (!isProspect && !tickedCount) { toast.error("Tick at least one day in the plan first."); return; }
+    let plan: Item[] = isProspect
+      ? buildPlan(year, month, 1 + Math.floor(Math.random() * 40), hhmm, pool.length, doneList().filter((x): x is number => typeof x === "number"))
+      : buildFromSlots(slots, month, preset.id, hhmm, pool.length, doneList(), readUsed(preset.id));
     if (isProspect) {
       // A free sample is 8 posts, shown on the page I hand over.
       const only = plan.filter((i) => i.kind === "post").slice(0, 8);
@@ -474,7 +589,8 @@ export default function MonthPlanner() {
       for (const p of ready) {
         await schedulePost(p, client, preset.id);
         patchPost(p.id, { scheduled: true, selected: false });
-        markDone(p.n);
+        markDone(p.when.slice(0, 10));
+        if (!isProspect) rememberUsed(preset.id, p);
         ok++;
         toast.loading(`Scheduling ${ok} of ${ready.length}`, { id: toastId });
       }
@@ -546,7 +662,7 @@ export default function MonthPlanner() {
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <CalendarRange className="w-5 h-5 text-violet-400" />
         <h1 className="font-bold text-lg">Month</h1>
-        <span className="text-sm text-muted-foreground">One client, one calendar month, 20 posts made for you, starting from now</span>
+        <span className="text-sm text-muted-foreground">Pick a client and a month, tick your days, choose a tool and topic for each, and I make them all together</span>
       </header>
       <main className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
         <section className="rounded-2xl border border-border/30 p-5 space-y-4">
@@ -651,6 +767,82 @@ export default function MonthPlanner() {
             </div>
           </div>
         </section>
+        {preset && !isProspect && (
+          <section className="rounded-2xl border border-border/30 p-5 space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="font-semibold">Plan {MONTHS[month]}</h2>
+              <span className={`text-sm ${tickedCount >= MAX_POSTS ? "text-amber-400" : "text-muted-foreground"}`}>{tickedCount} of {MAX_POSTS} days ticked</span>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={() => setSlots(defaultSlots(year, month, hhmm).map((d) => ({ ...(slots.find((x) => x.key === d.key) ?? d), on: d.on })))}>Tick Monday to Friday</Button>
+                <Button size="sm" variant="outline" onClick={() => setSlots((l) => l.map((x) => ({ ...x, on: false })))}>Clear ticks</Button>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tick the days you are posting on, choose a tool for each one, then a topic from the list or type your own. Leave the list on "I choose a fresh one" and I pick a design this client has not had before.
+              A topic you type steers the words and the caption. The cover wording comes from the design, and you can change it on the post once it is made.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {!voice ? "Checking what this client has told me…"
+                : voice.text
+                  ? `Writing from what ${preset.name} has told me: ${[voice.found.profile && "Getting to know you", voice.found.questions > 0 && `${voice.found.questions} Client Question answer${voice.found.questions === 1 ? "" : "s"}`, voice.found.homework > 0 && "Homework"].filter(Boolean).join(", ")}.`
+                  : `${preset.name} has not filled in Getting to know you, Client Question or Homework yet, so the words come from their preset and brand notes only.`}
+              {siteTreatments.length > 0 ? ` Their website treatments are in the treatment topic list (${siteTreatments.length}).` : ""}
+            </p>
+            {siteTreatments.length > 0 && <datalist id="month-site-treatments">{siteTreatments.map((t) => <option key={t} value={t} />)}</datalist>}
+            <div className="divide-y divide-border/20">
+              {slots.map((slot) => {
+                const [y, m, d] = slot.key.split("-").map(Number);
+                const date = new Date(y, m - 1, d);
+                const { tool, group } = toolFor(slot.choice, month);
+                const weekend = date.getDay() === 0 || date.getDay() === 6;
+                return (
+                  <div key={slot.key} className={`grid items-center gap-2 py-2 sm:grid-cols-[130px_190px_minmax(0,1fr)_minmax(0,1fr)] ${slot.on ? "" : "opacity-50"}`}>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={slot.on} onChange={(e) => toggleSlot(slot.key, e.target.checked)} className="h-4 w-4 accent-violet-500" />
+                      <span className={weekend ? "text-muted-foreground" : "font-medium"}>{DAY_NAMES[date.getDay()]} {d}</span>
+                    </label>
+                    <select
+                      value={slot.choice}
+                      disabled={!slot.on}
+                      onChange={(e) => patchSlot(slot.key, { choice: e.target.value as Choice, design: "auto" })}
+                      className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
+                      aria-label={`Tool for ${slot.key}`}
+                    >
+                      {(Object.keys(CHOICE_LABEL) as Choice[])
+                        .filter((c) => c !== "seasonal" || !!SEASONAL[month])
+                        .map((c) => <option key={c} value={c}>{c === "seasonal" ? SEASONAL[month]?.name ?? "Seasonal" : CHOICE_LABEL[c]}</option>)}
+                    </select>
+                    <select
+                      value={slot.design}
+                      disabled={!slot.on}
+                      onChange={(e) => patchSlot(slot.key, { design: e.target.value })}
+                      className="w-full rounded-md border border-border/40 bg-background px-2 py-1.5 text-sm"
+                      aria-label={`Design for ${slot.key}`}
+                    >
+                      <option value="auto">I choose a fresh one</option>
+                      {designsFor(tool, group).map((id) => <option key={id} value={id}>{designLabel(tool, id)}</option>)}
+                    </select>
+                    <Input
+                      value={slot.topic}
+                      disabled={!slot.on}
+                      onChange={(e) => patchSlot(slot.key, { topic: e.target.value })}
+                      list={slot.choice === "treatments" && siteTreatments.length ? "month-site-treatments" : undefined}
+                      placeholder={slot.choice === "treatments" ? "Treatment or topic (optional)" : "Your own topic (optional)"}
+                      className="h-9"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={create} disabled={!preset || !!busy || poolBusy || !tickedCount}>
+                {busy === "write" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+                {items.length ? `Make these ${tickedCount} posts again` : `Make these ${tickedCount} posts`}
+              </Button>
+              <span className="text-sm text-muted-foreground">Nothing is scheduled until you press the schedule button at the bottom.</span>
+            </div>
+          </section>
+        )}
         {isProspect && (
           <section className="rounded-2xl border border-border/30 p-5 space-y-2">
             <h2 className="font-semibold">Their photos</h2>
@@ -685,7 +877,7 @@ export default function MonthPlanner() {
 
         {items.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Pick a client and a month and press Create the month. I make every post, picture and caption from their approved photos and put them on screen for you to check. Nothing is scheduled until you press the schedule button at the bottom.
+            Pick a client and a month, tick the days in the plan and press Make these posts. I make every post, picture and caption from their approved photos and put them on screen for you to check. Nothing is scheduled until you press the schedule button at the bottom.
           </p>
         )}
 
