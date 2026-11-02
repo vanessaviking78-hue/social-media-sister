@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
-import { SUITE_FONTS, fontById, injectSuiteFontCss, drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
+import { SUITE_FONTS, clientSlug, fontById, injectSuiteFontCss, drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { RYDER_CLINIC, RYDER_GROUPS, RYDER_POST_TYPES, type RyderPostType } from "@/lib/ryder-posts";
 
 // THE RYDER CLINIC, her own page. Photo first, a soft white wash over the bottom third.
@@ -36,8 +37,8 @@ type Photo = { id: string; bmp: ImageBitmap; url: string };
 type Fonts = { head: string; body: string };
 type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
 
-async function loadTitleFont(): Promise<TitleFont> {
-  const style = readTitleStyle();
+async function loadTitleFont(client?: string): Promise<TitleFont> {
+  const style = readTitleStyle(client);
   try {
     return { lf: await loadSuiteFont(style.fontId), style };
   } catch {
@@ -237,11 +238,11 @@ export default function RyderPage() {
   // the title look is saved in Font Lab; pick it up now and whenever she comes back to this tab
   useEffect(() => {
     let live = true;
-    const load = () => { loadTitleFont().then((t) => live && setTf(t)); };
+    const load = () => { loadTitleFont(preset ? clientSlug(preset.name) : undefined).then((t) => live && setTf(t)); };
     load();
     window.addEventListener("focus", load);
     return () => { live = false; window.removeEventListener("focus", load); };
-  }, []);
+  }, [preset]);
   const [area, setArea] = useState("Bedford");
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -279,7 +280,7 @@ export default function RyderPage() {
 
   const typesInGroup = useMemo(() => RYDER_POST_TYPES.filter((t) => t.group === group), [group]);
 
-  const addPhotos = async (files: FileList | null) => {
+  const addPhotos = async (files: FileList | File[] | null) => {
     if (!files?.length) return;
     const added: Photo[] = [];
     for (const f of Array.from(files)) {
@@ -331,7 +332,7 @@ export default function RyderPage() {
 
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
-    const tfNow = await loadTitleFont();
+    const tfNow = await loadTitleFont(preset ? clientSlug(preset.name) : undefined);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");
@@ -434,7 +435,17 @@ export default function RyderPage() {
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPhotos(e.target.files); e.currentTarget.value = ""; }} />
-            <Button onClick={() => fileRef.current?.click()} variant="secondary"><ImagePlus className="w-4 h-4 mr-2" />Add photos</Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={() => fileRef.current?.click()} variant="secondary"><ImagePlus className="w-4 h-4 mr-2" />Upload photos</Button>
+              <ApprovedImagesPicker
+                clientName={preset?.name || RYDER_CLINIC}
+                mode="multi"
+                skipBackgroundRemoval
+                large
+                label="Use approved photos"
+                onAddImages={(files) => { if (files.length) addPhotos(files); }}
+              />
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap">
             {pool.length === 0 && <p className="text-white/50 text-sm">Add the doctor's photos once. They go on every carousel exactly as they are, with the white wash over the bottom third.</p>}

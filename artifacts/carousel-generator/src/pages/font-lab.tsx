@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { usePresets } from "@/lib/use-presets";
 import {
   DEFAULT_TITLE_STYLE,
   SUITE_FONTS,
@@ -12,6 +13,9 @@ import {
   injectSuiteFontCss,
   layoutTitle,
   loadSuiteFont,
+  clearClientStyle,
+  clientSlug,
+  hasClientStyle,
   readTitleStyle,
   saveTitleStyle,
   titleHeight,
@@ -50,7 +54,15 @@ function Glyph({ lf, name, active, onClick }: { lf: LoadedFont; name: string; ac
 }
 
 export default function FontLabPage() {
+  const { presets } = usePresets();
+  const [client, setClient] = useState<string>(""); // "" means everyone
   const [style, setStyle] = useState<TitleStyle>(() => readTitleStyle());
+  const pickClient = (slug: string) => {
+    setClient(slug);
+    setSaved(false);
+    setStyle(readTitleStyle(slug || undefined));
+  };
+  const clientList = useMemo(() => [...presets].sort((a, b) => a.name.localeCompare(b.name)), [presets]);
   const [text, setText] = useState(SAMPLE);
   const [size, setSize] = useState(110);
   const [lf, setLf] = useState<LoadedFont | null>(null);
@@ -112,9 +124,10 @@ export default function FontLabPage() {
   };
 
   const save = () => {
-    saveTitleStyle(style);
+    saveTitleStyle(style, client || undefined);
     setSaved(true);
-    toast.success("Saved. The Ryder titles now use this look.");
+    const who = client ? clientList.find((p) => clientSlug(p.name) === client)?.name || "this client" : "every client without their own look";
+    toast.success(`Saved for ${who}.`);
   };
 
   const font = fontById(style.fontId);
@@ -126,9 +139,23 @@ export default function FontLabPage() {
           <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
             <h1 className="text-3xl">Font Lab</h1>
-            <p className="text-white/60 text-sm">Pick a font, space it out wide and choose the occasional curly letters. The preview is drawn the same way as the posts.</p>
+            <p className="text-white/60 text-sm">Pick a font, space it out wide and choose the occasional curly letters. The preview is drawn the same way as the posts. Choose a client below to give them their own look.</p>
           </div>
         </div>
+
+        <section className="rounded-xl border border-white/10 p-4 space-y-2">
+          <h2 className="font-semibold">Who is this for?</h2>
+          <select value={client} onChange={(e) => pickClient(e.target.value)} className="w-full md:w-96 bg-white/5 border border-white/15 rounded-md p-2">
+            <option value="" className="text-black">Everyone (the default look)</option>
+            {clientList.map((p) => (
+              <option key={p.id} value={clientSlug(p.name)} className="text-black">{p.name}{hasClientStyle(clientSlug(p.name)) ? "  (has own look)" : ""}</option>
+            ))}
+          </select>
+          <p className="text-white/50 text-xs">Each client can have their own title look. A client without one uses the "Everyone" look.</p>
+          {client && hasClientStyle(client) && (
+            <button className="text-xs underline text-white/60" onClick={() => { clearClientStyle(client); pickClient(client); toast.success("That client now uses the Everyone look"); }}>Remove this client's own look</button>
+          )}
+        </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-3">
           <h2 className="font-semibold">1. Choose a font</h2>
@@ -218,7 +245,7 @@ export default function FontLabPage() {
 
         <div className="flex flex-wrap items-center gap-3 sticky bottom-4">
           <Button onClick={save} className="bg-emerald-500 hover:bg-emerald-400 text-black">
-            {saved ? <Check className="w-4 h-4 mr-2" /> : null}Use this look for the Ryder titles
+            {saved ? <Check className="w-4 h-4 mr-2" /> : null}Save this look{client ? " for this client" : " for everyone"}
           </Button>
           <Button variant="outline" onClick={() => { setStyle({ ...DEFAULT_TITLE_STYLE }); setSaved(false); }}>Start again</Button>
           <span className="text-white/50 text-sm">{font.name}, spacing {style.tracking}</span>

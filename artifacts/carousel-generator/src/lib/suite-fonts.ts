@@ -110,21 +110,42 @@ export const DEFAULT_TITLE_STYLE: TitleStyle = {
   rate: "some",
 };
 
-export const TITLE_STYLE_KEY = "suite-title-style-v1";
+export const TITLE_STYLE_KEY = "suite-title-style-v1"; // the "everyone" look
+const clientKey = (slug: string) => `suite-title-style-client-${slug}`;
 
-export function readTitleStyle(): TitleStyle {
+/** A short, steady key for a client name, so each client keeps their own look. */
+export const clientSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+function readKey(key: string): TitleStyle | null {
   try {
-    const raw = localStorage.getItem(TITLE_STYLE_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) return { ...DEFAULT_TITLE_STYLE, ...JSON.parse(raw) };
   } catch {
     /* private window */
   }
-  return { ...DEFAULT_TITLE_STYLE };
+  return null;
 }
 
-export function saveTitleStyle(s: TitleStyle) {
+/** The look saved for this client, else the one saved for everyone, else the default. */
+export function readTitleStyle(client?: string): TitleStyle {
+  return (client ? readKey(clientKey(client)) : null) || readKey(TITLE_STYLE_KEY) || { ...DEFAULT_TITLE_STYLE };
+}
+
+export function hasClientStyle(client: string): boolean {
+  return readKey(clientKey(client)) !== null;
+}
+
+export function saveTitleStyle(s: TitleStyle, client?: string) {
   try {
-    localStorage.setItem(TITLE_STYLE_KEY, JSON.stringify(s));
+    localStorage.setItem(client ? clientKey(client) : TITLE_STYLE_KEY, JSON.stringify(s));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearClientStyle(client: string) {
+  try {
+    localStorage.removeItem(clientKey(client));
   } catch {
     /* ignore */
   }
