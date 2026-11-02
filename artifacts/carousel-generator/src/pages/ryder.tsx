@@ -114,6 +114,7 @@ type Post = {
   when: string;
   busy: boolean;
   scheduling: boolean;
+  rejected?: string;
 };
 
 const TEMPLATES = [{ id: "t1", name: "1. Photo with white wash" }];
@@ -390,15 +391,15 @@ export default function RyderPage() {
 
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
 
-  const write = async (post: Post) => {
+  const write = async (post: Post, fix?: string) => {
     if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, kind: t.kind, avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: post.note, area }) });
+      const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, kind: t.kind, avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" "), area }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags });
+      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -428,6 +429,23 @@ export default function RyderPage() {
     }
     zip.file("caption.txt", `${post.caption}\n\n${post.hashtags.join(" ")}\n`);
     saveAs(await zip.generateAsync({ type: "blob" }), `ryder-${t.id}.zip`);
+  };
+
+  // Pressing Schedule first asks: schedule it, or reject it with a reason.
+  const [review, setReview] = useState<{ id: string; reason: string; rejecting: boolean } | null>(null);
+  const REASONS = ["Wording is too long", "Tone is not right", "Not clinical enough", "Wrong photo", "Not suitable for her page", "Compliance concern"];
+  const reject = (post: Post, rewrite: boolean) => {
+    const reason = (review?.reason || "").trim();
+    if (!reason) { toast.error("Add a reason first"); return; }
+    patch(post.id, { rejected: reason });
+    try {
+      const log = JSON.parse(localStorage.getItem("ryder-rejected-v1") || "[]");
+      log.push({ typeId: post.typeId, hook: post.hook, reason, at: new Date().toISOString() });
+      localStorage.setItem("ryder-rejected-v1", JSON.stringify(log.slice(-200)));
+    } catch { /* ignore */ }
+    setReview(null);
+    if (rewrite) write(post, reason);
+    else toast.success("Rejected, with your reason saved on the post");
   };
 
   const schedule = async (post: Post) => {
@@ -599,13 +617,48 @@ export default function RyderPage() {
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
                     </Button>
                     <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
-                    <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling}>
+                    <Button size="sm" onClick={() => setReview({ id: post.id, reason: "", rejecting: false })} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
+                {post.rejected && (
+                  <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm flex items-start justify-between gap-3">
+                    <div><span className="font-semibold text-red-300">Rejected.</span> {post.rejected}</div>
+                    <button className="underline text-white/70 shrink-0" onClick={() => patch(post.id, { rejected: undefined })}>Clear</button>
+                  </div>
+                )}
+                {review && review.id === post.id && (
+                  <div className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3 text-sm">
+                    {!review.rejecting ? (
+                      <>
+                        <p className="font-medium">Happy with this post?</p>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button size="sm" onClick={() => { setReview(null); schedule(post); }}><CalendarCheck className="w-4 h-4 mr-2" />Yes, schedule it</Button>
+                          <Button size="sm" variant="outline" className="border-red-400/50 text-red-300" onClick={() => setReview({ ...review, rejecting: true })}>Reject it with a reason</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setReview(null)}>Cancel</Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium">Why are you rejecting it?</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {REASONS.map((r) => (
+                            <button key={r} onClick={() => setReview({ ...review, reason: r })} className={`rounded-full border px-3 py-1 ${review.reason === r ? "border-red-400 bg-red-400/15" : "border-white/20 hover:border-white/50"}`}>{r}</button>
+                          ))}
+                        </div>
+                        <textarea rows={2} className="w-full bg-white/5 border border-white/15 rounded-md p-2" placeholder="Or type your own reason" value={review.reason} onChange={(e) => setReview({ ...review, reason: e.target.value })} />
+                        <div className="flex gap-2 flex-wrap">
+                          <Button size="sm" onClick={() => reject(post, true)} disabled={post.busy}><Sparkles className="w-4 h-4 mr-2" />Reject and rewrite it</Button>
+                          <Button size="sm" variant="secondary" onClick={() => reject(post, false)}>Reject only</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setReview(null)}>Cancel</Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
                     <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={look} logo={logo} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
