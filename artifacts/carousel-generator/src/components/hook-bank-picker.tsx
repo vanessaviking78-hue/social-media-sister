@@ -55,6 +55,8 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
   const [dayFilter, setDayFilter] = useState<string>("All");
   const [showUsed, setShowUsed] = useState(false);
   const [search, setSearch] = useState("");
+  const [theme, setTheme] = useState("All");
+  const themes = ["All", "Original", ...Array.from(new Set(HOOKS.map(h => h.theme).filter((t): t is string => !!t)))];
 
   // Show what this browser knows straight away, then bring in the list from the database.
   useEffect(() => {
@@ -128,6 +130,21 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                 {d}
               </button>
             ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Theme</span>
+            {themes.map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTheme(t)}
+                className={`rounded-full border px-3 py-1 text-xs ${theme === t ? "border-pink-500/60 bg-pink-500/10" : "border-border/40 hover:border-border/70"}`}
+              >
+                {t === "Original" ? "My first hooks" : t}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -165,6 +182,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
             {visibleDays.map(d => {
               const items = HOOKS
                 .filter(h => h.day === d.day)
+                .filter(h => theme === "All" || (theme === "Original" ? !h.theme : h.theme === theme))
                 .filter(h => !q || (h.text + " " + (h.group ?? "") + " " + h.season).toLowerCase().includes(q))
                 .filter(h => showUsed || !used.includes(h.code) || picked.includes(h.code));
               const pickedHere = picked.filter(c => HOOKS.some(h => h.code === c && h.day === d.day)).length;
