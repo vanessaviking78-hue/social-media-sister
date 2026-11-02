@@ -9,7 +9,7 @@ import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, NOVEMBER_PALETTE_LA
 import { DEFAULT_PALETTES, DESIGNS as XMAS_DESIGNS, DESIGN_BY_ID as XMAS_BY_ID, drawXmas, resolveText as resolveXmasText } from "./xmas-designs";
 import { LUX_SLIDE_DEFS, LUX_PALETTE, LUX_LABELS, LUX_COVERS, LUX_SLIDES, luxDefaults, resolveLuxText, drawLux, drawLuxPhotoSlide } from "./lux-designs";
 import { EMPOWER, EMPOWER_BY_ID, resolveEmpowerText, drawEmpower } from "./empower-designs";
-import { MENS_SETS, MENS_PHOTO_COUNT } from "./mens-sets";
+import { MENS_SETS, MENS_PHOTO_COUNT, MENS_STATIC_READY } from "./mens-sets";
 import { drawAllPostPages, MIN_PHOTOS, type MagazinePostCopy } from "./magazine-post-pages";
 import { setMagazineFonts, setMagazineSize, PAGE_W as MAG_W, PAGE_H as MAG_H } from "./magazine-pages";
 import { setFlipHandoff } from "./flip-handoff";
@@ -206,7 +206,7 @@ export const designsFor = (tool: ToolId, group?: "xmas" | "newyear"): string[] =
     : tool === "november" ? NOVEMBER_DESIGNS.map((d) => d.id)
     : tool === "lux" ? Array.from({ length: LUX_COVERS }, (_, i) => String(i))
     : tool === "empower" ? EMPOWER.map((d) => d.id)
-    : tool === "mens" ? [...MENS_SETS.map((m) => m.id), ...UD.UNIQUE.map((d) => `u:${d.id}`)]
+    : tool === "mens" ? [...(MENS_STATIC_READY ? MENS_SETS.map((m) => m.id) : []), ...UD.UNIQUE.map((d) => `u:${d.id}`)]
     : tool === "magazine" ? ["post", "reel"]
     : tool === "tweet" ? ["tweet"]
     : tool === "stylish" ? [...STYLISH_COVERS.map((c) => `${c}:editorial`), ...STYLISH_COVERS.map((c) => `${c}:classic`)]

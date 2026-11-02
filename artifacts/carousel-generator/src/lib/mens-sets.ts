@@ -11,6 +11,8 @@ export type MensSet = {
 };
 
 // Photos of men shared by every client, kept in public/mens/photos as man-1.jpg to man-11.jpg. Men posts built as photo posts draw on these.
+// The finished slide sets are not in the code yet (their PNGs have to be added under public/mens/<folder>). Until they are, Month only offers the photo posts.
+export const MENS_STATIC_READY = false;
 export const MENS_PHOTO_COUNT = 11;
 export const mensPhotoPath = (i: number) => `/mens/photos/man-${(i % MENS_PHOTO_COUNT) + 1}.jpg`;
 
