@@ -207,6 +207,7 @@ async function buildClientProfileContext(clientName: string): Promise<string> {
   try { await ensureSiteCache(); } catch { /* skip */ }
   const clip = (t: unknown, max = 600) => String(t ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 
+  let gtky = false;
   // Getting to know you
   try {
     await ensureTable();
@@ -220,6 +221,7 @@ async function buildClientProfileContext(clientName: string): Promise<string> {
       const lines = Object.keys(LABELS)
         .filter(k => (answers[k] ?? "").trim())
         .map(k => `- ${LABELS[k]}: ${answers[k].trim().replace(/\s+/g, " ")}`);
+      if (lines.length) gtky = true;
       if (lines.length) parts.push(`GETTING TO KNOW YOU (their own words):\n${lines.join("\n")}`);
     }
   } catch { /* skip this part */ }
@@ -293,7 +295,7 @@ async function buildClientProfileContext(clientName: string): Promise<string> {
   } catch { /* skip this part */ }
 
   if (!parts.length) return "";
-  return `\n\nWHAT I KNOW ABOUT THIS CLIENT (use it so the writing sounds like them, use their humour and their patients' worries, and respect any off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${parts.join("\n\n")}\n\nTONE COMES FROM THIS CLIENT, NOT FROM THE HOUSE VOICE: the house voice only supplies the structure (hooks, pillars, the closing question). Read how this person writes and talks in her own words above: formal or chatty, dry or silly, short or flowing, any regional words, what makes her laugh, what she cares about. Write in that register and at that level of humour, using her own interests, sayings and real details. Never use stock props (tea, kettle, biscuits, sofa). Two clients must never sound alike, so avoid generic openers and jokes that could sit on anyone's page.`;
+  return `\n\nWHAT I KNOW ABOUT THIS CLIENT (use it so the writing sounds like them, use their humour and their patients' worries, and respect any off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${parts.join("\n\n")}${gtky ? `\n\nTONE COMES FROM THIS CLIENT, NOT FROM THE HOUSE VOICE: the house voice only supplies the structure (hooks, pillars, the closing question). Read how this person writes and talks in her own words above: formal or chatty, dry or silly, short or flowing, any regional words, what makes her laugh, what she cares about. Write in that register and at that level of humour, using her own interests, sayings and real details. Never use stock props (tea, kettle, biscuits, sofa). Two clients must never sound alike, so avoid generic openers and jokes that could sit on anyone's page.` : `\n\nTONE: this client has not filled in Getting to know you, so write in the HOUSE VOICE (professional with humour and personality, but caring) and use the facts above only for what the clinic does and who it serves.`}`;
 }
 
 const newToken = () => randomBytes(12).toString("hex");
