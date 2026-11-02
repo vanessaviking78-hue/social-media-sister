@@ -392,6 +392,10 @@ export default function RyderPage() {
 
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
 
+  // Her preset's caption footnote goes on the end of every caption, once, ahead of the hashtags.
+  const foot = (preset?.captionFootnote || "").trim();
+  const withFoot = (c: string) => (foot && c.trim() && !c.includes(foot) ? `${c.trimEnd()}\n\n${foot}` : c);
+
   const write = async (post: Post, fix?: string) => {
     if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
@@ -400,7 +404,7 @@ export default function RyderPage() {
       const r = await fetch(`${BASE}/api/ryder/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, kind: t.kind, avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" "), area }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
+      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: withFoot(fixDoctor(data.caption)), hashtags: data.hashtags, rejected: undefined });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -461,7 +465,7 @@ export default function RyderPage() {
       const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `ryder-${t.id}-${i + 1}-${Date.now()}.png`));
       const body = {
         postType: "carousel",
-        content: { caption: `${post.caption.trim()}\n\n${post.hashtags.join(" ")}`.trim(), title: `${t.label} · ${RYDER_CLINIC}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "ryder" },
+        content: { caption: `${withFoot(post.caption).trim()}\n\n${post.hashtags.join(" ")}`.trim(), title: `${t.label} · ${RYDER_CLINIC}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "ryder" },
         scheduledAt: new Date(post.when).toISOString(),
         isTrial: false,
         notes: "",
@@ -505,7 +509,7 @@ export default function RyderPage() {
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
             <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Bedford" /></label>
           </div>
-          <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it.</p>
+          <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes on the end of every caption, then the 5 hashtags.</p>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
               <span className="text-white/60">Gradient colour (the default for every post)</span>
