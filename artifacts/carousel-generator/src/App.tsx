@@ -23,6 +23,7 @@ import BasicPosts from "@/pages/basic-posts";
 import Treatments from "@/pages/treatments";
 import No1Page from "@/pages/no1";
 import RyderPage from "@/pages/ryder";
+import LisaPage from "@/pages/lisa";
 import FontLabPage from "@/pages/font-lab";
 import UniquePosts from "@/pages/unique";
 import MonthPlanner from "@/pages/month-planner";
@@ -180,6 +181,7 @@ function ProtectedRouter() {
       <Route path="/treatments" component={Treatments} />
       <Route path="/no1" component={No1Page} />
       <Route path="/ryder" component={RyderPage} />
+      <Route path="/lisa" component={LisaPage} />
       <Route path="/font-lab" component={FontLabPage} />
       <Route path="/unique" component={UniquePosts} />
       <Route path="/month-planner" component={MonthPlanner} />
