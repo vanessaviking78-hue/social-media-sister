@@ -2,13 +2,14 @@
 // Post 1 is the intro (headline is the treatment name). Posts 2 to 6 are the angles below.
 // Edit this list to add or rename a treatment. The folder names in "Universal images" match `name`.
 
-export type UGroupId = "fillers" | "regenerative" | "laser" | "skin";
+export type UGroupId = "fillers" | "regenerative" | "laser" | "skin" | "wellbeing";
 
 export const U_GROUPS: { id: UGroupId; label: string; folder: string }[] = [
   { id: "fillers", label: "Fillers", folder: "Fillers" },
   { id: "regenerative", label: "Regenerative", folder: "Regenerative" },
   { id: "laser", label: "Laser hair removal", folder: "Laser hair removal" },
   { id: "skin", label: "Skin treatments", folder: "Skin treatments" },
+  { id: "wellbeing", label: "Wellbeing", folder: "Wellbeing" },
 ];
 
 export type UTreatment = {
@@ -62,6 +63,8 @@ export const U_TREATMENTS: UTreatment[] = [
   t("microdermabrasion", "skin", "Microdermabrasion", "a scrub", "Mechanical exfoliation that polishes away dull surface skin.", { plural: false }),
   t("medical-facial", "skin", "Medical grade facial", "a high street facial", "A facial built around medical grade skincare and a proper skin assessment.", { mid: "a medical grade facial", plural: false }),
   t("skin-tightening", "skin", "Skin tightening", "a good night's sleep", "Non surgical treatments that support firmness of the face and body.", { plural: false }),
+  // Wellbeing
+  t("reiki", "wellbeing", "Reiki", "a massage", "Reiki is a gentle, hands-off relaxation therapy where a practitioner uses light touch or hovering hands while the client rests, fully clothed. It is offered for relaxation and a sense of calm only. Never claim it heals, treats, cures or relieves any condition, pain, stress or illness, and never suggest it replaces medical care.", { mid: "Reiki", plural: false }),
 ];
 
 export const U_BY_ID = new Map(U_TREATMENTS.map((x) => [x.id, x]));
