@@ -38,6 +38,24 @@ type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: 
 const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+// Metallic finishes. A colour value is either a hex, or "metal:name" for a shiny multi stop gradient.
+export const METALS: { id: string; name: string; stops: string[] }[] = [
+  { id: "gold", name: "Gold", stops: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"] },
+  { id: "rosegold", name: "Rose gold", stops: ["#8a4f45", "#d9a08f", "#ffe3d6", "#c98a79", "#8a4f45"] },
+  { id: "silver", name: "Silver", stops: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"] },
+  { id: "champagne", name: "Champagne", stops: ["#9c8458", "#e6d2a8", "#fff8e6", "#d2bb8c", "#9c8458"] },
+  { id: "bronze", name: "Bronze", stops: ["#5c3a1a", "#a8713a", "#e0ac72", "#8a5a2a", "#5c3a1a"] },
+  { id: "copper", name: "Copper", stops: ["#6e2f1a", "#c0683f", "#f0a984", "#b05a35", "#6e2f1a"] },
+  { id: "gunmetal", name: "Gunmetal", stops: ["#1c1f24", "#4a5059", "#8b929c", "#3a3f47", "#1c1f24"] },
+];
+const metalOf = (v: string) => (v.startsWith("metal:") ? METALS.find((m) => m.id === v.slice(6)) : undefined);
+const metalCss = (m: { stops: string[] }) => `linear-gradient(135deg, ${m.stops.map((c, i) => `${c} ${Math.round((i / (m.stops.length - 1)) * 100)}%`).join(", ")})`;
+const metalFill = (ctx: CanvasRenderingContext2D, m: { stops: string[] }, x0: number, y0: number, x1: number, y1: number) => {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  m.stops.forEach((c, i) => g.addColorStop(i / (m.stops.length - 1), c));
+  return g;
+};
+
 const rgbOf = (hex: string) => {
   const h = isHex(hex) ? hex : "#0d0d0d";
   return `${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)}`;
@@ -152,15 +170,42 @@ function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
 // The wash: clear where the picture shows, solid where the writing sits. It grows from the bottom or from the top.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
   const o = Math.max(0, Math.min(100, look.opacity)) / 100;
-  const c = rgbOf(look.wash);
   const bottom = look.dir === "bottom";
+  const metal = metalOf(look.wash);
+  const c = metal ? "0,0,0" : rgbOf(look.wash);
   const g = bottom ? ctx.createLinearGradient(0, H * from, 0, H) : ctx.createLinearGradient(0, H * (1 - from), 0, 0);
   g.addColorStop(0, `rgba(${c},0)`);
   g.addColorStop(0.45, `rgba(${c},${0.88 * o})`);
   g.addColorStop(0.7, `rgba(${c},${0.98 * o})`);
   g.addColorStop(1, `rgba(${c},${o})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  if (!metal) {
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  // metallic: paint the shine on a spare canvas, fade it with the same ramp, then lay it over the photo
+  const tmp = document.createElement("canvas");
+  tmp.width = W;
+  tmp.height = H;
+  const t = tmp.getContext("2d")!;
+  t.fillStyle = metalFill(t, metal, 0, 0, W, H);
+  t.fillRect(0, 0, W, H);
+  t.globalCompositeOperation = "destination-in";
+  t.fillStyle = g;
+  t.fillRect(0, 0, W, H);
+  ctx.drawImage(tmp, 0, 0);
+}
+
+// Solid fill for the last slide: a hex or a metallic sheen.
+function solidFill(ctx: CanvasRenderingContext2D, v: string): string | CanvasGradient {
+  const m = metalOf(v);
+  return m ? metalFill(ctx, m, 0, 0, W, H) : v;
+}
+
+// Writing colour: a hex, or a metallic sheen across the band the writing sits in.
+function inkPaint(ctx: CanvasRenderingContext2D, v: string, y: number, h: number): string | CanvasGradient {
+  const m = metalOf(v);
+  return m ? metalFill(ctx, m, 100, y, W - 100, y + Math.max(h, 60)) : v;
 }
 
 function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, look: Look) {
@@ -200,9 +245,9 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   ctx.textBaseline = "top";
 
   if (n === 4) {
-    ctx.fillStyle = look.wash;
+    ctx.fillStyle = solidFill(ctx, look.wash);
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = ink;
+    ctx.fillStyle = inkPaint(ctx, ink, H / 2 - 200, 400);
     ctx.textAlign = "left";
     const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
     const total = fit.lines.length * fit.px * 1.25;
@@ -212,7 +257,7 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
       ctx.fillText(l, LEFT, y);
       y += fit.px * 1.25;
     }
-    ctx.strokeStyle = ink;
+    ctx.strokeStyle = inkPaint(ctx, ink, y, 60);
     ctx.globalAlpha = 0.4;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -247,13 +292,13 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
     const gap = 30;
     const startY = top ? 190 : H - 110 - subH - gap - headH;
     if (tf && layout) {
-      drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, "center", W - 200, ink);
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
     } else {
-      ctx.fillStyle = ink;
+      ctx.fillStyle = inkPaint(ctx, ink, startY, 120);
       ctx.font = `400 90px "${BODY_FONT}", sans-serif`;
       ctx.fillText(post.headline || "", W / 2, startY);
     }
-    ctx.fillStyle = ink;
+    ctx.fillStyle = inkPaint(ctx, ink, startY, headH + subH + gap);
     ctx.globalAlpha = 0.92;
     ctx.font = body(sub.px);
     let y = startY + headH + gap;
@@ -267,12 +312,12 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   }
 
   wash(ctx, 0.3, look);
-  ctx.fillStyle = ink;
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = top ? 190 : H - 170 - total;
+  ctx.fillStyle = inkPaint(ctx, ink, y, total);
   ctx.font = body(fit.px);
   for (const l of fit.lines) {
     ctx.fillText(l, LEFT, y);
@@ -311,7 +356,7 @@ function ColourPicker({ label, value, onChange, swatches }: { label: string; val
             onClick={() => onChange(s.hex)}
             title={s.name}
             className={`h-8 min-w-8 px-2 rounded-md border text-xs ${value.toLowerCase() === s.hex.toLowerCase() ? "border-emerald-400 ring-2 ring-emerald-400/40" : "border-white/25 hover:border-white/60"}`}
-            style={{ background: s.hex, color: s.hex.toLowerCase() === "#ffffff" ? "#111" : "#fff" }}
+            style={{ background: metalOf(s.hex) ? metalCss(metalOf(s.hex)!) : s.hex, color: s.hex.toLowerCase() === "#ffffff" || (metalOf(s.hex) && !["bronze", "copper", "gunmetal"].includes(s.hex.slice(6))) ? "#111" : "#fff", textShadow: metalOf(s.hex) ? "0 0 3px rgba(255,255,255,.35)" : undefined }}
           >
             {s.name}
           </button>
@@ -776,8 +821,9 @@ export default function UniversalPage() {
     }
     return list;
   }, [preset]);
-  const washSwatches = [{ name: "Black", hex: "#0d0d0d" }, { name: "White", hex: "#ffffff" }, ...brand];
-  const textSwatches = [{ name: "White", hex: "#ffffff" }, { name: "Black", hex: "#0d0d0d" }, ...brand];
+  const metalSwatches = METALS.map((m) => ({ name: m.name, hex: `metal:${m.id}` }));
+  const washSwatches = [{ name: "Black", hex: "#0d0d0d" }, { name: "White", hex: "#ffffff" }, ...brand, ...metalSwatches];
+  const textSwatches = [{ name: "White", hex: "#ffffff" }, { name: "Black", hex: "#0d0d0d" }, ...brand, ...metalSwatches];
 
   const groupTreatments = U_TREATMENTS.filter((x) => x.group === groupId);
   const imgs = libBy.get(treatmentId) ?? [];
