@@ -601,7 +601,7 @@ router.post("/ten-free/extras", requireAuth, async (req: Request, res: Response)
 
 ${STYLE_RULES}
 
-YOU ARE WRITING REEL HOOKS FOR THE CLINICIAN TO FILM ON HER PHONE. Return exactly 10 hooks, the ten most engaging you can write. Each is a line she says to camera (or shows as the on screen text) in the first three seconds, in her own voice, plus one short idea for what to film so it is easy to do alone with a phone.
+YOU ARE WRITING REEL HOOKS FOR THE CLINICIAN TO FILM ON HER PHONE. Return exactly 3 hooks (they are not used, keep them short). Each is a line she says to camera (or shows as the on screen text) in the first three seconds, in her own voice, plus one short idea for what to film so it is easy to do alone with a phone.
 - Be original. Avoid the lines every clinic reel uses. No "POV:" more than once, no "things I wish I knew", no "stop scrolling", no "you won't believe".
 - Make them make a woman over 35 stop, smile and want to reply: her real personality (hobbies, pets, being a mum or not, her area, her three words, her passion), relatable honesty, myths about a consultation, behind the scenes of the clinic day. Never a claim, never a price, never prescription only.
 - hook: 6 to 16 words. idea: under 18 words.
@@ -619,7 +619,6 @@ Return JSON only: {"hooks":[{"hook":"","idea":""}],"polls":[{"n":1,"question":""
     });
     const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { hooks?: { hook?: string; idea?: string }[]; polls?: { n?: number; question?: string; a?: string; b?: string; instruction?: string }[] };
     const hooks = (parsed.hooks ?? []).map((h) => ({ hook: noDashes(h.hook).slice(0, 160), idea: noDashes(h.idea).slice(0, 160) })).filter((h) => h.hook).slice(0, 10);
-    if (hooks.length < 8) throw new Error("The reel hooks came back short, try again");
     const polls = (parsed.polls ?? []).map((p) => ({ n: Number(p.n) || 0, question: noDashes(p.question).slice(0, 70), a: noDashes(p.a).slice(0, 24), b: noDashes(p.b).slice(0, 24), instruction: noDashes(p.instruction).slice(0, 200) }));
     res.json({ hooks, polls });
   } catch (err: unknown) {
@@ -641,7 +640,7 @@ type PubStory = { n: number; image: string; instruction?: string; poll: { questi
 router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTable();
-    const b = req.body as { id?: string; posts?: PubPost[]; stories?: PubStory[]; hooks?: { hook: string; idea: string }[]; fact?: string; logoUrl?: string; whatsappOnSlides?: boolean };
+    const b = req.body as { id?: string; posts?: PubPost[]; stories?: PubStory[]; hooks?: { hook: string; script?: string; onScreen?: string; idea?: string }[]; fact?: string; logoUrl?: string; whatsappOnSlides?: boolean };
     const id = str(b.id, 80);
     if (!id || !Array.isArray(b.posts) || b.posts.length === 0 || !Array.isArray(b.stories) || !Array.isArray(b.hooks)) {
       res.status(400).json({ error: "The request, the posts, the stories and the hooks are all needed" });
@@ -687,7 +686,7 @@ router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response
         instruction: noDashes(s.instruction).slice(0, 220),
         poll: { question: noDashes(s.poll?.question).slice(0, 80), a: noDashes(s.poll?.a).slice(0, 30), b: noDashes(s.poll?.b).slice(0, 30) },
       })),
-      hooks: b.hooks.slice(0, 12).map((h) => ({ hook: noDashes(h.hook).slice(0, 200), idea: noDashes(h.idea).slice(0, 200) })),
+      hooks: b.hooks.slice(0, 12).map((h) => ({ hook: noDashes(h.hook).slice(0, 300), script: noDashes(h.script).slice(0, 1200), onScreen: noDashes(h.onScreen).slice(0, 200) })),
       fact: noDashes(b.fact).slice(0, 300),
       code,
       builtAt: new Date().toISOString(),

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { TEN_PLAN, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
+import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { applyCopy, skeleton, type CopyResult } from "@/lib/pack-build";
 import { renderPackPost, renderPackSlide, type PackClient, type PackPost } from "@/lib/pack-engine";
@@ -83,7 +84,7 @@ function Builder({ id }: { id: string }) {
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
-  const [hooks, setHooks] = useState<{ hook: string; idea: string }[]>([]);
+  const [hooks, setHooks] = useState<{ hook: string; script: string; onScreen: string }[]>([]);
   const [fact, setFact] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [link, setLink] = useState("");
@@ -238,9 +239,9 @@ function Builder({ id }: { id: string }) {
         }
       }
 
-      setStatus("Writing the 10 reel hooks and story polls...");
+      setStatus("Picking the 10 reels and writing the story polls...");
       const extras = await post("/ten-free/extras", { clinic, answers: req.answers, posts: out.map((o) => ({ n: o.n, label: o.label })) });
-      setHooks(extras.hooks);
+      setHooks(pickReels(10));
       for (const o of out) {
         const pl = (extras.polls || []).find((x: any) => x.n === o.n);
         if (pl) o.poll = { question: pl.question, a: pl.a, b: pl.b, instruction: pl.instruction || "" };

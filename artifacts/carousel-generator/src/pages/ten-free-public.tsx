@@ -11,7 +11,7 @@ type Result = {
   clinicName: string; clinicianName: string; logoUrl: string; code: string; fact: string;
   posts: { n: number; kind: string; label: string; images: string[]; caption: string; tags: string }[];
   stories: { n: number; image: string; instruction?: string; poll: { question: string; a: string; b: string } }[];
-  hooks: { hook: string; idea: string }[];
+  hooks: { hook: string; script?: string; onScreen?: string; idea?: string }[];
 };
 
 const CSS = `
@@ -110,7 +110,7 @@ export default function TenFreePublic({ slug }: { slug: string }) {
         zip.file(`stories/story-${s.n}.jpg`, await fileOf(s.image, ""));
         zip.file(`stories/story-${s.n}-poll.txt`, `${s.poll.question}\n${s.poll.a} / ${s.poll.b}`);
       }
-      zip.file("reel-hooks.txt", data.hooks.map((h, i) => `${i + 1}. ${h.hook}\n   Film: ${h.idea}`).join("\n\n"));
+      zip.file("reel-hooks.txt", data.hooks.map((h, i) => `${i + 1}. ${h.hook}\n   Script: ${h.script ?? h.idea ?? ""}\n   On screen: ${h.onScreen ?? ""}`).join("\n\n"));
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -173,9 +173,15 @@ export default function TenFreePublic({ slug }: { slug: string }) {
 
         {tab === "reels" && (
           <div className="tp-sec" style={{ paddingTop: 36 }}>
-            <p className="tp-sub">Ten hooks to film. Say the first line to camera. The idea underneath is what to film.</p>
+            <p className="tp-sub">Ten reels to film. Say the hook to camera, then read or paraphrase the script. A fresh ten for every pack.</p>
             {data.hooks.map((h, i) => (
-              <div className="tp-hook" key={i}><span className="tp-pink">{String(i + 1).padStart(2, "0")}</span><span>{h.hook}</span><small>{h.idea}</small></div>
+              <div className="tp-hook" key={i}>
+                <span className="tp-pink">{String(i + 1).padStart(2, "0")}</span>
+                <span>{h.hook}</span>
+                {h.script && <small style={{ color: INK, fontSize: 16, lineHeight: 1.4, marginTop: 6 }}><b className="tp-pink">Script: </b>{h.script}</small>}
+                {h.onScreen && <small><b className="tp-pink">On screen: </b>{h.onScreen}</small>}
+                {h.idea && <small>{h.idea}</small>}
+              </div>
             ))}
           </div>
         )}
