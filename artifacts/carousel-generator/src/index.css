@@ -290,3 +290,14 @@ html.cs-light [class*="min-h-screen"],
 html.cs-light [class*="min-h-[100dvh]"] {
   background-color: #000;
 }
+
+/* Marketing agency look: only black, hot pink and white. Pink heading bar, bold sticker buttons. */
+html.cs-light h1::after { background: #ff1f8e; height: 8px; width: 90px; }
+html.cs-light h2, html.cs-light h3 { text-transform: uppercase; }
+html.cs-light footer a { font-family: 'League Spartan', sans-serif; font-weight: 800; text-transform: uppercase; }
+
+/* The hub is drawn in true colours (black, hot pink, white), so the global flip is switched off there. */
+html.cs-light.cs-hub { filter: none; background: #fff; }
+html.cs-light.cs-hub img, html.cs-light.cs-hub video, html.cs-light.cs-hub canvas,
+html.cs-light.cs-hub [style*="background-image"], html.cs-light.cs-hub .keep-colour { filter: none; }
+html.cs-light.cs-hub body, html.cs-light.cs-hub [class*="min-h-screen"], html.cs-light.cs-hub [class*="min-h-[100dvh]"] { background-color: #fff; }

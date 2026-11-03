@@ -1107,14 +1107,18 @@ loadCq();
 const id3 = setInterval(loadCq, 60000);
 return () => clearInterval(id3);
 }, []);
+useEffect(() => {
+  document.documentElement.classList.add("cs-hub");
+  return () => document.documentElement.classList.remove("cs-hub");
+}, []);
 return (
-<div className="min-h-[100dvh] w-full bg-background">
+<div className="min-h-[100dvh] w-full" style={{ background: "#fff", color: "#000" }}>
 {/* Header */}
-<header className="border-b border-border/30 py-5 px-8 flex items-center gap-4">
-<img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
+<header className="py-6 px-8 flex items-center gap-4" style={{ background: "#000", borderBottom: "8px solid #ff1f8e" }}>
+<img src="/sms-logo.png" alt="Social Media Sister" className="h-9 w-auto object-contain" />
 <div>
-<h1 className="font-bold text-xl leading-none">The CyberSuite</h1>
-<p className="text-sm text-muted-foreground mt-0.5">Social Media Sister</p>
+<span style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "2.4rem", lineHeight: 0.9, letterSpacing: "-0.02em", textTransform: "uppercase", color: "#fff", display: "block", transform: "rotate(-1.5deg)" }}>The Cyber<span style={{ color: "#ff1f8e" }}>Suite</span></span>
+<span style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 800, fontSize: "0.8rem", letterSpacing: "0.3em", textTransform: "uppercase", color: "#ff1f8e" }}>Social Media Sister</span>
 </div>
 
   <button
@@ -1124,7 +1128,8 @@ return (
       localStorage.removeItem("cybersuite-pw");
       window.location.href = "/";
     }}
-    className="ml-auto flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+    className="ml-auto flex items-center gap-2 text-sm transition-colors"
+    style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", background: "#ff1f8e", color: "#000", padding: "10px 18px", borderRadius: 999 }}
     >
   <LogOut className="w-4 h-4" />
   Log out
@@ -1133,7 +1138,7 @@ return (
 
 {/* Grid */}
 <main className="max-w-5xl mx-auto px-6 py-12">
-<p className="text-muted-foreground text-base mb-10">Pick a tool to get started.</p>
+<p className="mb-10" style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "clamp(2rem,5vw,3.6rem)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.02em", color: "#000" }}>Pick a tool. <span className="" style={{ color: "#ff1f8e", display: "inline-block", transform: "rotate(-2deg)" }}>Make it loud.</span></p>
 
 {/* Group tabs */}
 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
@@ -1142,32 +1147,32 @@ return (
 { key: "admin", label: "Admin" },
 { key: "content", label: "Content Creation", icon: Wand2 },
 { key: "carousel", label: "Carousel" },
-].map((tab) => (
+].map((tab, ti) => {
+const on = activeGroup === tab.key;
+return (
 <button
 key={tab.key}
 type="button"
 onClick={() => setActiveGroup(tab.key as typeof activeGroup)}
-className={`rounded-2xl border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
-activeGroup === tab.key
-? "border-pink-500/60 bg-gradient-to-br from-pink-500/30 to-pink-500/10 shadow-lg"
-: "border-border/30 bg-gradient-to-br from-pink-500/10 to-pink-500/0 hover:border-pink-500/50"
-}`}
+className="p-5 text-left transition-all duration-200 hover:-translate-y-1"
+style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", border: "4px solid #000", borderRadius: 4, boxShadow: on ? "6px 6px 0 #000" : "6px 6px 0 #ff1f8e", fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", fontSize: "1.2rem", transform: `rotate(${ti % 2 ? 1 : -1}deg)` }}
 >
-<span className={`flex items-center gap-2 text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>
+<span className="flex items-center gap-2">
 {"icon" in tab && tab.icon ? <tab.icon className="w-5 h-5 shrink-0" /> : null}
 {tab.label}
 </span>
 </button>
-))}
+);
+})}
 </div>
 
 {/* Filtered grid */}
 <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : 0} />)}
 </div>
 </main>
 
-<footer className="border-t border-border/20 mt-8 px-8 py-5 flex justify-center gap-6 text-xs text-muted-foreground">
+<footer className="mt-8 px-8 py-5 flex justify-center gap-6 text-xs" style={{ color: "#000", borderTop: "4px solid #ff1f8e" }}>
 <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
 <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
 <Link href="/data-deletion" className="hover:text-foreground transition-colors">Data Deletion</Link>
@@ -1179,20 +1184,23 @@ activeGroup === tab.key
 
 type Tool = typeof TOOLS[number];
 
-function ToolCard({ tool, badge = 0 }: { tool: Tool; badge?: number }) {
+function ToolCard({ tool, badge = 0, idx = 0 }: { tool: Tool; badge?: number; idx?: number }) {
 const Icon = tool.icon;
+const dark = (Math.floor(idx / 4) + idx) % 2 === 0;
+const bg = dark ? "#000" : "#ff1f8e";
+const fg = dark ? "#ff1f8e" : "#000";
 const cardBody = (
-<div className={`group relative rounded-2xl border border-border/30 bg-gradient-to-br ${tool.color} p-5 cursor-pointer transition-all duration-200 ${tool.border} hover:shadow-lg hover:-translate-y-0.5 h-full`}>
+<div className="group relative p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 h-full" style={{ background: bg, color: fg, border: "4px solid #000", borderRadius: 4, boxShadow: `6px 6px 0 ${dark ? "#ff1f8e" : "#000"}`, transform: `rotate(${idx % 3 === 0 ? -0.8 : idx % 3 === 1 ? 0.6 : 0}deg)` }}>
 {badge > 0 && (
-<span className="absolute -top-2 -right-2 z-10 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full bg-pink-500 text-white text-xs font-bold shadow-lg ring-2 ring-background animate-pulse">
+<span className="absolute -top-3 -right-3 z-10 min-w-[26px] h-[26px] px-1.5 flex items-center justify-center rounded-full text-xs font-black" style={{ background: "#fff", color: "#000", border: "3px solid #000" }}>
 {badge > 99 ? "99+" : badge}
 </span>
 )}
-<div className={`mb-3 ${tool.iconColor}`}>
-<Icon className="w-7 h-7" />
+<div className="mb-3" style={{ color: fg }}>
+<Icon className="w-8 h-8" strokeWidth={2.5} />
 </div>
-<h2 className="font-semibold text-base mb-1.5 text-foreground">{tool.name}</h2>
-<p className="text-sm text-muted-foreground leading-snug">{tool.description}</p>
+<h2 style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "1.5rem", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.01em", color: fg, marginBottom: 6 }}>{tool.name}</h2>
+<p style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.15, color: dark ? "#fff" : "#000" }}>{tool.description}</p>
 </div>
 );
 if ((tool as any).external) {
