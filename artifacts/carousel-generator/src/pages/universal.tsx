@@ -35,7 +35,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -250,7 +250,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const ts = (look.titleSize || 100) / 100;
   const bs = (look.bodySize || 100) / 100;
   const ink = look.text;
-  const body = (px: number, w = 400) => `${w} ${px}px "${BODY_FONT}", sans-serif`;
+  const body = (px: number, w = 400) => `${w} ${px}px "${look.bodyFont || BODY_FONT}", serif`;
   const LEFT = 100;
   const top = look.dir === "top";
   ctx.clearRect(0, 0, W, H);

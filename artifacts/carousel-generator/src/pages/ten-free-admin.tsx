@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import { TEN_PLAN, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
-import { buildAssets, renderStory, renderUniversalPost } from "@/lib/tenfree-engine";
+import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { applyCopy, skeleton, type CopyResult } from "@/lib/pack-build";
-import { renderPackPost, renderPackSlide, type PackClient, type PackPost } from "@/lib/pack-engine";
+import { renderPackPost, renderPackSlide, packFonts, slidesOf, type PackClient, type PackPost } from "@/lib/pack-engine";
 import { DEFAULT_FOCUS, type PoolPhoto } from "@/lib/month-engine";
 import { brandPalette, loadImage, textLogo } from "@/lib/sample-post";
 import { makeClearLogo } from "@/lib/logo-clear";
@@ -79,7 +79,15 @@ type Item = {
   poll: Poll & { instruction: string };
 };
 
+const HEAD_FONTS = [
+  { id: "instrument", label: "Instrument Serif", css: "'Instrument Serif', serif" },
+  { id: "playfair", label: "Playfair Display", css: "'Playfair Display', serif" },
+  { id: "spartan", label: "League Spartan", css: "'League Spartan', sans-serif" },
+] as const;
+const BODY_CSS = "'Playfair Display', serif";
+
 function Builder({ id }: { id: string }) {
+  const [headChoice, setHeadChoice] = useState<(typeof HEAD_FONTS)[number]["id"]>("instrument");
   const [req, setReq] = useState<Req | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -93,6 +101,33 @@ function Builder({ id }: { id: string }) {
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
   const itemsRef = useRef<Item[]>([]);
   itemsRef.current = items;
+
+  // Subtitles and every page after the first use Playfair Display on all the posts. The headline font is the picker.
+  useEffect(() => {
+    const def = { head: packFonts.head, body: packFonts.body };
+    packFonts.body = BODY_CSS;
+    return () => {
+      packFonts.head = def.head;
+      packFonts.body = def.body;
+    };
+  }, []);
+  useEffect(() => {
+    const f = HEAD_FONTS.find((x) => x.id === headChoice)!;
+    packFonts.head = f.css;
+    packFonts.body = BODY_CSS;
+    (async () => {
+      await loadPlayfair();
+      await Promise.all([400, 700, 900].map((w) => document.fonts.load(`${w} 40px ${f.css}`).catch(() => [])));
+      const client = clientRef.current;
+      if (!client) return;
+      for (const it of itemsRef.current) {
+        if (!it.post) continue;
+        const cvs = await renderPackPost(it.post, client, 0.4);
+        patchItem(it.n, { previews: cvs.map((c) => c.toDataURL("image/jpeg", 0.8)) });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [headChoice]);
 
   const loadReq = useCallback(() => {
     fetch(`${API}/ten-free/requests/${id}`, { headers: authHeaders() }).then((r) => r.json()).then((j) => {
@@ -184,6 +219,9 @@ function Builder({ id }: { id: string }) {
       };
       clientRef.current = client;
 
+      const dm = `If you are from ${req.area.split(",")[0].trim()} and want a safe caring practitioner meet me in the DMs`;
+      packFonts.body = BODY_CSS;
+
       // The personal posts, from the pack templates.
       const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
       const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
@@ -210,7 +248,7 @@ function Builder({ id }: { id: string }) {
       }
       const finalPack = results.map((p) => {
         const preset = built.find((b) => b.post.n === p.n)?.slot.preset;
-        const withPreset = preset ? { ...p, text: { ...p.text, ...preset } } : p;
+        const withPreset = { ...(preset ? { ...p, text: { ...p.text, ...preset } } : p), cta: slidesOf(p) > 1 ? dm : p.cta };
         return withPreset.hashtags ? withPreset : { ...withPreset, hashtags: tagsA || tagsB };
       });
 
@@ -229,7 +267,7 @@ function Builder({ id }: { id: string }) {
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          const canvases = renderUniversalPost({ treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: c.cta }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle }, assets);
+          const canvases = renderUniversalPost({ treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle }, assets);
           out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
         } else {
@@ -337,6 +375,13 @@ function Builder({ id }: { id: string }) {
           {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
         </div>
         {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
+      </div>
+      <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-sm font-semibold">Headline font for every post:</span>
+        {HEAD_FONTS.map((f) => (
+          <button key={f.id} onClick={() => setHeadChoice(f.id)} className={`px-3 py-1.5 rounded border text-sm ${headChoice === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`} style={{ fontFamily: f.css }}>{f.label}</button>
+        ))}
+        <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels keep the Blue Mirage headline.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : "Build the 10 posts"}</button>

@@ -14,6 +14,16 @@ export const SH = 1920;
 const BODY = "Montserrat";
 // A delicate serif for subtitles and body lines on the six personal posts.
 const SOFT = "Cormorant Garamond";
+export function loadPlayfair(): Promise<unknown> {
+  if (!document.getElementById("tf-playfair")) {
+    const l = document.createElement("link");
+    l.id = "tf-playfair";
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap";
+    document.head.appendChild(l);
+  }
+  return Promise.all(["400 40px", "500 40px", "600 40px", "700 40px", "italic 400 40px"].map((f) => document.fonts.load(`${f} "Playfair Display"`).catch(() => []))).catch(() => undefined);
+}
 function loadSoft(): Promise<unknown> {
   if (!document.getElementById("tf-soft")) {
     const l = document.createElement("link");
@@ -114,6 +124,7 @@ function textLogoCanvas(name: string): HTMLCanvasElement {
 export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null }): Promise<Assets> {
   await ensureFonts();
   await loadSoft();
+  await loadPlayfair();
   const tf = await buildTitleFont();
   let logo: HTMLCanvasElement | null = null;
   if (o.logoBlob) {
@@ -213,7 +224,7 @@ function handleStamp(ctx: CanvasRenderingContext2D, a: Assets, y: number) {
 export type UniversalCopy = { subtitle: string; slides: string[]; cta: string };
 
 export function universalLook(a: Assets): Look {
-  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: true };
+  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: true, bodyFont: "Playfair Display" };
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */

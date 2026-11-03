@@ -13,6 +13,9 @@ import type { PackKind } from "./pack-plan";
 export const PACK_HEAD_FONT = "'Instrument Serif', serif";
 export const PACK_BODY_FONT = "'Montserrat', sans-serif";
 
+// The fonts the templates draw with. The paid packs never change these. The 10 free posts page lets Vanessa swap them while she vets a pack.
+export const packFonts = { head: PACK_HEAD_FONT, body: PACK_BODY_FONT };
+
 export type PackPost = {
   n: number;
   kind: PackKind;
@@ -112,7 +115,7 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
   canvas.width = Math.round(w * scale);
   canvas.height = Math.round(h * scale);
   const ctx = canvas.getContext("2d")!;
-  const client: Client = { ...c, headFont: PACK_HEAD_FONT, bodyFont: PACK_BODY_FONT };
+  const client: Client = { ...c, headFont: packFonts.head, bodyFont: packFonts.body };
 
   if (post.kind === "unique" || post.kind === "treatment") {
     const mp = makePost(monthTool(post.kind), post.design, post.n, "", 0, c.pool.length);
@@ -162,8 +165,8 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
       text: resolveEmpowerText(def, post.text, c.fill),
       palette: { ...def.palette, ...(roles ?? {}) },
       metal: {},
-      headFont: PACK_HEAD_FONT,
-      bodyFont: PACK_BODY_FONT,
+      headFont: packFonts.head,
+      bodyFont: packFonts.body,
       upper: false,
       photo: await bmp(c.pool, post.photos[0]),
       focus,
@@ -178,21 +181,21 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
   const cover = Number(post.design) || 0;
   if (n === 0) {
     drawLux(ctx, {
-      cover, text: resolveLuxText(cover, post.text, c.fill), palette, metal: {}, headFont: PACK_HEAD_FONT, bodyFont: PACK_BODY_FONT,
+      cover, text: resolveLuxText(cover, post.text, c.fill), palette, metal: {}, headFont: packFonts.head, bodyFont: packFonts.body,
       photo: await bmp(c.pool, post.photos[0]), focus, logo: c.logo, logoPos: "off",
     });
     return;
   }
   const last = n === LUX_SLIDES - 1;
   drawLuxPhotoSlide(ctx, {
-    text: fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? fillTokens(post.cta, c.fill) : "", palette, bodyFont: PACK_BODY_FONT,
+    text: fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? fillTokens(post.cta, c.fill) : "", palette, bodyFont: packFonts.body,
     photo: await bmp(c.pool, post.photos[n]), focus, scrim: 35, logo: c.logo, logoPos: "tr", arrow: !last,
   });
 }
 
 export async function renderPackPost(post: PackPost, c: PackClient, scale = 1): Promise<HTMLCanvasElement[]> {
   try {
-    await Promise.all([PACK_HEAD_FONT, PACK_BODY_FONT].flatMap((f) => [400, 500, 600, 700].map((wt) => document.fonts.load(`${wt} 40px ${f}`).catch(() => []))));
+    await Promise.all([packFonts.head, packFonts.body].flatMap((f) => [400, 500, 600, 700].map((wt) => document.fonts.load(`${wt} 40px ${f}`).catch(() => []))));
   } catch { /* draw with whatever has arrived */ }
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < slidesOf(post); n++) {
