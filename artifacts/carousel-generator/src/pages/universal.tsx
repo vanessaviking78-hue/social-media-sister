@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -62,6 +62,7 @@ type Post = {
   when: string;
   busy: boolean;
   scheduling: boolean;
+  banked?: boolean;
   rejected?: string;
   look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text">>;
 };
@@ -674,40 +675,83 @@ export default function UniversalPage() {
     else toast.success("Rejected, with your reason saved on the post");
   };
 
+  // Draws the five slides, uploads them and sends the post to the scheduler. A bank post has no date.
+  const send = async (post: Post, mode: "schedule" | "bank", whenIso?: string) => {
+    if (!preset) throw new Error("Pick the client first");
+    if (!(libBy.get(post.treatmentId) ?? []).length) throw new Error(`${(U_BY_ID.get(post.treatmentId) as UTreatment).name} has no photos yet`);
+    const cs = await render(post);
+    const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `universal-${post.key.replace(":", "-")}-${i + 1}-${Date.now()}.png`));
+    const x = U_BY_ID.get(post.treatmentId) as UTreatment;
+    const content = { caption: fullCaption(post), title: `${x.name} ${post.index + 1} · ${preset.name}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "universal", universalKey: post.key };
+    const body = mode === "bank"
+      ? { postType: "carousel", content, status: "draft", presetId: preset.id }
+      : { postType: "carousel", content, scheduledAt: new Date(whenIso || post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
+    const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: "Failed" }));
+      throw new Error(err.error || (mode === "bank" ? "Failed to save to the Client Bank" : "Failed to schedule"));
+    }
+    if (mode === "schedule") setScheduled((s) => ({ ...s, [keyOf(post.key)]: new Date(whenIso || post.when).toISOString() }));
+  };
+
   const schedule = async (post: Post) => {
+    patch(post.id, { scheduling: true });
+    try {
+      await send(post, "schedule");
+      toast.success("Scheduled, and crossed off the list");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not schedule");
+    }
+    patch(post.id, { scheduling: false });
+  };
+
+  const bank = async (post: Post) => {
+    patch(post.id, { scheduling: true });
+    try {
+      await send(post, "bank");
+      patch(post.id, { banked: true });
+      toast.success(`Added to ${preset?.name}'s Client Bank, no date`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add to the bank");
+    }
+    patch(post.id, { scheduling: false });
+  };
+
+  // Every open post that has its words written and is not already scheduled, one per day from the first date.
+  const [bulkBusy, setBulkBusy] = useState("");
+  const ready = posts.filter((p) => p.caption && !scheduled[keyOf(p.key)]);
+  const bulk = async (mode: "schedule" | "bank") => {
     if (!preset) {
       toast.error("Pick the client first");
       return;
     }
-    if (!(libBy.get(post.treatmentId) ?? []).length) {
-      toast.error("This treatment has no photos yet");
+    const list = mode === "bank" ? ready.filter((p) => !p.banked) : ready;
+    if (!list.length) {
+      toast.error("Nothing written and waiting. Press Write it on the posts first");
       return;
     }
-    patch(post.id, { scheduling: true });
-    try {
-      const cs = await render(post);
-      const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `universal-${post.key.replace(":", "-")}-${i + 1}-${Date.now()}.png`));
-      const x = U_BY_ID.get(post.treatmentId) as UTreatment;
-      const body = {
-        postType: "carousel",
-        content: { caption: fullCaption(post), title: `${x.name} ${post.index + 1} · ${preset.name}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "universal", universalKey: post.key },
-        scheduledAt: new Date(post.when).toISOString(),
-        isTrial: false,
-        notes: "",
-        presetId: preset.id,
-      };
-      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!r.ok) {
-        const err = await r.json().catch(() => ({ error: "Failed" }));
-        throw new Error(err.error || "Failed to schedule");
+    const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
+    let done = 0;
+    let failed = "";
+    for (const [i, post] of list.entries()) {
+      setBulkBusy(`${done + 1} of ${list.length}`);
+      patch(post.id, { scheduling: true });
+      try {
+        const d = new Date(first);
+        d.setDate(d.getDate() + i);
+        await send(post, mode, d.toISOString());
+        if (mode === "bank") patch(post.id, { banked: true });
+        done++;
+      } catch (e) {
+        failed = e instanceof Error ? e.message : "Something failed";
+        patch(post.id, { scheduling: false });
+        break;
       }
-      setScheduled((s) => ({ ...s, [keyOf(post.key)]: new Date(post.when).toISOString() }));
       patch(post.id, { scheduling: false });
-      toast.success("Scheduled, and crossed off the list");
-    } catch (e) {
-      patch(post.id, { scheduling: false });
-      toast.error(e instanceof Error ? e.message : "Could not schedule");
     }
+    setBulkBusy("");
+    if (done) toast.success(mode === "bank" ? `${done} added to ${preset.name}'s Client Bank` : `${done} scheduled, one a day from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+    if (failed) toast.error(`Stopped after ${done}: ${failed}`);
   };
 
   const doneFor = (x: UTreatment) => postTypesFor(x).filter((t) => scheduled[keyOf(t.key)]).length;
@@ -876,6 +920,16 @@ export default function UniversalPage() {
 
         <section id="posts" className="space-y-6">
           {posts.length === 0 && <p className="text-white/50 text-sm">Press a post above and it opens here.</p>}
+          {posts.length > 0 && (
+            <div className="rounded-xl border border-white/10 p-4 flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-white/70">{ready.length} written and waiting{preset ? ` for ${preset.name}` : ""}</span>
+              {bulkBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{bulkBusy}</span>}
+              <div className="ml-auto flex gap-2 flex-wrap">
+                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one a day</Button>
+                <Button size="sm" variant="secondary" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("bank")}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
+              </div>
+            </div>
+          )}
           {posts.map((post) => {
             const x = U_BY_ID.get(post.treatmentId) as UTreatment;
             const lk = lookFor(post);
@@ -891,6 +945,9 @@ export default function UniversalPage() {
                     <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
                     <Button size="sm" onClick={() => setReview({ id: post.id, reason: "", rejecting: false })} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}>
+                      <Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Add to bank"}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
