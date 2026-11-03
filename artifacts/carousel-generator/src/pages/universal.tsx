@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
-import { drawTitle, injectSuiteFontCss, layoutTitle, loadSuiteFont, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
+import { drawTitle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
 // UNIVERSAL: any client, every non prescription treatment, six posts each.
@@ -23,8 +23,15 @@ const CLIENT_KEY = "universal-client-v1";
 const SCHED_KEY = "universal-scheduled-v1";
 const BODY_FONT = "Montserrat";
 
-// The headline font is the same for every client.
-const TITLE_STYLE: TitleStyle = { fontId: "blue-mirage", tracking: 40, upper: false, ligatures: true, swaps: {}, rate: "off" };
+// The headline font is the same for every client. The curly, joined-up letters are the font's own alternates,
+// so they only appear when a swap is chosen. Use the look saved in Font Lab if it is for Blue Mirage.
+const BASE_TITLE: TitleStyle = { fontId: "blue-mirage", tracking: 40, upper: false, ligatures: true, swaps: {}, rate: "some" };
+const RATES: { id: SwapRate; label: string }[] = [
+  { id: "off", label: "None" },
+  { id: "starts", label: "First letters" },
+  { id: "some", label: "Some" },
+  { id: "all", label: "All" },
+];
 
 type Dir = "bottom" | "top";
 type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean };
@@ -394,14 +401,37 @@ export default function UniversalPage() {
     };
   }, [preset?.id, preset?.logoUrl]);
 
-  const [tf, setTf] = useState<TitleFont>(null);
+  const [lfont, setLfont] = useState<LoadedFont | null>(null);
+  const [rate, setRate] = useState<SwapRate>(() => {
+    try {
+      return (localStorage.getItem("universal-curly-v1") as SwapRate) || "some";
+    } catch {
+      return "some";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("universal-curly-v1", rate);
+    } catch {
+      /* ignore */
+    }
+  }, [rate]);
   useEffect(() => {
     let live = true;
-    loadSuiteFont(TITLE_STYLE.fontId).then((lf) => live && setTf({ lf, style: TITLE_STYLE })).catch(() => undefined);
+    loadSuiteFont(BASE_TITLE.fontId).then((lf) => live && setLfont(lf)).catch(() => undefined);
     return () => {
       live = false;
     };
   }, []);
+  const tf: TitleFont = useMemo(() => {
+    if (!lfont) return null;
+    const saved = readTitleStyle();
+    const mine = saved.fontId === BASE_TITLE.fontId && Object.keys(saved.swaps).length > 0;
+    // Her Font Lab choices win. Otherwise every letter that has one gets the font's first curly version.
+    const swaps: Record<string, string> = mine ? saved.swaps : {};
+    if (!mine) for (const [ch, list] of Object.entries(lfont.data.alts)) if (list.length) swaps[ch] = list[0];
+    return { lf: lfont, style: { ...BASE_TITLE, tracking: mine ? saved.tracking : BASE_TITLE.tracking, swaps, rate } };
+  }, [lfont, rate]);
 
   // The fixed photos for every treatment
   const [lib, setLib] = useState<LibImage[]>([]);
@@ -738,7 +768,7 @@ export default function UniversalPage() {
             <ColourPicker label="Gradient colour" value={look.wash} onChange={(hex) => setLook((l) => ({ ...l, wash: hex }))} swatches={washSwatches} />
             <ColourPicker label="Writing colour" value={look.text} onChange={(hex) => setLook((l) => ({ ...l, text: hex }))} swatches={textSwatches} />
           </div>
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
+          <div className="grid md:grid-cols-4 gap-4 text-sm">
             <label className="space-y-1 block">
               <span className="text-white/60">Gradient strength: {look.opacity}%</span>
               <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
@@ -748,6 +778,14 @@ export default function UniversalPage() {
               <div className="flex gap-2">
                 {(["bottom", "top"] as const).map((d) => (
                   <button key={d} onClick={() => setLook((l) => ({ ...l, dir: d }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.dir === d ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{d}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <span className="text-white/60">Curly headline letters</span>
+              <div className="flex gap-1 flex-wrap">
+                {RATES.map((r) => (
+                  <button key={r.id} onClick={() => setRate(r.id)} className={`rounded-md border px-2 py-1.5 text-xs ${rate === r.id ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{r.label}</button>
                 ))}
               </div>
             </div>
@@ -767,7 +805,7 @@ export default function UniversalPage() {
               <input type="range" min={40} max={200} step={5} value={look.logoSize} onChange={(e) => setLook((l) => ({ ...l, logoSize: Number(e.target.value) }))} className="w-full" />
             </label>
           </div>
-          <p className="text-white/40 text-xs">Headline font: Blue Mirage {tf ? "" : "(loading)"}. Subtitle and every page after the first: Montserrat. Caption footnote from the client preset: {foot ? `"${foot}"` : "none saved"}. It goes at the very end, under the 5 hashtags.</p>
+          <p className="text-white/40 text-xs">Headline font: Blue Mirage {tf ? "" : "(loading)"}. Curly letters follow whichever ones you picked in Font Lab, otherwise the font's first curly version of each letter. Subtitle and every page after the first: Montserrat. Caption footnote from the client preset: {foot ? `"${foot}"` : "none saved"}. It goes at the very end, under the 5 hashtags.</p>
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
