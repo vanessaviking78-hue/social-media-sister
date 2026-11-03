@@ -56,7 +56,7 @@ export default function TenFreePublic({ slug }: { slug: string }) {
   const [data, setData] = useState<Result | null>(null);
   const [missing, setMissing] = useState(false);
   const [zipping, setZipping] = useState(false);
-  const [tab, setTab] = useState<"posts" | "stories" | "reels">("posts");
+  const [tab, setTab] = useState<"how" | "posts" | "stories" | "reels">("how");
 
   useEffect(() => {
     document.title = "Your 10 free posts";
@@ -135,10 +135,24 @@ export default function TenFreePublic({ slug }: { slug: string }) {
         <p style={{ marginTop: 22 }}><button className="tp-btn k" disabled={zipping} onClick={saveAll}>{zipping ? "Packing it up..." : "Save everything in one go"}</button></p>
 
         <div className="tp-tabs">
+          <button className={`tp-tab${tab === "how" ? " on" : ""}`} onClick={() => setTab("how")}>How to</button>
           <button className={`tp-tab${tab === "posts" ? " on" : ""}`} onClick={() => setTab("posts")}>Posts</button>
           <button className={`tp-tab${tab === "stories" ? " on" : ""}`} onClick={() => setTab("stories")}>Stories</button>
           <button className={`tp-tab${tab === "reels" ? " on" : ""}`} onClick={() => setTab("reels")}>Reels</button>
         </div>
+
+        {tab === "how" && (
+          <div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>1. Save the pictures</div><p className="tp-lede" style={{ maxWidth: 760 }}>Go to the Posts tab and press Download slides under each post. On a phone the pictures land in your camera roll. On a laptop they land in your downloads folder, then send them to your phone with AirDrop, email or WhatsApp to yourself.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>2. Make the carousel</div><p className="tp-lede" style={{ maxWidth: 760 }}>Open Instagram and press the plus. Choose Post, tap the little overlapping squares to select several, then tap the slides in order, slide 1 first. That is the one people see before they swipe.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>3. Paste the caption</div><p className="tp-lede" style={{ maxWidth: 760 }}>On the Posts tab press Copy caption, then paste it into the caption box. The hashtags are already at the bottom. Read it once and tweak anything that does not sound like you, because it is your voice.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>4. Schedule it, so you are not doing this at 11pm</div><p className="tp-lede" style={{ maxWidth: 760 }}>On the final screen open Advanced settings, then Schedule this post, and pick a date and time. You need a professional (business or creator) account for this, and it is free to switch in Settings. Or use Meta Business Suite on your laptop: press Create post, choose Instagram, add the pictures, paste the caption and choose Schedule.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>5. Best days</div><p className="tp-lede" style={{ maxWidth: 760 }}>Spread the ten out. One every other day is plenty, and a carousel on a weekday morning or early evening tends to do nicely. Start with the treatment carousels and post the personal ones in between.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>6. Stories</div><p className="tp-lede" style={{ maxWidth: 760 }}>Use the Stories tab. Save the tall image, post it as a Story, then add the poll sticker and type in the suggested question and the two answers. Post the story an hour after the post goes live so it sends people to it.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>7. Reels</div><p className="tp-lede" style={{ maxWidth: 760 }}>The Reels tab has ten ideas with a script and the words to put on screen. Pick one, prop your phone up, film it in one go, and do not worry about it being perfect. Rough and real beats polished.</p></div>
+          <div className="tp-post"><div className="tp-k" style={{ marginBottom: 10 }}>8. Reply to every comment</div><p className="tp-lede" style={{ maxWidth: 760 }}>When someone comments, reply within the hour if you can. Instagram loves it and so do your future clients. Then come and tell me which post did best.</p></div>
+          </div>
+        )}
 
         {tab === "posts" && data.posts.map((p) => (
           <div className="tp-post" key={p.n}>

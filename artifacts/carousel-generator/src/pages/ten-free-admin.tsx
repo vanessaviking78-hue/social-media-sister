@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { TEN_PLAN, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
+import { TEN_PLAN, RELATABLE_IDS, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
+import { EMPOWER } from "@/lib/empower-designs";
 import { applyCopy, skeleton, type CopyResult } from "@/lib/pack-build";
 import { renderPackPost, renderPackSlide, packFonts, slidesOf, type PackClient, type PackPost } from "@/lib/pack-engine";
 import { DEFAULT_FOCUS, type PoolPhoto } from "@/lib/month-engine";
@@ -75,7 +76,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string };
 };
 
@@ -227,11 +228,14 @@ function Builder({ id }: { id: string }) {
       const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
       const cursor = { at: 0 };
       const built = packSlots.map((s) => {
-        const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design;
+        const relIds = RELATABLE_IDS.filter((id) => EMPOWER.some((e) => e.id === id));
+        const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design === "relatable" ? relIds[hashSeed(req.id + "relatable") % relIds.length] : s.design;
         const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length);
         const facts = `About me (the only facts you may use): hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
-        sk.spec.idea = `${s.idea}. ${facts}`;
-        return { slot: s, post: sk.post, spec: sk.spec };
+        const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;
+        sk.spec.idea = `${rel ? `${s.idea}, in the style of this template: ${rel.idea}` : s.idea}. ${facts}`;
+        const slot = s.design === "relatable" ? { ...s, label: rel?.name || s.label, preset: design === "gatecrasher" ? GATECRASHER_PRESET : undefined } : s;
+        return { slot, post: sk.post, spec: sk.spec };
       });
       const results: PackPost[] = built.map((b) => b.post);
       let tagsA = "", tagsB = "";
@@ -267,8 +271,9 @@ function Builder({ id }: { id: string }) {
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          const canvases = renderUniversalPost({ treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle }, assets);
-          out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
+          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0] };
+          const canvases = renderUniversalPost(uniArgs, assets);
+          out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
         } else {
           const pp = finalPack.find((x) => x.n === slot.n)!;
@@ -288,7 +293,7 @@ function Builder({ id }: { id: string }) {
       setItems(out);
       setFact(pickFact(req.id));
       if (assets.logo) setLogoUrl(await upload(await canvasToPng(assets.logo), "logo.png").catch(() => ""));
-      setStatus("Built. Drag any photo to move it in its frame, then publish.");
+      setStatus("Built. Drag a photo to move it in its frame, click a treatment photo to swap it, then publish.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "The build stopped");
       setStatus("");
@@ -313,6 +318,16 @@ function Builder({ id }: { id: string }) {
       list[i] = cv.toDataURL("image/jpeg", 0.8);
       patchItem(n, { previews: list });
     }, 60);
+  };
+  // Click a photo on a treatment carousel to swap it for the next one in the library.
+  const swapPhoto = (it: Item, i: number) => {
+    const assets = assetsRef.current;
+    if (!it.uniArgs || !assets || i > 3 || it.uniArgs.photos.length < 2) return;
+    const shift = [...it.uniArgs.shift];
+    shift[i] = (shift[i] || 0) + 1;
+    const args = { ...it.uniArgs, shift };
+    const cvs = renderUniversalPost(args, assets);
+    patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
   };
   const onDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number) => {
     if (!it.post || it.post.kind === "tweet") return;
@@ -403,7 +418,8 @@ function Builder({ id }: { id: string }) {
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
-                  className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : ""}`} />
+                  onClick={() => swapPhoto(it, i)} title={it.uniArgs && i <= 3 ? "Click to swap the photo" : undefined}
+                  className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             <textarea value={it.caption} onChange={(e) => patchItem(it.n, { caption: e.target.value })} rows={6} className="w-full text-sm border rounded p-2" />

@@ -26,9 +26,8 @@ export const TEN_PLAN: TenSlot[] = [
     idea: "a post about safety and doing things properly: a good practitioner says no, assesses first, and never rushes a decision. Friendly and funny, no claims" },
   { n: 9, label: "Unique post", carousel: true, source: "pack", kind: "unique", design: "auto",
     idea: "a funny, shareable post that no other clinic is posting, in my voice" },
-  { n: 10, label: "Gatecrasher", carousel: false, source: "pack", kind: "empower", design: "gatecrasher",
-    idea: "a nostalgic, funny post about the shift from big nights out to comfy slippers and a good novel",
-    preset: { head: "One minute you're at *Gatecrasher.* Next minute you're in *comfy slippers* reading a novel." } },
+  { n: 10, label: "Relatable", carousel: false, source: "pack", kind: "empower", design: "relatable",
+    idea: "a nostalgic, funny, relatable post for women over 35" },
 ];
 
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
@@ -109,3 +108,8 @@ export const PSYCH_FACTS: string[] = [
 export const pickFact = (seedText: string): string => PSYCH_FACTS[hashSeed(seedText) % PSYCH_FACTS.length];
 
 export const monthNameUK = (d = new Date()): string => d.toLocaleString("en-GB", { month: "long", timeZone: "Europe/London" });
+
+// The relatable posts. Each clinic gets one of these, chosen from its request, so the free packs are not all the same.
+// Gatecrasher keeps the wording written for it. The others use their own template wording as the starting point.
+export const RELATABLE_IDS = ["gatecrasher", "heather", "knees", "mum", "nineties", "terrified", "smell", "playlist", "at25", "built-different", "hotter", "list-hotter", "nobody-warned", "whats-gone", "thousand", "film-title"];
+export const GATECRASHER_PRESET = { head: "One minute you're at *Gatecrasher.* Next minute you're in *comfy slippers* reading a novel." };
