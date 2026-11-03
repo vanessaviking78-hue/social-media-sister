@@ -140,8 +140,10 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 4, req.id);
+      const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id);
       if (picks.length < 3) throw new Error("None of the treatments she ticked have photos in the Universal library");
+      const distinct = new Set(picks.map((p) => p.treatment.id)).size;
+      if (distinct < 3) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
 
       setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
@@ -160,6 +162,13 @@ function Builder({ id }: { id: string }) {
           pool.push({ id: `${req.id}-${i}`, file: new File([blob], `pool-${i}.jpg`, { type: blob.type || "image/jpeg" }), url: URL.createObjectURL(blob) });
         } catch { /* skip */ }
       }
+      // A colour that shows up on both the dark blocks and the light pages of the templates (a near black accent would vanish).
+      const lumOf = (h: string) => { const v = parseInt(h.slice(1), 16); const f = (c: number) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }; return 0.2126 * f((v >> 16) & 255) + 0.7152 * f((v >> 8) & 255) + 0.0722 * f(v & 255); };
+      const mixTo = (h: string, to: number, t: number) => { const v = parseInt(h.slice(1), 16); const c = [(v >> 16) & 255, (v >> 8) & 255, v & 255].map((x) => Math.round(x + (to - x) * t)); return "#" + c.map((x) => x.toString(16).padStart(2, "0")).join(""); };
+      let accent = req.accentHex;
+      for (let i = 0; i < 20 && lumOf(accent) < 0.16; i++) accent = mixTo(accent, 255, 0.15);
+      for (let i = 0; i < 20 && lumOf(accent) > 0.5; i++) accent = mixTo(accent, 0, 0.15);
+      if (Math.abs(lumOf(accent) - lumOf(req.mainHex)) < 0.1) accent = lumOf(req.mainHex) > 0.3 ? mixTo(req.mainHex, 0, 0.45) : mixTo(req.mainHex, 255, 0.55);
       const clear = logoBlob ? await makeClearLogo(logoBlob).catch(() => null) : null;
       const base = textLogo(req.clinicName);
       const logoCanvas = clear || base.logo;
@@ -169,7 +178,7 @@ function Builder({ id }: { id: string }) {
         businessName: req.clinicName, ownerName: owner, role: "Aesthetic practitioner", area: req.area, audience: "women over 35", brandNotes: "", footnote: "",
         fill: { owner, clinic: req.clinicName, area: req.area.split(",")[0].trim(), role: "Aesthetic practitioner" },
         headFont: "'Instrument Serif', serif", bodyFont: "'Montserrat', sans-serif",
-        brand: { main: req.mainHex, accent: req.accentHex }, logo: logoImg, pool, handle: req.handle,
+        brand: { main: req.mainHex, accent }, logo: logoImg, pool, handle: req.handle,
         portraitLogo: logoCanvas, portraitPalette: { ...brandPalette(req.mainHex, base.palette), tile: "rgba(0,0,0,0)" },
       };
       clientRef.current = client;
