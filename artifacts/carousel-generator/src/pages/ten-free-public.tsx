@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const PINK = "#ff1f8e";
 const INK = "#111";
+import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Result = {
@@ -163,7 +164,8 @@ export default function TenFreePublic({ slug }: { slug: string }) {
           <div className="tp-code">
             <div>3 months of social media for the price of 1</div>
             <b>{data.code}</b>
-            <div style={{ fontSize: 15, color: "#666" }}>Message me on Instagram @social_media_sister and quote your code.</div>
+            <div style={{ fontSize: 15, color: "#666" }}>Message me and quote your code.</div>
+            {TENFREE_WHATSAPP && <a className="tp-btn" style={{ marginTop: 16 }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent(`Hi Vanessa, my code is ${data.code}`)}`}>Message me on WhatsApp</a>}
           </div>
         </div>
         <div className="tp-foot">Social Media Sister</div>

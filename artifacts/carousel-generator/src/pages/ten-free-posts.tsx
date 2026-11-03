@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
+import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 import { canvasToPng, makeClearLogo } from "@/lib/logo-clear";
 
 // cybersuite.com/10freeposts : the public form. League Spartan Black everywhere, white page, hot pink accents.
@@ -117,6 +118,7 @@ export default function TenFreePosts() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
+  const [repeat, setRepeat] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
 
@@ -183,6 +185,7 @@ export default function TenFreePosts() {
       if (photo) fd.append("photo", photo);
       const r = await fetch("/api/ten-free/intake", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
+      if (r.status === 409) setRepeat(true);
       if (!r.ok) throw new Error(j.error || "Something went wrong, please try again");
       setDone(true);
       window.scrollTo({ top: 0 });
@@ -249,7 +252,7 @@ export default function TenFreePosts() {
                 {field("Instagram handle", "handle", { ph: "@yourclinic" })}
                 {field("Where are you based?", "area", { ph: "Leeds" })}
                 {field("Website", "website", { ph: "www.yourclinic.co.uk" })}
-                {field("WhatsApp number", "whatsapp", { ph: "07700 900123" })}
+                {field("WhatsApp number (I send your link here)", "whatsapp", { ph: "07700 900123" })}
               </div>
             </div>
 
@@ -332,6 +335,7 @@ export default function TenFreePosts() {
               <span>I am happy for Social Media Sister to use my logo, photo and details to build my free posts and to email me about them.</span>
             </label>
             {err && <div className="tf-err">{err}</div>}
+            {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I would like my discount for a monthly membership")}`}>Claim my discount on WhatsApp</a>}
             <button className="tf-go" disabled={busy || logoBusy} onClick={submit}>
               {busy ? "Sending..." : "Send me my 10 free posts"}
             </button>

@@ -74,7 +74,7 @@ function Builder({ id }: { id: string }) {
   const [hooks, setHooks] = useState<{ hook: string; idea: string }[]>([]);
   const [fact, setFact] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [waOn, setWaOn] = useState(true);
+  const [waOn, setWaOn] = useState(false);
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
 
@@ -222,7 +222,7 @@ function Builder({ id }: { id: string }) {
         <div>Why: {req.answers.why}</div>
         <div>Three words: {req.answers.threeWords} · Passion: {req.answers.passion}</div>
       </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={waOn} onChange={(e) => setWaOn(e.target.checked)} /> Show her WhatsApp number on the closing slides</label>
+      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={waOn} onChange={(e) => setWaOn(e.target.checked)} /> Show her WhatsApp number on the closing slides (off by default)</label>
       <div className="flex gap-3 items-center">
         <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{built.length ? "Rebuild" : "Build the 9 posts"}</button>
         {built.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}

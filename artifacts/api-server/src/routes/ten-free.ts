@@ -92,6 +92,9 @@ function tooMany(ip: string): boolean {
   return recent.length > 6;
 }
 
+const REPEAT_CODE = "NEXTBUNDLE";
+const REPEAT_MSG = `Don't push your luck lassy Jim, you've had your freebie, but here's a discount for the next bundle. Use the code ${REPEAT_CODE} for money off a monthly membership.`;
+
 type Files = { [field: string]: Express.Multer.File[] };
 
 // ---------------------------------------------------------------------------
@@ -168,8 +171,9 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
 
     const key = emailKey(email);
     const existing = await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
-    if (existing.rows.length) {
-      res.status(409).json({ error: "That email address has already had its free posts. Each email gets one free turn, so if you would like more, message me on Instagram and we will chat." });
+    const sameClinic = await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} LIMIT 1`);
+    if (existing.rows.length || sameClinic.rows.length) {
+      res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
       return;
     }
 
@@ -184,7 +188,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
           ${logoKey ? `/api/free-samples/media/${logoKey}` : ""}, ${photoKey ? `/api/free-samples/media/${photoKey}` : ""})`);
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === "23505") {
-        res.status(409).json({ error: "That email address has already had its free posts. Each email gets one free turn, so if you would like more, message me on Instagram and we will chat." });
+        res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
         return;
       }
       throw err;

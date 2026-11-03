@@ -13,6 +13,18 @@ export const W = 1080;
 export const H = 1350;
 export const SH = 1920;
 const BODY = "Montserrat";
+// A delicate serif for subtitles and body lines on the six personal posts.
+const SOFT = "Cormorant Garamond";
+function loadSoft(): Promise<unknown> {
+  if (!document.getElementById("tf-soft")) {
+    const l = document.createElement("link");
+    l.id = "tf-soft";
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@300;400;500&display=swap";
+    document.head.appendChild(l);
+  }
+  return Promise.all(["300 40px", "italic 400 40px", "500 40px"].map((f) => document.fonts.load(`${f} "${SOFT}"`).catch(() => []))).catch(() => undefined);
+}
 
 // ---------- colour ----------
 
@@ -102,6 +114,7 @@ function textLogoCanvas(name: string): HTMLCanvasElement {
 
 export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null }): Promise<Assets> {
   await ensureFonts();
+  await loadSoft();
   const tf = await buildTitleFont();
   let logo: HTMLCanvasElement | null = null;
   if (o.logoBlob) {
@@ -318,13 +331,13 @@ function drawCover(ctx: CanvasRenderingContext2D, a: Assets, s: BespokeSpec, var
     tracked(ctx, label, W / 2, 884, 7);
     const hh = headline(ctx, a, s.headline, 926, single ? 190 : 230, single ? 100 : 110);
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const sub = fit(ctx, secondary, 500, W - 260, 120, 32, 24, 1.4);
-    ctx.font = `500 ${sub.px}px "${BODY}", sans-serif`;
+    const sub = fit(ctx, secondary, 400, W - 260, 120, 40, 28, 1.3);
+    ctx.font = `italic 400 ${sub.px}px "${SOFT}", serif`;
     ctx.textAlign = "center";
     let y = 926 + hh + 14;
     for (const l of sub.lines) {
       ctx.fillText(l, W / 2, y);
-      y += sub.px * 1.4;
+      y += sub.px * 1.3;
     }
     logoAt(ctx, a, W / 2, H - 150, 260, 62);
     return;
@@ -336,14 +349,14 @@ function drawCover(ctx: CanvasRenderingContext2D, a: Assets, s: BespokeSpec, var
   tracked(ctx, label, W / 2, 340, 8);
   rule(ctx, b, W / 2, 392);
   const hh = headline(ctx, a, s.headline, 440, single ? 400 : 420, single ? 140 : 150);
-  const body = fit(ctx, secondary, 500, W - 260, 220, single ? 42 : 38, 28, 1.5);
+  const body = fit(ctx, secondary, 400, W - 260, 240, single ? 54 : 48, 32, 1.35);
   ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = `500 ${body.px}px "${BODY}", sans-serif`;
+  ctx.font = `italic 400 ${body.px}px "${SOFT}", serif`;
   ctx.textAlign = "center";
   let y = 440 + hh + 46;
   for (const l of body.lines) {
     ctx.fillText(l, W / 2, y);
-    y += body.px * 1.5;
+    y += body.px * 1.35;
   }
   handleStamp(ctx, a, H - 150);
 }
@@ -358,14 +371,14 @@ function drawBodySlide(ctx: CanvasRenderingContext2D, a: Assets, text: string, i
   ctx.textAlign = "left";
   ctx.fillText(String(i), 110, 130);
   rule(ctx, b, 165, 520, 90);
-  const body = fit(ctx, text, 600, W - 250, 560, 50, 32, 1.55);
+  const body = fit(ctx, text, 500, W - 250, 560, 62, 38, 1.4);
   ctx.fillStyle = "#ffffff";
-  ctx.font = `600 ${body.px}px "${BODY}", sans-serif`;
+  ctx.font = `500 ${body.px}px "${SOFT}", serif`;
   ctx.textAlign = "left";
   let y = 566;
   for (const l of body.lines) {
     ctx.fillText(l, 120, y);
-    y += body.px * 1.55;
+    y += body.px * 1.4;
   }
   ctx.fillStyle = rgba("#ffffff", 0.7);
   ctx.font = `600 22px "${BODY}", sans-serif`;
