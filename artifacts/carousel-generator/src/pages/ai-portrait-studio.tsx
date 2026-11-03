@@ -166,6 +166,19 @@ const DINLEYS_PRESETS: PhotoStudioPreset[] = [
   { id: "dn-30", name: "Artistic Gallery Wall Candid", hasColour: false },
 ];
 
+const ACADEMY_PRESETS: PhotoStudioPreset[] = [
+  { id: "ac-01", name: "The expert educator", hasColour: false },
+  { id: "ac-02", name: "Facial anatomy masterclass", hasColour: false },
+  { id: "ac-03", name: "The presentation board", hasColour: false },
+  { id: "ac-04", name: "Venus system demonstration", hasColour: false },
+  { id: "ac-05", name: "Hands-on teaching", hasColour: false },
+  { id: "ac-06", name: "The intimate delegate discussion", hasColour: false },
+  { id: "ac-07", name: "The authority portrait", hasColour: false },
+  { id: "ac-08", name: "Over-the-shoulder teaching moment", hasColour: false },
+  { id: "ac-09", name: "The mentor", hasColour: false },
+  { id: "ac-10", name: "The academy founder", hasColour: false },
+];
+
 const SAME_ROOM_PRESETS: PhotoStudioPreset[] = [
   { id: "sr-01", name: "Arms Folded", hasColour: false },
   { id: "sr-02", name: "Holding A Syringe Tray", hasColour: false },
@@ -719,7 +732,7 @@ const MIX_STYLES: { value: string; label: string }[] = [
   { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
 ];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...ACADEMY_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -917,7 +930,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "academy">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1690,6 +1703,7 @@ export default function AiPortraitStudio() {
                 { key: "winter", label: "WINTER WOOLIES" },
                 { key: "dinleys", label: "Dinleys" },
                 { key: "sameroom", label: "Same Room" },
+                { key: "academy", label: "Academy" },
                 { key: "tweaked", label: "TWEAKED" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
@@ -1982,6 +1996,59 @@ export default function AiPortraitStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {SAME_ROOM_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+{activeSection === "academy" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">ACADEMY</p>
+<p className="text-xs text-muted-foreground mb-3">Upload one clear photo of the trainer. Ten training academy shots, all in black scrubs, with the identity and realism instructions added to every prompt so the whole set looks like one person on one training day. Tick the ones you want.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {ACADEMY_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.has(preset.id);
                 return (
                   <div

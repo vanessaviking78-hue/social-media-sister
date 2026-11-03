@@ -3991,3 +3991,58 @@ export const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
   { label: "Final Editorial Mix", presetIds: ["ic-81","ic-82","ic-83","ic-84","ic-85","ic-86","ic-87","ic-88","ic-89","ic-90"] },
   { label: "Extra High-End",      presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
 ];
+
+// ─── ACADEMY folder ───────────────────────────────────────────────────────
+// 10 training academy shots of the trainer in black scrubs, from one reference photo.
+// Her identity and realism block is added to every prompt so the set stays consistent.
+const ACADEMY_CONSISTENCY = `IDENTITY AND REALISM REQUIREMENTS:
+Use the supplied reference photograph as the exact identity reference. Do not alter, beautify, rejuvenate, reshape or reinterpret her face.
+Preserve her natural facial proportions, eye shape, nose, lips, jawline, skin tone, age, hair and distinctive features.
+She must wear professional black medical scrubs in every image.
+Photographic realism is essential. Natural skin texture, visible pores, realistic hands and fingers, anatomically correct equipment, believable lighting, genuine human expressions and authentic clinical environments.
+Shot on a professional full-frame DSLR, realistic 50mm or 85mm lens, natural depth of field, high-resolution editorial photography.
+No plastic skin, no excessive retouching, no artificial facial symmetry, no CGI appearance, no illustration, no cartoon effects, no distorted equipment, no duplicated people, no incorrect anatomy.
+The final image must look like an actual photograph taken during a professional medical aesthetics training day.`;
+
+export const ACADEMY_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "ac-01", name: "The expert educator", hasColour: false,
+    promptTemplate: `A hyper-realistic editorial photograph of the female aesthetics trainer standing at the front of a sophisticated medical training academy, wearing tailored black medical scrubs. Three delegates seated in front of her, listening attentively. She is confidently explaining a clinical concept, gesturing naturally with one hand. Large presentation screen in the background, soft natural lighting, professional medical education photography, 85mm lens, realistic skin texture, luxury editorial finish.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-02", name: "Facial anatomy masterclass", hasColour: false,
+    promptTemplate: `The trainer wearing black scrubs, standing beside a detailed anatomical facial teaching model. She is pointing towards the facial musculature, explaining anatomical structures to two delegates. Highly detailed anatomical model with accurate muscle placement, realistic clinical training room, delegates taking notes, candid documentary photography, natural lighting, authentic professional environment.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-03", name: "The presentation board", hasColour: false,
+    promptTemplate: `A cinematic but completely realistic photograph of the trainer standing beside a large interactive presentation board displaying detailed facial anatomy diagrams. She is explaining the relationship between facial structures, with delegates watching from their seats. Black scrubs, sophisticated neutral training room, premium medical academy atmosphere, sharp focus on trainer, realistic screen graphics, editorial corporate photography.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-04", name: "Venus system demonstration", hasColour: false,
+    promptTemplate: `The trainer in fitted black scrubs demonstrating a Venus aesthetic technology system to a small group of delegates. She is standing alongside the machine, explaining the controls and technology. Delegates are observing closely. Authentic professional equipment, realistic control panel, premium clinical training suite, soft daylight, documentary-style medical photography, no exaggerated futuristic effects.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-05", name: "Hands-on teaching", hasColour: false,
+    promptTemplate: `A candid, hyper-realistic photograph capturing the trainer guiding a delegate through a practical learning demonstration using an anatomical facial training model. Trainer standing close by, pointing out important anatomical landmarks. Both wearing appropriate professional clinical attire. Genuine expressions, concentration, natural body language, realistic hands, beautifully lit training room.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-06", name: "The intimate delegate discussion", hasColour: false,
+    promptTemplate: `The trainer seated at a modern clinical training table with four delegates, discussing facial anatomy and treatment planning. An anatomical head model, printed anatomical diagrams, notebooks and pens on the table. She is engaged in conversation, explaining a point with confidence. Black scrubs, relaxed but authoritative expression, natural candid photography, luxury medical education setting.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-07", name: "The authority portrait", hasColour: false,
+    promptTemplate: `A striking full-length editorial portrait of the trainer in elegant black medical scrubs, standing confidently beside a large screen showing detailed facial anatomy. Arms naturally positioned, direct confident eye contact with the camera, sophisticated clinical academy interior. Beautiful natural light, subtle shadows, premium medical journal photography, realistic skin pores and facial detail. Not glamour photography.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-08", name: "Over-the-shoulder teaching moment", hasColour: false,
+    promptTemplate: `Photographed from behind a delegate's shoulder, capturing the trainer explaining facial anatomy on a large presentation screen. Her face is clearly visible in profile, wearing black scrubs. Her hand is pointing towards the anatomical diagram. Delegates in the foreground slightly out of focus. Natural classroom atmosphere, professional documentary photography, cinematic depth of field, authentic moment.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-09", name: "The mentor", hasColour: false,
+    promptTemplate: `A warm, professional photograph of the trainer standing alongside a delegate, discussing their learning progress. She is smiling naturally and offering guidance. A facial anatomy model and presentation board are visible in the background. Black scrubs, genuine connection, confident mentorship, premium clinical education environment, natural daylight, authentic expressions, high-end corporate editorial photography.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+  {
+    id: "ac-10", name: "The academy founder", hasColour: false,
+    promptTemplate: `A sophisticated editorial photograph of the trainer standing in the centre of her medical aesthetics training academy. Large presentation screen displaying facial anatomy, Venus system equipment positioned nearby, anatomical models arranged neatly on a clinical teaching table. She is wearing black scrubs, looking directly at camera with quiet confidence. Beautiful architectural interior, premium medical education branding aesthetic, realistic photography, natural light, high detail.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+];
