@@ -46,19 +46,18 @@ function fiveTags(raw: unknown, area: string): string[] {
 // picked at random and kept different from the other posts she has already made.
 const TREATMENT_CTA = "If this sounds like something you'd be interested in, drop me a DM.";
 const AREA_CTAS = [
-  "If you're in {area} and would like to know more about training with me, follow along.",
-  "If you're in {area} and want to learn from someone who truly cares, meet me in the DMs.",
-  "If you're in {area} and the surrounding areas and are thinking about a new direction, feel free to ask me any questions.",
-  "If you are near {area} and would like a relaxed chat before deciding anything, my DMs are open.",
-  "If you live in or around {area} and have a question you have been meaning to ask, send me a message.",
-  "If you're in {area} and would like to talk training through with me, I would love to hear from you in the DMs.",
-  "If you're in {area} and would like a little more information, come and say hello in the DMs.",
-  "If you are in {area} and the surrounding areas and want honest, unhurried advice about training, do get in touch.",
+  "If you're a medical professional looking to train with someone who cares, follow along.",
+  "If you're a medical professional looking to train with someone who cares, meet me in the DMs.",
+  "If you're a medical professional looking to train with someone who cares, feel free to ask me any questions.",
+  "If you're a medical professional and would like a relaxed chat before deciding anything, my DMs are open. Many of my trainees travel to me.",
+  "If you're a medical professional looking to train with someone who cares, send me a message. Plenty of people travel to train with me.",
+  "If you're a medical professional looking to train with someone who cares, I would love to hear from you in the DMs.",
+  "If you're a medical professional and happy to travel to train with someone who cares, come and say hello in the DMs.",
+  "If you're a medical professional looking for honest, unhurried advice about training, do get in touch.",
 ];
 function pickCta(kind: string, area: string, avoid: string[]): string {
   if (kind === "treatment") return TREATMENT_CTA;
-  const where = area || "your area";
-  const all = AREA_CTAS.map((t) => t.replace("{area}", where));
+  const all = AREA_CTAS;
   const fresh = all.filter((c) => !avoid.some((a) => a.trim().toLowerCase() === c.toLowerCase()));
   const pool = fresh.length ? fresh : all;
   return pool[Math.floor(Math.random() * pool.length)];
