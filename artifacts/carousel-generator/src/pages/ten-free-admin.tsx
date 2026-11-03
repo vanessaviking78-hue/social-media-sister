@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { TEN_PLAN, pickTreatments, pickFact, monthNameUK, treatmentByName } from "@/lib/tenfree-content";
-import { buildAssets, renderBespoke, renderStory, renderUniversalPost, type BespokeSpec } from "@/lib/tenfree-engine";
+import { TEN_PLAN, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
+import { buildAssets, renderStory, renderUniversalPost } from "@/lib/tenfree-engine";
+import { hashSeed } from "@/lib/pack-plan";
+import { UNIQUE } from "@/lib/unique-designs";
+import { applyCopy, skeleton, type CopyResult } from "@/lib/pack-build";
+import { renderPackPost, renderPackSlide, type PackClient, type PackPost } from "@/lib/pack-engine";
+import { DEFAULT_FOCUS, type PoolPhoto } from "@/lib/month-engine";
+import { brandPalette, loadImage, textLogo } from "@/lib/sample-post";
+import { makeClearLogo } from "@/lib/logo-clear";
 import { loadBitmap } from "@/pages/universal";
 import { canvasToPng } from "@/lib/logo-clear";
 
@@ -16,10 +23,9 @@ const authHeaders = (): Record<string, string> => {
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
   mainHex: string; accentHex: string; treatments: string[]; answers: { hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
-  logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string;
+  logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string;
 };
 type Poll = { question: string; a: string; b: string };
-type Built = { n: number; kind: string; label: string; canvases: HTMLCanvasElement[]; story: HTMLCanvasElement; caption: string; tags: string; poll: Poll };
 
 const siteLink = (slug: string) => `${window.location.origin}${BASE}/10free/${slug}`;
 
@@ -66,24 +72,39 @@ function List() {
   );
 }
 
+type Item = {
+  n: number; label: string; source: "universal" | "pack"; carousel: boolean;
+  post?: PackPost; uni?: HTMLCanvasElement[]; caption: string; tags: string; previews: string[];
+  poll: Poll & { instruction: string };
+};
+
 function Builder({ id }: { id: string }) {
   const [req, setReq] = useState<Req | null>(null);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const [built, setBuilt] = useState<Built[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [hooks, setHooks] = useState<{ hook: string; idea: string }[]>([]);
   const [fact, setFact] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [waOn, setWaOn] = useState(false);
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
+  const clientRef = useRef<PackClient | null>(null);
+  const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
+  const itemsRef = useRef<Item[]>([]);
+  itemsRef.current = items;
 
-  useEffect(() => {
+  const loadReq = useCallback(() => {
     fetch(`${API}/ten-free/requests/${id}`, { headers: authHeaders() }).then((r) => r.json()).then((j) => {
       setReq(j);
       if (j.slug) { setLink(siteLink(j.slug)); setCode(j.code || ""); }
     });
   }, [id]);
+  useEffect(() => { loadReq(); }, [loadReq]);
+  useEffect(() => {
+    if (req?.aiStatus !== "working") return;
+    const t = setInterval(loadReq, 10000);
+    return () => clearInterval(t);
+  }, [req?.aiStatus, loadReq]);
 
   const post = async (path: string, body: unknown) => {
     const r = await fetch(`${API}${path}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
@@ -100,6 +121,10 @@ function Builder({ id }: { id: string }) {
     return d.url as string;
   };
   const jpg = (c: HTMLCanvasElement): Promise<Blob> => new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not save an image"))), "image/jpeg", 0.92));
+  const patchItem = (n: number, p: Partial<Item>) => {
+    itemsRef.current = itemsRef.current.map((x) => (x.n === n ? { ...x, ...p } : x));
+    setItems(itemsRef.current);
+  };
 
   const build = async () => {
     if (!req) return;
@@ -115,66 +140,107 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-
-      setStatus("Choosing the three treatments...");
       const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 4, req.id);
-      if (picks.length < 3) throw new Error("Not enough treatment photos in the Universal library");
+      if (picks.length < 3) throw new Error("None of the treatments she ticked have photos in the Universal library");
 
-      setStatus("Preparing the logo and fonts...");
+      setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
       const photoBlob = req.photoUrl ? await fetch(req.photoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
-      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: waOn ? req.whatsapp : "", logoBlob, photoBlob });
+      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob });
+      assetsRef.current = assets;
 
-      setStatus("Writing the personal posts...");
-      const { posts: copy } = await post("/ten-free/copy", { clinic, answers: req.answers, kinds: ["about-me", "empower", "ageing", "seasonal", "men", "about-why"] });
-      const byKind = new Map<string, any>(copy.map((c: any) => [c.kind, c]));
+      // The pool for the pack templates: her three Studio portraits, then the photo she sent.
+      const pool: PoolPhoto[] = [];
+      const sources = [...(req.aiUrls ?? []), ...(req.photoUrl ? [req.photoUrl] : [])];
+      for (const [i, u] of sources.entries()) {
+        try {
+          const r = await fetch(`${API}/free-samples/source-image?url=${encodeURIComponent(u)}`);
+          if (!r.ok) continue;
+          const blob = await r.blob();
+          pool.push({ id: `${req.id}-${i}`, file: new File([blob], `pool-${i}.jpg`, { type: blob.type || "image/jpeg" }), url: URL.createObjectURL(blob) });
+        } catch { /* skip */ }
+      }
+      const clear = logoBlob ? await makeClearLogo(logoBlob).catch(() => null) : null;
+      const base = textLogo(req.clinicName);
+      const logoCanvas = clear || base.logo;
+      const logoImg = await loadImage(logoCanvas.toDataURL("image/png")).catch(() => null);
+      const owner = req.clinicianName;
+      const client: PackClient = {
+        businessName: req.clinicName, ownerName: owner, role: "Aesthetic practitioner", area: req.area, audience: "women over 35", brandNotes: "", footnote: "",
+        fill: { owner, clinic: req.clinicName, area: req.area.split(",")[0].trim(), role: "Aesthetic practitioner" },
+        headFont: "'Instrument Serif', serif", bodyFont: "'Montserrat', sans-serif",
+        brand: { main: req.mainHex, accent: req.accentHex }, logo: logoImg, pool, handle: req.handle,
+        portraitLogo: logoCanvas, portraitPalette: { ...brandPalette(req.mainHex, base.palette), tile: "rgba(0,0,0,0)" },
+      };
+      clientRef.current = client;
+
+      // The personal posts, from the pack templates.
+      const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
+      const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
+      const cursor = { at: 0 };
+      const built = packSlots.map((s) => {
+        const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design;
+        const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length);
+        const facts = `About me (the only facts you may use): hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
+        sk.spec.idea = `${s.idea}. ${facts}`;
+        return { slot: s, post: sk.post, spec: sk.spec };
+      });
+      const results: PackPost[] = built.map((b) => b.post);
+      let tagsA = "", tagsB = "";
+      for (let i = 0; i < built.length; i += 4) {
+        setStatus(`Writing the posts... ${Math.min(i + 4, built.length)} of ${built.length}`);
+        const chunk = built.slice(i, i + 4);
+        const j = await post("/post-packs/copy", { clinic: { name: req.clinicName, owner, role: "Aesthetic practitioner", area: req.area, treatments: req.treatments }, items: chunk.map((b) => ({ n: b.spec.n, kind: b.spec.kind, idea: b.spec.idea, fields: b.spec.fields, current: b.spec.current, photoSlides: b.spec.photoSlides })) });
+        if (!tagsA && j.tagsA) tagsA = j.tagsA;
+        if (!tagsB && j.tagsB) tagsB = j.tagsB;
+        for (const r of j.items as CopyResult[]) {
+          const idx = results.findIndex((p) => p.n === r.n);
+          if (idx >= 0) results[idx] = applyCopy(results[idx], r, r.n % 2 === 0 ? tagsB || tagsA : tagsA || tagsB);
+        }
+      }
+      const finalPack = results.map((p) => {
+        const preset = built.find((b) => b.post.n === p.n)?.slot.preset;
+        const withPreset = preset ? { ...p, text: { ...p.text, ...preset } } : p;
+        return withPreset.hashtags ? withPreset : { ...withPreset, hashtags: tagsA || tagsB };
+      });
 
       setStatus("Writing the treatment posts...");
       const tcopy: any[] = [];
       for (const p of picks) {
-        const r = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: "" });
-        tcopy.push(r);
+        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: "" }));
       }
 
-      setStatus("Writing the reel hooks and polls...");
-      const extras = await post("/ten-free/extras", { clinic, answers: req.answers, treatmentPosts: picks.map((p) => p.treatment.name) });
-      setHooks(extras.hooks);
-
       setStatus("Drawing the posts...");
-      const out: Built[] = [];
+      const out: Item[] = [];
       let ti = 0;
       for (const slot of TEN_PLAN) {
-        let canvases: HTMLCanvasElement[];
-        let caption = "";
-        let tags = "";
-        let poll: Poll = { question: "", a: "", b: "" };
-        let label = slot.label;
-        if (slot.kind === "treatment") {
+        if (slot.source === "universal") {
           const p = picks[ti];
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          canvases = renderUniversalPost({ treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: c.cta }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle }, assets);
-          caption = c.caption || "";
-          tags = (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" ");
-          const ep = (extras.polls || []).find((x: any) => x.treatment === p.treatment.name) || (extras.polls || [])[ti];
-          if (ep) poll = { question: ep.question, a: ep.a, b: ep.b };
-          label = `${p.treatment.name} carousel`;
+          const canvases = renderUniversalPost({ treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: c.cta }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle }, assets);
+          out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
         } else {
-          const w = byKind.get(slot.kind);
-          const spec: BespokeSpec = { kind: slot.kind, carousel: slot.carousel, headline: w.headline, subtitle: w.subtitle, slides: w.slides, body: w.body, cta: "Tag a friend who will get it", month: monthNameUK() };
-          canvases = renderBespoke(spec, assets, slot.n);
-          caption = w.caption;
-          tags = (w.hashtags || []).map((h: string) => `#${h}`).join(" ");
-          poll = w.poll;
+          const pp = finalPack.find((x) => x.n === slot.n)!;
+          const cvs = await renderPackPost(pp, client, 0.4);
+          out.push({ n: slot.n, label: slot.label, source: "pack", carousel: slot.carousel, post: pp, caption: pp.caption, tags: pp.hashtags, previews: cvs.map((c) => c.toDataURL("image/jpeg", 0.8)), poll: { question: "", a: "", b: "", instruction: "" } });
         }
-        out.push({ n: slot.n, kind: slot.kind, label, canvases, story: renderStory(canvases[0], assets), caption, tags, poll });
       }
-      setBuilt(out);
+
+      setStatus("Writing the 10 reel hooks and story polls...");
+      const extras = await post("/ten-free/extras", { clinic, answers: req.answers, posts: out.map((o) => ({ n: o.n, label: o.label })) });
+      setHooks(extras.hooks);
+      for (const o of out) {
+        const pl = (extras.polls || []).find((x: any) => x.n === o.n);
+        if (pl) o.poll = { question: pl.question, a: pl.a, b: pl.b, instruction: pl.instruction || "" };
+      }
+      itemsRef.current = out;
+      setItems(out);
       setFact(pickFact(req.id));
       if (assets.logo) setLogoUrl(await upload(await canvasToPng(assets.logo), "logo.png").catch(() => ""));
-      setStatus("Built. Have a look, then publish.");
+      setStatus("Built. Drag any photo to move it in its frame, then publish.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "The build stopped");
       setStatus("");
@@ -183,18 +249,55 @@ function Builder({ id }: { id: string }) {
     }
   };
 
+  // Dragging a photo moves it inside its frame (pack posts only).
+  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number]; w: number; h: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startFocus = (p: PackPost, i: number): [number, number] => (p.focus?.[`f${i}`] as [number, number] | undefined) ?? (p.kind === "portrait" ? [0.5, 0] : (DEFAULT_FOCUS as [number, number]));
+  const redraw = (n: number, i: number) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(async () => {
+      const client = clientRef.current;
+      const it = itemsRef.current.find((x) => x.n === n);
+      if (!client || !it?.post) return;
+      const cv = document.createElement("canvas");
+      await renderPackSlide(it.post, i, client, cv, 0.4);
+      const list = [...it.previews];
+      list[i] = cv.toDataURL("image/jpeg", 0.8);
+      patchItem(n, { previews: list });
+    }, 60);
+  };
+  const onDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number) => {
+    if (!it.post || it.post.kind === "tweet") return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    const r = (e.target as HTMLElement).getBoundingClientRect();
+    dragRef.current = { n: it.n, i, x: e.clientX, y: e.clientY, start: startFocus(it.post, i), w: r.width, h: r.height };
+  };
+  const onMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    const d = dragRef.current;
+    if (!d) return;
+    const fx = Math.max(0, Math.min(1, d.start[0] - (e.clientX - d.x) / d.w));
+    const fy = Math.max(0, Math.min(1, d.start[1] - (e.clientY - d.y) / d.h));
+    const it = itemsRef.current.find((x) => x.n === d.n);
+    if (!it?.post) return;
+    patchItem(d.n, { post: { ...it.post, focus: { ...(it.post.focus ?? {}), [`f${d.i}`]: [fx, fy] as [number, number] } } });
+    redraw(d.n, d.i);
+  };
+
   const publish = async () => {
-    if (!req || !built.length) return;
+    const client = clientRef.current;
+    const assets = assetsRef.current;
+    if (!req || !client || !assets || !itemsRef.current.length) return;
     setBusy(true);
     try {
       const posts = [];
       const stories = [];
-      for (const [i, b] of built.entries()) {
-        setStatus(`Saving images ${i + 1} of ${built.length}...`);
+      for (const [i, it] of itemsRef.current.entries()) {
+        setStatus(`Saving images ${i + 1} of ${itemsRef.current.length}...`);
+        const cvs = it.post ? await renderPackPost(it.post, client, 1) : it.uni!;
         const images: string[] = [];
-        for (const [k, c] of b.canvases.entries()) images.push(await upload(await jpg(c), `post-${b.n}-${k + 1}.jpg`));
-        posts.push({ n: b.n, kind: b.kind, label: b.label, images, caption: b.caption, tags: b.tags });
-        stories.push({ n: b.n, image: await upload(await jpg(b.story), `story-${b.n}.jpg`), poll: b.poll });
+        for (const [k, c] of cvs.entries()) images.push(await upload(await jpg(c), `post-${it.n}-${k + 1}.jpg`));
+        posts.push({ n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags });
+        stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
       }
       const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
       setLink(siteLink(j.slug));
@@ -207,11 +310,10 @@ function Builder({ id }: { id: string }) {
     }
   };
 
-  const thumbs = useMemo(() => built.map((b) => b.canvases[0].toDataURL("image/jpeg", 0.5)), [built]);
   if (!req) return <div className="p-6">Loading...</div>;
-  const ticked = req.treatments.map((t) => treatmentByName(t)?.name || t).join(", ");
+  const ticked = req.treatments.join(", ");
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-5">
+    <div className="max-w-5xl mx-auto p-6 space-y-5">
       <Link href="/10free-admin" className="text-sm underline">Back to requests</Link>
       <h1 className="text-2xl font-bold">{req.clinicName}</h1>
       <div className="text-sm space-y-1">
@@ -221,11 +323,14 @@ function Builder({ id }: { id: string }) {
         <div>Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
         <div>Why: {req.answers.why}</div>
         <div>Three words: {req.answers.threeWords} · Passion: {req.answers.passion}</div>
+        <div className="font-semibold">Studio portraits: {req.photoUrl ? (req.aiStatus === "ready" ? `${req.aiUrls.length} ready` : req.aiStatus === "failed" ? "failed" : "still being made") : "no photo sent"}
+          {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
+        </div>
+        {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
       </div>
-      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={waOn} onChange={(e) => setWaOn(e.target.checked)} /> Show her WhatsApp number on the closing slides (off by default)</label>
-      <div className="flex gap-3 items-center">
-        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{built.length ? "Rebuild" : "Build the 9 posts"}</button>
-        {built.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
+      <div className="flex gap-3 items-center flex-wrap">
+        <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : "Build the 10 posts"}</button>
+        {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
       </div>
       {link && (
@@ -236,12 +341,18 @@ function Builder({ id }: { id: string }) {
           <button className="px-3 py-1 border rounded text-sm" onClick={() => { navigator.clipboard.writeText(link); toast.success("Copied"); }}>Copy link</button>
         </div>
       )}
-      <div className="grid grid-cols-3 gap-3">
-        {built.map((b, i) => (
-          <div key={b.n} className="space-y-1">
-            <img src={thumbs[i]} className="w-full rounded" />
-            <div className="text-xs">{b.n}. {b.label} ({b.canvases.length} {b.canvases.length === 1 ? "image" : "slides"})</div>
-            <div className="text-xs text-muted-foreground line-clamp-3">{b.caption}</div>
+      <div className="grid gap-6 md:grid-cols-2">
+        {items.map((it) => (
+          <div key={it.n} className="border rounded-xl p-3 space-y-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
+            <div className="flex gap-2 overflow-x-auto">
+              {it.previews.map((src, i) => (
+                <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
+                  className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : ""}`} />
+              ))}
+            </div>
+            <textarea value={it.caption} onChange={(e) => patchItem(it.n, { caption: e.target.value })} rows={6} className="w-full text-sm border rounded p-2" />
+            <input value={it.tags} onChange={(e) => patchItem(it.n, { tags: e.target.value })} className="w-full text-xs border rounded p-2" />
           </div>
         ))}
       </div>

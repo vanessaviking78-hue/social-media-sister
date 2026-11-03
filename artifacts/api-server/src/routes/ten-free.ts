@@ -10,6 +10,9 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { saveSampleFile, appLink, needsRewrite, rewriteFlagged } from "../lib/freeSampleWorker";
 import { HOUSE_VOICE } from "../lib/houseRules";
 import { notifyTenFreeRequest } from "../lib/notify";
+import { aiSourcePhotosTable } from "@workspace/db/schema";
+import { readKey } from "../lib/freeSampleWorker";
+import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 
 // 10 FREE POSTS. A public form at /10freeposts where a clinic asks for nine free posts (3 treatment carousels, an empowering post,
 // 2 about the injector, one about ignoring other people's opinions on ageing, one for men, one seasonal), with stories, poll ideas,
@@ -75,6 +78,8 @@ function ensureTable(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )`)
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_urls JSONB NOT NULL DEFAULT '[]'::jsonb`))
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_status TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -90,6 +95,36 @@ function tooMany(ip: string): boolean {
   recent.push(now);
   hits.set(ip, recent);
   return recent.length > 6;
+}
+
+
+// ---------------------------------------------------------------------------
+// Three Studio portraits of the clinician, made in the background after the form is sent. Only three, and only when she sent a photo.
+// ---------------------------------------------------------------------------
+
+const STUDIO_SLOTS = [{ id: "mx-01" }, { id: "mx-02" }, { id: "mx-16" }];
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function runStudio(id: string, photoKey: string, clinicName: string): Promise<void> {
+  try {
+    await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'working' WHERE id = ${id}`);
+    const buf = await readKey(photoKey);
+    const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: clinicName, photoUrl: `/api/media/${photoKey}`, notes: "10 free posts" }).returning();
+    const results = new Map<string, string>();
+    let pending = STUDIO_SLOTS.map((x) => x.id);
+    for (let round = 0; round < 3 && pending.length > 0; round++) {
+      const jobId = `tf_${Date.now()}_${uuid().slice(0, 8)}`;
+      createJob(jobId, pending);
+      await processPortraitJob(jobId, buf, source.id, clinicName, pending.map((pid) => ({ id: pid, aspectRatio: "3:4" })));
+      for (const c of getJob(jobId)?.cards ?? []) if (c.status === "success" && c.outputImageUrl) results.set(c.scenarioId, c.outputImageUrl);
+      pending = pending.filter((pid) => !results.has(pid));
+      if (pending.length) await sleep(3000);
+    }
+    const urls = STUDIO_SLOTS.map((x) => results.get(x.id)).filter((u): u is string => !!u);
+    await db.execute(sql`UPDATE tenfree_requests SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"}, updated_at = now() WHERE id = ${id}`);
+  } catch {
+    await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'failed' WHERE id = ${id}`).catch(() => undefined);
+  }
 }
 
 const REPEAT_CODE = "NEXTBUNDLE";
@@ -193,6 +228,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       }
       throw err;
     }
+    if (photoKey) void runStudio(id, photoKey, clinicName);
     void notifyTenFreeRequest({ clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
@@ -208,7 +244,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
 type Row = {
   id: string; email: string; status: string; clinic_name: string; clinician_name: string; handle: string; area: string; website: string; whatsapp: string;
   main_hex: string; accent_hex: string; treatments: string[]; answers: Record<string, string>; logo_url: string; photo_url: string; notes: string; slug: string; code: string;
-  created_at: string;
+  created_at: string; ai_urls?: string[]; ai_status?: string; photo_key?: string;
 };
 
 const shape = (r: Row) => ({
@@ -230,6 +266,8 @@ const shape = (r: Row) => ({
   notes: r.notes,
   slug: r.slug,
   code: r.code,
+  aiUrls: r.ai_urls ?? [],
+  aiStatus: r.ai_status ?? "",
   createdAt: r.created_at,
 });
 
@@ -285,6 +323,23 @@ router.delete("/ten-free/requests/:id", requireAuth, async (req: Request, res: R
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not delete that request" });
+  }
+});
+
+router.post("/ten-free/requests/:id/studio", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTable();
+    const r = await db.execute(sql`SELECT photo_url, clinic_name FROM tenfree_requests WHERE id = ${String(req.params.id)}`);
+    const row = r.rows[0] as { photo_url?: string; clinic_name?: string } | undefined;
+    const key = (row?.photo_url ?? "").replace("/api/free-samples/media/", "");
+    if (!row || !key) {
+      res.status(400).json({ error: "She did not send a photo" });
+      return;
+    }
+    void runStudio(String(req.params.id), key, row.clinic_name ?? "");
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not start" });
   }
 });
 
@@ -531,13 +586,13 @@ Return JSON only: {"posts":[{"kind":"","headline":"","subtitle":"","slides":[],"
   }
 });
 
-// 30 reel hooks and a story poll for each treatment post.
+// 10 reel hooks and a story poll for every post.
 router.post("/ten-free/extras", requireAuth, async (req: Request, res: Response) => {
   try {
-    const body = req.body as { clinic?: ClinicIn; answers?: Answers; treatmentPosts?: string[] };
+    const body = req.body as { clinic?: ClinicIn; answers?: Answers; posts?: { n: number; label: string }[] };
     const clinic = body.clinic;
     const answers = body.answers;
-    const names = (body.treatmentPosts ?? []).map((t) => str(t, 80)).filter(Boolean).slice(0, 3);
+    const list = (body.posts ?? []).map((p) => ({ n: Number(p.n) || 0, label: str(p.label, 100) })).filter((p) => p.n).slice(0, 12);
     if (!clinic?.name || !clinic.area || !answers) {
       res.status(400).json({ error: "Send the clinic and her answers" });
       return;
@@ -546,26 +601,26 @@ router.post("/ten-free/extras", requireAuth, async (req: Request, res: Response)
 
 ${STYLE_RULES}
 
-YOU ARE WRITING REEL HOOKS FOR THE CLINICIAN TO FILM ON HER PHONE. Return exactly 30 hooks. Each is a line she says to camera (or shows as the on screen text) in the first three seconds, in her own voice, plus one short idea for what to film so it is easy to do alone with a phone.
-- Be original. Avoid the lines every clinic reel uses. No "POV:" more than twice in the whole list, no "things I wish I knew", no "stop scrolling", no "you won't believe".
-- Spread them across: her real personality (hobbies, pets, being a mum or not, her area, her three words, her passion), funny observations about women over 35, honest myths about a consultation, behind the scenes of the clinic day, and a few for the treatments she offers (never prescription only, never a claim, never a price).
+YOU ARE WRITING REEL HOOKS FOR THE CLINICIAN TO FILM ON HER PHONE. Return exactly 10 hooks, the ten most engaging you can write. Each is a line she says to camera (or shows as the on screen text) in the first three seconds, in her own voice, plus one short idea for what to film so it is easy to do alone with a phone.
+- Be original. Avoid the lines every clinic reel uses. No "POV:" more than once, no "things I wish I knew", no "stop scrolling", no "you won't believe".
+- Make them make a woman over 35 stop, smile and want to reply: her real personality (hobbies, pets, being a mum or not, her area, her three words, her passion), relatable honesty, myths about a consultation, behind the scenes of the clinic day. Never a claim, never a price, never prescription only.
 - hook: 6 to 16 words. idea: under 18 words.
-Also return a story poll for each treatment post named: { "treatment": "...", "question": "...", "a": "...", "b": "..." }, question under 60 characters, answers under 20 characters each, playful.
-Return JSON only: {"hooks":[{"hook":"","idea":""}],"polls":[{"treatment":"","question":"","a":"","b":""}]}`;
+Also return an Instagram story poll for each numbered post given: { "n": 1, "question": "...", "a": "...", "b": "..." }, question under 60 characters, answers under 20 characters each, playful and specific to that post. Also return "instruction" for each: one short friendly sentence telling her how to use that story (for example add the poll sticker with the question, then tag your location).
+Return JSON only: {"hooks":[{"hook":"","idea":""}],"polls":[{"n":1,"question":"","a":"","b":"","instruction":""}]}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: system },
-        { role: "user", content: `${aboutBlock(clinic, answers)}\n\nTreatment posts needing a poll: ${names.join(", ") || "none"}` },
+        { role: "user", content: `${aboutBlock(clinic, answers)}\n\nPosts needing a story poll:\n${list.map((p) => `${p.n}. ${p.label}`).join("\n")}` },
       ],
       response_format: { type: "json_object" },
       temperature: 0.95,
-      max_tokens: 4000,
+      max_tokens: 3500,
     });
-    const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { hooks?: { hook?: string; idea?: string }[]; polls?: { treatment?: string; question?: string; a?: string; b?: string }[] };
-    const hooks = (parsed.hooks ?? []).map((h) => ({ hook: noDashes(h.hook).slice(0, 160), idea: noDashes(h.idea).slice(0, 160) })).filter((h) => h.hook).slice(0, 30);
-    if (hooks.length < 24) throw new Error("The reel hooks came back short, try again");
-    const polls = (parsed.polls ?? []).map((p) => ({ treatment: str(p.treatment, 80), question: noDashes(p.question).slice(0, 70), a: noDashes(p.a).slice(0, 24), b: noDashes(p.b).slice(0, 24) }));
+    const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { hooks?: { hook?: string; idea?: string }[]; polls?: { n?: number; question?: string; a?: string; b?: string; instruction?: string }[] };
+    const hooks = (parsed.hooks ?? []).map((h) => ({ hook: noDashes(h.hook).slice(0, 160), idea: noDashes(h.idea).slice(0, 160) })).filter((h) => h.hook).slice(0, 10);
+    if (hooks.length < 8) throw new Error("The reel hooks came back short, try again");
+    const polls = (parsed.polls ?? []).map((p) => ({ n: Number(p.n) || 0, question: noDashes(p.question).slice(0, 70), a: noDashes(p.a).slice(0, 24), b: noDashes(p.b).slice(0, 24), instruction: noDashes(p.instruction).slice(0, 200) }));
     res.json({ hooks, polls });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free extras failed");
@@ -581,7 +636,7 @@ const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const makeCode = () => `3FOR1-${Array.from(randomBytes(5), (b) => CODE_CHARS[b % CODE_CHARS.length]).join("")}`;
 
 type PubPost = { n: number; kind: string; label: string; images: string[]; caption: string; tags: string };
-type PubStory = { n: number; image: string; poll: { question: string; a: string; b: string } };
+type PubStory = { n: number; image: string; instruction?: string; poll: { question: string; a: string; b: string } };
 
 router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -629,9 +684,10 @@ router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response
       stories: b.stories.slice(0, 12).map((s) => ({
         n: Number(s.n) || 0,
         image: str(s.image, 400),
+        instruction: noDashes(s.instruction).slice(0, 220),
         poll: { question: noDashes(s.poll?.question).slice(0, 80), a: noDashes(s.poll?.a).slice(0, 30), b: noDashes(s.poll?.b).slice(0, 30) },
       })),
-      hooks: b.hooks.slice(0, 40).map((h) => ({ hook: noDashes(h.hook).slice(0, 200), idea: noDashes(h.idea).slice(0, 200) })),
+      hooks: b.hooks.slice(0, 12).map((h) => ({ hook: noDashes(h.hook).slice(0, 200), idea: noDashes(h.idea).slice(0, 200) })),
       fact: noDashes(b.fact).slice(0, 300),
       code,
       builtAt: new Date().toISOString(),

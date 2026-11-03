@@ -2,7 +2,6 @@ import { BASE_TITLE, DEFAULT_LOOK, drawSlide, ensureFonts, type Look, type Photo
 import { drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight } from "./suite-fonts";
 import { loadImage } from "./sample-post";
 import { logoLuma, makeClearLogo, recolourLogo } from "./logo-clear";
-import type { TenKind } from "./tenfree-content";
 
 // 10 FREE POSTS drawing. The three treatment posts are drawn by Universal's own slide drawer, so they match her Universal tool.
 // The six others (about me, empowering, your face your rules, seasonal, men, why I do this) are drawn here in the same language:
@@ -91,7 +90,7 @@ export async function buildTitleFont(): Promise<TitleFont> {
   const mine = saved.fontId === BASE_TITLE.fontId && Object.keys(saved.swaps).length > 0;
   const swaps: Record<string, string> = mine ? { ...saved.swaps } : {};
   if (!mine) for (const [ch, list] of Object.entries(lf.data.alts)) if (list.length) swaps[ch] = list[0];
-  return { lf, style: { ...BASE_TITLE, tracking: mine ? saved.tracking : BASE_TITLE.tracking, swaps, rate: "some" } };
+  return { lf, style: { ...BASE_TITLE, tracking: mine ? saved.tracking : BASE_TITLE.tracking, swaps, rate: "starts" } };
 }
 
 function textLogoCanvas(name: string): HTMLCanvasElement {
@@ -189,112 +188,6 @@ const rgba = (h: string, a: number) => {
   return `rgba(${r},${g},${b},${a})`;
 };
 
-function background(ctx: CanvasRenderingContext2D, b: Brand, variant: number) {
-  const runs: [number, number, number, number][] = [
-    [0, 0, W, H],
-    [W, 0, 0, H],
-    [0, H, W, 0],
-    [W * 0.5, 0, W * 0.5, H],
-  ];
-  const [x0, y0, x1, y1] = runs[variant % runs.length];
-  const g = ctx.createLinearGradient(x0, y0, x1, y1);
-  g.addColorStop(0, b.deep);
-  g.addColorStop(0.55, b.mid);
-  g.addColorStop(1, mixHex(b.deep, "#000000", 0.25));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  // a soft pool of light, so the gradient feels lit rather than flat
-  const spot = ctx.createRadialGradient(variant % 2 ? W * 0.2 : W * 0.82, H * 0.14, 20, variant % 2 ? W * 0.2 : W * 0.82, H * 0.14, 760);
-  spot.addColorStop(0, rgba(b.glow, 0.2));
-  spot.addColorStop(1, rgba(b.glow, 0));
-  ctx.fillStyle = spot;
-  ctx.fillRect(0, 0, W, H);
-  // a whisper of grain
-  const r = seeded(7 + variant * 101);
-  for (let i = 0; i < 2600; i++) {
-    ctx.fillStyle = r() > 0.5 ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.05)";
-    ctx.fillRect(r() * W, r() * H, 1.6, 1.6);
-  }
-}
-
-function frame(ctx: CanvasRenderingContext2D, b: Brand) {
-  ctx.strokeStyle = rgba(b.glow, 0.45);
-  ctx.lineWidth = 2;
-  ctx.strokeRect(54, 54, W - 108, H - 108);
-}
-
-function logoAt(ctx: CanvasRenderingContext2D, a: Assets, cx: number, y: number, maxW: number, maxH: number) {
-  if (!a.logo) return;
-  const s = Math.min(maxW / a.logo.width, maxH / a.logo.height);
-  const w = a.logo.width * s;
-  const h = a.logo.height * s;
-  ctx.drawImage(a.logo, cx - w / 2, y, w, h);
-}
-
-function rule(ctx: CanvasRenderingContext2D, b: Brand, cx: number, y: number, w = 90) {
-  ctx.fillStyle = rgba(b.glow, 0.8);
-  ctx.fillRect(cx - w / 2, y, w, 2);
-}
-
-function headline(ctx: CanvasRenderingContext2D, a: Assets, text: string, y: number, maxH: number, start = 150): number {
-  const maxW = W - 240;
-  let size = start;
-  const make = (s: number) => layoutTitle(a.tf!.lf, text, a.tf!.style, s, maxW, 1.1);
-  let layout = make(size);
-  while (size > 64 && titleHeight(layout) > maxH) {
-    size -= 4;
-    layout = make(size);
-  }
-  drawTitle(ctx, a.tf!.lf, layout, a.tf!.style, 120, y, "center", maxW, "#ffffff");
-  return titleHeight(layout);
-}
-
-function archPhoto(ctx: CanvasRenderingContext2D, a: Assets, b: Brand, x: number, y: number, w: number, h: number) {
-  const bmp = a.photo;
-  if (!bmp) return;
-  const r = w / 2;
-  const path = (px: number, py: number, pw: number, ph: number) => {
-    const pr = pw / 2;
-    ctx.beginPath();
-    ctx.moveTo(px, py + ph);
-    ctx.lineTo(px, py + pr);
-    ctx.arc(px + pr, py + pr, pr, Math.PI, 0);
-    ctx.lineTo(px + pw, py + ph);
-    ctx.closePath();
-  };
-  ctx.save();
-  path(x, y, w, h);
-  ctx.clip();
-  const s = Math.max(w / bmp.width, h / bmp.height);
-  const bw = bmp.width * s;
-  const bh = bmp.height * s;
-  ctx.drawImage(bmp, x + (w - bw) / 2, y + (h - bh) * 0.12, bw, bh);
-  // a gentle wash at the foot of the arch so it settles into the gradient
-  const fade = ctx.createLinearGradient(0, y + h * 0.7, 0, y + h);
-  fade.addColorStop(0, rgba(b.deep, 0));
-  fade.addColorStop(1, rgba(b.deep, 0.55));
-  ctx.fillStyle = fade;
-  ctx.fillRect(x, y, w, h);
-  ctx.restore();
-  ctx.strokeStyle = rgba(b.glow, 0.6);
-  ctx.lineWidth = 2;
-  path(x - 18, y - 18, w + 36, h + 18);
-  ctx.stroke();
-  void r;
-}
-
-const LABEL: Record<TenKind, string> = {
-  treatment: "",
-  "about-me": "A LITTLE ABOUT ME",
-  empower: "THIS ONE IS FOR YOU",
-  ageing: "YOUR FACE, YOUR RULES",
-  seasonal: "",
-  men: "FOR THE GENTLEMEN",
-  "about-why": "WHY I DO THIS",
-};
-
-export type BespokeSpec = { kind: TenKind; carousel: boolean; headline: string; subtitle: string; slides: string[]; body: string; cta: string; month: string };
-
 function whatsappStamp(ctx: CanvasRenderingContext2D, a: Assets, y: number) {
   if (!a.whatsapp) return;
   ctx.textBaseline = "top";
@@ -315,137 +208,12 @@ function handleStamp(ctx: CanvasRenderingContext2D, a: Assets, y: number) {
   tracked(ctx, `@${a.handle.toUpperCase()}`, W / 2, y, 6);
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, a: Assets, s: BespokeSpec, variant: number, single: boolean) {
-  const b = a.brand;
-  background(ctx, b, variant);
-  frame(ctx, b);
-  ctx.textBaseline = "top";
-  const label = s.kind === "seasonal" ? `${s.month.toUpperCase()} NOTES` : LABEL[s.kind];
-  const withPhoto = !!a.photo && (s.kind === "about-me" || s.kind === "about-why");
-  const secondary = single ? s.body : s.subtitle;
-
-  if (withPhoto) {
-    archPhoto(ctx, a, b, 230, 150, 620, 690);
-    ctx.fillStyle = rgba(b.glow, 0.95);
-    ctx.font = `700 22px "${BODY}", sans-serif`;
-    tracked(ctx, label, W / 2, 884, 7);
-    const hh = headline(ctx, a, s.headline, 926, single ? 190 : 230, single ? 100 : 110);
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const sub = fit(ctx, secondary, 400, W - 260, 120, 40, 28, 1.3);
-    ctx.font = `italic 400 ${sub.px}px "${SOFT}", serif`;
-    ctx.textAlign = "center";
-    let y = 926 + hh + 14;
-    for (const l of sub.lines) {
-      ctx.fillText(l, W / 2, y);
-      y += sub.px * 1.3;
-    }
-    logoAt(ctx, a, W / 2, H - 150, 260, 62);
-    return;
-  }
-
-  logoAt(ctx, a, W / 2, 112, 340, 84);
-  ctx.fillStyle = rgba(b.glow, 0.95);
-  ctx.font = `700 24px "${BODY}", sans-serif`;
-  tracked(ctx, label, W / 2, 340, 8);
-  rule(ctx, b, W / 2, 392);
-  const hh = headline(ctx, a, s.headline, 440, single ? 400 : 420, single ? 140 : 150);
-  const body = fit(ctx, secondary, 400, W - 260, 240, single ? 54 : 48, 32, 1.35);
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = `italic 400 ${body.px}px "${SOFT}", serif`;
-  ctx.textAlign = "center";
-  let y = 440 + hh + 46;
-  for (const l of body.lines) {
-    ctx.fillText(l, W / 2, y);
-    y += body.px * 1.35;
-  }
-  handleStamp(ctx, a, H - 150);
-}
-
-function drawBodySlide(ctx: CanvasRenderingContext2D, a: Assets, text: string, i: number, total: number) {
-  const b = a.brand;
-  background(ctx, b, i + 1);
-  frame(ctx, b);
-  ctx.textBaseline = "top";
-  ctx.fillStyle = rgba(b.glow, 0.2);
-  ctx.font = `800 300px "${BODY}", sans-serif`;
-  ctx.textAlign = "left";
-  ctx.fillText(String(i), 110, 130);
-  rule(ctx, b, 165, 520, 90);
-  const body = fit(ctx, text, 500, W - 250, 560, 62, 38, 1.4);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `500 ${body.px}px "${SOFT}", serif`;
-  ctx.textAlign = "left";
-  let y = 566;
-  for (const l of body.lines) {
-    ctx.fillText(l, 120, y);
-    y += body.px * 1.4;
-  }
-  ctx.fillStyle = rgba("#ffffff", 0.7);
-  ctx.font = `600 22px "${BODY}", sans-serif`;
-  tracked(ctx, `${i + 1} / ${total}`, W - 120, H - 140, 5, "right");
-  logoAt(ctx, a, 120 + 100, H - 150, 220, 54);
-}
-
-function drawCtaSlide(ctx: CanvasRenderingContext2D, a: Assets, text: string) {
-  const b = a.brand;
-  const g = ctx.createLinearGradient(0, 0, W, H);
-  g.addColorStop(0, b.deep);
-  g.addColorStop(1, b.mid);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  const spot = ctx.createRadialGradient(W * 0.5, H * 0.35, 20, W * 0.5, H * 0.35, 700);
-  spot.addColorStop(0, rgba(b.glow, 0.18));
-  spot.addColorStop(1, rgba(b.glow, 0));
-  ctx.fillStyle = spot;
-  ctx.fillRect(0, 0, W, H);
-  frame(ctx, b);
-  ctx.textBaseline = "top";
-  const fitted = fit(ctx, text, 700, W - 260, 400, 78, 44, 1.25);
-  const total = fitted.lines.length * fitted.px * 1.25;
-  let y = 400 - total / 2 + 80;
-  ctx.fillStyle = "#ffffff";
-  ctx.font = `700 ${fitted.px}px "${BODY}", sans-serif`;
-  ctx.textAlign = "center";
-  for (const l of fitted.lines) {
-    ctx.fillText(l, W / 2, y);
-    y += fitted.px * 1.25;
-  }
-  rule(ctx, b, W / 2, y + 30);
-  logoAt(ctx, a, W / 2, y + 96, 420, 120);
-  handleStamp(ctx, a, a.whatsapp ? H - 330 : H - 170);
-  whatsappStamp(ctx, a, H - 250);
-}
-
-/** Draws one of the six bespoke posts: five slides for a carousel, one image for the rest. */
-export function renderBespoke(spec: BespokeSpec, a: Assets, variant: number): HTMLCanvasElement[] {
-  const make = () => {
-    const c = document.createElement("canvas");
-    c.width = W;
-    c.height = H;
-    return c;
-  };
-  const out: HTMLCanvasElement[] = [];
-  const cover = make();
-  drawCover(cover.getContext("2d")!, a, spec, variant, !spec.carousel);
-  out.push(cover);
-  if (!spec.carousel) return out;
-  for (let i = 0; i < 3; i++) {
-    const c = make();
-    drawBodySlide(c.getContext("2d")!, a, spec.slides[i] || "", i + 1, 5);
-    out.push(c);
-  }
-  const last = make();
-  drawCtaSlide(last.getContext("2d")!, a, spec.cta || "Tag a friend who will get it");
-  out.push(last);
-  return out;
-}
-
 // ---------- Universal (the three treatment posts) ----------
 
 export type UniversalCopy = { subtitle: string; slides: string[]; cta: string };
 
 export function universalLook(a: Assets): Look {
-  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: false };
+  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: true };
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
@@ -485,34 +253,35 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
 
 // ---------- stories ----------
 
-/** The cover of a post on a tall story canvas. The edges of the cover are stretched into the bands above and below, and the
- *  lower band is left clear for the poll sticker. */
+/** The cover of a post on a tall 1080 x 1920 story canvas. The cover sits in the middle at full width, and its top and bottom edges are
+ *  stretched into the bands above and below so it looks intended. The lower band is left clear for the poll sticker. */
 export function renderStory(cover: HTMLCanvasElement, a: Assets): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W;
   c.height = SH;
   const ctx = c.getContext("2d")!;
-  const gap = (SH - H) / 2;
+  const h = Math.round((cover.height / cover.width) * W);
+  const top = Math.max(0, Math.round((SH - h) / 2));
   const b = a.brand;
   ctx.fillStyle = b.deep;
   ctx.fillRect(0, 0, W, SH);
-  // stretch the top and bottom edge of the cover into the bands, then dim them with the brand colour so they feel intended
-  ctx.drawImage(cover, 0, 0, W, 6, 0, 0, W, gap + 2);
-  ctx.drawImage(cover, 0, H - 6, W, 6, 0, gap + H - 2, W, gap + 2);
-  const top = ctx.createLinearGradient(0, 0, 0, gap);
-  top.addColorStop(0, rgba(b.deep, 0.92));
-  top.addColorStop(1, rgba(b.deep, 0.35));
-  ctx.fillStyle = top;
-  ctx.fillRect(0, 0, W, gap);
-  const bottom = ctx.createLinearGradient(0, gap + H, 0, SH);
-  bottom.addColorStop(0, rgba(b.deep, 0.35));
-  bottom.addColorStop(1, rgba(b.deep, 0.92));
-  ctx.fillStyle = bottom;
-  ctx.fillRect(0, gap + H, W, gap);
-  ctx.drawImage(cover, 0, gap);
+  const edge = Math.max(2, Math.round(cover.height * 0.004));
+  ctx.drawImage(cover, 0, 0, cover.width, edge, 0, 0, W, top + 2);
+  ctx.drawImage(cover, 0, cover.height - edge, cover.width, edge, 0, top + h - 2, W, SH - top - h + 2);
+  const t = ctx.createLinearGradient(0, 0, 0, top);
+  t.addColorStop(0, rgba(b.deep, 0.9));
+  t.addColorStop(1, rgba(b.deep, 0.4));
+  ctx.fillStyle = t;
+  ctx.fillRect(0, 0, W, top);
+  const bt = ctx.createLinearGradient(0, top + h, 0, SH);
+  bt.addColorStop(0, rgba(b.deep, 0.4));
+  bt.addColorStop(1, rgba(b.deep, 0.9));
+  ctx.fillStyle = bt;
+  ctx.fillRect(0, top + h, W, SH - top - h);
+  ctx.drawImage(cover, 0, top, W, h);
   ctx.textBaseline = "top";
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = `700 28px "${BODY}", sans-serif`;
-  tracked(ctx, "NEW POST", W / 2, gap / 2 - 18, 10);
+  tracked(ctx, "NEW POST", W / 2, Math.max(40, top / 2 - 18), 10);
   return c;
 }

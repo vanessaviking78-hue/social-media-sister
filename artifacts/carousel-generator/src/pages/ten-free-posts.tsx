@@ -228,16 +228,16 @@ export default function TenFreePosts() {
               <h1 className="tf-h1">
                 Your <span>10 free</span> posts
               </h1>
-              <p className="tf-lede">Tell me a little about you and your clinic. I build nine posts in your colours, with your logo, your website and your WhatsApp, plus stories, reel hooks and a surprise at the end.</p>
+              <p className="tf-lede">Tell me a little about you and your clinic. I build ten posts in your colours with your logo, plus matching stories, reel hooks and a surprise at the end.</p>
               <div className="tf-list">
-                <div><b>3</b>Treatment posts</div>
-                <div><b>1</b>Empowering post</div>
+                <div><b>3</b>Treatment carousels</div>
                 <div><b>2</b>About you</div>
-                <div><b>1</b>Your face, your rules</div>
-                <div><b>1</b>Men love it too</div>
-                <div><b>1</b>Seasonal post</div>
-                <div><b>9</b>Matching stories</div>
-                <div><b>30</b>Reel hooks to film</div>
+                <div><b>1</b>Empowering post</div>
+                <div><b>1</b>Safety post</div>
+                <div><b>2</b>Just for fun</div>
+                <div><b>1</b>This month</div>
+                <div><b>10</b>Matching stories</div>
+                <div><b>10</b>Reel hooks to film</div>
               </div>
             </div>
 
