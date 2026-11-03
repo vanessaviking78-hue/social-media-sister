@@ -25,7 +25,7 @@ const BODY_FONT = "Montserrat";
 
 // The headline font is the same for every client. The curly, joined-up letters are the font's own alternates,
 // so they only appear when a swap is chosen. Use the look saved in Font Lab if it is for Blue Mirage.
-const BASE_TITLE: TitleStyle = { fontId: "blue-mirage", tracking: 40, upper: false, ligatures: true, swaps: {}, rate: "some" };
+export const BASE_TITLE: TitleStyle = { fontId: "blue-mirage", tracking: 40, upper: false, ligatures: true, swaps: {}, rate: "some" };
 const RATES: { id: SwapRate; label: string }[] = [
   { id: "off", label: "None" },
   { id: "starts", label: "First letters" },
@@ -34,8 +34,9 @@ const RATES: { id: SwapRate; label: string }[] = [
 ];
 
 type Dir = "bottom" | "top";
-type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean };
-const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
+// grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string };
+export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 // Metallic finishes. A colour value is either a hex, or "metal:name" for a shiny multi stop gradient.
@@ -61,10 +62,10 @@ const rgbOf = (hex: string) => {
   return `${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)}`;
 };
 
-type Photo = { url: string; bmp: ImageBitmap };
+export type Photo = { url: string; bmp: ImageBitmap };
 type LibImage = { id: number; treatmentId: string; name: string; url: string };
 
-type Post = {
+export type Post = {
   id: string;
   key: string; // treatment id : post number
   treatmentId: string;
@@ -100,7 +101,7 @@ const localUrl = (u: string) => {
 };
 
 const bitmapCache = new Map<string, Promise<ImageBitmap>>();
-function loadBitmap(url: string): Promise<ImageBitmap> {
+export function loadBitmap(url: string): Promise<ImageBitmap> {
   let p = bitmapCache.get(url);
   if (!p) {
     p = fetch(localUrl(url)).then((r) => {
@@ -123,7 +124,7 @@ function loadLogoImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
-async function ensureFonts() {
+export async function ensureFonts() {
   loadGoogleFonts();
   injectSuiteFontCss();
   try {
@@ -242,10 +243,10 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, 
   }
 }
 
-type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
+export type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
 
 // Slide 0 is the cover, 1 to 3 are the writing, 4 is the call to action.
-function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, tf: TitleFont, look: Look, logo: HTMLImageElement | null) {
+export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, tf: TitleFont, look: Look, logo: HTMLImageElement | null) {
   const ts = (look.titleSize || 100) / 100;
   const bs = (look.bodySize || 100) / 100;
   const ink = look.text;
@@ -256,7 +257,14 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   ctx.textBaseline = "top";
 
   if (n === 4) {
-    ctx.fillStyle = solidFill(ctx, look.wash);
+    if (look.grad && isHex(look.grad) && isHex(look.wash)) {
+      const g = ctx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, look.wash);
+      g.addColorStop(1, look.grad);
+      ctx.fillStyle = g;
+    } else {
+      ctx.fillStyle = solidFill(ctx, look.wash);
+    }
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = inkPaint(ctx, ink, H / 2 - 200, 400);
     ctx.textAlign = "left";

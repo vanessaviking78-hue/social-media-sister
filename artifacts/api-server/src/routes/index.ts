@@ -98,12 +98,14 @@ import yetToPostRouter from "./yet-to-post";
 import toastPhotoRouter from "./toast-photo";
 import freeSamplesRouter from "./free-samples";
 import postPacksRouter from "./post-packs";
+import tenFreeRouter from "./ten-free";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(freeSamplesRouter);
 router.use(postPacksRouter);
+router.use(tenFreeRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
 router.use(magazinePostRouter);

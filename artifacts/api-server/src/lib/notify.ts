@@ -361,3 +361,45 @@ export async function notifySampleReady(opts: {
     logger.warn({ err }, "Sample ready notification email failed");
   }
 }
+
+/**
+ * Emails NOTIFY_EMAIL when someone asks for their 10 free posts on the public form,
+ * so Vanessa can look at them and decide whether to build and send the link.
+ * Fire-and-forget: never throws.
+ */
+export async function notifyTenFreeRequest(opts: {
+  clinicName: string;
+  clinicianName?: string;
+  handle?: string;
+  email: string;
+  area?: string;
+  website?: string;
+  whatsapp?: string;
+  link: string;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const who = `${opts.clinicName}${opts.clinicianName ? ` (${opts.clinicianName})` : ""}`;
+  const lines = [
+    `${who} has asked for their free posts.`,
+    "",
+    `Email: ${opts.email}`,
+    opts.handle ? `Instagram: @${opts.handle.replace(/^@/, "")}` : "",
+    opts.area ? `Area: ${opts.area}` : "",
+    opts.website ? `Website: ${opts.website}` : "",
+    opts.whatsapp ? `WhatsApp: ${opts.whatsapp}` : "",
+    "",
+    "Have a look at them, and if they are a good fit, build their posts and send them their private link:",
+    opts.link,
+    "",
+    "The CyberSuite",
+  ].filter((l, i, a) => l !== "" || (i > 0 && a[i - 1] !== ""));
+  try {
+    await transporter.sendMail({ from, to, subject: `Free posts request: ${opts.clinicName}`, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Ten free request notification email failed");
+  }
+}

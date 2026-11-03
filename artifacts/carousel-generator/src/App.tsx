@@ -155,6 +155,9 @@ import BonusContent from "@/pages/bonus-content";
 import ClientBank from "@/pages/client-bank";
 import DailyFive from "@/pages/daily-five";
 import InjectorReels from "@/pages/injector-reels";
+import TenFreePosts from "@/pages/ten-free-posts";
+import TenFreePublic from "@/pages/ten-free-public";
+import TenFreeAdmin from "@/pages/ten-free-admin";
 
 const queryClient = new QueryClient();
 
@@ -170,6 +173,7 @@ function ProtectedRouter() {
   return (
     <Switch>
       <Route path="/hub" component={Hub} />
+      <Route path="/10free-admin" component={TenFreeAdmin} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
       <Route path="/magazinepost" component={MagazinePost} />
@@ -324,6 +328,8 @@ function AppContent() {
   const [isSampleRequest] = useRoute("/getmysample");
   const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
   const [isPackOrder] = useRoute("/getmyposts");
+  const [isTenFreeForm] = useRoute("/10freeposts");
+  const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isNo1Client] = useRoute("/no1bodypostsready");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
@@ -445,6 +451,12 @@ function AppContent() {
   }
   if (isPackOrder) {
     return <PackOrder />;
+  }
+  if (isTenFreeForm) {
+    return <TenFreePosts />;
+  }
+  if (isTenFreePublic && tenFreeParams?.slug) {
+    return <TenFreePublic slug={tenFreeParams.slug} />;
   }
   if (isPackPublic && packPublicParams?.slug) {
     return <PackPublic slug={packPublicParams.slug} />;
