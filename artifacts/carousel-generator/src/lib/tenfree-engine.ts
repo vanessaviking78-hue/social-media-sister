@@ -224,7 +224,7 @@ function handleStamp(ctx: CanvasRenderingContext2D, a: Assets, y: number) {
 export type UniversalCopy = { subtitle: string; slides: string[]; cta: string };
 
 export function universalLook(a: Assets): Look {
-  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: true, bodyFont: "Playfair Display" };
+  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 100, logoWhite: false, bw: false, bodyFont: "Playfair Display" };
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
