@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
-import { drawTitle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
+import { drawTitle, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
 // UNIVERSAL: any client, every non prescription treatment, six posts each.
@@ -462,22 +462,27 @@ export default function UniversalPage() {
       /* ignore */
     }
   }, [rate]);
+  // A look saved for this client in Font Lab replaces Blue Mirage for them.
+  const clientStyle = useMemo(() => (preset && hasClientStyle(preset.name) ? readTitleStyle(preset.name) : null), [preset]);
+  const fontId = clientStyle?.fontId ?? BASE_TITLE.fontId;
   useEffect(() => {
     let live = true;
-    loadSuiteFont(BASE_TITLE.fontId).then((lf) => live && setLfont(lf)).catch(() => undefined);
+    setLfont(null);
+    loadSuiteFont(fontId).then((lf) => live && setLfont(lf)).catch(() => undefined);
     return () => {
       live = false;
     };
-  }, []);
+  }, [fontId]);
   const tf: TitleFont = useMemo(() => {
     if (!lfont) return null;
+    if (clientStyle) return { lf: lfont, style: clientStyle };
     const saved = readTitleStyle();
     const mine = saved.fontId === BASE_TITLE.fontId && Object.keys(saved.swaps).length > 0;
     // Her Font Lab choices win. Otherwise every letter that has one gets the font's first curly version.
     const swaps: Record<string, string> = mine ? saved.swaps : {};
     if (!mine) for (const [ch, list] of Object.entries(lfont.data.alts)) if (list.length) swaps[ch] = list[0];
     return { lf: lfont, style: { ...BASE_TITLE, tracking: mine ? saved.tracking : BASE_TITLE.tracking, swaps, rate } };
-  }, [lfont, rate]);
+  }, [lfont, rate, clientStyle]);
 
   // The fixed photos for every treatment
   const [lib, setLib] = useState<LibImage[]>([]);
@@ -895,7 +900,7 @@ export default function UniversalPage() {
               <input type="range" min={40} max={200} step={5} value={look.logoSize} onChange={(e) => setLook((l) => ({ ...l, logoSize: Number(e.target.value) }))} className="w-full" />
             </label>
           </div>
-          <p className="text-white/40 text-xs">Headline font: Blue Mirage {tf ? "" : "(loading)"}. Curly letters follow whichever ones you picked in Font Lab, otherwise the font's first curly version of each letter. Subtitle and every page after the first: Montserrat. Caption footnote from the client preset: {foot ? `"${foot}"` : "none saved"}. It goes at the very end, under the 5 hashtags.</p>
+          <p className="text-white/40 text-xs">Headline font: {clientStyle ? `${preset?.name}'s own look from Font Lab` : "Blue Mirage"} {tf ? "" : "(loading)"}. Curly letters follow whichever ones you picked in Font Lab, otherwise the font's first curly version of each letter. Subtitle and every page after the first: Montserrat. Caption footnote from the client preset: {foot ? `"${foot}"` : "none saved"}. It goes at the very end, under the 5 hashtags.</p>
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
