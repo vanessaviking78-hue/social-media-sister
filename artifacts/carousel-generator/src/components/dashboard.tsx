@@ -1,22 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { Check, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-// Content Day ticks live in the existing content-ticklist table. Keys look like "12:shot".
-const STORE_ID = "dashboard";
-
 const URGENT_DAYS = 7; // under a week of posts scheduled
 const SOON_DAYS = 30; // under a month of posts scheduled
 
-const STEPS = [
-  { key: "booked", label: "Booked", full: "Content Day booked" },
-  { key: "shot", label: "Shot", full: "Content Day shot" },
-  { key: "edited", label: "Edited", full: "Content Day edited" },
-  { key: "delivered", label: "Delivered", full: "Content Day delivered" },
-] as const;
-
-type StepKey = (typeof STEPS)[number]["key"];
 type Level = "urgent" | "soon" | "ok";
 
 type FocusClient = { presetId: number; clientName: string; daysCovered: number };
@@ -53,7 +42,6 @@ function coverText(days: number): string {
 
 export function Dashboard() {
   const [clients, setClients] = useState<FocusClient[]>([]);
-  const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -63,14 +51,9 @@ export function Dashboard() {
 
   const load = useCallback(async () => {
     try {
-      const [focusRes, tickRes] = await Promise.all([
-        fetch(`${BASE}/api/daily-focus`, { headers: authHeaders() }),
-        fetch(`${BASE}/api/content-ticklist/${STORE_ID}`, { headers: authHeaders() }),
-      ]);
+      const focusRes = await fetch(`${BASE}/api/daily-focus`, { headers: authHeaders() });
       const focus: FocusResponse = focusRes.ok ? await focusRes.json() : {};
-      const tickJson = tickRes.ok ? await tickRes.json() : { state: {} };
       setClients(Array.isArray(focus.monthlyClients) ? focus.monthlyClients : []);
-      setTicks(tickJson.state && typeof tickJson.state === "object" ? tickJson.state : {});
       setError(focusRes.ok ? "" : "Could not load your clients.");
     } catch {
       setError("Could not load your clients.");
@@ -85,46 +68,20 @@ export function Dashboard() {
     return () => clearInterval(id);
   }, [load]);
 
-  const toggle = async (presetId: number, step: StepKey) => {
-    const key = `${presetId}:${step}`;
-    const next = !ticks[key];
-    setTicks((t) => {
-      const copy = { ...t };
-      if (next) copy[key] = true;
-      else delete copy[key];
-      return copy;
-    });
-    try {
-      const res = await fetch(`${BASE}/api/content-ticklist/${STORE_ID}`, {
-        method: "PATCH",
-        headers: authHeaders(),
-        body: JSON.stringify({ key, value: next }),
-      });
-      if (!res.ok) throw new Error("save failed");
-    } catch {
-      setError("That tick did not save. Try again.");
-      load();
-    }
-  };
-
-  // Priority order: least scheduled first. Content Days in progress are shown on the client, not used to rank.
+  // Priority order: least scheduled first.
   const rows = useMemo(() => {
     return clients
       .map((c) => {
         const level = levelFor(c.daysCovered, toNewYear);
-        const ticked = STEPS.filter((s) => ticks[`${c.presetId}:${s.key}`]);
-        const inProgress = ticked.length > 0 && !ticks[`${c.presetId}:delivered`];
-        const nextStep = STEPS.find((s) => !ticks[`${c.presetId}:${s.key}`]);
-        return { ...c, level, inProgress, nextStep, gap: Math.max(0, toNewYear - c.daysCovered) };
+        return { ...c, level, gap: Math.max(0, toNewYear - c.daysCovered) };
       })
       .sort((a, b) => a.daysCovered - b.daysCovered || a.clientName.localeCompare(b.clientName));
-  }, [clients, ticks, toNewYear]);
+  }, [clients, toNewYear]);
 
   const n = rows.length;
   const urgent = rows.filter((r) => r.level === "urgent");
   const soon = rows.filter((r) => r.level === "soon");
   const okRows = rows.filter((r) => r.level === "ok");
-  const inProgress = rows.filter((r) => r.inProgress);
   const topPriority = [...urgent, ...soon].slice(0, 5);
 
   const shown = rows.filter((r) => view === "all" || r.level === view);
@@ -154,15 +111,11 @@ export function Dashboard() {
         <p className="text-sm text-muted-foreground">No clients found yet. Add clients in Presets and they will show here.</p>
       ) : (
         <>
-          {/* Traffic lights: the whole picture in four boxes */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {/* Traffic lights: the whole picture in three boxes */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <Light level="urgent" count={urgent.length} label={`under ${URGENT_DAYS} days of posts`} active={view === "urgent"} onClick={() => setView(view === "urgent" ? "all" : "urgent")} />
             <Light level="soon" count={soon.length} label={`under ${SOON_DAYS} days of posts`} active={view === "soon"} onClick={() => setView(view === "soon" ? "all" : "soon")} />
             <Light level="ok" count={okRows.length} label="on track" active={view === "ok"} onClick={() => setView(view === "ok" ? "all" : "ok")} />
-            <div className="rounded-xl border border-border/30 bg-card/40 px-4 py-3 min-w-0">
-              <div className="text-3xl font-bold text-foreground tabular-nums">{inProgress.length}</div>
-              <div className="text-xs text-muted-foreground">Content Days in progress</div>
-            </div>
           </div>
 
           {/* Priority list */}
@@ -191,26 +144,6 @@ export function Dashboard() {
             </ol>
           )}
 
-          {/* Content Days in progress */}
-          {inProgress.length > 0 && (
-            <>
-              <h3 className="text-base font-semibold text-foreground mb-2">Content Days in progress</h3>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-6">
-                {inProgress.map((r) => (
-                  <div key={r.presetId} className="rounded-xl border border-border/30 bg-card/40 px-3 py-2.5 min-w-0">
-                    <div className="font-medium text-sm text-foreground break-words">{r.clientName}</div>
-                    <div className="text-xs text-muted-foreground mb-2">Next: {r.nextStep ? r.nextStep.full : "all done"}</div>
-                    {r.nextStep && (
-                      <button type="button" onClick={() => toggle(r.presetId, r.nextStep!.key)} className="text-xs px-3 py-1 rounded-md bg-pink-500 text-white font-semibold hover:bg-pink-400">
-                        Tick {r.nextStep.label}
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
           {/* Every client */}
           <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <h3 className="text-base font-semibold text-foreground">
@@ -230,27 +163,6 @@ export function Dashboard() {
                   <div className="font-medium text-sm text-foreground break-words">{r.clientName}</div>
                   <div className="text-xs text-muted-foreground">{r.daysCovered >= toNewYear ? "Posts covered to 1 Jan" : coverText(r.daysCovered)}</div>
                 </div>
-                <div className="flex flex-wrap items-center gap-1.5" aria-label={`Content Day steps for ${r.clientName}`}>
-                  <span className="text-xs text-muted-foreground mr-1">Content Day</span>
-                  {STEPS.map((s) => {
-                    const on = !!ticks[`${r.presetId}:${s.key}`];
-                    return (
-                      <button
-                        key={s.key}
-                        type="button"
-                        onClick={() => toggle(r.presetId, s.key)}
-                        aria-pressed={on}
-                        title={s.full}
-                        className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md border transition-colors ${
-                          on ? "bg-emerald-500 border-emerald-500 text-white font-semibold" : "border-border/40 text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {on ? <Check className="w-3 h-3" /> : null}
-                        {s.label}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             ))}
             {shown.length === 0 && <p className="text-sm text-muted-foreground">Nobody in this group.</p>}
@@ -268,7 +180,7 @@ export function Dashboard() {
             </p>
           )}
           <p className="mt-3 text-xs text-muted-foreground">
-            Colours and the order come from the posts you have scheduled, so they update on their own. The Content Day ticks are yours to tick.
+            Colours and the order come from the posts you have scheduled, so they update on their own.
           </p>
         </>
       )}
