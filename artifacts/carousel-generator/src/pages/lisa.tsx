@@ -339,7 +339,7 @@ export default function LisaPage() {
     window.addEventListener("focus", load);
     return () => { live = false; window.removeEventListener("focus", load); };
   }, [preset]);
-  const [area, setArea] = useState("Beeston");
+  const [area, setArea] = useState("Nottingham");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -527,7 +527,7 @@ export default function LisaPage() {
               </select>
             </label>
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
-            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Beeston" /></label>
+            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Nottingham" /></label>
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
