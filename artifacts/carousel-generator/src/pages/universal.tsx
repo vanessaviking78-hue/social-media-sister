@@ -1080,7 +1080,11 @@ export default function UniversalPage() {
                     <span className="text-white/60">Caption</span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={6} value={post.caption} onChange={(e) => patch(post.id, { caption: e.target.value })} />
                   </label>
-                  <p className="md:col-span-2 text-white/50">{post.hashtags.join(" ")}</p>
+                  <div className="md:col-span-2 space-y-1">
+                    <span className="text-white/60">Exactly as it will post (caption, 5 hashtags, then {preset ? `${preset.name}'s` : "the client's"} footnote)</span>
+                    <pre className="whitespace-pre-wrap rounded bg-white/5 p-2 text-white/70 font-sans">{post.caption ? fullCaption(post) : ""}</pre>
+                    {post.caption && preset && !foot && <p className="text-amber-300/90">{preset.name} has no footnote saved on their preset, so none is added.</p>}
+                  </div>
                   <label className="space-y-1 block md:col-span-2">
                     <span className="text-white/60">Anything extra for this one (optional)</span>
                     <input className="w-full bg-white/5 rounded p-2" value={post.note} onChange={(e) => patch(post.id, { note: e.target.value })} placeholder="A detail to include" />
