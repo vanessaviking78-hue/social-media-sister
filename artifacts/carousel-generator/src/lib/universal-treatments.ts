@@ -65,6 +65,7 @@ export const U_TREATMENTS: UTreatment[] = [
   t("skin-tightening", "skin", "Skin tightening", "a good night's sleep", "Non surgical treatments that support firmness of the face and body.", { plural: false }),
   // Wellbeing
   t("reiki", "wellbeing", "Reiki", "a massage", "Reiki is a gentle, hands-off relaxation therapy where a practitioner uses light touch or hovering hands while the client rests, fully clothed. It is offered for relaxation and a sense of calm only. Never claim it heals, treats, cures or relieves any condition, pain, stress or illness, and never suggest it replaces medical care.", { mid: "Reiki", plural: false }),
+  t("japanese-head-spa", "wellbeing", "Japanese head spa", "a hair wash at the salon", "A Japanese head spa is a slow, deeply relaxing scalp and hair treatment: a scalp analysis, gentle cleansing, a warm water and steam experience and a long scalp massage. It is offered for relaxation and for scalp and hair care. Never claim it treats hair loss, scalp conditions, stress or any health problem, and never promise hair growth or thicker hair.", { mid: "a Japanese head spa", plural: false }),
 ];
 
 export const U_BY_ID = new Map(U_TREATMENTS.map((x) => [x.id, x]));
