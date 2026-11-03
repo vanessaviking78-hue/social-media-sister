@@ -34,8 +34,8 @@ const RATES: { id: SwapRate; label: string }[] = [
 ];
 
 type Dir = "bottom" | "top";
-type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean };
-const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false };
+type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean };
+const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 // Metallic finishes. A colour value is either a hex, or "metal:name" for a shiny multi stop gradient.
@@ -82,7 +82,7 @@ type Post = {
   scheduling: boolean;
   banked?: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text">>;
+  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text" | "bw">>;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -158,6 +158,17 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, font: (px: number)
   }
   ctx.font = font(min);
   return { px: min, lines: wrap(ctx, text, maxW) };
+}
+
+// Black and white, done pixel by pixel so it works in every browser.
+function toGrey(ctx: CanvasRenderingContext2D) {
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+    d[i] = d[i + 1] = d[i + 2] = g;
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
@@ -269,8 +280,10 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
     return;
   }
 
-  if (photo) coverFit(ctx, photo.bmp);
-  else {
+  if (photo) {
+    coverFit(ctx, photo.bmp);
+    if (look.bw) toGrey(ctx);
+  } else {
     ctx.fillStyle = "#3a3633";
     ctx.fillRect(0, 0, W, H);
   }
@@ -884,6 +897,7 @@ export default function UniversalPage() {
                 ))}
               </div>
             </div>
+            <label className="flex items-center gap-2 self-end pb-2"><input type="checkbox" checked={look.bw} onChange={(e) => setLook((l) => ({ ...l, bw: e.target.checked }))} /> Black and white photos</label>
             <label className="flex items-center gap-2 self-end pb-2"><input type="checkbox" checked={look.logoWhite} onChange={(e) => setLook((l) => ({ ...l, logoWhite: e.target.checked }))} /> Make the logo white</label>
           </div>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -1054,6 +1068,7 @@ export default function UniversalPage() {
                         <button key={d} onClick={() => patch(post.id, { look: { ...post.look, dir: d } })} className={`flex-1 rounded border px-1 py-1 capitalize ${lk.dir === d ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{d}</button>
                       ))}
                     </div>
+                    <label className="flex items-center gap-2 pt-1"><input type="checkbox" checked={lk.bw} onChange={(e) => patch(post.id, { look: { ...post.look, bw: e.target.checked } })} /> Black and white photos</label>
                     {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
                   </div>
                 </div>
