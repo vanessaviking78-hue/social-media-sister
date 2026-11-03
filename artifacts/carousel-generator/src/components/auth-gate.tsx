@@ -15,6 +15,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // The whole signed in area (and the login screen) wears the brilliant white theme. Public pages are not under this gate.
+  useEffect(() => {
+    document.documentElement.classList.add("cs-light");
+    return () => document.documentElement.classList.remove("cs-light");
+  }, []);
+
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const pw = localStorage.getItem(PASSWORD_KEY);

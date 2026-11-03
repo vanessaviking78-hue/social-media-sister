@@ -229,3 +229,64 @@
 .cs-report .cs-cta strong {
     color: hsl(var(--primary));
 }
+
+
+/* ------------------------------------------------------------------------------------------------
+   BRILLIANT WHITE THEME for the signed in CyberSuite (class set by AuthGate on <html>).
+   The tools were all built on a dark palette, so the page is flipped once at the root (invert + hue
+   rotate keeps every hue where it was and only turns dark to light), then pictures, canvases and
+   colour pickers are flipped back so they look exactly as they did. Remove the cs-light class to go
+   back to dark. The variables below are set so the flip lands on a true white page.
+   ------------------------------------------------------------------------------------------------ */
+html.cs-light {
+  filter: invert(1) hue-rotate(180deg);
+  background: #000;
+  --background: 0 0% 0%;
+  --card: 0 0% 3%;
+  --popover: 0 0% 3%;
+  --card-border: 0 0% 12%;
+  --popover-border: 0 0% 12%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --secondary: 0 0% 7%;
+  --muted: 0 0% 7%;
+  --accent: 0 0% 6%;
+  --muted-foreground: 0 0% 68%;
+}
+html.cs-light img,
+html.cs-light video,
+html.cs-light canvas,
+html.cs-light iframe,
+html.cs-light input[type="color"],
+html.cs-light [style*="background-image"],
+html.cs-light .keep-colour {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Large League Spartan Black headings with a hot pink accent bar. */
+html.cs-light h1,
+html.cs-light h2,
+html.cs-light h3 {
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.015em;
+  line-height: 1;
+}
+html.cs-light h1 { font-size: clamp(2.4rem, 5.2vw, 3.75rem); text-transform: uppercase; }
+html.cs-light h2 { font-size: clamp(1.7rem, 3.4vw, 2.4rem); }
+html.cs-light h3 { font-size: clamp(1.25rem, 2.2vw, 1.6rem); }
+html.cs-light h1::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin-top: 0.55rem;
+  background: hsl(328 100% 57%);
+}
+
+/* Every full page container becomes brilliant white, whatever dark shade it was built with. */
+html.cs-light body,
+html.cs-light [class*="min-h-screen"],
+html.cs-light [class*="min-h-[100dvh]"] {
+  background-color: #000;
+}
