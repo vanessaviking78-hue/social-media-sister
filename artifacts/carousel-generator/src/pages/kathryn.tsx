@@ -730,7 +730,7 @@ export default function KathrynPage() {
     patch(post.id, { scheduling: false });
   };
 
-  // Every open post that has its words written and is not already scheduled, one per day from the earliest date.
+  // Every open post that has its words written and is not already scheduled, one every 4 days from the earliest date.
   const [bulkBusy, setBulkBusy] = useState("");
   const ready = posts.filter((p) => p.caption && !scheduled[p.typeId]);
   const bulk = async (mode: "schedule" | "bank") => {
@@ -745,7 +745,7 @@ export default function KathrynPage() {
       patch(post.id, { scheduling: true });
       try {
         const d = new Date(first);
-        d.setDate(d.getDate() + i);
+        d.setDate(d.getDate() + i * 4);
         await send(post, mode, d.toISOString());
         if (mode === "bank") patch(post.id, { banked: true });
         done++;
@@ -757,7 +757,7 @@ export default function KathrynPage() {
       patch(post.id, { scheduling: false });
     }
     setBulkBusy("");
-    if (done) toast.success(mode === "bank" ? `${done} added to the Client Bank` : `${done} scheduled, one a day from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+    if (done) toast.success(mode === "bank" ? `${done} added to the Client Bank` : `${done} scheduled, one every 4 days from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
     if (failed) toast.error(`Stopped after ${done}: ${failed}`);
   };
 
@@ -898,7 +898,7 @@ export default function KathrynPage() {
               <span className="text-sm text-white/70">{ready.length} written and waiting</span>
               {bulkBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{bulkBusy}</span>}
               <div className="ml-auto flex gap-2 flex-wrap">
-                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one a day</Button>
+                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 4 days</Button>
                 <Button size="sm" variant="secondary" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("bank")}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
               </div>
             </div>
@@ -918,7 +918,6 @@ export default function KathrynPage() {
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>
-                    <Button size="sm" variant="outline" className="border-red-400/50 text-red-300" onClick={() => setReview({ id: post.id, reason: "", rejecting: true })} disabled={!post.caption}>Reject</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
