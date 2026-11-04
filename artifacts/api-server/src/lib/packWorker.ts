@@ -17,7 +17,7 @@ import { logger } from "./logger";
 export const PACK_POOL_SIZE = 12;
 
 export type PackInput = {
-  size: 12 | 20 | 30;
+  size: 6 | 12 | 20;
   role: string;
   website: string;
   /** brand colours as hex codes, main first */

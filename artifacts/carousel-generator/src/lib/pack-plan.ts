@@ -11,17 +11,18 @@ import { ALL_TREATMENTS as TREATMENTS } from "./treatment-designs";
 import { EMPOWER } from "./empower-designs";
 import { LUX_COVERS } from "./lux-designs";
 
-export type PackSize = 12 | 20 | 30;
+export type PackSize = 6 | 12 | 20;
 export type PackKind = "treatment" | "tweet" | "portrait" | "unique" | "empower" | "lux";
 
-export const PACK_PRICE: Record<PackSize, number> = { 12: 75, 20: 125, 30: 150 };
+// Monthly prices: Starter 6 posts, Growth 12 posts, Complete 20 posts with 20 stories and 20 reel hooks.
+export const PACK_PRICE: Record<PackSize, number> = { 6: 97, 12: 167, 20: 247 };
 
 // How many of each kind a pack holds. The 12 is Vanessa's spec: 3 treatment, 2 tweet, 2 portrait and 5 from
-// Unique, Empower and LUX. The 20 and 30 keep the same shape.
+// Unique, Empower and LUX. The 6 and 20 keep the same shape.
 export const PACK_SPLIT: Record<PackSize, { treatment: number; tweet: number; portrait: number; templates: number }> = {
+  6: { treatment: 2, tweet: 1, portrait: 1, templates: 2 },
   12: { treatment: 3, tweet: 2, portrait: 2, templates: 5 },
   20: { treatment: 5, tweet: 3, portrait: 4, templates: 8 },
-  30: { treatment: 7, tweet: 5, portrait: 6, templates: 12 },
 };
 
 export type PackItem = {

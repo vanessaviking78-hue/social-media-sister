@@ -4,6 +4,8 @@ import { ArrowLeft, Loader2, Copy, ExternalLink, RefreshCw, Send, Download, Cale
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { buildPackPlan, PACK_PRICE, type PackSize } from "@/lib/pack-plan";
+import { makeBrand, renderStory } from "@/lib/tenfree-engine";
+import { pickReels } from "@/lib/tenfree-reels";
 import { applyCopy, skeleton, treatmentIdsFor, type CopyResult, type CopySpec } from "@/lib/pack-build";
 import { renderPackPost, renderPackSlide, type PackClient, type PackPost } from "@/lib/pack-engine";
 import { DEFAULT_FOCUS } from "@/lib/month-engine";
@@ -276,6 +278,7 @@ export default function PackReview() {
     setBusy(true);
     try {
       const out: { n: number; kind: string; images: string[]; caption: string; tags: string }[] = [];
+      const stories: { n: number; image: string }[] = [];
       for (const [i, p] of posts.entries()) {
         setStatus(`Saving the finished posts... ${i + 1} of ${posts.length}`);
         const cvs = await renderPackPost(p, client, 1);
@@ -285,7 +288,15 @@ export default function PackReview() {
           images.push(await uploadBlob(blob, `pack-${p.n}-${k + 1}.jpg`));
         }
         out.push({ n: p.n, kind: p.kind, images, caption: p.caption, tags: p.hashtags });
+        // The Complete package (20 posts) also gets a matching story for every post.
+        if (draft.data?.pack?.size === 20) {
+          const brand = makeBrand(draft.data.pack.mainHex || "#1f3a5f", draft.data.pack.accentHex || "#c9a27a");
+          const sc = renderStory(cvs[0], { brand });
+          const sblob: Blob = await new Promise((res, rej) => sc.toBlob((b) => (b ? res(b) : rej(new Error("Could not save a story"))), "image/jpeg", 0.92));
+          stories.push({ n: p.n, image: await uploadBlob(sblob, `pack-story-${p.n}.jpg`) });
+        }
       }
+      const hooks = draft.data?.pack?.size === 20 ? pickReels(20) : [];
       const r = await fetch(`${API}/post-packs/publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -296,6 +307,8 @@ export default function PackReview() {
           logoUrl: draft.logoUrl,
           accent: draft.data?.pack?.accentHex,
           posts: out,
+          stories,
+          hooks,
         }),
       });
       const j = (await r.json()) as { slug?: string; error?: string };
@@ -420,7 +433,7 @@ export default function PackReview() {
         </h1>
         {pack && (
           <p className="text-sm text-[#7a625a] mb-4">
-            {pack.size} posts for {pack.month}, £{PACK_PRICE[pack.size]}. {pack.role}. {draft?.handle}. {draft?.area}.
+            {pack.size} posts for {pack.month}, £{PACK_PRICE[pack.size]} a month{pack.size === 20 ? ", with 20 stories and 20 reel hooks" : ""}. {pack.role}. {draft?.handle}. {draft?.area}.
           </p>
         )}
 

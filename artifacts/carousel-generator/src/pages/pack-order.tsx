@@ -1,56 +1,58 @@
 import { useEffect, useState } from "react";
 import { ALL_TREATMENTS, TREAT_GROUP, TREAT_GROUP_ORDER } from "@/lib/treatment-designs";
-import { PACK_PRICE, type PackSize } from "@/lib/pack-plan";
+import { type PackSize } from "@/lib/pack-plan";
+import { PACK_TIERS, PACK_CHECKOUT } from "@/lib/pack-tiers";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 const CSS = `
-.po-root { --bg:#fde9ef; --card:#fff6f9; --ink:#2a1e1a; --muted:#6e5d56; --line:#f1c9d6; --accent:#9a5a49; --accent-ink:#ffffff; --soft:#fad7e2;
-  --display:"League Spartan", system-ui, sans-serif; --body:"League Spartan", system-ui, sans-serif;
-  background:var(--bg); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.55; min-height:100vh; box-sizing:border-box;
-  padding:40px 16px 56px; }
+.po-root { --pink:#ff1f8e; --ink:#000; background:#fff; color:#000; font-family:"League Spartan", system-ui, sans-serif; font-size:16px; line-height:1.4; min-height:100vh; box-sizing:border-box; padding:0 0 64px; }
 .po-root * { box-sizing:border-box; }
 .po-root, .po-root * { font-family:"League Spartan", system-ui, sans-serif !important; font-weight:700 !important; }
-.po-wrap { max-width:620px; margin:0 auto; display:flex; flex-direction:column; gap:22px; }
-.po-from { font-size:13px; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); font-weight:700; }
-.po-h1 { font-family:var(--display); font-weight:400; font-size:clamp(36px,8vw,56px); line-height:1.05; margin:0; text-wrap:balance; }
-.po-lede { margin:0; font-size:17px; }
-.po-form { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:20px; display:flex; flex-direction:column; gap:18px; }
+.po-bar { background:#000; border-bottom:8px solid var(--pink); padding:22px 20px; }
+.po-bar span { display:block; max-width:760px; margin:0 auto; color:var(--pink); font-weight:900 !important; letter-spacing:.3em; text-transform:uppercase; font-size:13px; }
+.po-wrap { max-width:760px; margin:0 auto; padding:40px 20px 0; display:flex; flex-direction:column; gap:26px; }
+.po-from { font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:var(--pink); font-weight:900 !important; }
+.po-h1 { font-weight:900 !important; font-size:clamp(44px,10vw,92px); line-height:.9; margin:0; text-transform:uppercase; letter-spacing:-.02em; }
+.po-h1 em { font-style:normal; color:var(--pink); display:inline-block; transform:rotate(-2deg); }
+.po-h2 { font-weight:900 !important; font-size:clamp(24px,5vw,36px); text-transform:uppercase; line-height:1; margin:0; }
+.po-lede { margin:0; font-size:20px; max-width:620px; }
+.po-form { border:4px solid #000; box-shadow:8px 8px 0 var(--pink); padding:22px; display:flex; flex-direction:column; gap:20px; background:#fff; }
 .po-field { display:flex; flex-direction:column; gap:6px; border:0; padding:0; margin:0; min-width:0; }
-.po-field > label, .po-field > legend, .po-lab { font-weight:700; font-size:14px; padding:0; }
-.po-field small { color:var(--muted); font-size:13px; }
-.po-input { font:inherit; color:inherit; background:transparent; border:1.5px solid var(--line); border-radius:10px; padding:11px 12px; min-height:46px; width:100%; }
-.po-input:focus-visible, .po-btn:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
-.po-sizes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; }
-.po-size { position:relative; border:1.5px solid var(--line); border-radius:14px; padding:14px 10px; text-align:center; cursor:pointer; display:flex; flex-direction:column; gap:2px; background:transparent; }
+.po-field > label, .po-field > legend, .po-lab { font-weight:900 !important; font-size:15px; letter-spacing:.06em; text-transform:uppercase; padding:0; }
+.po-field small { color:#444; font-size:14px; font-weight:600 !important; }
+.po-input { font:inherit; color:#000; background:#fff; border:3px solid #000; border-radius:0; padding:11px 12px; min-height:48px; width:100%; }
+.po-input:focus-visible, .po-btn:focus-visible { outline:4px solid var(--pink); outline-offset:2px; }
+.po-sizes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; }
+.po-size { position:relative; padding:18px 14px 16px; cursor:pointer; display:flex; flex-direction:column; gap:6px; border:4px solid #000; box-shadow:6px 6px 0 #000; }
+.po-size.k { background:#000; color:var(--pink); box-shadow:6px 6px 0 var(--pink); }
+.po-size.p { background:var(--pink); color:#000; }
 .po-size input { position:absolute; opacity:0; inset:0; cursor:pointer; }
-.po-size:has(input:checked) { border-color:var(--accent); background:var(--soft); }
-.po-size:has(input:focus-visible) { outline:3px solid var(--accent); outline-offset:2px; }
-.po-size b { font-family:var(--display); font-weight:400; font-size:34px; line-height:1; }
-.po-size span { font-size:13px; color:var(--muted); }
-.po-size em { font-style:normal; font-weight:700; font-size:18px; }
+.po-size:has(input:checked) { outline:5px solid #000; outline-offset:4px; }
+.po-size:has(input:checked)::after { content:"CHOSEN"; position:absolute; top:-14px; right:10px; background:#fff; color:#000; border:3px solid #000; padding:2px 8px; font-size:12px; letter-spacing:.12em; font-weight:900 !important; }
+.po-size:has(input:focus-visible) { outline:5px solid #000; outline-offset:4px; }
+.po-size b { font-weight:900 !important; font-size:30px; text-transform:uppercase; line-height:.95; }
+.po-size .pr { font-weight:900 !important; font-size:40px; line-height:1; white-space:nowrap; }
+.po-size .pr i { font-style:normal; font-size:14px; }
+.po-size ul { margin:4px 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; font-size:15px; }
+.po-size li::before { content:"+ "; font-weight:900 !important; }
+.po-size.k ul { color:#fff; }
 .po-colours { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
-.po-colour { display:flex; align-items:center; gap:10px; border:1.5px solid var(--line); border-radius:10px; padding:8px 10px; font-size:14px; }
+.po-colour { display:flex; align-items:center; gap:10px; border:3px solid #000; padding:8px 10px; font-size:14px; }
 .po-colour input { width:44px; height:36px; border:0; padding:0; background:transparent; cursor:pointer; }
 .po-ticks { display:flex; flex-direction:column; gap:18px; }
 .po-group { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 12px; }
-.po-group > .po-lab { grid-column:1 / -1; color:var(--accent); }
+.po-group > .po-lab { grid-column:1 / -1; color:var(--pink); }
 .po-check { display:flex; gap:10px; align-items:flex-start; font-size:15px; }
-.po-check input { margin-top:4px; width:20px; height:20px; flex:none; }
-.po-btn { font:inherit; cursor:pointer; border:0; background:var(--accent); color:var(--accent-ink); padding:12px 18px; border-radius:10px; font-weight:700; font-size:16px; min-height:48px; }
+.po-check input { margin-top:4px; width:20px; height:20px; flex:none; accent-color:var(--pink); }
+.po-btn { font:inherit; cursor:pointer; border:4px solid #000; background:var(--pink); color:#000; padding:14px 20px; font-weight:900 !important; font-size:19px; text-transform:uppercase; letter-spacing:.04em; min-height:56px; box-shadow:6px 6px 0 #000; }
 .po-btn[disabled] { opacity:.6; cursor:default; }
-.po-error { color:#b3261e; font-size:15px; margin:0; }
-@media (prefers-color-scheme: dark) { .po-error { color:#ff9c93; } }
-.po-sig { color:var(--muted); font-size:14px; margin:0; }
-@media (max-width:520px) { .po-group { grid-template-columns:minmax(0,1fr); } }
+.po-error { color:#000; background:var(--pink); padding:10px 12px; font-size:15px; margin:0; }
+.po-sig { color:#000; font-size:14px; margin:0; }
+@media (max-width:640px) { .po-sizes { grid-template-columns:minmax(0,1fr); } .po-group { grid-template-columns:minmax(0,1fr); } }
 `;
 
 const ROLES = ["Nurse", "Injector", "Dentist", "Doctor", "Pharmacist", "Other"];
-const SIZES: { size: PackSize; note: string }[] = [
-  { size: 12, note: "a good start" },
-  { size: 20, note: "a fuller feed" },
-  { size: 30, note: "a month done" },
-];
 
 // iPhone photos are often HEIC, which most browsers and the server cannot read, so turn them into JPEGs here.
 async function toUsable(file: File): Promise<File> {
@@ -131,7 +133,7 @@ export default function PackOrder() {
     // The two fonts the pack uses.
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Montserrat:wght@400;600;700&family=League+Spartan:wght@700;800&display=swap";
+    link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Montserrat:wght@400;600;700&family=League+Spartan:wght@700;900&display=swap";
     document.head.appendChild(link);
     return () => link.remove();
   }, []);
@@ -228,12 +230,13 @@ export default function PackOrder() {
     return (
       <div className="po-root">
         <style>{CSS}</style>
+        <div className="po-bar"><span>Social Media Sister</span></div>
         <div className="po-wrap">
-          <span className="po-from">Social Media Sister</span>
-          <h1 className="po-h1">Got it, thank you.</h1>
+          <h1 className="po-h1">Got it, <em>thank you.</em></h1>
           <p className="po-lede">
-            I have your details and your photo. I will put your {size} posts together, check them myself, and email you a link where you can save every image with its caption and hashtags. It can take a little while, so no need to wait around.
+            I have your details and your photo. I will put your {size} posts{size === 20 ? ", 20 stories and 20 reel hooks" : ""} together, check them myself, and email you a link where you can save everything with its captions and hashtags. It can take a little while, so no need to wait around.
           </p>
+          {PACK_CHECKOUT[size] ? <p><a className="po-btn" style={{ display: "inline-block", textDecoration: "none" }} href={PACK_CHECKOUT[size]}>Pay £{PACK_TIERS.find((t) => t.size === size)?.price} to get started</a></p> : null}
           <p className="po-sig">Vanessa Wormald, Social Media Sister</p>
         </div>
       </div>
@@ -243,22 +246,22 @@ export default function PackOrder() {
   return (
     <div className="po-root">
       <style>{CSS}</style>
+      <div className="po-bar"><span>Social Media Sister</span></div>
       <div className="po-wrap">
-        <span className="po-from">Social Media Sister</span>
-        <h1 className="po-h1">Your posts, ready to go.</h1>
+        <h1 className="po-h1">Your posts, <em>ready to go.</em></h1>
         <p className="po-lede">
           Tell me about your clinic and send me one photo of you. I turn it into a pack of posts in your colours, with the captions and hashtags already written, so all you do is save them and post.
         </p>
         <form className="po-form" onSubmit={submit} noValidate>
           <fieldset className="po-field">
-            <legend>How many posts?</legend>
+            <legend>Pick your package</legend>
             <div className="po-sizes">
-              {SIZES.map((s) => (
-                <label className="po-size" key={s.size}>
-                  <input type="radio" name="size" checked={size === s.size} onChange={() => setSize(s.size)} />
-                  <b>{s.size}</b>
-                  <span>{s.note}</span>
-                  <em>£{PACK_PRICE[s.size]}</em>
+              {PACK_TIERS.map((t, ti) => (
+                <label className={`po-size ${ti % 2 === 0 ? "k" : "p"}`} key={t.size}>
+                  <input type="radio" name="size" checked={size === t.size} onChange={() => setSize(t.size)} />
+                  <b>{t.name}</b>
+                  <span className="pr">£{t.price}<i> a month</i></span>
+                  <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>
                 </label>
               ))}
             </div>
@@ -348,7 +351,7 @@ export default function PackOrder() {
             <span>I am happy for Social Media Sister to use my photos to make my posts.</span>
           </label>
           {error && <p className="po-error" role="alert">{error}</p>}
-          <button className="po-btn" type="submit" disabled={busy}>{busy ? "Sending..." : `Order my ${size} posts`}</button>
+          <button className="po-btn" type="submit" disabled={busy}>{busy ? "Sending..." : `Order my ${PACK_TIERS.find((t) => t.size === size)?.name} package`}</button>
         </form>
         <p className="po-sig">Vanessa Wormald, Social Media Sister</p>
       </div>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type PackPostData = { n: number; kind: string; images: string[]; caption: string; tags: string };
-type PackData = { slug: string; clinicName: string; logoUrl: string; accent: string; size: number; posts: PackPostData[] };
+type PackData = { slug: string; clinicName: string; logoUrl: string; accent: string; size: number; posts: PackPostData[]; stories?: { n: number; image: string }[]; hooks?: { hook: string; script?: string; onScreen?: string }[] };
 
 const KIND_LABEL: Record<string, string> = {
   treatment: "Treatment carousel",
@@ -203,6 +203,34 @@ export default function PackPublic({ slug }: { slug: string }) {
             </div>
           </article>
         ))}
+
+        {data.stories && data.stories.length > 0 && (
+          <section className="pp-post" style={{ display: "block" }}>
+            <h2 className="pp-day">Your {data.stories.length} stories</h2>
+            <p className="pp-lede">One for every post, ready to share to your story the hour after the post goes live. Add a poll or a question sticker on top.</p>
+            <div className="pp-slides" style={{ marginTop: 14 }}>
+              {data.stories.map((s) => (
+                <a key={s.n} href={s.image} download={`story-${s.n}.jpg`} style={{ flex: "0 0 220px" }}><img src={s.image} alt={`Story for post ${s.n}`} style={{ width: "100%", flex: "none" }} /></a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {data.hooks && data.hooks.length > 0 && (
+          <section className="pp-post" style={{ display: "block" }}>
+            <h2 className="pp-day">Your {data.hooks.length} reels to film</h2>
+            <p className="pp-lede">Pick one, prop your phone up and film it in one go. Rough and real beats polished.</p>
+            <ol style={{ marginTop: 14, paddingLeft: 20, display: "flex", flexDirection: "column", gap: 14 }}>
+              {data.hooks.map((h, i) => (
+                <li key={i}>
+                  <strong>{h.hook}</strong>
+                  {h.script ? <p className="pp-caption" style={{ margin: "4px 0 0", whiteSpace: "pre-wrap" }}>{h.script}</p> : null}
+                  {h.onScreen ? <p className="pp-tags" style={{ margin: "4px 0 0" }}>On screen: {h.onScreen}</p> : null}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         <footer className="pp-foot">
           <h2>Before you post</h2>

@@ -279,7 +279,7 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
 
 /** The cover of a post on a tall 1080 x 1920 story canvas. The cover sits in the middle at full width, and its top and bottom edges are
  *  stretched into the bands above and below so it looks intended. The lower band is left clear for the poll sticker. */
-export function renderStory(cover: HTMLCanvasElement, a: Assets): HTMLCanvasElement {
+export function renderStory(cover: HTMLCanvasElement, a: Pick<Assets, "brand">): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W;
   c.height = SH;

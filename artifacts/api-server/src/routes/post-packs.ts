@@ -13,12 +13,12 @@ import { BASE_RULES } from "./caption-generator";
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 6 } });
 
-// Post Pack. A clinic orders 12, 20 or 30 posts on the public form. While Vanessa is testing no payment is taken
+// Post Pack. A clinic orders a Starter (6), Growth (12) or Complete (20 posts with stories and reel hooks) package on the public form. While Vanessa is testing no payment is taken
 // (PACK_PAYMENTS is not "on"), the order is saved as a draft, the Studio portraits are made in the background, and
 // she opens it on the review page, where the posts are planned, written and drawn before anyone gets the link.
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
-const SIZES = [12, 20, 30] as const;
+const SIZES = [6, 12, 20] as const;
 const ROLES = ["nurse", "injector", "dentist", "doctor", "pharmacist", "other"];
 
 const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
@@ -55,7 +55,7 @@ router.post(
       const area = str(body.area, 120);
       const role = str(body.role, 60).toLowerCase();
       const email = str(body.email, 160);
-      const size = Number(body.size) as 12 | 20 | 30;
+      const size = Number(body.size) as 6 | 12 | 20;
       if (!clinicName || !handle || !area || !email || !photo) {
         res.status(400).json({ error: "Please add your clinic name, Instagram handle, area, email and a photo of you" });
         return;
@@ -65,7 +65,7 @@ router.post(
         return;
       }
       if (!SIZES.includes(size)) {
-        res.status(400).json({ error: "Please choose 12, 20 or 30 posts" });
+        res.status(400).json({ error: "Please choose a package" });
         return;
       }
       if (body.consent !== "yes") {
@@ -257,15 +257,17 @@ const slugify = (s: string) =>
 
 router.post("/post-packs/publish", async (req: Request, res: Response) => {
   try {
-    const { clinicName, draftId, size, logoUrl, accent, posts } = req.body as {
+    const { clinicName, draftId, size, logoUrl, accent, posts, stories, hooks } = req.body as {
       clinicName?: string;
       draftId?: string;
       size?: number;
       logoUrl?: string;
       accent?: string;
       posts?: { n: number; kind: string; images: string[]; caption: string; tags: string }[];
+      stories?: { n: number; image: string }[];
+      hooks?: { hook: string; script?: string; onScreen?: string }[];
     };
-    if (!clinicName?.trim() || !Array.isArray(posts) || posts.length === 0 || !SIZES.includes(Number(size) as 12 | 20 | 30)) {
+    if (!clinicName?.trim() || !Array.isArray(posts) || posts.length === 0 || !SIZES.includes(Number(size) as 6 | 12 | 20)) {
       res.status(400).json({ error: "clinicName, a pack size and the posts are required" });
       return;
     }
@@ -284,6 +286,8 @@ router.post("/post-packs/publish", async (req: Request, res: Response) => {
         size: Number(size),
         logoUrl: logoUrl ?? "",
         accent: /^#[0-9a-fA-F]{6}$/.test(accent ?? "") ? accent : "#9a5a49",
+        stories: Array.isArray(stories) ? stories.slice(0, 20).map((s) => ({ n: Number(s.n) || 0, image: str(s.image, 400) })).filter((s) => s.image) : [],
+        hooks: Array.isArray(hooks) ? hooks.slice(0, 20).map((h) => ({ hook: noDashes(str(h.hook, 300)), script: noDashes(str(h.script, 1500)), onScreen: noDashes(str(h.onScreen, 200)) })) : [],
         posts: posts.map((p) => ({
           n: p.n,
           kind: str(p.kind, 20),
