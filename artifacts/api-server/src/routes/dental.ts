@@ -14,6 +14,8 @@ const router: IRouter = Router();
 const CLINICS: Record<string, { name: string; dentist: string }> = {
   castle: { name: "Castle Clinic", dentist: "the dentist who runs Castle Clinic" },
   kathryn: { name: "Dr Kathryn Bell", dentist: "Dr Kathryn Bell, a dentist" },
+  // NO 1 BODY SCULPTING shares the saved photo library only. Her words are written by /no1/copy.
+  no1: { name: "NO 1 BODY SCULPTING", dentist: "the owner of NO 1 BODY SCULPTING" },
 };
 
 function clean(text: unknown, max: number): string {
