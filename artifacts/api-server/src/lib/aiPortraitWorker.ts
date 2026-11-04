@@ -6,6 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
+import { geminiOk, geminiFailed } from "./aiCreditAlert";
 import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, ACADEMY_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
@@ -358,11 +359,12 @@ export async function processPortraitJob(
           })
           .returning();
 
+        void geminiOk();
         patchCard({ status: "success", outputImageUrl: outputUrl, originalImageUrl: originalUrl, portraitId: row.id });
         succeeded = true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        
+        void geminiFailed(msg);
       const is429 = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate");
         const is503 = msg.includes("503") || msg.toLowerCase().includes("unavailable") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("high demand");
             const isRetryable = is429 || is503;

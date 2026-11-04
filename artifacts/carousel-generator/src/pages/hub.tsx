@@ -1073,6 +1073,7 @@ const [hwCount, setHwCount] = useState(0);
 const [reelCaptionCount, setReelCaptionCount] = useState(0);
 const [cqCount, setCqCount] = useState(0);
 const [freeWaiting, setFreeWaiting] = useState(0);
+const [creditLow, setCreditLow] = useState(false);
 const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -1147,8 +1148,15 @@ fetch(`${BASE}/api/ten-free/requests`, { headers: { "x-app-password": pw, "Autho
 .then((d) => setFreeWaiting((d.requests ?? []).filter((x: { status: string }) => x.status === "new").length))
 .catch(() => {});
 };
+const loadCredit = () => {
+fetch(`${BASE}/api/ai-credit-status`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+.then((r) => (r.ok ? r.json() : { low: false }))
+.then((d) => setCreditLow(!!d.low))
+.catch(() => {});
+};
 loadFree();
-const id4 = setInterval(loadFree, 60000);
+loadCredit();
+const id4 = setInterval(() => { loadFree(); loadCredit(); }, 60000);
 return () => clearInterval(id4);
 }, []);
 useEffect(() => {
@@ -1157,6 +1165,11 @@ useEffect(() => {
 }, []);
 return (
 <div className="min-h-[100dvh] w-full" style={{ background: "#fff", color: "#000" }}>
+{creditLow && (
+<div style={{ background: "#ff1f8e", color: "#fff", padding: "12px 24px", fontWeight: 800, textAlign: "center" }}>
+Your Google AI Studio credits look empty, so Studio portraits are failing. Top up at aistudio.google.com (Billing) and it will start working again by itself.
+</div>
+)}
 {/* Header */}
 <header className="py-6 px-8 flex items-center gap-4" style={{ background: "#000", borderBottom: "8px solid #ff1f8e" }}>
 <img src="/sms-logo.png" alt="Social Media Sister" className="h-9 w-auto object-contain" />

@@ -403,3 +403,16 @@ export async function notifyTenFreeRequest(opts: {
     logger.warn({ err }, "Ten free request notification email failed");
   }
 }
+
+/** A plain email to NOTIFY_EMAIL, for things like "your AI credits look low". Never throws. */
+export async function notifyOwner(subject: string, text: string): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  try {
+    await transporter.sendMail({ from: process.env.EMAIL_FROM || process.env.SMTP_USER, to, subject, text });
+  } catch (err) {
+    logger.warn({ err }, "Owner notification email failed");
+  }
+}

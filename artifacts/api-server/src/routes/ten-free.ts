@@ -10,6 +10,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { saveSampleFile, appLink, needsRewrite, rewriteFlagged } from "../lib/freeSampleWorker";
 import { HOUSE_VOICE } from "../lib/houseRules";
 import { notifyTenFreeRequest } from "../lib/notify";
+import { creditStatus } from "../lib/aiCreditAlert";
 import { aiSourcePhotosTable } from "@workspace/db/schema";
 import { readKey } from "../lib/freeSampleWorker";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
@@ -279,6 +280,14 @@ const shape = (r: Row) => ({
   aiStatus: r.ai_status ?? "",
   createdAt: r.created_at,
   sentAt: r.sent_at ?? null,
+});
+
+router.get("/ai-credit-status", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    res.json(await creditStatus());
+  } catch {
+    res.json({ low: false, message: "", since: null });
+  }
 });
 
 router.get("/ten-free/requests", requireAuth, async (_req: Request, res: Response) => {
