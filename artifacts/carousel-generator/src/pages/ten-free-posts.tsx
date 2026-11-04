@@ -173,6 +173,7 @@ export default function TenFreePosts() {
 
   async function submit() {
     setErr("");
+    if (!photo) return setErr("Please add a photo of you. No filter needed, and get your full face, head and shoulders in.");
     if (!consent) return setErr("Please tick the box at the bottom so I know you are happy.");
     setBusy(true);
     try {
@@ -292,8 +293,8 @@ export default function TenFreePosts() {
               <div className="tf-drop" style={{ marginTop: 26 }} onClick={() => photoRef.current?.click()}>
                 <div className="tf-l" style={{ width: 150, flex: "none" }}>{photo ? "Photo added" : "Your photo"}</div>
                 <div>
-                  <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photo ? photo.name : "Add a photo of you (optional)"}</div>
-                  <div className="tf-note">A clear one with good light works best.</div>
+                  <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photo ? photo.name : "Add a photo of you (needed)"}</div>
+                  <div className="tf-note">No filter needed. Please get your full face, head and shoulders in.</div>
                 </div>
                 <input ref={photoRef} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => onPhoto(e.target.files?.[0])} />
               </div>

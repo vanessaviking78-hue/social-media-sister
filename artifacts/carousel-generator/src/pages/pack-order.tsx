@@ -362,7 +362,7 @@ export default function PackOrder() {
 
           <div className="po-field">
             <label htmlFor="po-photo">A photo of you</label>
-            <small>A clear, well lit photo of your face and shoulders works best.</small>
+            <small>No filter needed. Please get your full face, head and shoulders in.</small>
             <input id="po-photo" className="po-input" type="file" accept="image/*,.heic,.heif" onChange={(e) => void pickPhoto(e.target.files?.[0])} required />
           </div>
           <div className="po-field">
