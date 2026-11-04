@@ -396,7 +396,7 @@ function Builder({ id }: { id: string }) {
         {HEAD_FONTS.map((f) => (
           <button key={f.id} onClick={() => setHeadChoice(f.id)} className={`px-3 py-1.5 rounded border text-sm ${headChoice === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`} style={{ fontFamily: f.css }}>{f.label}</button>
         ))}
-        <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels keep the Blue Mirage headline.</span>
+        <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels are in Hatcher.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : "Build the 10 posts"}</button>

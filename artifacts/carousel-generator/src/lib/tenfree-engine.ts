@@ -1,11 +1,12 @@
 import { BASE_TITLE, DEFAULT_LOOK, drawSlide, ensureFonts, type Look, type Photo, type Post, type TitleFont } from "@/pages/universal";
-import { drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight } from "./suite-fonts";
+import opentype from "opentype.js";
+import { drawTitle, layoutTitle, titleHeight, type LoadedFont } from "./suite-fonts";
 import { loadImage } from "./sample-post";
 import { logoLuma, makeClearLogo, recolourLogo } from "./logo-clear";
 
 // 10 FREE POSTS drawing. The three treatment posts are drawn by Universal's own slide drawer, so they match her Universal tool.
 // The six others (about me, empowering, your face your rules, seasonal, men, why I do this) are drawn here in the same language:
-// a gradient in the clinic's colours, Blue Mirage headlines with the odd curly letter, Montserrat underneath, a see-through logo.
+// a gradient in the clinic's colours, Hatcher headlines on the treatment posts, Montserrat underneath, a see-through logo.
 // Stories are the cover of each post on a tall canvas with room left for the poll sticker.
 
 export const W = 1080;
@@ -93,14 +94,26 @@ export type Assets = {
   tf: TitleFont;
 };
 
-// The headline font is Blue Mirage for everyone. Her Font Lab choices for it win, otherwise each letter that has one gets its first curly version.
+// The headline font on the three treatment carousels is Hatcher, loaded from the same files her NO 1 page uses. It has no curly
+// alternates, so there is nothing to swap and the headline is drawn exactly as typed.
+let hatcherP: Promise<LoadedFont> | null = null;
+function loadHatcher(): Promise<LoadedFont> {
+  if (!hatcherP) {
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    hatcherP = fetch(`${base}/fonts/no1/Hatcher.woff`).then(async (r) => {
+      if (!r.ok) throw new Error("Hatcher font missing");
+      const font = opentype.parse(await r.arrayBuffer());
+      const byName = new Map<string, opentype.Glyph>();
+      for (let i = 0; i < font.glyphs.length; i++) { const g = font.glyphs.get(i); if (g.name) byName.set(g.name, g); }
+      return { id: "hatcher", font, byName, data: { alts: {}, chars: {} } } as LoadedFont;
+    });
+    hatcherP.catch(() => { hatcherP = null; });
+  }
+  return hatcherP;
+}
 export async function buildTitleFont(): Promise<TitleFont> {
-  const lf = await loadSuiteFont("blue-mirage");
-  const saved = readTitleStyle();
-  const mine = saved.fontId === BASE_TITLE.fontId && Object.keys(saved.swaps).length > 0;
-  const swaps: Record<string, string> = mine ? { ...saved.swaps } : {};
-  if (!mine) for (const [ch, list] of Object.entries(lf.data.alts)) if (list.length) swaps[ch] = list[0];
-  return { lf, style: { ...BASE_TITLE, tracking: mine ? saved.tracking : BASE_TITLE.tracking, swaps, rate: "starts" } };
+  const lf = await loadHatcher();
+  return { lf, style: { ...BASE_TITLE, fontId: "hatcher", tracking: 10, swaps: {}, rate: "off" } };
 }
 
 function textLogoCanvas(name: string): HTMLCanvasElement {
