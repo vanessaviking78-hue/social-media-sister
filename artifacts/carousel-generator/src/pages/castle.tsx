@@ -25,16 +25,8 @@ const CLINIC_KEY = "castle";
 const CLINIC_NAME = DENTAL_CLINICS[CLINIC_KEY].name;
 const LOOK_KEY = "castle-look-v1";
 
-// How the wash and the writing look. Wash is white or black with an opacity slider; writing is auto, black or white.
-type WashColour = "white" | "black" | "brown" | "beige";
-const WASHES: Record<WashColour, { rgb: string; bg: string; light: boolean }> = {
-  white: { rgb: "255,255,255", bg: "#ffffff", light: false },
-  black: { rgb: "13,13,13", bg: "#0d0d0d", light: true },
-  brown: { rgb: "74,52,38", bg: "#4a3426", light: true },
-  beige: { rgb: "232,220,200", bg: "#e8dcc8", light: false },
-};
-type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "white"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "silver" };
-const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
+type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string };
+const DEFAULT_LOOK: Look = { wash: "#ffffff", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
 const fixDoctor = (t: string) => (t || "").replace(/\bdoctors?\b/gi, (m) => "D" + m.slice(1).toLowerCase());
@@ -74,19 +66,112 @@ function loadLogoImg(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
+// Colours are a hex, or "metal:name" (a classic metal), or "metal:#rrggbb" (any colour in a shiny metallic finish).
+const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+const METALS: { id: string; name: string; stops: string[] }[] = [
+  { id: "gold", name: "Gold", stops: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"] },
+  { id: "rosegold", name: "Rose gold", stops: ["#8a4f45", "#d9a08f", "#ffe3d6", "#c98a79", "#8a4f45"] },
+  { id: "silver", name: "Silver", stops: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"] },
+  { id: "champagne", name: "Champagne", stops: ["#9c8458", "#e6d2a8", "#fff8e6", "#d2bb8c", "#9c8458"] },
+  { id: "bronze", name: "Bronze", stops: ["#5c3a1a", "#a8713a", "#e0ac72", "#8a5a2a", "#5c3a1a"] },
+  { id: "copper", name: "Copper", stops: ["#6e2f1a", "#c0683f", "#f0a984", "#b05a35", "#6e2f1a"] },
+  { id: "gunmetal", name: "Gunmetal", stops: ["#1c1f24", "#4a5059", "#8b929c", "#3a3f47", "#1c1f24"] },
+];
+const hexParts = (h: string) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixHex = (h: string, to: number, t: number) => {
+  const p = hexParts(h).map((v) => Math.round(v + (to - v) * t));
+  return "#" + p.map((v) => v.toString(16).padStart(2, "0")).join("");
+};
+const lumOf = (h: string) => { const [r, g, b] = hexParts(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+const metalOf = (v: string): { stops: string[]; base: string } | undefined => {
+  if (typeof v !== "string" || !v.startsWith("metal:")) return undefined;
+  const rest = v.slice(6);
+  if (isHex(rest)) return { base: rest, stops: [mixHex(rest, 0, 0.5), rest, mixHex(rest, 255, 0.65), mixHex(rest, 0, 0.12), mixHex(rest, 0, 0.5)] };
+  const m = METALS.find((x) => x.id === rest);
+  return m ? { stops: m.stops, base: m.stops[2] } : undefined;
+};
+const metalCss = (m: { stops: string[] }) => `linear-gradient(135deg, ${m.stops.map((c, i) => `${c} ${Math.round((i / (m.stops.length - 1)) * 100)}%`).join(", ")})`;
+const metalFill = (ctx: CanvasRenderingContext2D, m: { stops: string[] }, x0: number, y0: number, x1: number, y1: number) => {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  m.stops.forEach((c, i) => g.addColorStop(i / (m.stops.length - 1), c));
+  return g;
+};
+const rgbOf = (hex: string) => { const [r, g, b] = hexParts(isHex(hex) ? hex : "#0d0d0d"); return `${r},${g},${b}`; };
+// Older saved looks used names. Turn them into colours.
+const OLD_WASH: Record<string, string> = { white: "#ffffff", black: "#0d0d0d", brown: "#4a3426", beige: "#e8dcc8" };
+function normLook(l: Look): Look {
+  const wash = OLD_WASH[l.wash] || l.wash || "#ffffff";
+  const text = l.text === "black" ? "#0d0d0d" : l.text === "white" ? "#ffffff" : l.text || "auto";
+  const headline = l.headline === "silver" ? "metal:silver" : l.headline || "auto";
+  return { ...l, wash, text, headline };
+}
+// Is the background dark enough to want light writing?
+function washIsDark(wash: string) {
+  const m = metalOf(wash);
+  if (m) return lumOf(m.base) < 0.5 || ["metal:bronze", "metal:copper", "metal:gunmetal"].includes(wash);
+  return lumOf(isHex(wash) ? wash : "#ffffff") < 0.5;
+}
 function inks(look: Look) {
-  const w = WASHES[look.wash] || WASHES.white;
-  const light = look.text === "white" || (look.text === "auto" && w.light);
-  return { ink: light ? "#ffffff" : INK, grey: light ? "#cfcfcf" : GREY, bg: w.bg };
+  const l = normLook(look);
+  const dark = washIsDark(l.wash);
+  const ink = l.text === "auto" ? (dark ? "#ffffff" : INK) : l.text;
+  const grey = l.text === "auto" ? (dark ? "#cfcfcf" : GREY) : l.text;
+  return { ink, grey, bg: l.wash };
+}
+// Turn a colour into something a canvas can paint with, shining across the band it covers.
+function paintOf(ctx: CanvasRenderingContext2D, v: string, y0: number, y1: number): string | CanvasGradient {
+  const m = metalOf(v);
+  return m ? metalFill(ctx, m, 100, y0, W - 100, y0 + Math.max(y1 - y0, 80)) : v;
 }
 
-// Metallic silver for the headline: a soft diagonal sheen from shadow grey to bright highlight.
-function silver(ctx: CanvasRenderingContext2D, y0: number, y1: number): CanvasGradient {
-  const g = ctx.createLinearGradient(100, y0, W - 100, y1);
-  const stops = ["#7d838a", "#e9ecef", "#9ba1a8", "#ffffff", "#858b92", "#d5d9dd", "#8a9097"];
-  stops.forEach((c, i) => g.addColorStop(i / (stops.length - 1), c));
-  return g;
+const SOLIDS: { name: string; hex: string }[] = [
+  { name: "White", hex: "#ffffff" }, { name: "Black", hex: "#0d0d0d" }, { name: "Cream", hex: "#f5efe6" }, { name: "Beige", hex: "#e8dcc8" },
+  { name: "Blush", hex: "#f2d4d0" }, { name: "Sage", hex: "#9caf88" }, { name: "Teal", hex: "#2a7f8a" }, { name: "Navy", hex: "#14213d" },
+  { name: "Plum", hex: "#5b2a4a" }, { name: "Burgundy", hex: "#6d1a2b" }, { name: "Brown", hex: "#4a3426" }, { name: "Grey", hex: "#8a8a8a" },
+];
+function ColourPicker({ label, value, onChange, extra = [], small = false }: { label: string; value: string; onChange: (v: string) => void; extra?: { name: string; hex: string }[]; small?: boolean }) {
+  const isMetal = value.startsWith("metal:");
+  const baseHex = isMetal ? (isHex(value.slice(6)) ? value.slice(6) : "#0d0d0d") : isHex(value) ? value : "#0d0d0d";
+  const btn = (s: { name: string; hex: string }, shiny: boolean) => {
+    const v = shiny ? s.hex : s.hex;
+    const m = metalOf(v);
+    const on = value.toLowerCase() === v.toLowerCase();
+    return (
+      <button key={`${shiny}-${s.name}-${v}`} onClick={() => onChange(v)} title={s.name}
+        className={`${small ? "h-6 w-6" : "h-8 w-8"} rounded-md border ${on ? "border-emerald-400 ring-2 ring-emerald-400/40" : "border-white/25 hover:border-white/60"}`}
+        style={{ background: m ? metalCss(m) : isHex(v) ? v : "transparent" }}>
+        {!m && !isHex(v) ? <span className="text-[10px] text-white/70">{s.name.slice(0, 1)}</span> : null}
+      </button>
+    );
+  };
+  return (
+    <div className="space-y-1 text-sm">
+      <span className="text-white/60">{label}</span>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {extra.map((s) => (
+          <button key={s.name} onClick={() => onChange(s.hex)} className={`h-8 px-2 rounded-md border text-xs ${value === s.hex ? "border-emerald-400 bg-emerald-400/15" : "border-white/25 hover:border-white/60"}`}>{s.name}</button>
+        ))}
+        {SOLIDS.map((s) => btn(s, false))}
+      </div>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-white/40 text-xs w-14">Metallic</span>
+        {METALS.map((m) => btn({ name: m.name, hex: `metal:${m.id}` }, true))}
+        {SOLIDS.filter((s) => !["#ffffff", "#f5efe6", "#e8dcc8"].includes(s.hex)).map((s) => btn({ name: `Metallic ${s.name.toLowerCase()}`, hex: `metal:${s.hex}` }, true))}
+      </div>
+      <div className="flex items-center gap-3 text-white/70">
+        <label className="flex items-center gap-2">
+          <input type="color" value={baseHex} onChange={(e) => onChange(isMetal ? `metal:${e.target.value}` : e.target.value)} className="h-8 w-10 rounded bg-transparent border border-white/25 p-0.5 cursor-pointer" />
+          Any colour
+        </label>
+        <label className="flex items-center gap-1.5">
+          <input type="checkbox" checked={isMetal} onChange={(e) => onChange(e.target.checked ? `metal:${baseHex}` : baseHex)} />
+          Metallic finish
+        </label>
+      </div>
+    </div>
+  );
 }
+
 const FONT_KEY = "castle-fonts-v1";
 const AREA_KEY = "castle-area-v1";
 const SCHED_KEY = "castle-scheduled-v1";
@@ -209,20 +294,35 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
   (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`;
 }
 
-// The white wash: clear at the top, solid white by the bottom third.
+// The wash: clear where the photo shows, solid where the writing sits. Solid colour or a metallic sheen.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
-  const o = Math.max(0, Math.min(100, look.opacity)) / 100;
-  const c = (WASHES[look.wash] || WASHES.white).rgb;
+  const l = normLook(look);
+  const o = Math.max(0, Math.min(100, l.opacity)) / 100;
+  const metal = metalOf(l.wash);
+  const c = metal ? "0,0,0" : rgbOf(l.wash);
   const g = ctx.createLinearGradient(0, H * from, 0, H);
   g.addColorStop(0, `rgba(${c},0)`);
   g.addColorStop(0.45, `rgba(${c},${0.88 * o})`);
   g.addColorStop(0.7, `rgba(${c},${0.98 * o})`);
   g.addColorStop(1, `rgba(${c},${o})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  if (!metal) {
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  const tmp = document.createElement("canvas");
+  tmp.width = W;
+  tmp.height = H;
+  const t = tmp.getContext("2d")!;
+  t.fillStyle = metalFill(t, metal, 0, 0, W, H);
+  t.fillRect(0, 0, W, H);
+  t.globalCompositeOperation = "destination-in";
+  t.fillStyle = g;
+  t.fillRect(0, 0, W, H);
+  ctx.drawImage(tmp, 0, 0);
 }
 
-function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center", color = GREY) {
+function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center", color: string | CanvasGradient = GREY) {
   ctx.save();
   ctx.fillStyle = color;
   ctx.font = `600 22px "${f.body}", sans-serif`;
@@ -241,7 +341,11 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
   const ts = (look.titleSize || 100) / 100;
   const bs = (look.bodySize || 100) / 100;
-  const { ink: INKC, grey: GREYC, bg: BGC } = inks(look);
+  look = normLook(look);
+  const { ink, grey, bg } = inks(look);
+  const INKC = paintOf(ctx, ink, H * 0.35, H);
+  const GREYC = paintOf(ctx, grey, H - 120, H);
+  const BGC = metalOf(bg) ? metalFill(ctx, metalOf(bg)!, 0, 0, W, H) : bg;
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
@@ -256,7 +360,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520 * Math.max(1, ts), Math.round(84 * ts), Math.round(44 * ts), 1.2);
     const total = fit.lines.length * fit.px * 1.2;
     let y = (H - total) / 2 - 30;
-    if (look.headline === "silver") ctx.fillStyle = silver(ctx, y, y + total);
+    if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
     ctx.font = head(fit.px);
     for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.2; }
     ctx.fillStyle = INKC;
@@ -279,14 +383,14 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
       const ty = H - 175 - titleHeight(layout);
-      drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline === "silver" ? silver(ctx, ty, ty + titleHeight(layout)) : INKC);
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline !== "auto" ? paintOf(ctx, look.headline, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
       const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
       let y = H - 175 - total;
-      if (look.headline === "silver") ctx.fillStyle = silver(ctx, y, y + total);
+      if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
     }
@@ -359,7 +463,7 @@ export default function CastlePage() {
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "Hatcher", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
-  const [look, setLook] = useState<Look>(() => { try { const r = localStorage.getItem(LOOK_KEY); if (r) return { ...DEFAULT_LOOK, ...JSON.parse(r) }; } catch { /* ignore */ } return DEFAULT_LOOK; });
+  const [look, setLook] = useState<Look>(() => { try { const r = localStorage.getItem(LOOK_KEY); if (r) return normLook({ ...DEFAULT_LOOK, ...JSON.parse(r) }); } catch { /* ignore */ } return DEFAULT_LOOK; });
   useEffect(() => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* ignore */ } }, [look]);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
@@ -567,7 +671,7 @@ export default function CastlePage() {
     saveAs(await zip.generateAsync({ type: "blob" }), `castle-${t.id}.zip`);
   };
 
-  const lookFor = (post: Post): Look => ({ ...look, ...(post.look || {}) });
+  const lookFor = (post: Post): Look => normLook({ ...look, ...(post.look || {}) });
 
   // Pressing Schedule first asks: schedule it, or reject it with a reason.
   const [review, setReview] = useState<{ id: string; reason: string; rejecting: boolean } | null>(null);
@@ -642,35 +746,14 @@ export default function CastlePage() {
             <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Beeston" /></label>
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1">
-              <span className="text-white/60">Gradient colour (the default for every post)</span>
-              <div className="flex gap-2">
-                {(["white", "black", "brown", "beige"] as const).map((c) => (
-                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
-                ))}
-              </div>
-            </div>
-            <label className="space-y-1 block">
+          <div className="space-y-4 text-sm">
+            <ColourPicker label="Gradient colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
+            <label className="space-y-1 block max-w-sm">
               <span className="text-white/60">Gradient strength: {look.opacity}%</span>
               <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
             </label>
-            <div className="space-y-1">
-              <span className="text-white/60">Writing colour</span>
-              <div className="flex gap-2">
-                {([["auto", "Match gradient"], ["black", "Black"], ["white", "White"]] as const).map(([v, label]) => (
-                  <button key={v} onClick={() => setLook((l) => ({ ...l, text: v }))} className={`flex-1 rounded-md border px-2 py-2 ${look.text === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="space-y-1 text-sm">
-            <span className="text-white/60">Headline colour</span>
-            <div className="flex gap-2 max-w-sm">
-              {([["auto", "Same as writing"], ["silver", "Metallic silver"]] as const).map(([v, label]) => (
-                <button key={v} onClick={() => setLook((l) => ({ ...l, headline: v }))} className={`flex-1 rounded-md border px-2 py-2 ${look.headline === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-              ))}
-            </div>
+            <ColourPicker label="Writing colour" value={normLook(look).text} onChange={(v) => setLook((l) => ({ ...l, text: v }))} extra={[{ name: "Match gradient", hex: "auto" }]} />
+            <ColourPicker label="Headline colour" value={normLook(look).headline} onChange={(v) => setLook((l) => ({ ...l, headline: v }))} extra={[{ name: "Same as writing", hex: "auto" }]} />
           </div>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <label className="space-y-1 block">
@@ -819,34 +902,15 @@ export default function CastlePage() {
                     )}
                   </div>
                 )}
-                <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-4 gap-3 text-xs items-end">
-                  <div className="space-y-1">
-                    <span className="text-white/60">This post: gradient</span>
-                    <div className="flex gap-1">
-                      {(["white", "black", "brown", "beige"] as const).map((c) => (
-                        <button key={c} onClick={() => patch(post.id, { look: { ...post.look, wash: c } })} className={`flex-1 rounded border px-1 py-1 capitalize ${lookFor(post).wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-2 gap-3 text-xs items-start">
+                  <ColourPicker small label="This post: gradient" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
                     <input type="range" min={0} max={100} step={5} value={lookFor(post).opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
                   </label>
+                  <ColourPicker small label="Writing" value={lookFor(post).text} onChange={(v) => patch(post.id, { look: { ...post.look, text: v } })} extra={[{ name: "Match", hex: "auto" }]} />
                   <div className="space-y-1">
-                    <span className="text-white/60">Writing</span>
-                    <div className="flex gap-1">
-                      {([["auto", "Match"], ["black", "Black"], ["white", "White"]] as const).map(([v, label]) => (
-                        <button key={v} onClick={() => patch(post.id, { look: { ...post.look, text: v } })} className={`flex-1 rounded border px-1 py-1 ${lookFor(post).text === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-white/60">Headline</span>
-                    <div className="flex gap-1">
-                      {([["auto", "Writing colour"], ["silver", "Silver"]] as const).map(([v, label]) => (
-                        <button key={v} onClick={() => patch(post.id, { look: { ...post.look, headline: v } })} className={`flex-1 rounded border px-1 py-1 ${lookFor(post).headline === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-                      ))}
-                    </div>
+                    <ColourPicker small label="Headline" value={lookFor(post).headline} onChange={(v) => patch(post.id, { look: { ...post.look, headline: v } })} extra={[{ name: "Writing colour", hex: "auto" }]} />
                     {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
                   </div>
                 </div>
