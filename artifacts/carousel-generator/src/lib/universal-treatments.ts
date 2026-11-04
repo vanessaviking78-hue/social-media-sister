@@ -35,7 +35,6 @@ export const U_TREATMENTS: UTreatment[] = [
   t("nose-filler", "fillers", "Nose filler", "contouring makeup", "A non surgical way to refine the profile of the nose with filler, assessed very carefully.", { plural: false }),
   t("temple-filler", "fillers", "Temple filler", "a good fringe", "Filler to replace volume lost at the temples and soften the hollowing there.", { plural: false }),
   t("hand-filler", "fillers", "Hand filler", "hand cream", "Filler to restore volume to the backs of the hands.", { plural: false }),
-  t("dermal-fillers", "fillers", "Dermal fillers", "skincare", "An overview of hyaluronic acid dermal fillers and what they can be used for.", { plural: true, mid: "dermal fillers" }),
   // Regenerative
   t("skin-boosters", "regenerative", "Skin boosters", "moisturiser", "Fine, hydrating hyaluronic acid treatments that work on skin quality, glow and hydration from within.", { plural: true }),
   t("profhilo", "regenerative", "Profhilo", "filler", "A hybrid hyaluronic acid treatment used to improve skin quality, hydration and bounce.", { mid: "Profhilo", plural: false }),

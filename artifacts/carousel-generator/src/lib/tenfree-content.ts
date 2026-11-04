@@ -36,7 +36,7 @@ const INTERESTING = new Set([
   "carbon-laser", "reiki", "biostimulators", "temple-filler", "hand-filler", "profhilo", "dermaplaning", "led", "ipl", "prp-hair", "nose-filler",
 ]);
 // The ones every clinic posts about, picked last.
-const OBVIOUS = new Set(["dermal-fillers", "skin-tightening", "medical-facial", "microdermabrasion", "lip-filler", "skin-boosters", "chemical-peels"]);
+const OBVIOUS = new Set(["skin-tightening", "medical-facial", "microdermabrasion", "lip-filler", "skin-boosters", "chemical-peels"]);
 // Polynucleotides and the eye version count as one choice, so they never take two of the three places.
 const SAME_FAMILY = (a: string, b: string) => a.startsWith("polynucleotide") && b.startsWith("polynucleotide");
 
