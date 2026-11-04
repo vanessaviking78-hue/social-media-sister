@@ -53,6 +53,7 @@ const sub = (g: EG, x: number, y: number, w: number, h: number, size: number, co
   rich(g, "sub", x, y, w, h, { font: "body", max: size, min: 6, weight: 400, colour, align, lh: 1.32 });
 
 function frame(g: EG, x: number, y: number, w: number, h: number, colour: string, lw = 0.9) {
+  if (decor.off) return;
   g.ctx.save();
   g.ctx.strokeStyle = colour;
   g.ctx.lineWidth = lw;
@@ -136,7 +137,7 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     photoRect(g, 293, 32, 91, 442);
     rect(g, 289, 8, 1.1, 484, rgba(g.p.ink, 0.8));
     rect(g, 36, 38, 1, 430, rgba(g.p.ink, 0.75));
-    rect(g, 0, 474, W, 26, tone(g, "page", -0.06));
+    if (!decor.off) rect(g, 0, 474, W, 26, tone(g, "page", -0.06));
     head(g, 62, 88, 224, 215, { max: 36, colour: k(g, "ink"), lh: 1.04 });
     rect(g, 62, 318, 42, 1.2, k(g, "ink"));
     sub(g, 62, 340, 160, 40, 10, k(g, "ink"));
@@ -180,7 +181,7 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     rect(g, 20, 40, 360, 1, rgba(g.p.ink, 0.35));
     headCond(g, 20, 78, 210, 235, { max: 44, colour: k(g, "ink"), lh: 0.98 }, 0.7);
     // photo with a hard shadow
-    rect(g, 231, 139, 162, 254, "rgba(0,0,0,0.28)");
+    if (!decor.off) rect(g, 231, 139, 162, 254, "rgba(0,0,0,0.28)");
     photoRect(g, 226, 134, 162, 254);
     sub(g, 20, 424, 215, 44, 11, k(g, "ink"));
   },
@@ -207,7 +208,7 @@ export const LUX_LAYOUTS: LuxLayout[] = [
     rect(g, 140, 42, 120, 1, rgba(g.p.ink, 0.45));
     head(g, 40, 62, 320, 146, { max: 36, colour: k(g, "ink"), align: "center", lh: 1.03 });
     // taped corner and an L of ink on the left
-    rect(g, 36, 322, 86, 132, rgba(g.p.ink, 0.07));
+    if (!decor.off) rect(g, 36, 322, 86, 132, rgba(g.p.ink, 0.07));
     rect(g, 46, 318, 1, 144, rgba(g.p.ink, 0.5));
     rect(g, 32, 441, 94, 1, rgba(g.p.ink, 0.5));
     // the photograph, a little crooked, on a cream card

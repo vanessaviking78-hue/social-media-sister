@@ -1,4 +1,5 @@
 // Small drawing helpers shared by the Unique layouts: stamps, pins, redaction bars, backgrounds.
+import { decor } from "./empower-kit";
 import { HU, XH, XW, rand, rgba, shade, textBox, drawPhoto, type G } from "./xmas-designs";
 
 export const tx = (g: G, k: string) => g.t[k] ?? "";
@@ -99,6 +100,7 @@ export function framedPhoto(g: G, x: number, y: number, w: number, h: number, ro
 }
 
 export function barcode(g: G, x: number, y: number, w: number, h: number, colour: string, seed = 4) {
+  if (decor.off) return;
   const r = rand(seed);
   g.ctx.save(); g.ctx.fillStyle = colour;
   for (let xx = x; xx < x + w;) { const bw = 2 + Math.floor(r() * 5); g.ctx.fillRect(xx, y, Math.min(bw, x + w - xx), h); xx += bw + 2 + Math.floor(r() * 4); }

@@ -63,7 +63,7 @@ export const tone = (g: EG, key: EKey, amt: number) => shade(g.p[key], amt);
 export const decor = { off: false };
 
 export function rect(g: EG, x: number, y: number, w: number, h: number, style: string) {
-  if (decor.off && ((h <= 1.3 && w >= 12) || (w <= 1.3 && h >= 12))) return;
+  if (decor.off && ((h <= 3 && w >= 12) || (w <= 3 && h >= 12))) return;
   g.ctx.fillStyle = style;
   g.ctx.fillRect(x, y, w, h);
 }
@@ -123,6 +123,7 @@ export function brush(g: EG, x1: number, y1: number, x2: number, y2: number, w: 
 }
 
 export function dashed(g: EG, x1: number, y1: number, x2: number, y2: number, colour: string, lw = 1, dash: [number, number] = [4, 4]) {
+  if (decor.off) return;
   const { ctx } = g;
   ctx.save();
   ctx.setLineDash(dash);
@@ -132,6 +133,7 @@ export function dashed(g: EG, x1: number, y1: number, x2: number, y2: number, co
 }
 
 export function bracket(g: EG, x: number, y: number, dx: number, dy: number, len: number, colour: string, lw = 1.1) {
+  if (decor.off) return;
   const { ctx } = g;
   ctx.save();
   ctx.strokeStyle = colour; ctx.lineWidth = lw;
@@ -233,6 +235,7 @@ export const split = (g: EG, key: string): string[] => tx(g, key).split("\n").ma
 
 // Text standing on its side (reads bottom to top)
 export function upright(g: EG, text: string, x: number, y: number, size: number, colour: string, weight = 700) {
+  if (decor.off) return;
   const { ctx } = g;
   ctx.save();
   ctx.translate(x, y);
@@ -277,6 +280,7 @@ export function zigPts(x: number, y: number, w: number, h: number, teeth = 12): 
 
 // Film sprocket holes along a strip
 export function sprockets(g: EG, x: number, y: number, len: number, horizontal: boolean, colour: string, size = 5, gap = 11) {
+  if (decor.off) return;
   for (let d = 4; d < len - size; d += gap) {
     if (horizontal) rect(g, x + d, y, size, size * 0.8, colour);
     else rect(g, x, y + d, size * 0.8, size, colour);
@@ -380,6 +384,7 @@ export function rich(g: EG, key: string, x: number, y: number, w: number, h: num
 
 // Small barcode, for tickets
 export function barcode(g: EG, x: number, y: number, w: number, h: number, colour: string, seed = 4) {
+  if (decor.off) return;
   const r = rand(seed);
   let xx = x;
   while (xx < x + w) {
