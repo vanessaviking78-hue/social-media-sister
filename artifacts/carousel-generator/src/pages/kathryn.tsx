@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -138,7 +138,7 @@ function ColourPicker({ label, value, onChange, extra = [], small = false }: { l
     const on = value.toLowerCase() === v.toLowerCase();
     return (
       <button key={`${shiny}-${s.name}-${v}`} onClick={() => onChange(v)} title={s.name}
-        className={`${small ? "h-6 w-6" : "h-8 w-8"} rounded-md border ${on ? "border-emerald-400 ring-2 ring-emerald-400/40" : "border-white/25 hover:border-white/60"}`}
+        className={`keep-colour ${small ? "h-6 w-6" : "h-8 w-8"} rounded-md border ${on ? "border-emerald-400 ring-2 ring-emerald-400/40" : "border-white/25 hover:border-white/60"}`}
         style={{ background: m ? metalCss(m) : isHex(v) ? v : "transparent" }}>
         {!m && !isHex(v) ? <span className="text-[10px] text-white/70">{s.name.slice(0, 1)}</span> : null}
       </button>
@@ -195,6 +195,7 @@ type Post = {
   photos: number[];
   note: string;
   when: string;
+  banked?: boolean;
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
@@ -690,31 +691,74 @@ export default function KathrynPage() {
     else toast.success("Rejected, with your reason saved on the post");
   };
 
-  const schedule = async (post: Post) => {
-    if (!preset) { toast.error("I cannot find her client preset. It needs a name with Kathryn in it"); return; }
+  // Draws the slides, uploads them and sends the post to the scheduler. A bank post has no date.
+  const send = async (post: Post, mode: "schedule" | "bank", whenIso?: string) => {
+    if (!preset) throw new Error("I cannot find her client preset. It needs a name with Kathryn in it");
     const t = TYPE_BY_ID.get(post.typeId)!;
-    if (!photoCount(post)) { toast.error("Add photos for this section first"); return; }
+    if (!photoCount(post)) throw new Error("Add photos for this section first");
+    const cs = await render(post);
+    const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `kathryn-${t.id}-${i + 1}-${Date.now()}.png`));
+    const content = { caption: fullCaption(post), title: `${t.label} · ${CLINIC_NAME}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "kathryn" };
+    const body = mode === "bank"
+      ? { postType: "carousel", content, status: "draft", presetId: preset.id }
+      : { postType: "carousel", content, scheduledAt: new Date(whenIso || post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
+    const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || (mode === "bank" ? "Failed to save to the Client Bank" : "Failed to schedule")); }
+    if (mode === "schedule") setScheduled((s) => ({ ...s, [t.id]: new Date(whenIso || post.when).toISOString() }));
+  };
+
+  const schedule = async (post: Post) => {
     patch(post.id, { scheduling: true });
     try {
-      const cs = await render(post);
-      const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `kathryn-${t.id}-${i + 1}-${Date.now()}.png`));
-      const body = {
-        postType: "carousel",
-        content: { caption: fullCaption(post), title: `${t.label} · ${CLINIC_NAME}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "kathryn" },
-        scheduledAt: new Date(post.when).toISOString(),
-        isTrial: false,
-        notes: "",
-        presetId: preset.id,
-      };
-      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Failed to schedule"); }
-      setScheduled((s) => ({ ...s, [t.id]: new Date(post.when).toISOString() }));
-      patch(post.id, { scheduling: false });
+      await send(post, "schedule");
       toast.success("Scheduled, and crossed off her list");
     } catch (e) {
-      patch(post.id, { scheduling: false });
       toast.error(e instanceof Error ? e.message : "Could not schedule");
     }
+    patch(post.id, { scheduling: false });
+  };
+
+  const bank = async (post: Post) => {
+    patch(post.id, { scheduling: true });
+    try {
+      await send(post, "bank");
+      patch(post.id, { banked: true });
+      toast.success(`Added to ${preset?.name || CLINIC_NAME}'s Client Bank, no date`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add to the bank");
+    }
+    patch(post.id, { scheduling: false });
+  };
+
+  // Every open post that has its words written and is not already scheduled, one per day from the earliest date.
+  const [bulkBusy, setBulkBusy] = useState("");
+  const ready = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+  const bulk = async (mode: "schedule" | "bank") => {
+    if (!preset) { toast.error("I cannot find her client preset"); return; }
+    const list = mode === "bank" ? ready.filter((p) => !p.banked) : ready;
+    if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
+    const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
+    let done = 0;
+    let failed = "";
+    for (const [i, post] of list.entries()) {
+      setBulkBusy(`${done + 1} of ${list.length}`);
+      patch(post.id, { scheduling: true });
+      try {
+        const d = new Date(first);
+        d.setDate(d.getDate() + i);
+        await send(post, mode, d.toISOString());
+        if (mode === "bank") patch(post.id, { banked: true });
+        done++;
+      } catch (e) {
+        failed = e instanceof Error ? e.message : "Something failed";
+        patch(post.id, { scheduling: false });
+        break;
+      }
+      patch(post.id, { scheduling: false });
+    }
+    setBulkBusy("");
+    if (done) toast.success(mode === "bank" ? `${done} added to the Client Bank` : `${done} scheduled, one a day from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+    if (failed) toast.error(`Stopped after ${done}: ${failed}`);
   };
 
   const doneIn = (g: string) => DENTAL_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
@@ -849,6 +893,16 @@ export default function KathrynPage() {
 
         <section className="space-y-6">
           {posts.length === 0 && <p className="text-white/50 text-sm">Press a post name above and it opens here.</p>}
+          {posts.length > 0 && (
+            <div className="rounded-xl border border-white/10 p-4 flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-white/70">{ready.length} written and waiting</span>
+              {bulkBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{bulkBusy}</span>}
+              <div className="ml-auto flex gap-2 flex-wrap">
+                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one a day</Button>
+                <Button size="sm" variant="secondary" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("bank")}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
+              </div>
+            </div>
+          )}
           {posts.map((post) => {
             const t = TYPE_BY_ID.get(post.typeId)!;
             return (
@@ -860,9 +914,11 @@ export default function KathrynPage() {
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
                     </Button>
                     <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
-                    <Button size="sm" onClick={() => setReview({ id: post.id, reason: "", rejecting: false })} disabled={!post.caption || post.scheduling}>
+                    <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
+                    <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>
+                    <Button size="sm" variant="outline" className="border-red-400/50 text-red-300" onClick={() => setReview({ id: post.id, reason: "", rejecting: true })} disabled={!post.caption}>Reject</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
@@ -879,7 +935,6 @@ export default function KathrynPage() {
                       <>
                         <p className="font-medium">Happy with this post?</p>
                         <div className="flex gap-2 flex-wrap">
-                          <Button size="sm" onClick={() => { setReview(null); schedule(post); }}><CalendarCheck className="w-4 h-4 mr-2" />Yes, schedule it</Button>
                           <Button size="sm" variant="outline" className="border-red-400/50 text-red-300" onClick={() => setReview({ ...review, rejecting: true })}>Reject it with a reason</Button>
                           <Button size="sm" variant="ghost" onClick={() => setReview(null)}>Cancel</Button>
                         </div>
