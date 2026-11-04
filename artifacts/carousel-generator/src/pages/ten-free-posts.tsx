@@ -107,7 +107,7 @@ async function toUsable(file: File): Promise<File> {
 }
 
 export default function TenFreePosts() {
-  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
+  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
   const [cols, setCols] = useState<Colours>({ main: "#c2185b", accent: "#1a1a1a" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
@@ -313,6 +313,16 @@ export default function TenFreePosts() {
               <h2>A bit about you</h2>
               <p className="sub">This is where the personality comes from, so be yourself.</p>
               <div className="tf-grid">
+                <div className="tf-f full">
+                  <span className="tf-l">Are you a clinic or an academy? (tick one)</span>
+                  <div className="tf-mum">
+                    {["Clinic", "Academy"].map((o) => (
+                      <button type="button" key={o} className={`tf-chip${f.bizType === o ? " on" : ""}`} onClick={() => setF((p) => ({ ...p, bizType: o }))}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="tf-f full">
                   <span className="tf-l">How old are you?</span>
                   <div className="tf-mum">

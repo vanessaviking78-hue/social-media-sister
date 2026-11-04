@@ -176,6 +176,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       }
     }
     const answers = {
+      bizType: ["Clinic", "Academy"].includes(str(b.bizType, 20)) ? str(b.bizType, 20) : "",
       age: ["Under 30", "30 to 37", "38 to 44", "45 to 54", "55 or over"].includes(str(b.age, 20)) ? str(b.age, 20) : "",
       hobbies: str(b.hobbies, 400),
       mum: str(b.mum, 40),
@@ -184,7 +185,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       threeWords: str(b.threeWords, 120),
       passion: str(b.passion, 400),
     };
-    if (!answers.age || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets) {
+    if (!answers.bizType || !answers.age || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets) {
       res.status(400).json({ error: "Please answer every question about you, the posts are built from them" });
       return;
     }

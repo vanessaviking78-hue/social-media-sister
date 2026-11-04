@@ -11,7 +11,7 @@ const authHeaders = (): Record<string, string> => {
 
 type Row = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; whatsapp: string;
-  notes: string; slug: string; code: string; createdAt: string; sentAt: string | null;
+  answers?: { bizType?: string }; notes: string; slug: string; code: string; createdAt: string; sentAt: string | null;
 };
 
 const link = (slug: string) => `${window.location.origin}${BASE}/10free/${slug}`;
@@ -84,7 +84,7 @@ export default function TenFreeTracker() {
           <div key={r.id} className="border rounded-lg p-4 space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <div className="font-semibold">{r.clinicName} <span className="text-xs uppercase text-pink-500">{r.sentAt ? "Sent" : STATUS[r.status] ?? r.status}</span></div>
+                <div className="font-semibold">{r.clinicName}{r.answers?.bizType === "Academy" ? " (Academy)" : ""} <span className="text-xs uppercase text-pink-500">{r.sentAt ? "Sent" : STATUS[r.status] ?? r.status}</span></div>
                 <div className="text-sm text-muted-foreground">{r.clinicianName} · {r.area} · asked {day(r.createdAt)}{r.sentAt ? ` · sent ${day(r.sentAt)}` : ""}</div>
                 <div className="text-sm text-muted-foreground">{r.email}{r.whatsapp ? ` · ${r.whatsapp}` : ""}</div>
               </div>

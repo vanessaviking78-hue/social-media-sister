@@ -25,7 +25,7 @@ const authHeaders = (): Record<string, string> => {
 
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
-  mainHex: string; accentHex: string; treatments: string[]; answers: { age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
+  mainHex: string; accentHex: string; treatments: string[]; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
   logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string;
 };
 type Poll = { question: string; a: string; b: string };
@@ -394,7 +394,7 @@ function Builder({ id }: { id: string }) {
         <div>{req.clinicianName} · {req.email} · {req.area} · @{req.handle}</div>
         <div>{req.website} {req.whatsapp && `· WhatsApp ${req.whatsapp}`}</div>
         <div>Ticked: {ticked || "nothing"}</div>
-        <div>Age: {req.answers.age || "not given"} · Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
+        <div>{req.answers.bizType === "Academy" && <b className="text-pink-500">ACADEMY (academy posts are not built yet) · </b>}Age: {req.answers.age || "not given"} · Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
         <div>Why: {req.answers.why}</div>
         <div>Three words: {req.answers.threeWords} · Passion: {req.answers.passion}</div>
         <div className="font-semibold">Studio portraits: {req.photoUrl ? (req.aiStatus === "ready" ? `${req.aiUrls.length} ready` : req.aiStatus === "failed" ? "failed" : "still being made") : "no photo sent"}
