@@ -47,6 +47,7 @@ export default function Photoshoot() {
   useEffect(() => {
     document.title = "AI Photo Studio";
     if (!sid) return;
+    if (sid === "test") { setState(localStorage.getItem("cybersuite-pw") ? "form" : "error"); setMsg("Test mode needs you logged in to your tools first"); return; }
     fetch(`${API}/photoshoot/session/${encodeURIComponent(sid)}`).then(j).then((r) => {
       if (!r.ok) { setMsg(String(r.body.error || "Something went wrong")); setState("error"); return; }
       if (r.body.used) { setToken(String(r.body.token)); setState("done"); return; }
@@ -65,7 +66,7 @@ export default function Photoshoot() {
     faces.forEach((f) => fd.append("photos", f));
     if (interior) fd.append("interior", interior);
     try {
-      const r = await j(await fetch(`${API}/photoshoot/start`, { method: "POST", body: fd }));
+      const r = await j(await fetch(`${API}/photoshoot/start`, { method: "POST", body: fd, headers: sid === "test" ? { "x-app-password": localStorage.getItem("cybersuite-pw") || "" } : undefined }));
       if (!r.ok) { setMsg(String(r.body.error || "Something went wrong")); setState("form"); return; }
       setToken(String(r.body.token)); setState("done");
     } catch { setMsg("That did not send, please try again"); setState("form"); }

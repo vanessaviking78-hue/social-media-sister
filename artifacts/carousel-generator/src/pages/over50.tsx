@@ -131,7 +131,15 @@ function buildCaptions(clinic: string, area: string): string[] {
 }
 
 export default function Over50() {
-  const paid = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("paid") === "yes";
+  const qs = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const sessionId = qs.get("session_id") || "";
+  const isTester = (() => { try { return !!localStorage.getItem("cybersuite-pw") && qs.get("paid") === "yes"; } catch { return false; } })();
+  const [verified, setVerified] = useState(() => { try { return sessionStorage.getItem("o5-ok") === sessionId && !!sessionId; } catch { return false; } });
+  useEffect(() => {
+    if (!sessionId || verified) return;
+    fetch(`${BASE}/api/over50/verify/${encodeURIComponent(sessionId)}`).then((r) => { if (r.ok) { setVerified(true); try { sessionStorage.setItem("o5-ok", sessionId); } catch { /* ignore */ } } }).catch(() => undefined);
+  }, [sessionId, verified]);
+  const paid = isTester || verified;
   const [clinic, setClinic] = useState("");
   const [area, setArea] = useState("");
   const [accent, setAccent] = useState("#c2185b");

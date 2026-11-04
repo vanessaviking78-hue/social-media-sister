@@ -60,7 +60,7 @@ function ensureTable(): Promise<void> {
 
 type Checked = { ok: true; email: string; amount: number } | { ok: false; code: number; error: string };
 
-async function checkStripe(sessionId: string): Promise<Checked> {
+async function checkStripe(sessionId: string, minPence = MIN_PENCE, linkEnv = "PHOTOSHOOT_PAYMENT_LINK_ID", what = "AI Photo Studio"): Promise<Checked> {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return { ok: false, code: 503, error: "Payment checking is not switched on yet. Please email me and I will sort you out." };
   if (!/^cs_(live|test)_[A-Za-z0-9]+$/.test(sessionId)) return { ok: false, code: 400, error: "That payment reference does not look right." };
@@ -69,14 +69,23 @@ async function checkStripe(sessionId: string): Promise<Checked> {
     if (!r.ok) return { ok: false, code: 400, error: "I could not find that payment. If you have just paid, wait a minute and try again." };
     const s = (await r.json()) as { payment_status?: string; amount_total?: number; currency?: string; payment_link?: string | null; customer_details?: { email?: string } };
     if (s.payment_status !== "paid") return { ok: false, code: 402, error: "That payment has not gone through yet." };
-    if ((s.currency || "gbp") !== "gbp" || (s.amount_total ?? 0) < MIN_PENCE) return { ok: false, code: 400, error: "That payment is not for the AI Photo Studio." };
-    const link = process.env.PHOTOSHOOT_PAYMENT_LINK_ID;
-    if (link && s.payment_link !== link) return { ok: false, code: 400, error: "That payment is not for the AI Photo Studio." };
+    if ((s.currency || "gbp") !== "gbp" || (s.amount_total ?? 0) < minPence) return { ok: false, code: 400, error: `That payment is not for the ${what}.` };
+    const link = process.env[linkEnv];
+    if (link && s.payment_link !== link) return { ok: false, code: 400, error: `That payment is not for the ${what}.` };
     return { ok: true, email: s.customer_details?.email || "", amount: s.amount_total ?? 0 };
   } catch {
     return { ok: false, code: 502, error: "I could not reach the payment system just now. Please try again in a minute." };
   }
 }
+
+router.get("/over50/verify/:sid", async (req: Request, res: Response) => {
+  const c = await checkStripe(str(req.params.sid, 120), 2400, "OVER50_PAYMENT_LINK_ID", "Women Over 50 bundle");
+  if (!c.ok) {
+    res.status(c.code).json({ error: c.error });
+    return;
+  }
+  res.json({ ok: true });
+});
 
 router.get("/photoshoot/session/:sid", async (req: Request, res: Response) => {
   try {

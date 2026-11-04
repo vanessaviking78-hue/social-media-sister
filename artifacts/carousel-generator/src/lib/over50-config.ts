@@ -1,6 +1,6 @@
 // Women Over 50 bundle: /over50. Fill OVER50_PAY_URL with the Stripe Payment Link for the £24 bundle.
-// Set the link's after payment page to https://www.thecybersuite.com/over50?paid=yes
-export const OVER50_PAY_URL = "";
+// Set the link's after payment page to https://www.thecybersuite.com/over50?session_id={CHECKOUT_SESSION_ID}
+export const OVER50_PAY_URL = "https://buy.stripe.com/14A8wQfmqeYP4KMgmg3cc08";
 export const OVER50_PRICE = "£24";
 
 // Per page: the red used in the design (so it can be swapped), and where the logo goes.
