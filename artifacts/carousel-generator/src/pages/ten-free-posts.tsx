@@ -115,6 +115,7 @@ export default function TenFreePosts() {
   const [logoBusy, setLogoBusy] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
+  const [tips, setTips] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
@@ -187,6 +188,12 @@ export default function TenFreePosts() {
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) setRepeat(true);
       if (!r.ok) throw new Error(j.error || "Something went wrong, please try again");
+      if (tips && /^\S+@\S+\.\S+$/.test(f.email.trim())) {
+        try {
+          const body = new URLSearchParams({ EMAIL: f.email.trim(), FNAME: f.clinicianName.split(" ")[0] || "", b_0c0c86040f98ca351fa2dffbe_fc00c528ad: "" });
+          await fetch("https://store.us10.list-manage.com/subscribe/post?u=0c0c86040f98ca351fa2dffbe&id=fc00c528ad", { method: "POST", mode: "no-cors", body });
+        } catch { /* the free posts still go ahead */ }
+      }
       setDone(true);
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -354,6 +361,10 @@ export default function TenFreePosts() {
             <label className="tf-consent">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
               <span>I am happy for Social Media Sister to use my logo, photo and details to build my free posts and to email me about them.</span>
+            </label>
+            <label className="tf-consent" style={{ marginTop: 18 }}>
+              <input type="checkbox" checked={tips} onChange={(e) => setTips(e.target.checked)} />
+              <span>Optional: send me Vanessa's social media tips and offers by email. You can unsubscribe any time.</span>
             </label>
             {err && <div className="tf-err">{err}</div>}
             {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I would like my discount for a monthly membership")}`}>Claim my discount on WhatsApp</a>}
