@@ -306,9 +306,9 @@ function Builder({ id }: { id: string }) {
   };
 
   // Dragging a photo moves it inside its frame (pack posts only).
-  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number]; w: number; h: number } | null>(null);
+  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number, number?]; w: number; h: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startFocus = (p: PackPost, i: number): [number, number] => (p.focus?.[`f${i}`] as [number, number] | undefined) ?? (p.kind === "portrait" ? [0.5, 0] : (DEFAULT_FOCUS as [number, number]));
+  const startFocus = (p: PackPost, i: number): [number, number, number?] => (p.focus?.[`f${i}`] as [number, number, number?] | undefined) ?? (p.kind === "portrait" ? [0.5, 0] : (DEFAULT_FOCUS as [number, number]));
   const redraw = (n: number, i: number) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
@@ -345,7 +345,7 @@ function Builder({ id }: { id: string }) {
     const fy = Math.max(0, Math.min(1, d.start[1] - (e.clientY - d.y) / d.h));
     const it = itemsRef.current.find((x) => x.n === d.n);
     if (!it?.post) return;
-    patchItem(d.n, { post: { ...it.post, focus: { ...(it.post.focus ?? {}), [`f${d.i}`]: [fx, fy] as [number, number] } } });
+    patchItem(d.n, { post: { ...it.post, focus: { ...(it.post.focus ?? {}), [`f${d.i}`]: [fx, fy, startFocus(it.post, d.i)[2]] as [number, number, number?] } } });
     redraw(d.n, d.i);
   };
 
@@ -425,6 +425,13 @@ function Builder({ id }: { id: string }) {
                   className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
+            {it.post?.kind === "empower" && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">Zoom the photo
+                <input type="range" min={1} max={2.5} step={0.05} value={(startFocus(it.post, 0) as number[])[2] ?? 1}
+                  onChange={(e) => { const f = startFocus(it.post!, 0); patchItem(it.n, { post: { ...it.post!, focus: { ...(it.post!.focus ?? {}), f0: [f[0], f[1], Number(e.target.value)] as [number, number, number?] } } }); redraw(it.n, 0); }} />
+                <span>then drag the photo to place it</span>
+              </label>
+            )}
             <textarea value={it.caption} onChange={(e) => patchItem(it.n, { caption: e.target.value })} rows={6} className="w-full text-sm border rounded p-2" />
             <input value={it.tags} onChange={(e) => patchItem(it.n, { tags: e.target.value })} className="w-full text-xs border rounded p-2" />
           </div>

@@ -58,13 +58,6 @@ export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<numbe
     idea = d.idea;
     defaults = { ...d.defaults };
     fields = d.fields.map((f) => ({ key: f.key, label: f.label }));
-    // Single image designs lead with one of my hook lines. The giant NO design and any worded preset keep their own words.
-    if (!noHook && item.design !== "no" && "head" in defaults) {
-      const hook = pickHook(hooks);
-      defaults.head = hook;
-      fixed = ["head"];
-      idea = `${idea}. The headline on the image is my hook line, kept exactly: "${hook}". Write the other fields so they follow on from that headline in the same shape as the current wording, and the caption carries the idea on`;
-    }
   } else if (item.kind === "lux") {
     const cover = Number(item.design) || 0;
     const def = LUX_SLIDE_DEFS[cover];

@@ -139,7 +139,7 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
 
   if (post.kind === "portrait") {
     const photo = await imageFromDataUrl(c.pool[post.photos[0] ?? 0]?.url);
-    const url = renderPortrait({ look: post.look, headline: post.headline, subtitle: post.subtitle, zoom: false, photo, focus: post.focus?.f0 }, c.portraitLogo, c.portraitPalette, c.area.split(",")[0].trim());
+    const url = renderPortrait({ look: post.look, headline: post.headline, subtitle: post.subtitle, zoom: false, photo, focus: post.focus?.f0 ? [post.focus.f0[0], post.focus.f0[1]] : undefined }, c.portraitLogo, c.portraitPalette, c.area.split(",")[0].trim());
     ctx.drawImage(await imageFromDataUrl(url), 0, 0, w, h);
     return;
   }

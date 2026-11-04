@@ -213,7 +213,7 @@ export function fillTokens(text: string, v: Fill): string {
 // ---------------------------------------------------------------------------
 
 export type Slot = { i: number; x: number; y: number; w: number; h: number; rot: number };
-export type Focus = [number, number];
+export type Focus = [number, number, number?];
 export const DEFAULT_FOCUS: Focus = [0.5, 0.32];
 
 export type G = {

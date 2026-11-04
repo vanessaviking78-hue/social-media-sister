@@ -50,7 +50,7 @@ export const DEFAULT_PALETTES: Record<Group, Palette> = {
 };
 
 export type Slot = { i: number; x: number; y: number; w: number; h: number; rot: number };
-export type Focus = [number, number];
+export type Focus = [number, number, number?]; // x, y, then an optional zoom (1 = fitted, up to 2.5)
 export const DEFAULT_FOCUS: Focus = [0.5, 0.35];
 
 export type DesignId =
@@ -651,7 +651,7 @@ export function polaroid(g: G, cx: number, cy: number, w: number, h: number, rot
 export function drawPhoto(g: G, w: number, h: number) {
   const { ctx, photo: bmp, focus: fc } = g;
   if (!bmp) { placeholder(g, w, h); return; }
-  const s = Math.max(w / bmp.width, h / bmp.height);
+  const s = Math.max(w / bmp.width, h / bmp.height) * (fc[2] ?? 1);
   const dw = bmp.width * s, dh = bmp.height * s;
   if (g.mono) { ctx.save(); ctx.filter = "grayscale(1) contrast(1.12) brightness(0.95)"; }
   ctx.drawImage(bmp, -w / 2 - (dw - w) * fc[0], -h / 2 - (dh - h) * fc[1], dw, dh);
