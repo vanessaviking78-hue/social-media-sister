@@ -9,4 +9,8 @@ export const PACK_TIERS: { size: PackSize; name: string; price: number; line: st
 
 // Paste the checkout link for each package here (for example from Stan Store) and a Pay button appears once an order is sent.
 // Left empty, the order comes to me to review and no payment is asked for.
-export const PACK_CHECKOUT: Record<PackSize, string> = { 6: "", 12: "", 20: "" };
+export const PACK_CHECKOUT: Record<PackSize, string> = {
+  6: "https://buy.stripe.com/5kQcN62zE8Ardhic603cc01",
+  12: "https://buy.stripe.com/bJefZidei03V3GI3zu3cc02",
+  20: "https://buy.stripe.com/dRmfZigqueYPa567PK3cc03",
+};
