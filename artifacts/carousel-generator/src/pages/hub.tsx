@@ -1072,6 +1072,7 @@ const [newCount, setNewCount] = useState(0);
 const [hwCount, setHwCount] = useState(0);
 const [reelCaptionCount, setReelCaptionCount] = useState(0);
 const [cqCount, setCqCount] = useState(0);
+const [freeWaiting, setFreeWaiting] = useState(0);
 const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -1138,6 +1139,19 @@ const id3 = setInterval(loadCq, 60000);
 return () => clearInterval(id3);
 }, []);
 useEffect(() => {
+const pw = localStorage.getItem("cybersuite-pw") || "";
+if (!pw) return;
+const loadFree = () => {
+fetch(`${BASE}/api/ten-free/requests`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+.then((r) => (r.ok ? r.json() : { requests: [] }))
+.then((d) => setFreeWaiting((d.requests ?? []).filter((x: { status: string }) => x.status === "new").length))
+.catch(() => {});
+};
+loadFree();
+const id4 = setInterval(loadFree, 60000);
+return () => clearInterval(id4);
+}, []);
+useEffect(() => {
   document.documentElement.classList.add("cs-hub");
   return () => document.documentElement.classList.remove("cs-hub");
 }, []);
@@ -1198,7 +1212,7 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
 
 {/* Filtered grid */}
 <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
 </div>
 </main>
 
