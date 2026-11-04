@@ -12,27 +12,27 @@ const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@900&display=swap');
-.o5 { background:#000; color:#fff; min-height:100vh; font-family:'League Spartan',sans-serif; font-weight:900; }
+.o5 { background:#fff; color:#000; min-height:100vh; font-family:'League Spartan',sans-serif; font-weight:900; }
 .o5 * { box-sizing:border-box; font-family:inherit; }
 .o5-w { max-width: 980px; margin:0 auto; padding: 48px 20px 90px; }
 .o5-k { color:${PINK}; letter-spacing:.3em; font-size:12px; text-transform:uppercase; }
 .o5-h1 { font-size: clamp(40px,9vw,84px); line-height:.95; text-transform:uppercase; margin:10px 0 18px; }
 .o5-h1 span { color:${PINK}; }
-.o5-p { font-size: 19px; line-height:1.4; max-width: 640px; font-weight:700; color:#ddd; }
-.o5-card { background:#111; border:1px solid #2a2a2a; padding: 24px; margin-top: 28px; }
+.o5-p { font-size: 19px; line-height:1.4; max-width: 640px; font-weight:700; color:#222; }
+.o5-card { background:#fff; border:2px solid #000; padding: 24px; margin-top: 28px; }
 .o5-g { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width:640px){ .o5-g { grid-template-columns: 1fr; } }
-.o5-l { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#aaa; display:block; margin-bottom:6px; }
-.o5-in { width:100%; background:#000; border:2px solid #333; color:#fff; padding:13px 14px; font-size:18px; font-weight:700; }
+.o5-l { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#555; display:block; margin-bottom:6px; }
+.o5-in { width:100%; background:#fff; border:2px solid #000; color:#000; padding:13px 14px; font-size:18px; font-weight:700; }
 .o5-in:focus { outline:none; border-color:${PINK}; }
 .o5-btn { background:${PINK}; color:#fff; border:0; padding:16px 26px; font-size:15px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:inline-block; margin: 6px 10px 0 0; }
-.o5-btn.alt { background:transparent; border:2px solid ${PINK}; }
+.o5-btn.alt { background:transparent; border:2px solid ${PINK}; color:#000; }
 .o5-btn[disabled] { opacity:.4; cursor:default; }
 .o5-posts { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap: 14px; margin-top: 18px; }
 .o5-posts canvas { width:100%; height:auto; display:block; }
-.o5-cap { border-top:1px solid #2a2a2a; padding: 16px 0; font-weight:600; font-size:16px; line-height:1.45; color:#ddd; white-space:pre-wrap; }
+.o5-cap { border-top:1px solid #ddd; padding: 16px 0; font-weight:600; font-size:16px; line-height:1.45; color:#222; white-space:pre-wrap; }
 .o5-cap b { color:${PINK}; }
-.o5-err { color:#ff6b8a; margin-top:12px; }
+.o5-err { color:#c4004f; margin-top:12px; }
 `;
 
 type Pt = [number, number, number];
@@ -210,7 +210,7 @@ export default function Over50() {
           <div className="o5-g">
             <label><span className="o5-l">Clinic name</span><input className="o5-in" value={clinic} onChange={(e) => setClinic(e.target.value)} placeholder="Your clinic" /></label>
             <label><span className="o5-l">Town or area (for your hashtags)</span><input className="o5-in" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Leeds" /></label>
-            <label><span className="o5-l">Your logo</span><input className="o5-in" type="file" accept="image/*,.heic,.heif" onChange={(e) => onLogo(e.target.files?.[0])} />{logoName && <small style={{ color: "#aaa" }}>{logoName}, background removed</small>}</label>
+            <label><span className="o5-l">Your logo</span><input className="o5-in" type="file" accept="image/*,.heic,.heif" onChange={(e) => onLogo(e.target.files?.[0])} />{logoName && <small style={{ color: "#555" }}>{logoName}, background removed</small>}</label>
             <label><span className="o5-l">Your accent colour</span><input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ width: 90, height: 50, background: "none", border: 0 }} /></label>
           </div>
           {err && <div className="o5-err">{err}</div>}

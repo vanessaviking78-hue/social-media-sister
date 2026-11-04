@@ -31,7 +31,7 @@ export default function PhotoshootAdmin() {
         {rows.map((r) => (
           <div key={r.id} className="ps-card" style={{ marginTop: 12, cursor: "pointer" }} onClick={() => { setOpen(r.id); loadOne(r.id); }}>
             <div style={{ fontSize: 22 }}>{r.clinic_name} <span style={{ color: "#ff1f8e" }}>{r.status}</span></div>
-            <div style={{ color: "#aaa", fontSize: 15 }}>{r.done} of 20 made, {r.scrub_colour} scrubs, {r.email} {r.note && `(${r.note})`}</div>
+            <div style={{ color: "#555", fontSize: 15 }}>{r.done} of 20 made, {r.scrub_colour} scrubs, {r.email} {r.note && `(${r.note})`}</div>
           </div>
         ))}
         {order && open && (
@@ -43,7 +43,7 @@ export default function PhotoshootAdmin() {
               {(order.images || []).map((im) => (
                 <div key={im.n}>
                   <img src={`${BASE}${im.url}`} alt={im.label} />
-                  <div style={{ fontSize: 13, color: "#aaa" }}>{im.n}. {im.label}</div>
+                  <div style={{ fontSize: 13, color: "#555" }}>{im.n}. {im.label}</div>
                   <button className="ps-btn alt" style={{ padding: "6px 10px", fontSize: 11 }} onClick={async () => { await act(`/photoshoot/orders/${open}/images/${im.n}`, "DELETE"); await act(`/photoshoot/orders/${open}/make`, "POST", { only: [im.n] }); toast.success("Redoing that one"); }}>Redo</button>
                 </div>
               ))}
