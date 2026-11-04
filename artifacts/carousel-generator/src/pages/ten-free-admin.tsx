@@ -25,7 +25,7 @@ const authHeaders = (): Record<string, string> => {
 
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
-  mainHex: string; accentHex: string; treatments: string[]; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
+  mainHex: string; accentHex: string; treatments: string[]; seq?: number; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
   logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string;
 };
 type Poll = { question: string; a: string; b: string };
@@ -180,7 +180,7 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id);
+      const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0);
       if (picks.length < 3) throw new Error("None of the treatments she ticked have photos in the Universal library");
       const distinct = new Set(picks.map((p) => p.treatment.id)).size;
       if (distinct < 3) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
@@ -229,10 +229,10 @@ function Builder({ id }: { id: string }) {
       // The personal posts, from the pack templates.
       const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
       const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
-      const cursor = { at: 0 };
+      const cursor: { at: number; hookBase?: number } = { at: 0, hookBase: (req.seq ?? 0) * 5 };
       const built = packSlots.map((s) => {
         const relIds = relatableFor(req.answers.age, /^(yes|grandma)/i.test(req.answers.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
-        const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design === "relatable" ? relIds[hashSeed(req.id + "relatable") % relIds.length] : s.design;
+        const design = s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
         const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length, !!s.preset || design === "gatecrasher");
         const facts = `About me (the only facts you may use): age group ${req.answers.age || "not given"} (never state it, and never use a memory or life stage that does not fit it); hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
         const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;

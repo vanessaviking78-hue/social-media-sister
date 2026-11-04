@@ -41,7 +41,8 @@ const OBVIOUS = new Set(["skin-tightening", "medical-facial", "microdermabrasion
 const SAME_FAMILY = (a: string, b: string) => a.startsWith("polynucleotide") && b.startsWith("polynucleotide");
 
 // The angle each of the three treatment posts takes (an index into the six posts of a treatment): the introduction, "3 things", "who it is for".
-const ANGLES = [0, 2, 3];
+// Rotated by request number so consecutive clinics do not all get the same three posts.
+const ANGLE_ORDER = [0, 2, 3, 1, 4, 5];
 
 function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -61,7 +62,7 @@ export type TreatmentPick = { treatment: UTreatment; angle: number; headline: st
  * hasPhotos: whether the Universal library holds photos for that treatment, because a post with no photos would be bare.
  * Spreads the three across different groups where it can, prefers the interesting ones, and never takes only polynucleotides.
  */
-export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string): TreatmentPick[] {
+export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string, seq = 0): TreatmentPick[] {
   const rand = rng(hashSeed(seedText));
   const byName = new Map(U_TREATMENTS.map((t) => [t.name.toLowerCase(), t]));
   // Only treatments she actually ticked. If fewer than three have photos, the same treatment is used again with a different angle.
@@ -82,7 +83,7 @@ export function pickTreatments(ticked: string[], hasPhotos: (id: string) => bool
   }
   while (chosen.length < 3) chosen.push(ranked[chosen.length % ranked.length]);
   return chosen.map((treatment, i) => {
-    const angle = ANGLES[i] ?? 0;
+    const angle = ANGLE_ORDER[(seq + i * 2) % ANGLE_ORDER.length];
     const type = postTypesFor(treatment)[angle];
     return { treatment, angle, headline: type.headline, brief: type.brief };
   });

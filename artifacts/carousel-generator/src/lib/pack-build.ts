@@ -30,7 +30,7 @@ export const treatmentIdsFor = (names: string[]): string[] => TREATMENTS.filter(
 // A skeleton post with its photos picked from the pool, plus what the writer needs to know about it.
 // A field is only rewritten if it holds real wording: lines with {owner} style tokens, and the disclaimer
 // and heading lines on treatment posts, are always kept exactly as designed.
-export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<number> }, poolLen: number, noHook = false): { post: PackPost; spec: CopySpec } {
+export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<number>; hookBase?: number }, poolLen: number, noHook = false): { post: PackPost; spec: CopySpec } {
   const take = (k: number) => Array.from({ length: k }, (_, i) => (poolLen ? (cursor.at + i) % poolLen : null));
   const photos = take(PHOTOS_NEEDED[item.kind]);
   cursor.at += PHOTOS_NEEDED[item.kind];
@@ -67,14 +67,14 @@ export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<numbe
   } else if (item.kind === "portrait") {
     idea = "a photo post of me with a big hook headline and a subtitle that finishes the thought";
     fields = [{ key: "headline", label: "Headline" }, { key: "subtitle", label: "Subtitle" }];
-    const hook = pickHook(hooks);
+    const hook = pickHook(hooks, cursor.hookBase);
     defaults = { ...splitHook(hook) };
     fixed = ["headline", "subtitle"];
     idea = `a photo post of me whose words on the image are my hook line: "${hook}". The caption carries that idea on`;
   } else {
     idea = "a tweet style graphic";
     fields = [{ key: "quote", label: "The tweet" }];
-    const hook = pickHook(hooks);
+    const hook = pickHook(hooks, cursor.hookBase);
     defaults = { quote: hook };
     fixed = ["quote"];
     idea = `a tweet style graphic whose words on the image are my hook line: "${hook}". The caption carries that idea on`;

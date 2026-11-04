@@ -107,8 +107,9 @@ export function splitHook(h: string): { headline: string; subtitle: string } {
 }
 
 // Picks a hook at random, never repeating one inside the same pack.
-export function pickHook(used: Set<number>): string {
-  let i = Math.floor(Math.random() * HOOKS.length);
+export function pickHook(used: Set<number>, base?: number): string {
+  // With a base (the free tool's request number) the pick walks the list in order, so each clinic gets a different line.
+  let i = base !== undefined ? (base + used.size) % HOOKS.length : Math.floor(Math.random() * HOOKS.length);
   for (let t = 0; t < HOOKS.length && used.has(i); t++) i = (i + 1) % HOOKS.length;
   used.add(i);
   return HOOKS[i];

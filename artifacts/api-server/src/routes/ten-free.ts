@@ -298,7 +298,9 @@ router.get("/ten-free/requests/:id", requireAuth, async (req: Request, res: Resp
       res.status(404).json({ error: "Request not found" });
       return;
     }
-    res.json(shape(r.rows[0] as unknown as Row));
+    // seq is how many requests came before this one, so the build can rotate its picks and no two clinics in a row get the same posts.
+    const before = await db.execute(sql`SELECT count(*)::int AS n FROM tenfree_requests WHERE created_at < ${(r.rows[0] as unknown as Row).created_at}`);
+    res.json({ ...shape(r.rows[0] as unknown as Row), seq: Number((before.rows[0] as { n?: number })?.n ?? 0) });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load that request" });
   }
