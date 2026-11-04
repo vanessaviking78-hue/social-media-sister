@@ -1,4 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { sql } from "drizzle-orm";
+import { db } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
@@ -154,6 +156,69 @@ router.post("/dental/copy", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "The words would not write, try again";
     req.log?.error({ err }, "dental: copy error");
     res.status(500).json({ error: message });
+  }
+});
+
+// The saved photos for each section (root canal, Invisalign and so on), per clinic. Uploaded once, used on every post in that section.
+let imagesReady: Promise<void> | null = null;
+function ensureImagesTable(): Promise<void> {
+  if (imagesReady) return imagesReady;
+  const p: Promise<void> = db
+    .execute(sql`CREATE TABLE IF NOT EXISTS dental_images (
+      id SERIAL PRIMARY KEY,
+      clinic TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`)
+    .then(() => undefined);
+  imagesReady = p;
+  p.catch(() => { imagesReady = null; });
+  return p;
+}
+
+router.get("/dental/images", async (req: Request, res: Response) => {
+  try {
+    const clinic = String(req.query.clinic ?? "");
+    if (!CLINICS[clinic]) { res.status(400).json({ error: "Unknown clinic" }); return; }
+    await ensureImagesTable();
+    const r = await db.execute(sql`SELECT id, group_id AS "groupId", name, url FROM dental_images WHERE clinic = ${clinic} ORDER BY id`);
+    res.json({ images: r.rows });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not load the photos" });
+  }
+});
+
+router.post("/dental/images", async (req: Request, res: Response) => {
+  try {
+    const body = req.body as { clinic?: unknown; items?: unknown };
+    const clinic = String(body.clinic ?? "");
+    if (!CLINICS[clinic]) { res.status(400).json({ error: "Unknown clinic" }); return; }
+    await ensureImagesTable();
+    const items = Array.isArray(body.items) ? (body.items as Record<string, unknown>[]) : [];
+    const rows = items
+      .map((i) => ({ groupId: String(i.groupId ?? "").slice(0, 40), name: String(i.name ?? "").slice(0, 200), url: String(i.url ?? "").slice(0, 600) }))
+      .filter((i) => i.groupId && i.url.startsWith("http"))
+      .slice(0, 100);
+    for (const r of rows) {
+      await db.execute(sql`INSERT INTO dental_images (clinic, group_id, name, url) VALUES (${clinic}, ${r.groupId}, ${r.name}, ${r.url})`);
+    }
+    res.json({ added: rows.length });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save the photos" });
+  }
+});
+
+router.delete("/dental/images/:id", async (req: Request, res: Response) => {
+  try {
+    await ensureImagesTable();
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) { res.status(400).json({ error: "Which photo?" }); return; }
+    await db.execute(sql`DELETE FROM dental_images WHERE id = ${id}`);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not remove it" });
   }
 });
 

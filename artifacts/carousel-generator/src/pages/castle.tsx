@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -114,6 +114,45 @@ type Post = {
   scheduling: boolean;
   rejected?: string;
   look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline">>; // this post only; empty means the page setting
+};
+
+type LibImage = { id: number; groupId: string; name: string; url: string };
+const localUrl = (u: string) => {
+  const i = u.indexOf("/api/content/images/");
+  return i >= 0 ? `${BASE}${u.slice(i)}` : u;
+};
+const bitmapCache = new Map<string, Promise<ImageBitmap>>();
+function loadBitmap(url: string): Promise<ImageBitmap> {
+  let p = bitmapCache.get(url);
+  if (!p) {
+    p = fetch(localUrl(url)).then((r) => { if (!r.ok) throw new Error("image missing"); return r.blob(); }).then((b) => createImageBitmap(b));
+    bitmapCache.set(url, p);
+    p.catch(() => bitmapCache.delete(url));
+  }
+  return p;
+}
+async function resizeToDataUrl(file: File, max = 1600): Promise<string> {
+  const raw = await createImageBitmap(file);
+  const sc = Math.min(1, max / Math.max(raw.width, raw.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(raw.width * sc);
+  c.height = Math.round(raw.height * sc);
+  c.getContext("2d")!.drawImage(raw, 0, 0, c.width, c.height);
+  raw.close();
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
+// Which section a folder name belongs to. Order matters, the more specific names come first.
+const FOLDER_ALIASES: [string, string[]][] = [
+  ["adhd", ["adhd"]], ["glp1", ["glp"]], ["kids", ["child", "kid"]], ["electric", ["electric"]], ["brushing", ["brushing"]],
+  ["root", ["rootcanal", "root"]], ["invisalign", ["invisalign", "aligner"]], ["bonding", ["bonding"]],
+  ["importance", ["importance", "whyoralhealth", "oralhealth"]], ["didyouknow", ["didyouknow", "dentistfact"]], ["myths", ["myth"]],
+  ["checkup", ["checkup", "checkups"]], ["sensitive", ["sensitiv"]], ["hygiene", ["hygiene"]], ["whitening", ["whiten"]], ["about", ["about"]],
+];
+const folderToGroup = (name: string): string | undefined => {
+  const n = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!n) return undefined;
+  return FOLDER_ALIASES.find(([, list]) => list.some((a) => n.includes(a)))?.[0];
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -294,6 +333,26 @@ export default function CastlePage() {
   const preset = useMemo(() => presets.find((p) => /castle/i.test(p.name) && !/academy/i.test(p.name)) ?? null, [presets]);
 
   const [pool, setPool] = useState<Photo[]>([]);
+  // The saved photos for each section. Uploaded once, kept for every post in that section.
+  const [lib, setLib] = useState<LibImage[]>([]);
+  const [libBusy, setLibBusy] = useState("");
+  const [bitmaps, setBitmaps] = useState<Record<string, ImageBitmap>>({});
+  const libFileRef = useRef<HTMLInputElement>(null);
+  const libFolderRef = useRef<HTMLInputElement>(null);
+  const loadLib = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/dental/images?clinic=${CLINIC_KEY}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setLib((data.images ?? []) as LibImage[]);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { loadLib(); }, [loadLib]);
+  const libBy = useMemo(() => {
+    const m = new Map<string, LibImage[]>();
+    for (const i of lib) m.set(i.groupId, [...(m.get(i.groupId) ?? []), i]);
+    return m;
+  }, [lib]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(DENTAL_GROUPS[0].id);
   const [typeId, setTypeId] = useState(DENTAL_POST_TYPES[0].id);
@@ -381,7 +440,78 @@ export default function CastlePage() {
     if (added.length) setPool((p) => [...p, ...added]);
   };
 
-  const photoFor = (post: Post, n: number): Photo | null => (pool.length ? pool[post.photos[n] % pool.length] ?? null : null);
+  // Every photo a post can use: its section's saved photos first, then anything added for this session.
+  const photosOf = (post: Post): Photo[] => {
+    const gid = TYPE_BY_ID.get(post.typeId)?.group ?? "";
+    const saved: Photo[] = [];
+    for (const i of libBy.get(gid) ?? []) { const bmp = bitmaps[i.url]; if (bmp) saved.push({ id: `lib-${i.id}`, bmp, url: localUrl(i.url) }); }
+    return [...saved, ...pool];
+  };
+  const photoCount = (post: Post) => (libBy.get(TYPE_BY_ID.get(post.typeId)?.group ?? "") ?? []).length + pool.length;
+  const photoFor = (post: Post, n: number): Photo | null => { const all = photosOf(post); return all.length ? all[post.photos[n] % all.length] ?? null : null; };
+
+  // Load the saved pictures any open post needs
+  useEffect(() => {
+    let live = true;
+    const need = new Set<string>();
+    for (const p of posts) for (const i of libBy.get(TYPE_BY_ID.get(p.typeId)?.group ?? "") ?? []) need.add(i.url);
+    need.forEach((url) => {
+      if (bitmaps[url]) return;
+      loadBitmap(url).then((b) => live && setBitmaps((cur) => (cur[url] ? cur : { ...cur, [url]: b }))).catch(() => undefined);
+    });
+    return () => { live = false; };
+  }, [posts, libBy, bitmaps]);
+
+  const uploadItems = async (items0: { file: File; groupId: string }[]) => {
+    if (!items0.length) return;
+    setLibBusy(`0 of ${items0.length}`);
+    let done = 0;
+    let failed = 0;
+    try {
+      for (let i = 0; i < items0.length; i += 3) {
+        const batch = items0.slice(i, i + 3);
+        try {
+          const dataUrls = await Promise.all(batch.map((b) => resizeToDataUrl(b.file)));
+          const urls = await uploadPngs(dataUrls, batch.map((b) => b.file.name.replace(/\.[a-z0-9]+$/i, "") + ".jpg"));
+          const items = batch.map((b, k) => ({ groupId: b.groupId, name: b.file.name, url: urls[k] })).filter((x) => x.url);
+          const r = await fetch(`${BASE}/api/dental/images`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clinic: CLINIC_KEY, items }) });
+          if (!r.ok) throw new Error("save failed");
+          done += items.length;
+        } catch { failed += batch.length; }
+        setLibBusy(`${done + failed} of ${items0.length}`);
+      }
+      await loadLib();
+      toast.success(`${done} photo${done === 1 ? "" : "s"} saved${failed ? `, ${failed} would not upload` : ""}`);
+    } finally { setLibBusy(""); }
+  };
+  const uploadToSection = (fl: FileList | null) => {
+    uploadItems(Array.from(fl ?? []).filter((f) => f.type.startsWith("image/")).map((file) => ({ file, groupId: group })));
+  };
+  // Her whole "dental" folder at once. Each photo goes to the section whose subfolder name matches.
+  const uploadFolder = (fl: FileList | null) => {
+    if (!fl?.length) return;
+    const have = new Set(lib.map((i) => `${i.groupId}|${i.name}`));
+    const picked: { file: File; groupId: string }[] = [];
+    let skipped = 0;
+    for (const f of Array.from(fl)) {
+      const path = ((f as File & { webkitRelativePath?: string }).webkitRelativePath || "").split("/");
+      if (!/\.(jpe?g|png|webp)$/i.test(f.name) || path.some((p) => p.startsWith("_") || p.startsWith("."))) continue;
+      const id = [...path].slice(0, -1).reverse().map(folderToGroup).find(Boolean);
+      if (!id || have.has(`${id}|${f.name}`)) { skipped++; continue; }
+      have.add(`${id}|${f.name}`);
+      picked.push({ file: f, groupId: id });
+    }
+    if (!picked.length) { toast.error("Nothing new to upload. Put the photos in subfolders named after the sections, like Root canal or Whitening"); return; }
+    if (skipped) toast.info(`${skipped} skipped, already uploaded or not inside a section folder`);
+    uploadItems(picked);
+  };
+  const removeLibImage = async (img: LibImage) => {
+    try {
+      const r = await fetch(`${BASE}/api/dental/images/${img.id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error("no");
+      setLib((l) => l.filter((x) => x.id !== img.id));
+    } catch { toast.error("Could not remove it"); }
+  };
 
   const addPost = (t: DentalPostType) => {
     const start = posts.length * 5;
@@ -459,7 +589,7 @@ export default function CastlePage() {
   const schedule = async (post: Post) => {
     if (!preset) { toast.error("I cannot find her client preset. It needs a name with Castle in it"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
-    if (!pool.length) { toast.error("Add her photo first"); return; }
+    if (!photoCount(post)) { toast.error("Add photos for this section first"); return; }
     patch(post.id, { scheduling: true });
     try {
       const cs = await render(post);
@@ -564,7 +694,7 @@ export default function CastlePage() {
             <label className="flex items-center gap-2"><input type="checkbox" checked={look.logoWhite} onChange={(e) => setLook((l) => ({ ...l, logoWhite: e.target.checked }))} /> Make the logo white</label>
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
-            <h3 className="font-medium">Her photos</h3>
+            <h3 className="font-medium">Extra photos for this session only</h3>
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPhotos(e.target.files); e.currentTarget.value = ""; }} />
             <div className="flex items-center gap-2 flex-wrap">
               <Button onClick={() => fileRef.current?.click()} variant="secondary"><ImagePlus className="w-4 h-4 mr-2" />Upload photos</Button>
@@ -579,7 +709,7 @@ export default function CastlePage() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {pool.length === 0 && <p className="text-white/50 text-sm">Add the dentist's photos once. They go on every carousel exactly as they are, with the white wash over the bottom third.</p>}
+            {pool.length === 0 && <p className="text-white/50 text-sm">Optional. Photos added here are used on every post this session, after the section's saved photos. Photos that should stay saved go in the saved photos box under step 2.</p>}
             {pool.map((p, i) => (
               <div key={p.id} className="relative">
                 <img src={p.url} alt="" className="w-16 h-20 object-cover rounded" />
@@ -595,9 +725,30 @@ export default function CastlePage() {
           <div className="flex gap-2 flex-wrap">
             {DENTAL_GROUPS.map((g) => (
               <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
-                {g.label} <span className="opacity-60">{doneIn(g.id)}/{totalIn(g.id)}</span>
+                {g.label} <span className="opacity-60">{doneIn(g.id)}/{totalIn(g.id)} · {(libBy.get(g.id) ?? []).length} photo{(libBy.get(g.id) ?? []).length === 1 ? "" : "s"}</span>
               </button>
             ))}
+          </div>
+          <div className="rounded-lg border border-white/10 p-3 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h3 className="font-medium">{DENTAL_GROUPS.find((g) => g.id === group)?.label}: saved photos</h3>
+              <div className="flex items-center gap-2">
+                {libBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Uploading {libBusy}</span>}
+                <input ref={libFileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { uploadToSection(e.target.files); e.currentTarget.value = ""; }} />
+                <input ref={libFolderRef} type="file" multiple className="hidden" {...({ webkitdirectory: "", directory: "" } as Record<string, string>)} onChange={(e) => { uploadFolder(e.target.files); e.currentTarget.value = ""; }} />
+                <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => libFolderRef.current?.click()}><FolderUp className="w-4 h-4 mr-2" />Upload my dental folder</Button>
+                <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => libFileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-2" />Upload photos for this section</Button>
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {(libBy.get(group) ?? []).length === 0 && <p className="text-white/50 text-sm">No saved photos for this section yet. Upload them once and they stay here for every post in this section.</p>}
+              {(libBy.get(group) ?? []).map((i) => (
+                <div key={i.id} className="relative">
+                  <img src={localUrl(i.url)} alt="" className="w-16 h-20 object-cover rounded" />
+                  <button className="absolute -top-1 -right-1 bg-black/70 rounded-full p-0.5" onClick={() => removeLibImage(i)} aria-label="Remove photo"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {typesInGroup.map((t) => {
@@ -701,7 +852,7 @@ export default function CastlePage() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < 4 && pool.length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < 4 && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
