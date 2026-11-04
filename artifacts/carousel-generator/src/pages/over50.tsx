@@ -140,11 +140,22 @@ export default function Over50() {
     fetch(`${BASE}/api/over50/verify/${encodeURIComponent(sessionId)}`).then((r) => { if (r.ok) { setVerified(true); try { sessionStorage.setItem("o5-ok", sessionId); } catch { /* ignore */ } } }).catch(() => undefined);
   }, [sessionId, verified]);
   const paid = isTester || verified;
-  const [clinic, setClinic] = useState("");
-  const [area, setArea] = useState("");
-  const [accent, setAccent] = useState("#c2185b");
+  const draft = (() => { try { return JSON.parse(localStorage.getItem("o5-draft") || "{}"); } catch { return {}; } })();
+  const [clinic, setClinic] = useState<string>(draft.clinic || "");
+  const [area, setArea] = useState<string>(draft.area || "");
+  const [accent, setAccent] = useState<string>(draft.accent || "#c2185b");
   const [logo, setLogo] = useState<HTMLCanvasElement | null>(null);
-  const [logoName, setLogoName] = useState("");
+  const [logoName, setLogoName] = useState<string>(draft.logoName || "");
+  useEffect(() => {
+    if (!draft.logoData) return;
+    const im = new Image();
+    im.onload = () => { const c = document.createElement("canvas"); c.width = im.width; c.height = im.height; c.getContext("2d")!.drawImage(im, 0, 0); setLogo(c); };
+    im.src = draft.logoData;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try { localStorage.setItem("o5-draft", JSON.stringify({ clinic, area, accent, logoName, logoData: logo ? logo.toDataURL("image/png") : "" })); } catch { /* ignore */ }
+  }, [clinic, area, accent, logo, logoName]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [zipping, setZipping] = useState(false);
@@ -234,7 +245,8 @@ export default function Over50() {
         </div>
 
         <h2 className="o5-h1" style={{ fontSize: 34, marginTop: 44 }}>Your <span>captions</span></h2>
-        {caps.map((c, i) => <div className="o5-cap" key={i}><b>Post {i + 1}</b>{"\n"}{c}</div>)}
+        {(paid ? caps : caps.slice(0, 2)).map((c, i) => <div className="o5-cap" key={i}><b>Post {i + 1}</b>{"\n"}{c}</div>)}
+        {!paid && <p className="o5-p" style={{ marginTop: 14 }}>That is a taste. The other eight captions unlock with your ten posts.</p>}
       </div>
     </div>
   );
