@@ -268,7 +268,8 @@ export default function TenFreePosts() {
                 </div>
                 <input ref={logoRef} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => onLogo(e.target.files?.[0])} />
               </div>
-              <div className="tf-colours" style={{ marginTop: 26 }}>
+              <div className="tf-l" style={{ marginTop: 26 }}>What are your 2 main branding colours?</div>
+              <div className="tf-colours" style={{ marginTop: 10 }}>
                 <label className="tf-col">
                   <input type="color" value={cols.main} onChange={(e) => setCols((c) => ({ ...c, main: e.target.value }))} />
                   Main colour

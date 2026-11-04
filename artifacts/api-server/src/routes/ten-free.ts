@@ -208,7 +208,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
 
     // Vanessa's own test addresses (vanessa+test1@thecybersuite.com or vanessaviking78+test1@gmail.com) skip the one free turn rule, so she can keep testing.
     // Testers she has named (Dermaluxe, plus anything in the TEN_FREE_TESTERS setting, comma separated) can also make as many as they like.
-    const testers = ["dermaluxe", ...(process.env.TEN_FREE_TESTERS || "").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
+    const testers = ["dermaluxe", "lhd aesthetics", "lhdaesthetics", "lhd_aesthetics", ...(process.env.TEN_FREE_TESTERS || "").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
     const isTester = testers.some((t) => `${clinicName} ${handle} ${email}`.toLowerCase().includes(t));
     const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
     const key = isTest ? `${emailKey(email)}#test${Date.now()}` : emailKey(email);
