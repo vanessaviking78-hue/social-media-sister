@@ -59,7 +59,11 @@ export const tone = (g: EG, key: EKey, amt: number) => shade(g.p[key], amt);
 // Shapes
 // ---------------------------------------------------------------------------
 
+// Switched off for the 10 free posts: no crosshairs, target marks, plus signs or hairline rules, just the design itself.
+export const decor = { off: false };
+
 export function rect(g: EG, x: number, y: number, w: number, h: number, style: string) {
+  if (decor.off && ((h <= 1.3 && w >= 12) || (w <= 1.3 && h >= 12))) return;
   g.ctx.fillStyle = style;
   g.ctx.fillRect(x, y, w, h);
 }
@@ -136,6 +140,7 @@ export function bracket(g: EG, x: number, y: number, dx: number, dy: number, len
 }
 
 export function crosshair(g: EG, x: number, y: number, size: number, colour: string) {
+  if (decor.off) return;
   rect(g, x - size, y - 0.4, size * 2, 0.8, colour);
   rect(g, x - 0.4, y - size, 0.8, size * 2, colour);
 }

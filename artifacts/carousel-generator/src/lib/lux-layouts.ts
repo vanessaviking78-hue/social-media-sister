@@ -2,7 +2,7 @@
 // space (the Canva page size) and scaled up onto the 1080 x 1350 canvas by drawLux.
 // Words: *asterisks* make a word the highlight colour (or italic on the question line of slide 8).
 import {
-  W, H, S, card, circle, crosshair, k, photoPoly, photoRect, poly, polyPath, rand, rect, rich, rgba, tone, tx, upright,
+  W, H, S, card, circle, crosshair, decor, k, photoPoly, photoRect, poly, polyPath, rand, rect, rich, rgba, tone, tx, upright,
   type EG, type P,
 } from "./empower-kit";
 import { drawPhoto } from "./xmas-designs";
@@ -62,6 +62,7 @@ function frame(g: EG, x: number, y: number, w: number, h: number, colour: string
 
 // The circle with a cross through it
 function target(g: EG, x: number, y: number, r: number, colour: string) {
+  if (decor.off) return;
   const { ctx } = g;
   ctx.save();
   ctx.strokeStyle = colour; ctx.lineWidth = 0.9;

@@ -7,6 +7,7 @@ import { hashSeed } from "@/lib/pack-plan";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { EMPOWER } from "@/lib/empower-designs";
+import { decor } from "@/lib/empower-kit";
 import { applyCopy, skeleton, type CopyResult } from "@/lib/pack-build";
 import { renderPackPost, renderPackSlide, packFonts, slidesOf, type PackClient, type PackPost } from "@/lib/pack-engine";
 import { DEFAULT_FOCUS, type PoolPhoto } from "@/lib/month-engine";
@@ -107,9 +108,11 @@ function Builder({ id }: { id: string }) {
   useEffect(() => {
     const def = { head: packFonts.head, body: packFonts.body };
     packFonts.body = BODY_CSS;
+    decor.off = true;
     return () => {
       packFonts.head = def.head;
       packFonts.body = def.body;
+      decor.off = false;
     };
   }, []);
   useEffect(() => {
