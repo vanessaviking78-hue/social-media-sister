@@ -227,6 +227,8 @@ export default function TenFreePosts() {
               <span>Sit tight.</span>
             </h1>
             <p className="tf-lede">Your details have landed with me. I check every one by hand, then build your posts and send you a private link. Keep an eye on your inbox, and your junk folder just in case.</p>
+            <p className="tf-lede" style={{ marginTop: 28 }}>Know another clinic who would love a freebie too? Send them this.</p>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Social Media Sister for 10 free posts made with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts")}`}>Share with another clinic</a>
           </div>
         ) : (
           <>

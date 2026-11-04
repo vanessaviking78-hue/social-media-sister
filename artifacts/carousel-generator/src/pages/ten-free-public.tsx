@@ -214,6 +214,12 @@ export default function TenFreePublic({ slug }: { slug: string }) {
             {TENFREE_WHATSAPP && <a className="tp-btn" style={{ marginTop: 16 }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent(`Hi Vanessa, my code is ${data.code}`)}`}>Message me on WhatsApp</a>}
           </div>
         </div>
+        <div className="tp-sec">
+          <h2>Know a clinic who needs this?</h2>
+          <p style={{ fontSize: 17, lineHeight: 1.4, marginBottom: 14 }}>Share this with another clinic so they can have a freebie too. Good friends share good things.</p>
+          <a className="tp-btn" href={`https://wa.me/?text=${encodeURIComponent("I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts")}`}>Share on WhatsApp</a>
+          <button className="tp-btn" onClick={() => { const t = "I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts"; if (navigator.share) navigator.share({ text: t }).catch(() => {}); else navigator.clipboard?.writeText(t).then(() => alert("Copied, now paste it to a clinic friend")); }}>Share or copy link</button>
+        </div>
         <div className="tp-foot">Social Media Sister</div>
       </div>
     </div>

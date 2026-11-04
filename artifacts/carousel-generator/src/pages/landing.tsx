@@ -242,6 +242,12 @@ export default function Landing() {
           </p>
         </section>
 
+        <section className="space-y-3 text-center">
+          <h2 style={{ fontSize: "1.6rem", lineHeight: 1.1, color: PINK }}>Want me to make some for you?</h2>
+          <p style={{ color: "rgba(255,255,255,0.8)", lineHeight: 1.55 }}>I will build 10 posts with your own logo, colours and photo. Free, one turn per clinic.</p>
+          <a href="/10freeposts" style={{ display: "inline-block", background: PINK, color: "#fff", padding: "16px 28px", fontWeight: 900, textTransform: "uppercase", letterSpacing: ".1em", textDecoration: "none" }}>Get my 10 free posts</a>
+        </section>
+
         <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
           Social Media Sister &middot; {BRAND.supportEmail}
         </p>
