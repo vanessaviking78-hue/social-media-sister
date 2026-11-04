@@ -33,7 +33,7 @@ export function parseFontFile(fileName: string): FontInfo {
 
 export function envatoGroup(fam: string): string {
   const n = fam.toLowerCase().replace(/[^a-z]/g, "");
-  if (/annyra|syora|avoraty|ragitras|brylliant/.test(n)) return "Envato fonts: headings";
+  if (/annyra|syora|avoraty|ragitras|brylliant|hatcher/.test(n)) return "Envato fonts: headings";
   if (/geonnix|enchantedlove|justsans/.test(n)) return "Envato fonts: subtitles";
   return "";
 }
@@ -101,6 +101,13 @@ function writeIntoLists(families: string[]) {
   ALL_FONTS.unshift(...rows.map(r => ({ label: r.label, value: r.fam, cat: r.group ? "Envato" : "Yours", custom: true } as { label: string; value: string; cat: string })));
 }
 
+// Fonts that ship with the suite, so every tool has them without anyone uploading anything.
+const BUILTIN_FONTS: { name: string; url: string }[] = [
+  { name: "Hatcher.woff2", url: "/fonts/suite/hatcher.woff2" },
+  { name: "Hatcher Italic.woff2", url: "/fonts/suite/hatcher-italic.woff2" },
+];
+const BASE_URL = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
 let running: Promise<void> | null = null;
 
 // Read every saved font, register it, and refresh the shared lists. Safe to call again
@@ -109,9 +116,17 @@ export function syncSharedFonts(): Promise<void> {
   const run = async () => {
     const saved = await dbAll();
     const families: string[] = [];
-    const keep = new Set(saved.map(s => s.name));
+    const keep = new Set([...saved.map(s => s.name), ...BUILTIN_FONTS.map(b => b.name)]);
     for (const name of [...faces.keys()]) {
       if (!keep.has(name)) { for (const f of faces.get(name) ?? []) document.fonts.delete(f); faces.delete(name); }
+    }
+    for (const b of BUILTIN_FONTS) {
+      try {
+        const r = await fetch(`${BASE_URL}${b.url}`);
+        if (!r.ok) continue;
+        const fam = await registerFace(b.name, await r.arrayBuffer());
+        if (fam && !families.includes(fam)) families.push(fam);
+      } catch { /* the font simply is not offered this visit */ }
     }
     for (const f of saved) {
       const fam = await registerFace(f.name, f.data);

@@ -3209,7 +3209,7 @@ export default function Stylish() {
   // Fonts bought from Envato get their own sections, headings and subtitles, at the top of every font list.
   const envatoGroup = (fam: string) => {
     const n = fam.toLowerCase().replace(/[^a-z]/g, "");
-    if (/annyra|syora|avoraty|ragitras|brylliant/.test(n)) return "Envato fonts: headings";
+    if (/annyra|syora|avoraty|ragitras|brylliant|hatcher/.test(n)) return "Envato fonts: headings";
     if (/geonnix|enchantedlove|justsans/.test(n)) return "Envato fonts: subtitles";
     return "";
   };

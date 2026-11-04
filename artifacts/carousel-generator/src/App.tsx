@@ -161,6 +161,7 @@ import TenFreePosts from "@/pages/ten-free-posts";
 import TenFreePublic from "@/pages/ten-free-public";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import TenFreeTracker from "@/pages/ten-free-tracker";
+import Over50 from "@/pages/over50";
 
 const queryClient = new QueryClient();
 
@@ -334,6 +335,7 @@ function AppContent() {
   const [isSampleRequest] = useRoute("/getmysample");
   const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
   const [isPackOrder] = useRoute("/getmyposts");
+  const [isOver50] = useRoute("/over50");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -457,6 +459,9 @@ function AppContent() {
   }
   if (isPackOrder) {
     return <PackOrder />;
+  }
+  if (isOver50) {
+    return <Over50 />;
   }
   if (isTenFreeForm) {
     return <TenFreePosts />;

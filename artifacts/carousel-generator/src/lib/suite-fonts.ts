@@ -9,6 +9,8 @@ const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 export type SuiteFont = { id: string; name: string; family: string; italic?: boolean; weight?: number; note?: string };
 
 export const SUITE_FONTS: SuiteFont[] = [
+  { id: "hatcher", name: "Hatcher", family: "SuiteHatcher" },
+  { id: "hatcher-italic", name: "Hatcher Italic", family: "SuiteHatcherItalic", italic: true },
   { id: "mofllig", name: "Mofllig", family: "SuiteMofllig", note: "Ligatures join by themselves" },
   { id: "blushade-regular", name: "Blushade", family: "SuiteBlushade" },
   { id: "blushade-italic", name: "Blushade Italic", family: "SuiteBlushadeItalic", italic: true },
