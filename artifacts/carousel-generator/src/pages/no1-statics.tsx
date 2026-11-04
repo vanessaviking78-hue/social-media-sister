@@ -1,0 +1,575 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "wouter";
+import { ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { saveAs } from "file-saver";
+import { Button } from "@/components/ui/button";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { usePresets } from "@/lib/use-presets";
+import { uploadPngs } from "@/lib/month-engine";
+import { STATIC_CLINIC, STATIC_GROUPS, STATIC_POST_TYPES, type StaticPostType } from "@/lib/no1-statics";
+
+// NO 1 BODY SCULPTING, her static page. One image per post, 16 sections of 6.
+// Hatcher on the headline, Merriweather for the supporting line, her logo top right.
+
+const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+const W = 1080;
+const H = 1350;
+const HEAD = "Hatcher";
+const BODY = "Merriweather";
+const SCHED_KEY = "no1-statics-scheduled-v1";
+const PERDAY_KEY = "no1-statics-perday-v1";
+const LOGO_SRC = `${BASE}/no1-logo.png`;
+
+const FONT_CSS = `
+@font-face { font-family: "Hatcher"; src: url("${BASE}/fonts/no1/Hatcher.woff2") format("woff2"), url("${BASE}/fonts/no1/Hatcher.woff") format("woff"); font-weight: 400; font-style: normal; font-display: swap; }
+`;
+
+type Photo = { id: string; bmp: ImageBitmap; url: string };
+type Post = {
+  id: string;
+  typeId: string;
+  hook: string;
+  line: string;
+  caption: string;
+  hashtags: string[];
+  photo: number;
+  note: string;
+  when: string;
+  busy: boolean;
+  scheduling: boolean;
+};
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const TYPE_BY_ID = new Map(STATIC_POST_TYPES.map((t) => [t.id, t]));
+const isTweet = (t: StaticPostType) => t.group === "tweets";
+
+let fontsReady: Promise<void> | null = null;
+function ensureFonts(): Promise<void> {
+  if (!fontsReady) {
+    fontsReady = (async () => {
+      if (!document.getElementById("no1-statics-fonts")) {
+        const st = document.createElement("style");
+        st.id = "no1-statics-fonts";
+        st.textContent = FONT_CSS;
+        document.head.appendChild(st);
+      }
+      if (!document.getElementById("no1-statics-merri")) {
+        const l = document.createElement("link");
+        l.id = "no1-statics-merri";
+        l.rel = "stylesheet";
+        l.href = "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap";
+        document.head.appendChild(l);
+      }
+      try {
+        await Promise.all([document.fonts.load(`400 60px "${HEAD}"`), document.fonts.load(`400 30px "${BODY}"`), document.fonts.load(`700 30px "${BODY}"`)]);
+      } catch {
+        /* falls back to a serif */
+      }
+    })();
+  }
+  return fontsReady;
+}
+
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("image would not load"));
+    img.src = src;
+  });
+}
+
+function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const out: string[] = [];
+  for (const para of text.split("\n")) {
+    const words = para.split(/\s+/).filter(Boolean);
+    let line = "";
+    for (const w of words) {
+      const test = line ? `${line} ${w}` : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        out.push(line);
+        line = w;
+      } else line = test;
+    }
+    if (line) out.push(line);
+  }
+  return out;
+}
+
+function fitText(ctx: CanvasRenderingContext2D, text: string, font: (px: number) => string, maxW: number, maxH: number, start: number, min: number, lh: number) {
+  for (let px = start; px >= min; px -= 2) {
+    ctx.font = font(px);
+    const lines = wrap(ctx, text, maxW);
+    if (lines.length * px * lh <= maxH) return { px, lines };
+  }
+  ctx.font = font(min);
+  return { px: min, lines: wrap(ctx, text, maxW) };
+}
+
+function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
+  const s = Math.max(W / bmp.width, H / bmp.height);
+  const w = bmp.width * s;
+  const h = bmp.height * s;
+  ctx.drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h);
+}
+
+function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) {
+  if (!logo || !logo.naturalWidth) return;
+  const w = 300;
+  const h = (logo.naturalHeight / logo.naturalWidth) * w;
+  const c = document.createElement("canvas");
+  c.width = Math.round(w);
+  c.height = Math.max(1, Math.round(h));
+  const g = c.getContext("2d")!;
+  g.drawImage(logo, 0, 0, c.width, c.height);
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(c, W - 60 - w, 60);
+}
+
+function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, photo: Photo | null, logo: HTMLImageElement | null) {
+  ctx.clearRect(0, 0, W, H);
+  ctx.textBaseline = "top";
+  if (photo) coverFit(ctx, photo.bmp);
+  else {
+    ctx.fillStyle = "#2a2a2a";
+    ctx.fillRect(0, 0, W, H);
+  }
+  const g = ctx.createLinearGradient(0, H * (tweet ? 0.1 : 0.3), 0, H);
+  g.addColorStop(0, "rgba(30,30,30,0)");
+  g.addColorStop(1, `rgba(30,30,30,${tweet ? 0.9 : 0.85})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  const lineText = (post.line || "").trim();
+  let bottom = H - 110;
+
+  if (lineText && !tweet) {
+    const lf = fitText(ctx, lineText, (px) => `400 ${px}px "${BODY}", serif`, W - 160, 200, 34, 24, 1.5);
+    const total = lf.lines.length * lf.px * 1.5;
+    ctx.font = `400 ${lf.px}px "${BODY}", serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    let y = bottom - total;
+    for (const l of lf.lines) {
+      ctx.fillText(l, 80, y);
+      y += lf.px * 1.5;
+    }
+    bottom = bottom - total - 36;
+  }
+
+  const hf = tweet
+    ? fitText(ctx, post.hook || "", (px) => `700 ${px}px "${BODY}", serif`, W - 160, 760, 64, 36, 1.3)
+    : fitText(ctx, post.hook || "", (px) => `400 ${px}px "${HEAD}", serif`, W - 160, 560, 124, 52, 1.08);
+  const lh = tweet ? 1.3 : 1.08;
+  ctx.font = tweet ? `700 ${hf.px}px "${BODY}", serif` : `400 ${hf.px}px "${HEAD}", serif`;
+  ctx.fillStyle = "#ffffff";
+  let y = bottom - hf.lines.length * hf.px * lh;
+  for (const l of hf.lines) {
+    ctx.fillText(l, 80, y);
+    y += hf.px * lh;
+  }
+
+  ctx.font = `700 24px "${BODY}", serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText(STATIC_CLINIC, 80, 70);
+  drawLogo(ctx, logo);
+}
+
+function PostCanvas({ post, tweet, photo, logo, onClick }: { post: Post; tweet: boolean; photo: Photo | null; logo: HTMLImageElement | null; onClick?: () => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      await ensureFonts();
+      const c = ref.current;
+      if (!c || !live) return;
+      const ctx = c.getContext("2d");
+      if (ctx) drawPost(ctx, post, tweet, photo, logo);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [post, tweet, photo, logo]);
+  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[220px] h-auto rounded-md border border-white/10 cursor-pointer" title={onClick ? "Click to swap the photo" : undefined} />;
+}
+
+const p2 = (x: number) => String(x).padStart(2, "0");
+const localStamp = (d: Date) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(d.getHours())}:${p2(d.getMinutes())}`;
+const nextDay = (hhmm: string) => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hhmm || "09:00"}`;
+};
+
+// Spread N posts a day evenly between 08:00 and 21:00, starting tomorrow.
+function slotFor(index: number, perDay: number): string {
+  const day = Math.floor(index / perDay);
+  const k = index % perDay;
+  const startMin = 8 * 60;
+  const endMin = 21 * 60;
+  const mins = perDay === 1 ? 12 * 60 : Math.round(startMin + (k * (endMin - startMin)) / (perDay - 1));
+  const d = new Date();
+  d.setDate(d.getDate() + 1 + day);
+  d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+  return localStamp(d);
+}
+
+export default function No1StaticsPage() {
+  const { presets } = usePresets();
+  const preset = useMemo(() => presets.find((p) => /no\s*1|no1/i.test(p.name)) ?? null, [presets]);
+
+  const [pool, setPool] = useState<Photo[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [group, setGroup] = useState(STATIC_GROUPS[0].id);
+  const [scheduled, setScheduled] = useState<Record<string, string>>({});
+  const [perDay, setPerDay] = useState(7);
+  const [logo, setLogo] = useState<HTMLImageElement | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    ensureFonts();
+    loadImg(LOGO_SRC).then(setLogo).catch(() => undefined);
+    try {
+      const s = localStorage.getItem(SCHED_KEY);
+      if (s) setScheduled(JSON.parse(s));
+      const n = Number(localStorage.getItem(PERDAY_KEY));
+      if (n >= 1 && n <= 10) setPerDay(n);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCHED_KEY, JSON.stringify(scheduled));
+    } catch {
+      /* ignore */
+    }
+  }, [scheduled]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PERDAY_KEY, String(perDay));
+    } catch {
+      /* ignore */
+    }
+  }, [perDay]);
+
+  // Anything already in the scheduler for her is crossed out too, on any device.
+  const loadScheduled = useCallback(async () => {
+    if (!preset) return;
+    try {
+      const r = await fetch(`${BASE}/api/scheduler/posts?presetId=${preset.id}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const found: Record<string, string> = {};
+      for (const sp of (data.posts ?? []) as { content?: { title?: string }; scheduledAt?: string; status?: string }[]) {
+        const title = sp.content?.title ?? "";
+        const t = STATIC_POST_TYPES.find((x) => title.startsWith(`${x.label} · static`));
+        if (t && sp.status !== "failed") found[t.id] = sp.scheduledAt ?? "";
+      }
+      setScheduled((cur) => ({ ...cur, ...found }));
+    } catch {
+      /* ignore */
+    }
+  }, [preset]);
+  useEffect(() => {
+    loadScheduled();
+  }, [loadScheduled]);
+
+  const typesInGroup = useMemo(() => STATIC_POST_TYPES.filter((t) => t.group === group), [group]);
+  const doneIn = (g: string) => STATIC_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
+  const totalIn = (g: string) => STATIC_POST_TYPES.filter((t) => t.group === g).length;
+  const dateLabel = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    } catch {
+      return "";
+    }
+  };
+
+  const addPhotos = async (files: FileList | File[] | null) => {
+    if (!files?.length) return;
+    const added: Photo[] = [];
+    for (const f of Array.from(files)) {
+      try {
+        const raw = await createImageBitmap(f);
+        const max = 2400;
+        let bmp = raw;
+        if (Math.max(raw.width, raw.height) > max) {
+          const s = max / Math.max(raw.width, raw.height);
+          const c = document.createElement("canvas");
+          c.width = Math.round(raw.width * s);
+          c.height = Math.round(raw.height * s);
+          c.getContext("2d")!.drawImage(raw, 0, 0, c.width, c.height);
+          bmp = await createImageBitmap(c);
+        }
+        added.push({ id: uid(), bmp, url: URL.createObjectURL(f) });
+      } catch {
+        toast.error(`${f.name} could not be read. Try a JPG or PNG.`);
+      }
+    }
+    if (added.length) setPool((p) => [...p, ...added]);
+  };
+
+  const photoFor = (post: Post): Photo | null => (pool.length ? pool[post.photo % pool.length] ?? null : null);
+
+  const addPost = (t: StaticPostType) => {
+    setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: l.length, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false }, ...l]);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
+  };
+
+  const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
+
+  const foot = (preset?.captionFootnote || "").trim();
+  const noFoot = (c: string) => (foot ? c.split(foot).join("").trim() : c.trim());
+  const fullCaption = (post: Post) => [noFoot(post.caption), post.hashtags.join(" "), foot].filter(Boolean).join("\n\n");
+
+  const write = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { busy: true });
+    try {
+      const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, tweet: isTweet(t), note: post.note }) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
+      patch(post.id, { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+    } catch (e) {
+      patch(post.id, { busy: false });
+      toast.error(e instanceof Error ? e.message : "The words would not write, try again");
+    }
+  };
+
+  const render = async (post: Post): Promise<HTMLCanvasElement> => {
+    await ensureFonts();
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    drawPost(c.getContext("2d")!, post, isTweet(t), photoFor(post), logo);
+    return c;
+  };
+
+  const download = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    const c = await render(post);
+    const blob: Blob | null = await new Promise((res) => c.toBlob(res, "image/png"));
+    if (blob) saveAs(blob, `no1-${t.id}.png`);
+  };
+
+  // Sends one post to the scheduler as a single image. Returns when it is in.
+  const send = async (post: Post, when: string) => {
+    if (!preset) throw new Error("I cannot find her client preset. It needs No 1 in its name");
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    const c = await render(post);
+    const [url] = await uploadPngs([c.toDataURL("image/png")], [`no1-${t.id}-${Date.now()}.png`]);
+    const body = {
+      postType: "single-image",
+      content: { caption: fullCaption(post), title: `${t.label} · static`, platforms: ["instagram"], imageUrls: [url], sourceTool: "no1-statics" },
+      scheduledAt: new Date(when).toISOString(),
+      isTrial: false,
+      notes: "",
+      presetId: preset.id,
+    };
+    const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: "Failed" }));
+      throw new Error(err.error || "Failed to schedule");
+    }
+    setScheduled((s) => ({ ...s, [t.id]: new Date(when).toISOString() }));
+  };
+
+  const schedule = async (post: Post) => {
+    if (!pool.length) {
+      toast.error("Add her photos first");
+      return;
+    }
+    patch(post.id, { scheduling: true });
+    try {
+      await send(post, post.when);
+      patch(post.id, { scheduling: false });
+      toast.success("Scheduled, and crossed off her list");
+    } catch (e) {
+      patch(post.id, { scheduling: false });
+      toast.error(e instanceof Error ? e.message : "Could not schedule");
+    }
+  };
+
+  // Every written post that is not yet scheduled, oldest first, spread perDay a day from tomorrow.
+  const ready = useMemo(() => [...posts].reverse().filter((p) => p.caption && !scheduled[p.typeId]), [posts, scheduled]);
+  const scheduleAll = async () => {
+    if (!pool.length) {
+      toast.error("Add her photos first");
+      return;
+    }
+    if (!ready.length) {
+      toast.error("Nothing written and waiting yet");
+      return;
+    }
+    setBulkBusy(true);
+    let done = 0;
+    try {
+      for (let i = 0; i < ready.length; i++) {
+        const when = slotFor(i, perDay);
+        patch(ready[i].id, { scheduling: true, when });
+        await send(ready[i], when);
+        patch(ready[i].id, { scheduling: false });
+        done++;
+      }
+      toast.success(`${done} posts scheduled, ${perDay} a day from tomorrow`);
+    } catch (e) {
+      toast.error(`${done} scheduled, then it stopped: ${e instanceof Error ? e.message : "could not schedule"}`);
+      setPosts((l) => l.map((p) => ({ ...p, scheduling: false })));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const writeAllInSection = async () => {
+    const wanted = typesInGroup.filter((t) => !scheduled[t.id] && !posts.some((p) => p.typeId === t.id));
+    if (!wanted.length) {
+      toast.error("Every post in this section is already open or scheduled");
+      return;
+    }
+    const fresh: Post[] = wanted.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: posts.length + i, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: true, scheduling: false }));
+    setPosts((l) => [...fresh.slice().reverse(), ...l]);
+    for (const post of fresh) {
+      const t = TYPE_BY_ID.get(post.typeId)!;
+      try {
+        const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, tweet: isTweet(t), note: "" }) });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data?.error || "failed");
+        patch(post.id, { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+      } catch {
+        patch(post.id, { busy: false });
+        toast.error(`"${t.label}" would not write, press Write it on it`);
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#161616] text-white">
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center gap-3">
+          <Link href="/hub" className="text-white/70 hover:text-white">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-3xl" style={{ fontFamily: `"${HEAD}", serif` }}>{STATIC_CLINIC} statics</h1>
+            <p className="text-white/60 text-sm">One image per post. 16 sections of 6. Names cross out once scheduled.{!preset && " (I cannot see her client preset yet, so scheduling is off.)"}</p>
+          </div>
+        </div>
+
+        <section className="rounded-xl border border-white/10 p-4 space-y-4">
+          <h2 className="font-semibold">1. Set up</h2>
+          <div className="grid md:grid-cols-3 gap-4 text-sm">
+            <label className="space-y-1 block">
+              <span className="text-white/60">Posts a day when you press Schedule all</span>
+              <input type="number" min={1} max={10} className="w-full bg-white/5 rounded p-2" value={perDay} onChange={(e) => setPerDay(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} />
+            </label>
+            <p className="text-white/50 self-end">They start tomorrow and are spread evenly between 8am and 9pm. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}.</p>
+          </div>
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
+            <h3 className="font-medium">Her photos</h3>
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { addPhotos(e.target.files); e.currentTarget.value = ""; }} />
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button onClick={() => fileRef.current?.click()} variant="secondary"><ImagePlus className="w-4 h-4 mr-2" />Upload photos</Button>
+              <ApprovedImagesPicker clientName={preset?.name || STATIC_CLINIC} mode="multi" skipBackgroundRemoval large label="Use approved photos" onAddImages={(files) => { if (files.length) addPhotos(files); }} />
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {pool.length === 0 && <p className="text-white/50 text-sm">Add her photos once. They go behind every post with a soft dark wash at the bottom, and rotate through the posts.</p>}
+            {pool.map((p, i) => (
+              <div key={p.id} className="relative">
+                <img src={p.url} alt="" className="w-16 h-20 object-cover rounded" />
+                <button className="absolute -top-1 -right-1 bg-black/70 rounded-full p-0.5" onClick={() => setPool((l) => l.filter((x) => x.id !== p.id))} aria-label={`Remove photo ${i + 1}`}><Trash2 className="w-3 h-3" /></button>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-white/10 p-4 space-y-4">
+          <h2 className="font-semibold">2. Pick a post</h2>
+          <div className="flex gap-2 flex-wrap">
+            {STATIC_GROUPS.map((g) => (
+              <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
+                {g.label} <span className="opacity-60">{doneIn(g.id)}/{totalIn(g.id)}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {typesInGroup.map((t) => {
+              const when = scheduled[t.id];
+              return (
+                <button key={t.id} onClick={() => addPost(t)} className="text-left px-3 py-2 rounded-lg border border-white/15 text-sm flex items-center gap-2">
+                  {when ? <CalendarCheck className="w-4 h-4 text-green-400 shrink-0" /> : <Plus className="w-4 h-4 text-white/40 shrink-0" />}
+                  <span className={when ? "line-through decoration-2 opacity-50" : ""}>{t.label}</span>
+                  {when && <span className="ml-auto text-xs text-green-300/80 whitespace-nowrap">{dateLabel(when)}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="secondary" onClick={writeAllInSection}><Sparkles className="w-4 h-4 mr-2" />Open and write all 6 in this section</Button>
+            <Button size="sm" onClick={scheduleAll} disabled={bulkBusy || ready.length === 0}>
+              {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}Schedule all written ({ready.length}), {perDay} a day
+            </Button>
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          {posts.length === 0 && <p className="text-white/50 text-sm">Press a post name above and it opens here.</p>}
+          {posts.map((post) => {
+            const t = TYPE_BY_ID.get(post.typeId)!;
+            const tweet = isTweet(t);
+            return (
+              <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h3 className="font-semibold">{t.label}</h3>
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
+                      {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
+                    </Button>
+                    <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
+                    <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling || bulkBusy}>
+                      {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-[220px_1fr] gap-4">
+                  <PostCanvas post={post} tweet={tweet} photo={photoFor(post)} logo={logo} onClick={pool.length > 1 ? () => patch(post.id, { photo: post.photo + 1 }) : undefined} />
+                  <div className="grid gap-3 text-sm content-start">
+                    <label className="space-y-1 block">
+                      <span className="text-white/60">{tweet ? "The tweet on the picture" : "Words on the picture"}</span>
+                      <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
+                    </label>
+                    {!tweet && (
+                      <label className="space-y-1 block">
+                        <span className="text-white/60">Supporting line</span>
+                        <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.line} onChange={(e) => patch(post.id, { line: e.target.value })} />
+                      </label>
+                    )}
+                    <label className="space-y-1 block">
+                      <span className="text-white/60">Caption</span>
+                      <textarea className="w-full bg-white/5 rounded p-2" rows={6} value={post.caption} onChange={(e) => patch(post.id, { caption: e.target.value })} />
+                    </label>
+                    <p className="text-white/50">{post.hashtags.join(" ")}</p>
+                    <label className="space-y-1 block">
+                      <span className="text-white/60">Anything extra for this one (optional)</span>
+                      <input className="w-full bg-white/5 rounded p-2" value={post.note} onChange={(e) => patch(post.id, { note: e.target.value })} placeholder="A detail to include" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      </div>
+    </div>
+  );
+}

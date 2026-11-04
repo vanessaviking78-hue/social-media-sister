@@ -587,6 +587,72 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   return result;
 }
 
+
+// ---------------------------------------------------------------------------
+// Zapier -> Publer rail (Instagram only, no Meta app needed).
+// Used for clients who cannot connect through Facebook. A preset is routed here
+// when its name matches an entry in ZAPIER_CLIENT_KEYS, for example
+//   ZAPIER_CLIENT_KEYS={"No 1 Body Sculpting":"no1"}
+// and ZAPIER_PUBLISH_WEBHOOK_URL holds the Catch Hook address. The Zap works out
+// the Publer workspace and account from the client key. Anything else keeps
+// using the Meta rail exactly as before.
+// ---------------------------------------------------------------------------
+function normaliseName(v: string): string {
+  return v.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function zapierClientKeyFor(presetName: string): string | null {
+  const raw = process.env.ZAPIER_CLIENT_KEYS;
+  if (!raw) return null;
+  try {
+    const map = JSON.parse(raw) as Record<string, string>;
+    const wanted = normaliseName(presetName || "");
+    for (const [name, key] of Object.entries(map)) {
+      if (normaliseName(name) === wanted && key) return key;
+    }
+  } catch (err) {
+    logger.error({ err }, "ZAPIER_CLIENT_KEYS is not valid JSON - ignoring");
+  }
+  return null;
+}
+
+// Publer only schedules a post if the time is comfortably in the future, otherwise the
+// Zap parks it as a draft. Send the post two minutes ahead of the moment it was due.
+const ZAPIER_LEAD_MS = 2 * 60 * 1000;
+
+async function fireZapierRail(
+  post: typeof scheduledPostsTable.$inferSelect,
+  clientKey: string,
+): Promise<{ via: "zapier"; sentAt: string; publerDueAt: string }> {
+  const hook = process.env.ZAPIER_PUBLISH_WEBHOOK_URL;
+  if (!hook) throw new Error("ZAPIER_PUBLISH_WEBHOOK_URL is not set");
+  if (post.postType === "story" || post.postType === "stories") {
+    throw new Error("Stories are not sent through the Zapier rail");
+  }
+  if (post.postType === "reel" || post.postType === "video_carousel") {
+    throw new Error("Only image posts are sent through the Zapier rail");
+  }
+  const content = post.content as PostContent;
+  const imageUrls = (content.imageUrls || []).map(absolutizeUrl).filter(Boolean);
+  if (!imageUrls.length) throw new Error("No image URLs");
+
+  const due = new Date(Date.now() + ZAPIER_LEAD_MS);
+  const res = await fetchWithTimeout(hook, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client: clientKey,
+      text: content.caption,
+      image_urls: imageUrls,
+      scheduled_at: due.toISOString(),
+    }),
+  }, 30000);
+  if (!res.ok) {
+    throw new Error(`Zapier webhook returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  }
+  return { via: "zapier", sentAt: new Date().toISOString(), publerDueAt: due.toISOString() };
+}
+
 let schedulerRunning = false;
 
 // A post can get orphaned at status "processing" if the server process itself
@@ -665,6 +731,34 @@ async function processScheduledPosts(): Promise<void> {
 
       if (!preset) {
         await markPostFailed(post.id, "Preset not found");
+        continue;
+      }
+
+      const zapierKey = zapierClientKeyFor(preset.name || post.clientName || "");
+      if (zapierKey) {
+        let zapOk = false;
+        let zapResult: Record<string, unknown> = {};
+        try {
+          zapResult = await fireZapierRail(post, zapierKey);
+          zapOk = true;
+        } catch (e: any) {
+          zapResult = { error: e?.message || "Zapier rail failed" };
+        }
+        const zapAt = new Date();
+        await db.update(scheduledPostsTable).set({
+          status: zapOk ? "published" : "failed",
+          metaStatus: zapOk ? "success" : "failed",
+          metaResult: zapResult,
+          metaPostedAt: zapOk ? zapAt : null,
+          updatedAt: zapAt,
+        }).where(eq(scheduledPostsTable.id, post.id));
+        logger.info({ postId: post.id, client: post.clientName, zapOk }, "Scheduled post sent via Zapier rail");
+        await notifyPostResult({
+          ok: zapOk,
+          clientName: preset.name || post.clientName || "client",
+          postType: post.postType,
+          detail: zapOk ? undefined : String(zapResult.error || ""),
+        });
         continue;
       }
 
