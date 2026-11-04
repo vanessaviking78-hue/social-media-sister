@@ -100,7 +100,12 @@ async function coloursFromLogo(file: File): Promise<{ main: string; accent: stri
   }
 }
 
+const PLAN_SIZE: Record<string, PackSize> = { starter: 6, growth: 12, complete: 20 };
+
 export default function PackOrder() {
+  // Stripe sends people back here with ?plan=starter|growth|complete once they have paid. No plan in the address means they have not paid yet.
+  const planParam = typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("plan") || "").toLowerCase();
+  const paidSize: PackSize | null = PLAN_SIZE[planParam] ?? null;
   const [clinicName, setClinicName] = useState("");
   const [clinicianName, setClinicianName] = useState("");
   const [handle, setHandle] = useState("");
@@ -109,7 +114,7 @@ export default function PackOrder() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
   const [roleOther, setRoleOther] = useState("");
-  const [size, setSize] = useState<PackSize>(12);
+  const [size, setSize] = useState<PackSize>(paidSize ?? 12);
   const [mainHex, setMainHex] = useState("#1f3a5f");
   const [accentHex, setAccentHex] = useState("#c9a27a");
   const [treatments, setTreatments] = useState<string[]>([]);
@@ -204,6 +209,7 @@ export default function PackOrder() {
       fd.append("email", email.trim());
       fd.append("role", finalRole);
       fd.append("size", String(size));
+      fd.append("plan", planParam);
       fd.append("mainHex", mainHex);
       fd.append("accentHex", accentHex);
       fd.append("treatments", JSON.stringify(treatments));
@@ -236,7 +242,35 @@ export default function PackOrder() {
           <p className="po-lede">
             I have your details and your photo. I will put your {size} posts{size === 20 ? ", 20 stories and 20 reel hooks" : ""} together, check them myself, and email you a link where you can save everything with its captions and hashtags. It can take a little while, so no need to wait around.
           </p>
-          {PACK_CHECKOUT[size] ? <p><a className="po-btn" style={{ display: "inline-block", textDecoration: "none" }} href={PACK_CHECKOUT[size]}>Pay £{PACK_TIERS.find((t) => t.size === size)?.price} to get started</a></p> : null}
+          {!paidSize && PACK_CHECKOUT[size] ? <p><a className="po-btn" style={{ display: "inline-block", textDecoration: "none" }} href={PACK_CHECKOUT[size]}>Pay £{PACK_TIERS.find((t) => t.size === size)?.price} to get started</a></p> : null}
+          <p className="po-sig">Vanessa Wormald, Social Media Sister</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!paidSize) {
+    return (
+      <div className="po-root">
+        <style>{CSS}</style>
+        <div className="po-bar"><span>Social Media Sister</span></div>
+        <div className="po-wrap">
+          <h1 className="po-h1">Your posts, <em>ready to go.</em></h1>
+          <p className="po-lede">
+            Pick a package and pay securely with Stripe. Straight after, I will ask for your photo, logo and colours, then turn them into posts with the captions and hashtags already written, so all you do is save them and post.
+          </p>
+          <div className="po-sizes">
+            {PACK_TIERS.map((t, ti) => (
+              <div className={`po-size ${ti % 2 === 0 ? "k" : "p"}`} key={t.size}>
+                <b>{t.name}</b>
+                <span className="pr">£{t.price}<i> a month</i></span>
+                <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>
+                {PACK_CHECKOUT[t.size] ? (
+                  <a className="po-btn" style={{ display: "block", textAlign: "center", textDecoration: "none", marginTop: 10, background: "#fff", color: "#000", boxShadow: "4px 4px 0 #000" }} href={PACK_CHECKOUT[t.size]}>Choose {t.name}</a>
+                ) : null}
+              </div>
+            ))}
+          </div>
           <p className="po-sig">Vanessa Wormald, Social Media Sister</p>
         </div>
       </div>
@@ -248,24 +282,11 @@ export default function PackOrder() {
       <style>{CSS}</style>
       <div className="po-bar"><span>Social Media Sister</span></div>
       <div className="po-wrap">
-        <h1 className="po-h1">Your posts, <em>ready to go.</em></h1>
+        <h1 className="po-h1">Payment received, <em>thank you.</em></h1>
         <p className="po-lede">
-          Tell me about your clinic and send me one photo of you. I turn it into a pack of posts in your colours, with the captions and hashtags already written, so all you do is save them and post.
+          You are in. Now tell me about your clinic and send me one photo of you, and I will turn it into your {size} posts{size === 20 ? ", 20 stories and 20 reel hooks" : ""} in your colours, with the captions and hashtags already written.
         </p>
         <form className="po-form" onSubmit={submit} noValidate>
-          <fieldset className="po-field">
-            <legend>Pick your package</legend>
-            <div className="po-sizes">
-              {PACK_TIERS.map((t, ti) => (
-                <label className={`po-size ${ti % 2 === 0 ? "k" : "p"}`} key={t.size}>
-                  <input type="radio" name="size" checked={size === t.size} onChange={() => setSize(t.size)} />
-                  <b>{t.name}</b>
-                  <span className="pr">£{t.price}<i> a month</i></span>
-                  <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>
-                </label>
-              ))}
-            </div>
-          </fieldset>
 
           <div className="po-field">
             <label htmlFor="po-clinic">Clinic name</label>
@@ -351,7 +372,7 @@ export default function PackOrder() {
             <span>I am happy for Social Media Sister to use my photos to make my posts.</span>
           </label>
           {error && <p className="po-error" role="alert">{error}</p>}
-          <button className="po-btn" type="submit" disabled={busy}>{busy ? "Sending..." : `Order my ${PACK_TIERS.find((t) => t.size === size)?.name} package`}</button>
+          <button className="po-btn" type="submit" disabled={busy}>{busy ? "Sending..." : "Send me my details"}</button>
         </form>
         <p className="po-sig">Vanessa Wormald, Social Media Sister</p>
       </div>
