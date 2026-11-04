@@ -869,8 +869,8 @@ export default function FreeSample() {
                   <input className={inputCls} value={credentials} onChange={(e) => setCredentials(e.target.value)} placeholder="Registered Nurse, fully insured" />
                 </label>
                 <label className="block">
-                  <Label>Treatments, up to 3 (optional)</Label>
-                  <input className={inputCls} value={treatments} onChange={(e) => setTreatments(e.target.value)} placeholder="Leave empty for treatment neutral posts" />
+                  <Label>Choose which 3 treatments you want to feature</Label>
+                  <input className={inputCls} value={treatments} onChange={(e) => setTreatments(e.target.value)} placeholder="For example: lip filler, skin boosters, HIFU" />
                 </label>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">

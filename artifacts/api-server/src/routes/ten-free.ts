@@ -199,7 +199,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
     let treatments: string[] = [];
     try {
       const t = JSON.parse(b.treatments || "[]");
-      if (Array.isArray(t)) treatments = t.map((x) => str(x, 60)).filter(Boolean).slice(0, 40);
+      if (Array.isArray(t)) treatments = t.map((x) => str(x, 60)).filter(Boolean).slice(0, 3);
     } catch {
       /* none ticked */
     }

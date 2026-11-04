@@ -230,7 +230,7 @@ export default function PackOrder() {
     }
   };
 
-  const toggle = (name: string) => setTreatments((t) => (t.includes(name) ? t.filter((x) => x !== name) : [...t, name]));
+  const toggle = (name: string) => setTreatments((t) => (t.includes(name) ? t.filter((x) => x !== name) : t.length >= 3 ? t : [...t, name]));
 
   if (done) {
     return (
@@ -343,15 +343,15 @@ export default function PackOrder() {
           </div>
 
           <fieldset className="po-field">
-            <legend>The treatments you offer</legend>
-            <small>Tick any that apply. Your treatment posts only use these.</small>
+            <legend>Choose which 3 treatments you want to feature</legend>
+            <small>Pick your three. Your treatment posts only use these. {treatments.length} of 3 chosen.</small>
             <div className="po-ticks">
               {TREAT_GROUP_ORDER.map((g) => (
                 <div key={g} className="po-group">
                   <div className="po-lab">{g}</div>
                   {ALL_TREATMENTS.filter((t) => TREAT_GROUP[t.id] === g).map((t) => (
                     <label className="po-check" key={t.id}>
-                      <input type="checkbox" checked={treatments.includes(t.name)} onChange={() => toggle(t.name)} />
+                      <input type="checkbox" checked={treatments.includes(t.name)} disabled={!treatments.includes(t.name) && treatments.length >= 3} onChange={() => toggle(t.name)} />
                       <span>{t.name}</span>
                     </label>
                   ))}
