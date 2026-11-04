@@ -4,6 +4,7 @@ import { ArrowLeft, Gift, Loader2, Copy, ExternalLink, Trash2, Sparkles, Send, R
 import { toast } from "sonner";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { usePresets } from "@/lib/use-presets";
+import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const API = `${BASE}/api`;
@@ -395,6 +396,7 @@ export default function FreeSample() {
   const [area, setArea] = useState("");
   const [credentials, setCredentials] = useState("");
   const [treatments, setTreatments] = useState("");
+  const pickedTreatments = treatments.split(", ").filter(Boolean);
   const [mixType, setMixType] = useState<MixType>("half");
   const [shirt, setShirt] = useState("bright optic white");
   const [month, setMonth] = useState(MONTHS[new Date().getMonth()]);
@@ -868,10 +870,32 @@ export default function FreeSample() {
                   <Label>Qualifications and background (optional)</Label>
                   <input className={inputCls} value={credentials} onChange={(e) => setCredentials(e.target.value)} placeholder="Registered Nurse, fully insured" />
                 </label>
-                <label className="block">
+                <div className="block sm:col-span-3">
                   <Label>Choose which 3 treatments you want to feature</Label>
-                  <input className={inputCls} value={treatments} onChange={(e) => setTreatments(e.target.value)} placeholder="For example: lip filler, skin boosters, HIFU" />
-                </label>
+                  <div className="text-xs text-muted-foreground mb-2">{pickedTreatments.length} of 3 chosen. Leave empty for treatment neutral posts.</div>
+                  {U_GROUPS.map((g) => (
+                    <div key={g.id} className="mb-2">
+                      <div className="text-xs font-semibold mb-1">{g.label}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
+                          const on = pickedTreatments.includes(t.name);
+                          const full = !on && pickedTreatments.length >= 3;
+                          return (
+                            <button
+                              type="button"
+                              key={t.id}
+                              disabled={full}
+                              onClick={() => setTreatments(on ? pickedTreatments.filter((x) => x !== t.name).join(", ") : [...pickedTreatments, t.name].join(", "))}
+                              className={`rounded-full border px-3 py-1 text-xs ${on ? "bg-primary text-primary-foreground border-primary" : "border-border/40 bg-background"} ${full ? "opacity-40 cursor-not-allowed" : ""}`}
+                            >
+                              {t.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="block">
