@@ -30,7 +30,7 @@ export const treatmentIdsFor = (names: string[]): string[] => TREATMENTS.filter(
 // A skeleton post with its photos picked from the pool, plus what the writer needs to know about it.
 // A field is only rewritten if it holds real wording: lines with {owner} style tokens, and the disclaimer
 // and heading lines on treatment posts, are always kept exactly as designed.
-export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<number> }, poolLen: number): { post: PackPost; spec: CopySpec } {
+export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<number> }, poolLen: number, noHook = false): { post: PackPost; spec: CopySpec } {
   const take = (k: number) => Array.from({ length: k }, (_, i) => (poolLen ? (cursor.at + i) % poolLen : null));
   const photos = take(PHOTOS_NEEDED[item.kind]);
   cursor.at += PHOTOS_NEEDED[item.kind];
@@ -56,6 +56,13 @@ export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<numbe
     idea = d.idea;
     defaults = { ...d.defaults };
     fields = d.fields.map((f) => ({ key: f.key, label: f.label }));
+    // Single image designs lead with one of my hook lines. The giant NO design and any worded preset keep their own words.
+    if (!noHook && item.design !== "no" && "head" in defaults) {
+      const hook = pickHook(hooks);
+      defaults.head = hook;
+      fixed = ["head"];
+      idea = `${idea}. The headline on the image is my hook line, kept exactly: "${hook}". Write the other fields so they follow on from that headline in the same shape as the current wording, and the caption carries the idea on`;
+    }
   } else if (item.kind === "lux") {
     const cover = Number(item.design) || 0;
     const def = LUX_SLIDE_DEFS[cover];

@@ -233,7 +233,7 @@ function Builder({ id }: { id: string }) {
       const built = packSlots.map((s) => {
         const relIds = RELATABLE_IDS.filter((id) => EMPOWER.some((e) => e.id === id));
         const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design === "relatable" ? relIds[hashSeed(req.id + "relatable") % relIds.length] : s.design;
-        const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length);
+        const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length, !!s.preset || design === "gatecrasher");
         const facts = `About me (the only facts you may use): hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
         const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;
         sk.spec.idea = `${rel ? `${s.idea}, in the style of this template: ${rel.idea}` : s.idea}. ${facts}`;
