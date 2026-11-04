@@ -162,6 +162,8 @@ import TenFreePublic from "@/pages/ten-free-public";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
+import Photoshoot, { PhotosView } from "@/pages/photoshoot";
+import PhotoshootAdmin from "@/pages/photoshoot-admin";
 
 const queryClient = new QueryClient();
 
@@ -178,6 +180,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
+      <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
@@ -336,6 +339,8 @@ function AppContent() {
   const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
   const [isPackOrder] = useRoute("/getmyposts");
   const [isOver50] = useRoute("/over50");
+  const [isPhotoshoot] = useRoute("/photoshoot");
+  const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -462,6 +467,12 @@ function AppContent() {
   }
   if (isOver50) {
     return <Over50 />;
+  }
+  if (isPhotoshoot) {
+    return <Photoshoot />;
+  }
+  if (isPhotosView && photosParams?.token) {
+    return <PhotosView token={photosParams.token} />;
   }
   if (isTenFreeForm) {
     return <TenFreePosts />;
