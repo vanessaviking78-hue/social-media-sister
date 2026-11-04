@@ -3,6 +3,7 @@
 // their own drawing modules, all using the pack's two fonts: Instrument Serif for titles and Montserrat for subtitles.
 
 import { DEFAULT_FOCUS, getBitmap, makePost, renderSlide as renderMonthSlide, slideCount as monthSlideCount, type Client, type PoolPhoto } from "./month-engine";
+import { textTweak } from "./empower-kit";
 import { EMPOWER_BY_ID, drawEmpower, resolveEmpowerText, XH, XW, type EPalette } from "./empower-designs";
 import { LUX_PALETTE, LUX_SLIDES, drawLux, drawLuxPhotoSlide, resolveLuxText } from "./lux-designs";
 import { fillTokens, type Focus } from "./basic-covers";
@@ -30,6 +31,9 @@ export type PackPost = {
   caption: string;
   hashtags: string;
   photos: (number | null)[]; // positions in the pool
+  textScale?: number; // Empower posts: size of all the words, 1 is as designed
+  textDx?: number; // Empower posts: words moved sideways in the 400 x 500 layout
+  textDy?: number;
   focus?: Record<string, Focus>; // where each slide's photo sits in its box, by slide number as "f0", "f1"...
 };
 
@@ -160,6 +164,7 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
   const roles = c.brand ? brandRoles(c.brand) : null;
   if (post.kind === "empower") {
     const def = EMPOWER_BY_ID[post.design];
+    textTweak.scale = post.textScale ?? 1; textTweak.dx = post.textDx ?? 0; textTweak.dy = post.textDy ?? 0;
     drawEmpower(ctx, {
       design: post.design,
       text: resolveEmpowerText(def, post.text, c.fill),
@@ -173,6 +178,7 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
       logo: c.logo,
       logoPos: "off",
     });
+    textTweak.scale = 1; textTweak.dx = 0; textTweak.dy = 0;
     return;
   }
 

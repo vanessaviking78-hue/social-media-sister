@@ -160,6 +160,7 @@ import InjectorReels from "@/pages/injector-reels";
 import TenFreePosts from "@/pages/ten-free-posts";
 import TenFreePublic from "@/pages/ten-free-public";
 import TenFreeAdmin from "@/pages/ten-free-admin";
+import TenFreeTracker from "@/pages/ten-free-tracker";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +177,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
+      <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
       <Route path="/magazinepost" component={MagazinePost} />

@@ -323,8 +323,16 @@ export function T2(g: EG, text: string, x: number, y: number, w: number, h: numb
 type RO = { font?: "head" | "body"; max: number; min?: number; weight?: number; colour: string; hi?: string; align?: CanvasTextAlign; lh?: number; caps?: boolean; italic?: boolean };
 type Wd = { t: string; hi: boolean };
 
+// A per post nudge for all the words on an Empower design: bigger or smaller, and moved sideways or up and down.
+export const textTweak = { scale: 1, dx: 0, dy: 0 };
+
 export function rich(g: EG, key: string, x: number, y: number, w: number, h: number, o: RO) {
   const { ctx } = g;
+  const sc = textTweak.scale || 1;
+  if (sc !== 1 || textTweak.dx || textTweak.dy) {
+    x += textTweak.dx; y += textTweak.dy; w *= sc; h *= sc;
+    o = { ...o, max: o.max * sc, min: (o.min ?? 5) * sc };
+  }
   const raw = tx(g, key);
   const text = o.caps ? raw.toUpperCase() : raw;
   const fam = o.font === "body" ? g.body : g.head;

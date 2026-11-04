@@ -79,6 +79,7 @@ function ensureTable(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )`)
     .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_urls JSONB NOT NULL DEFAULT '[]'::jsonb`))
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ`))
     .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_status TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
@@ -206,7 +207,10 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
     }
 
     // Vanessa's own test addresses (vanessa+test1@thecybersuite.com or vanessaviking78+test1@gmail.com) skip the one free turn rule, so she can keep testing.
-    const isTest = /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
+    // Testers she has named (Dermaluxe, plus anything in the TEN_FREE_TESTERS setting, comma separated) can also make as many as they like.
+    const testers = ["dermaluxe", ...(process.env.TEN_FREE_TESTERS || "").split(",").map((t) => t.trim().toLowerCase()).filter(Boolean)];
+    const isTester = testers.some((t) => `${clinicName} ${handle} ${email}`.toLowerCase().includes(t));
+    const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
     const key = isTest ? `${emailKey(email)}#test${Date.now()}` : emailKey(email);
     const existing = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
     const sameClinic = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} LIMIT 1`);
@@ -247,7 +251,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
 type Row = {
   id: string; email: string; status: string; clinic_name: string; clinician_name: string; handle: string; area: string; website: string; whatsapp: string;
   main_hex: string; accent_hex: string; treatments: string[]; answers: Record<string, string>; logo_url: string; photo_url: string; notes: string; slug: string; code: string;
-  created_at: string; ai_urls?: string[]; ai_status?: string; photo_key?: string;
+  created_at: string; sent_at?: string | null; ai_urls?: string[]; ai_status?: string; photo_key?: string;
 };
 
 const shape = (r: Row) => ({
@@ -272,6 +276,7 @@ const shape = (r: Row) => ({
   aiUrls: r.ai_urls ?? [],
   aiStatus: r.ai_status ?? "",
   createdAt: r.created_at,
+  sentAt: r.sent_at ?? null,
 });
 
 router.get("/ten-free/requests", requireAuth, async (_req: Request, res: Response) => {
@@ -301,7 +306,7 @@ router.get("/ten-free/requests/:id", requireAuth, async (req: Request, res: Resp
 router.patch("/ten-free/requests/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTable();
-    const b = req.body as { status?: string; notes?: string };
+    const b = req.body as { status?: string; notes?: string; sent?: boolean };
     const id = String(req.params.id);
     if (b.status !== undefined) {
       if (!["new", "declined"].includes(b.status)) {
@@ -309,6 +314,9 @@ router.patch("/ten-free/requests/:id", requireAuth, async (req: Request, res: Re
         return;
       }
       await db.execute(sql`UPDATE tenfree_requests SET status = ${b.status}, updated_at = now() WHERE id = ${id} AND status <> 'published'`);
+    }
+    if (b.sent !== undefined) {
+      await db.execute(b.sent ? sql`UPDATE tenfree_requests SET sent_at = now() WHERE id = ${id}` : sql`UPDATE tenfree_requests SET sent_at = NULL WHERE id = ${id}`);
     }
     if (b.notes !== undefined) {
       await db.execute(sql`UPDATE tenfree_requests SET notes = ${str(b.notes, 1000)}, updated_at = now() WHERE id = ${id}`);

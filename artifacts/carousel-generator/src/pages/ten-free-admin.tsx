@@ -53,7 +53,7 @@ function List() {
   };
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4">
-      <h1 className="text-2xl font-bold">10 free posts: requests</h1>
+      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">10 free posts: requests</h1><Link href="/10free-tracker" className="text-sm underline">Tracker of the ones done</Link></div>
       <p className="text-sm text-muted-foreground">Public form: {window.location.origin}{BASE}/10freeposts</p>
       {loading && <p>Loading...</p>}
       {!loading && rows.length === 0 && <p>No requests yet.</p>}
@@ -306,7 +306,8 @@ function Builder({ id }: { id: string }) {
   };
 
   // Dragging a photo moves it inside its frame (pack posts only).
-  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number, number?]; w: number; h: number } | null>(null);
+  const dragRef = useRef<{ n: number; i: number; x: number; y: number; start: [number, number, number?]; w: number; h: number; text?: [number, number] } | null>(null);
+  const [textMode, setTextMode] = useState<Record<number, boolean>>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startFocus = (p: PackPost, i: number): [number, number, number?] => (p.focus?.[`f${i}`] as [number, number, number?] | undefined) ?? (p.kind === "portrait" ? [0.5, 0] : (DEFAULT_FOCUS as [number, number]));
   const redraw = (n: number, i: number) => {
@@ -336,11 +337,18 @@ function Builder({ id }: { id: string }) {
     if (!it.post || it.post.kind === "tweet") return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const r = (e.target as HTMLElement).getBoundingClientRect();
-    dragRef.current = { n: it.n, i, x: e.clientX, y: e.clientY, start: startFocus(it.post, i), w: r.width, h: r.height };
+    dragRef.current = { n: it.n, i, x: e.clientX, y: e.clientY, start: startFocus(it.post, i), w: r.width, h: r.height, text: textMode[it.n] ? [it.post.textDx ?? 0, it.post.textDy ?? 0] : undefined };
   };
   const onMove = (e: React.PointerEvent<HTMLImageElement>) => {
     const d = dragRef.current;
     if (!d) return;
+    if (d.text) {
+      const it0 = itemsRef.current.find((x) => x.n === d.n);
+      if (!it0?.post) return;
+      patchItem(d.n, { post: { ...it0.post, textDx: d.text[0] + ((e.clientX - d.x) / d.w) * 400, textDy: d.text[1] + ((e.clientY - d.y) / d.h) * 500 } });
+      redraw(d.n, d.i);
+      return;
+    }
     const fx = Math.max(0, Math.min(1, d.start[0] - (e.clientX - d.x) / d.w));
     const fy = Math.max(0, Math.min(1, d.start[1] - (e.clientY - d.y) / d.h));
     const it = itemsRef.current.find((x) => x.n === d.n);
@@ -426,11 +434,21 @@ function Builder({ id }: { id: string }) {
               ))}
             </div>
             {it.post?.kind === "empower" && (
-              <label className="flex items-center gap-2 text-xs text-muted-foreground">Zoom the photo
-                <input type="range" min={1} max={2.5} step={0.05} value={(startFocus(it.post, 0) as number[])[2] ?? 1}
-                  onChange={(e) => { const f = startFocus(it.post!, 0); patchItem(it.n, { post: { ...it.post!, focus: { ...(it.post!.focus ?? {}), f0: [f[0], f[1], Number(e.target.value)] as [number, number, number?] } } }); redraw(it.n, 0); }} />
-                <span>then drag the photo to place it</span>
-              </label>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <label className="flex items-center gap-2">Zoom the photo
+                  <input type="range" min={1} max={2.5} step={0.05} value={(startFocus(it.post, 0) as number[])[2] ?? 1}
+                    onChange={(e) => { const f = startFocus(it.post!, 0); patchItem(it.n, { post: { ...it.post!, focus: { ...(it.post!.focus ?? {}), f0: [f[0], f[1], Number(e.target.value)] as [number, number, number?] } } }); redraw(it.n, 0); }} />
+                </label>
+                <label className="flex items-center gap-2">Text size
+                  <input type="range" min={0.6} max={1.6} step={0.05} value={it.post.textScale ?? 1}
+                    onChange={(e) => { patchItem(it.n, { post: { ...it.post!, textScale: Number(e.target.value) } }); redraw(it.n, 0); }} />
+                </label>
+                <label className="flex items-center gap-1">
+                  <input type="checkbox" checked={!!textMode[it.n]} onChange={(e) => setTextMode((m) => ({ ...m, [it.n]: e.target.checked }))} />
+                  Drag the text instead of the photo
+                </label>
+                <button className="underline" onClick={() => { patchItem(it.n, { post: { ...it.post!, textScale: 1, textDx: 0, textDy: 0 } }); redraw(it.n, 0); }}>Reset text</button>
+              </div>
             )}
             <textarea value={it.caption} onChange={(e) => patchItem(it.n, { caption: e.target.value })} rows={6} className="w-full text-sm border rounded p-2" />
             <input value={it.tags} onChange={(e) => patchItem(it.n, { tags: e.target.value })} className="w-full text-xs border rounded p-2" />
