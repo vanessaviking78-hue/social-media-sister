@@ -51,6 +51,8 @@ export function skeleton(item: PackItem, cursor: { at: number; hooks?: Set<numbe
     idea = d.idea;
     defaults = { ...d.defaults };
     fields = d.fields.map((f) => ({ key: f.key, label: f.label }));
+    // The wanted poster's title and stamp are always the word Wanted, never a synonym.
+    if (item.design === "wanted") fixed = ["big", "stamp"];
   } else if (item.kind === "empower") {
     const d = EMPOWER_BY_ID[item.design];
     idea = d.idea;
