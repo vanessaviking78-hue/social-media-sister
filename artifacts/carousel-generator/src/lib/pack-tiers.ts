@@ -14,3 +14,10 @@ export const PACK_CHECKOUT: Record<PackSize, string> = {
   12: "https://buy.stripe.com/bJefZidei03V3GI3zu3cc02",
   20: "https://buy.stripe.com/dRmfZigqueYPa567PK3cc03",
 };
+
+// One-off (no subscription) links and prices for the same three packages.
+export const PACK_ONEOFF: Record<PackSize, { price: number; link: string }> = {
+  6: { price: 127, link: "https://buy.stripe.com/00w8wQa26eYP4KM3zu3cc04" },
+  12: { price: 217, link: "https://buy.stripe.com/eVqbJ2b6ag2T9121rm3cc05" },
+  20: { price: 317, link: "https://buy.stripe.com/aFadRaa26cQHcdeb1W3cc06" },
+};

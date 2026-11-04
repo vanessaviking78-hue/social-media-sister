@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ALL_TREATMENTS, TREAT_GROUP, TREAT_GROUP_ORDER } from "@/lib/treatment-designs";
 import { type PackSize } from "@/lib/pack-plan";
-import { PACK_TIERS, PACK_CHECKOUT } from "@/lib/pack-tiers";
+import { PACK_TIERS, PACK_CHECKOUT, PACK_ONEOFF } from "@/lib/pack-tiers";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -267,6 +267,9 @@ export default function PackOrder() {
                 <ul>{t.includes.map((x) => <li key={x}>{x}</li>)}</ul>
                 {PACK_CHECKOUT[t.size] ? (
                   <a className="po-btn" style={{ display: "block", textAlign: "center", textDecoration: "none", marginTop: 10, background: "#fff", color: "#000", boxShadow: "4px 4px 0 #000" }} href={PACK_CHECKOUT[t.size]}>Choose {t.name}</a>
+                ) : null}
+                {PACK_ONEOFF[t.size].link ? (
+                  <a style={{ display: "block", textAlign: "center", marginTop: 8, color: "inherit", fontWeight: 900, fontSize: 14, textTransform: "uppercase", letterSpacing: ".06em", textDecoration: "underline" }} href={PACK_ONEOFF[t.size].link}>Or pay once, £{PACK_ONEOFF[t.size].price}</a>
                 ) : null}
               </div>
             ))}
