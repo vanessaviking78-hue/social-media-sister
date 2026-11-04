@@ -10,24 +10,24 @@ const API = `${BASE}/api`;
 
 export const PS_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@900&display=swap');
-.ps { background:#000; color:#fff; min-height:100vh; font-family:'League Spartan',sans-serif; font-weight:900; }
+.ps { background:#fff; color:#000; min-height:100vh; font-family:'League Spartan',sans-serif; font-weight:900; }
 .ps * { box-sizing:border-box; font-family:inherit; }
 .ps-w { max-width: 980px; margin:0 auto; padding: 48px 20px 90px; }
 .ps-k { color:${PINK}; letter-spacing:.3em; font-size:12px; text-transform:uppercase; }
 .ps-h1 { font-size: clamp(40px,9vw,84px); line-height:.95; text-transform:uppercase; margin:10px 0 18px; }
 .ps-h1 span { color:${PINK}; }
-.ps-p { font-size: 19px; line-height:1.4; max-width: 640px; font-weight:700; color:#ddd; }
-.ps-card { background:#111; border:1px solid #2a2a2a; padding: 24px; margin-top: 28px; }
-.ps-l { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#aaa; display:block; margin:14px 0 6px; }
-.ps-in { width:100%; background:#000; border:2px solid #333; color:#fff; padding:13px 14px; font-size:18px; font-weight:700; }
+.ps-p { font-size: 19px; line-height:1.4; max-width: 640px; font-weight:700; color:#222; }
+.ps-card { background:#fff; border:2px solid #000; padding: 24px; margin-top: 28px; }
+.ps-l { font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:#555; display:block; margin:14px 0 6px; }
+.ps-in { width:100%; background:#fff; border:2px solid #000; color:#000; padding:13px 14px; font-size:18px; font-weight:700; }
 .ps-in:focus { outline:none; border-color:${PINK}; }
 .ps-btn { background:${PINK}; color:#fff; border:0; padding:16px 26px; font-size:15px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; text-decoration:none; display:inline-block; margin: 6px 10px 0 0; }
-.ps-btn.alt { background:transparent; border:2px solid ${PINK}; }
+.ps-btn.alt { background:transparent; border:2px solid ${PINK}; color:#000; }
 .ps-btn[disabled] { opacity:.4; cursor:default; }
-.ps-err { color:#ff8fb8; margin-top:14px; font-weight:700; }
+.ps-err { color:#c4004f; margin-top:14px; font-weight:700; }
 .ps-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-top:20px; }
-.ps-grid img { width:100%; display:block; aspect-ratio:4/5; object-fit:cover; background:#222; }
-.ps-ul { font-size:18px; line-height:1.5; font-weight:700; color:#ddd; padding-left:20px; }
+.ps-grid img { width:100%; display:block; aspect-ratio:4/5; object-fit:cover; background:#eee; }
+.ps-ul { font-size:18px; line-height:1.5; font-weight:700; color:#222; padding-left:20px; }
 `;
 
 const j = async (r: Response) => ({ ok: r.ok, status: r.status, body: (await r.json().catch(() => ({}))) as Record<string, any> });
@@ -104,10 +104,10 @@ export default function Photoshoot() {
             <input className="ps-in" value={scrub} onChange={(e) => setScrub(e.target.value)} placeholder="navy" />
             <label className="ps-l">3 photos of you (needed). No filter. Full face, head and shoulders, different angles if you can</label>
             <input className="ps-in" type="file" accept="image/*" multiple onChange={(e) => setFaces(Array.from(e.target.files || []).slice(0, 3))} />
-            <div style={{ fontSize: 14, color: "#aaa", marginTop: 6 }}>{faces.length} of 3 added</div>
+            <div style={{ fontSize: 14, color: "#555", marginTop: 6 }}>{faces.length} of 3 added</div>
             <label className="ps-l">A photo of the inside of your clinic (optional, but it makes the scrubs shots look like you)</label>
             <input className="ps-in" type="file" accept="image/*" onChange={(e) => setInterior(e.target.files?.[0] || null)} />
-            <label style={{ display: "flex", gap: 10, marginTop: 18, fontSize: 16, fontWeight: 700, color: "#ddd" }}>
+            <label style={{ display: "flex", gap: 10, marginTop: 18, fontSize: 16, fontWeight: 700, color: "#222" }}>
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 22, height: 22, flex: "none" }} />
               <span>The photos are of me, and I know the images will be made by AI and may not be a perfect likeness.</span>
             </label>
