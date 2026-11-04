@@ -16,3 +16,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[[edge_functions]]
+  path = "/10free/*"
+  function = "ten-free-og"
