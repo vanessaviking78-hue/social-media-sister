@@ -19,7 +19,6 @@ const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const W = 1080;
 const H = 1350;
 const LOOK_KEY = "universal-look-v1";
-const CLIENT_KEY = "universal-client-v1";
 const SCHED_KEY = "universal-scheduled-v1";
 const BODY_FONT = "Montserrat";
 
@@ -404,22 +403,9 @@ async function resizeToDataUrl(file: File, max = 1600): Promise<string> {
 
 export default function UniversalPage() {
   const { presets } = usePresets();
-  const [presetId, setPresetId] = useState<number | null>(() => {
-    try {
-      const r = localStorage.getItem(CLIENT_KEY);
-      return r ? Number(r) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Always starts with no client chosen, so it asks every time and never carries the last client over.
+  const [presetId, setPresetId] = useState<number | null>(null);
   const preset = useMemo(() => presets.find((p) => p.id === presetId) ?? null, [presets, presetId]);
-  useEffect(() => {
-    try {
-      if (presetId) localStorage.setItem(CLIENT_KEY, String(presetId));
-    } catch {
-      /* ignore */
-    }
-  }, [presetId]);
 
   const [look, setLook] = useState<Look>(() => {
     try {
@@ -894,8 +880,8 @@ export default function UniversalPage() {
           <h2 className="font-semibold">1. Set up</h2>
           <div className="grid md:grid-cols-2 gap-3 text-sm">
             <label className="space-y-1 block">
-              <span className="text-white/60">Client (their voice, Getting to know you, homework, logo and footnote all come from here)</span>
-              <select className="w-full bg-white/5 rounded p-2" value={presetId ?? ""} onChange={(e) => setPresetId(e.target.value ? Number(e.target.value) : null)}>
+              <span className={preset ? "text-white/60" : "text-pink-400 font-semibold"}>{preset ? "Client (their voice, Getting to know you, homework, logo and footnote all come from here)" : "Which client is this for? Choose one to start"}</span>
+              <select className={`w-full bg-white/5 rounded p-2 ${preset ? "" : "ring-2 ring-pink-500"}`} value={presetId ?? ""} onChange={(e) => setPresetId(e.target.value ? Number(e.target.value) : null)}>
                 <option value="" className="text-black">Choose a client</option>
                 {[...presets].sort((a, b) => a.name.localeCompare(b.name)).map((p) => <option key={p.id} value={p.id} className="text-black">{p.name}</option>)}
               </select>

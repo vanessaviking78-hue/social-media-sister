@@ -55,7 +55,7 @@ export const U_TREATMENTS: UTreatment[] = [
   t("led", "skin", "LED light therapy", "a face mask", "Different wavelengths of light used to support the skin, often as a calming, relaxing add on.", { mid: "LED light therapy", plural: false }),
   t("carbon-laser", "skin", "Carbon laser facial", "a charcoal mask", "A laser facial using a carbon layer to refine the look of pores, oil and dull skin.", { plural: false }),
   t("hifu", "skin", "HIFU", "face yoga", "Focused ultrasound used to support firmness and lift in the face and neck.", { mid: "HIFU", plural: false }),
-  t("rf-microneedling", "skin", "Radiofrequency microneedling", "microneedling", "Microneedling combined with radiofrequency energy to support skin firmness, texture and tone.", { mid: "radiofrequency microneedling", plural: false }),
+  t("radiofrequency", "skin", "Radiofrequency", "a facial", "Radiofrequency energy used to gently warm the skin to support firmness, texture and tone.", { mid: "radiofrequency", plural: false }),
   t("ipl", "skin", "IPL photofacial", "foundation", "Intense pulsed light used to even the look of skin tone and redness.", { mid: "an IPL photofacial", plural: false }),
   t("laser-resurfacing", "skin", "Laser skin resurfacing", "a peel", "Laser treatment that refreshes skin texture and tone with some downtime.", { plural: false }),
   t("microdermabrasion", "skin", "Microdermabrasion", "a scrub", "Mechanical exfoliation that polishes away dull surface skin.", { plural: false }),
