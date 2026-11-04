@@ -56,8 +56,26 @@ export function splitHook(text: string): { first: string; second: string } {
 }
 
 // The last slide of every carousel. A treatment post asks her to comment the treatment name for more info,
-// any other post asks her to tag a friend. Written here so every writing tool ends the same way.
+// any other post gets one of these, picked at random so no two posts end the same way.
+export const OTHER_CTAS = [
+  "Save this for the days you forget",
+  "Comment SEEN if you felt that",
+  "Tell me your version in the comments",
+  "Comment ME if you needed this today",
+  "Which one are you? Tell me below",
+  "Save this one for a rainy Tuesday",
+  "Pop your answer in the comments, I read every one",
+  "Comment YES if this is you",
+  "Send this to the woman who runs your world",
+  "Reply with your own and I will answer",
+];
+
+export function isFinalCta(line: string): boolean {
+  const l = line.trim().replace(/[.!]+$/, "").toLowerCase();
+  return /^comment .* for more info$/.test(l) || l === "tag a friend who will get it" || OTHER_CTAS.some((c) => c.toLowerCase() === l);
+}
+
 export function finalCta(treatment: unknown): string {
   const t = String(treatment ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
-  return t ? `Comment ${t.toUpperCase()} for more info` : "Tag a friend who will get it";
+  return t ? `Comment ${t.toUpperCase()} for more info` : OTHER_CTAS[Math.floor(Math.random() * OTHER_CTAS.length)];
 }

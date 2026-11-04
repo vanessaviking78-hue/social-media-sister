@@ -1,3 +1,4 @@
+import { isFinalCta } from "../lib/hookBank";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
@@ -143,7 +144,7 @@ router.post("/dental/copy", async (req: Request, res: Response) => {
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l && !/^comment .* for more info\.?$/i.test(l) && !/^tag a friend who will get it\.?$/i.test(l) && !/drop me a dm|meet me in the dms|follow along\.?$/i.test(l))
+      .filter((l) => l && !isFinalCta(l) && !/drop me a dm|meet me in the dms|follow along\.?$/i.test(l))
       .join("\n");
     res.json({
       hook: clean(j.hook, 140),

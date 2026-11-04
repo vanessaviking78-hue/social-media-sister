@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta } from "../lib/hookBank";
+import { finalCta, isFinalCta } from "../lib/hookBank";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { freeSamplesTable } from "@workspace/db/schema";
@@ -63,7 +63,7 @@ THE SLIDES
 - "hook": slide 1, the cover line. Maximum 12 words. It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic.
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
-- "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be the line 'Tag a friend who will get it', which is added for you, so do not write it."}
+- "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be the line a closing engagement line, which is added for you, so do not write it."}
 - "hashtags": exactly 5, lower case, no spaces, each one joins Birmingham to a beauty, mums or skin theme. Every tag contains birmingham.
 
 WRITING RULES (non-negotiable)
@@ -112,7 +112,7 @@ router.post("/no1/copy", async (req: Request, res: Response) => {
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l && !/^comment .* for more info\.?$/i.test(l) && !/^tag a friend who will get it\.?$/i.test(l))
+      .filter((l) => l && !isFinalCta(l))
       .join("\n");
     res.json({
       hook: clean(j.hook, 140),

@@ -1,3 +1,4 @@
+import { isFinalCta } from "../lib/hookBank";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_RULES } from "../lib/houseRules";
@@ -131,7 +132,7 @@ router.post("/ryder/copy", async (req: Request, res: Response) => {
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())
-      .filter((l) => l && !/^comment .* for more info\.?$/i.test(l) && !/^tag a friend who will get it\.?$/i.test(l) && !/drop me a dm|meet me in the dms|follow along\.?$/i.test(l))
+      .filter((l) => l && !isFinalCta(l) && !/drop me a dm|meet me in the dms|follow along\.?$/i.test(l))
       .join("\n");
     res.json({
       hook: clean(j.hook, 140),
