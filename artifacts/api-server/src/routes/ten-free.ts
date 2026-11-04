@@ -204,9 +204,11 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       /* none ticked */
     }
 
-    const key = emailKey(email);
-    const existing = await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
-    const sameClinic = await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} LIMIT 1`);
+    // Vanessa's own test addresses (vanessa+test1@thecybersuite.com or vanessaviking78+test1@gmail.com) skip the one free turn rule, so she can keep testing.
+    const isTest = /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
+    const key = isTest ? `${emailKey(email)}#test${Date.now()}` : emailKey(email);
+    const existing = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
+    const sameClinic = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} LIMIT 1`);
     if (existing.rows.length || sameClinic.rows.length) {
       res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
       return;
