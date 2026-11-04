@@ -93,7 +93,7 @@ export function loadSuiteFont(id: string): Promise<LoadedFont> {
   return p;
 }
 
-export type SwapRate = "off" | "starts" | "some" | "all";
+export type SwapRate = "off" | "starts" | "some" | "all" | "first"; // "first" curls only the very first letter of the title
 
 /** Everything that makes the title look the way it does. Saved once, used by every post. */
 export type TitleStyle = {
@@ -175,6 +175,11 @@ function shapeWord(lf: LoadedFont, word: string, style: TitleStyle, counts: Map<
     const ch = chars[i];
     const swapName = style.swaps[ch];
     if (!swapName || !data.chars[ch]) return g;
+    if (style.rate === "first") {
+      const done = counts.get("\u0000first") || 0;
+      if (i === 0) counts.set("\u0000first", done + 1);
+      return i === 0 && done === 0 ? byName.get(swapName) || g : g;
+    }
     const n = counts.get(ch) || 0;
     counts.set(ch, n + 1);
     const use = style.rate === "all" || (style.rate === "starts" && i === 0) || (style.rate === "some" && n % 3 === 0);
