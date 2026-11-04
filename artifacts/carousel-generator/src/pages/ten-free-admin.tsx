@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { TEN_PLAN, RELATABLE_IDS, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
+import { TEN_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { pickReels } from "@/lib/tenfree-reels";
@@ -25,7 +25,7 @@ const authHeaders = (): Record<string, string> => {
 
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
-  mainHex: string; accentHex: string; treatments: string[]; answers: { hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
+  mainHex: string; accentHex: string; treatments: string[]; answers: { age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
   logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string;
 };
 type Poll = { question: string; a: string; b: string };
@@ -231,10 +231,10 @@ function Builder({ id }: { id: string }) {
       const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
       const cursor = { at: 0 };
       const built = packSlots.map((s) => {
-        const relIds = RELATABLE_IDS.filter((id) => EMPOWER.some((e) => e.id === id));
+        const relIds = relatableFor(req.answers.age, /^(yes|grandma)/i.test(req.answers.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
         const design = s.design === "auto" ? uniqueIds[hashSeed(req.id) % uniqueIds.length] : s.design === "relatable" ? relIds[hashSeed(req.id + "relatable") % relIds.length] : s.design;
         const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length, !!s.preset || design === "gatecrasher");
-        const facts = `About me (the only facts you may use): hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
+        const facts = `About me (the only facts you may use): age group ${req.answers.age || "not given"} (never state it, and never use a memory or life stage that does not fit it); hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
         const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;
         sk.spec.idea = `${rel ? `${s.idea}, in the style of this template: ${rel.idea}` : s.idea}. ${facts}`;
         const slot = s.design === "relatable" ? { ...s, label: rel?.name || s.label, preset: design === "gatecrasher" ? GATECRASHER_PRESET : undefined } : s;
@@ -386,7 +386,7 @@ function Builder({ id }: { id: string }) {
         <div>{req.clinicianName} · {req.email} · {req.area} · @{req.handle}</div>
         <div>{req.website} {req.whatsapp && `· WhatsApp ${req.whatsapp}`}</div>
         <div>Ticked: {ticked || "nothing"}</div>
-        <div>Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
+        <div>Age: {req.answers.age || "not given"} · Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
         <div>Why: {req.answers.why}</div>
         <div>Three words: {req.answers.threeWords} · Passion: {req.answers.passion}</div>
         <div className="font-semibold">Studio portraits: {req.photoUrl ? (req.aiStatus === "ready" ? `${req.aiUrls.length} ready` : req.aiStatus === "failed" ? "failed" : "still being made") : "no photo sent"}

@@ -112,4 +112,15 @@ export const monthNameUK = (d = new Date()): string => d.toLocaleString("en-GB",
 // The relatable posts. Each clinic gets one of these, chosen from its request, so the free packs are not all the same.
 // Gatecrasher keeps the wording written for it. The others use their own template wording as the starting point.
 export const RELATABLE_IDS = ["gatecrasher", "heather", "knees", "mum", "nineties", "terrified", "smell", "playlist", "at25", "built-different", "hotter", "list-hotter", "nobody-warned", "whats-gone", "thousand", "film-title"];
+// The youngest age band a relatable design suits, because many lean on 90s memories, being 25 once, or being over 40.
+// Bands: Under 30, 30 to 37, 38 to 44, 45 to 54, 55 or over.
+const AGE_RANK: Record<string, number> = { "Under 30": 0, "30 to 37": 1, "38 to 44": 2, "45 to 54": 3, "55 or over": 4 };
+const RELATABLE_MIN: Record<string, number> = {
+  gatecrasher: 2, heather: 2, knees: 2, nineties: 2, smell: 2, at25: 2, "built-different": 2, "list-hotter": 2, hotter: 2, "nobody-warned": 2, mum: 0,
+};
+export function relatableFor(age: string | undefined, isMum: boolean): string[] {
+  const rank = age && age in AGE_RANK ? AGE_RANK[age] : 4;
+  const ok = RELATABLE_IDS.filter((id) => rank >= (RELATABLE_MIN[id] ?? 0) && (id !== "mum" || isMum));
+  return ok.length ? ok : ["playlist", "film-title", "thousand"];
+}
 export const GATECRASHER_PRESET = { head: "One minute you're at *Gatecrasher.* Next minute you're in *comfy slippers* reading a novel." };

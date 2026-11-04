@@ -175,6 +175,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       }
     }
     const answers = {
+      age: ["Under 30", "30 to 37", "38 to 44", "45 to 54", "55 or over"].includes(str(b.age, 20)) ? str(b.age, 20) : "",
       hobbies: str(b.hobbies, 400),
       mum: str(b.mum, 40),
       pets: str(b.pets, 200),
@@ -182,7 +183,7 @@ router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { 
       threeWords: str(b.threeWords, 120),
       passion: str(b.passion, 400),
     };
-    if (!answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets) {
+    if (!answers.age || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets) {
       res.status(400).json({ error: "Please answer every question about you, the posts are built from them" });
       return;
     }
@@ -423,7 +424,7 @@ router.post("/ten-free/site-notes", requireAuth, async (req: Request, res: Respo
 // The words
 // ---------------------------------------------------------------------------
 
-type Answers = { hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
+type Answers = { age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
 type ClinicIn = { name: string; owner?: string; area: string; treatments?: string[]; siteNotes?: string; month?: string };
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -459,6 +460,7 @@ function aboutBlock(c: ClinicIn, a: Answers): string {
     Array.isArray(c.treatments) && c.treatments.length ? `Treatments offered (never prescription only): ${c.treatments.map((t) => str(t, 60)).join(", ")}` : "",
     "",
     "WHAT THE CLINICIAN TOLD ME ABOUT HERSELF (the only facts about her you may use, never add anything else):",
+    a.age ? `- Her age group: ${str(a.age, 20)} (never state her age, but never write a memory, era or life stage that does not fit it, for example no 90s or schooldays nostalgia for someone under 38, and no talk of being over 40 unless she is)` : "",
     `- Hobbies: ${str(a.hobbies, 400)}`,
     `- Is she a mum: ${str(a.mum, 40)}`,
     `- Pets: ${str(a.pets, 200)}`,

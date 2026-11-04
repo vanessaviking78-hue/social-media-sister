@@ -107,7 +107,7 @@ async function toUsable(file: File): Promise<File> {
 }
 
 export default function TenFreePosts() {
-  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
+  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
   const [cols, setCols] = useState<Colours>({ main: "#c2185b", accent: "#1a1a1a" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
@@ -312,6 +312,16 @@ export default function TenFreePosts() {
               <h2>A bit about you</h2>
               <p className="sub">This is where the personality comes from, so be yourself.</p>
               <div className="tf-grid">
+                <div className="tf-f full">
+                  <span className="tf-l">How old are you?</span>
+                  <div className="tf-mum">
+                    {["Under 30", "30 to 37", "38 to 44", "45 to 54", "55 or over"].map((o) => (
+                      <button type="button" key={o} className={`tf-chip${f.age === o ? " on" : ""}`} onClick={() => setF((p) => ({ ...p, age: o }))}>
+                        {o}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {field("What are your hobbies?", "hobbies", { area: true, full: true, ph: "Wild swimming, bad reality TV, baking" })}
                 <div className="tf-f full">
                   <span className="tf-l">Are you a mum?</span>
