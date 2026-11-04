@@ -22,6 +22,7 @@ import Hairdressers from "@/pages/hairdressers";
 import BasicPosts from "@/pages/basic-posts";
 import Treatments from "@/pages/treatments";
 import No1Page from "@/pages/no1";
+import No1StaticsPage from "@/pages/no1-statics";
 import RyderPage from "@/pages/ryder";
 import UniversalPage from "@/pages/universal";
 import LisaPage from "@/pages/lisa";
@@ -195,6 +196,7 @@ function ProtectedRouter() {
       <Route path="/basic-posts" component={BasicPosts} />
       <Route path="/treatments" component={Treatments} />
       <Route path="/no1" component={No1Page} />
+      <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
       <Route path="/universal" component={UniversalPage} />
       <Route path="/lisa" component={LisaPage} />
