@@ -624,6 +624,31 @@ export default function UniversalPage() {
     }
   };
 
+  // Clears the whole photo library so a fresh set can go in. She presses it herself and confirms first.
+  const removeAllImages = async () => {
+    if (!lib.length) {
+      toast.info("There are no photos to remove");
+      return;
+    }
+    if (!window.confirm(`Remove all ${lib.length} photos from every treatment? This cannot be undone. The 10 free posts tool uses these photos too, so it will have none until you add new ones.`)) {
+      return;
+    }
+    setLibBusy(`Removing ${lib.length} photos`);
+    let failed = 0;
+    for (const img of lib) {
+      try {
+        const r = await fetch(`${BASE}/api/universal/images/${img.id}`, { method: "DELETE" });
+        if (!r.ok) failed++;
+      } catch {
+        failed++;
+      }
+    }
+    setLibBusy("");
+    await loadLib();
+    if (failed) toast.error(`${failed} photos could not be removed. Press the button again to retry`);
+    else toast.success("All photos removed. Add your new ones with the upload buttons");
+  };
+
   // What has already gone into the scheduler for this client
   const keyOf = (postKey: string) => `${preset?.id ?? 0}|${postKey}`;
   useEffect(() => {
@@ -958,6 +983,7 @@ export default function UniversalPage() {
               <div>
                 <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { uploadToTreatment(e.target.files); e.currentTarget.value = ""; }} />
                 <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => fileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-2" />Add photos to {treatment.name}</Button>
+                <Button size="sm" variant="destructive" className="ml-2" disabled={!!libBusy || !lib.length} onClick={removeAllImages}><Trash2 className="w-4 h-4 mr-2" />Remove ALL photos ({lib.length})</Button>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
