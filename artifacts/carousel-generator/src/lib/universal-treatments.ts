@@ -45,8 +45,6 @@ export const U_TREATMENTS: UTreatment[] = [
   t("exosomes", "regenerative", "Exosome therapy", "a serum", "Exosome treatments used alongside skin needling to support skin quality and recovery.", { mid: "exosome therapy", plural: false }),
   t("sculptra", "regenerative", "Sculptra", "filler", "Sculptra is a poly-L-lactic acid biostimulator that encourages the skin to support itself, with results that build gradually over a course of sessions. It is a collagen stimulating treatment, not an instant volume filler.", { mid: "Sculptra", plural: false }),
   t("biostimulators", "regenerative", "Biostimulators", "filler", "Collagen stimulating treatments that encourage the skin to support itself, gradually, over time.", { plural: true }),
-  t("polynucleotide-eyes", "regenerative", "Polynucleotide eye treatment", "eye cream", "Polynucleotides placed around the delicate eye area to support skin quality, hydration and a more rested look.", { mid: "the polynucleotide eye treatment", plural: false }),
-  t("rf-microneedling", "regenerative", "Radiofrequency microneedling", "microneedling", "Microneedling combined with radiofrequency energy to support skin firmness, texture and tone.", { mid: "radiofrequency microneedling", plural: false }),
   // Laser hair removal
   t("laser-hair-removal", "laser", "Laser hair removal", "shaving", "Laser treatment that reduces hair growth over a course of sessions, suitable areas and skin tones assessed at consultation.", { plural: false }),
   // Skin treatments

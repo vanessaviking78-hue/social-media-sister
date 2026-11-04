@@ -32,7 +32,7 @@ export const TEN_PLAN: TenSlot[] = [
 
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
 const INTERESTING = new Set([
-  "sculptra", "exosomes", "polynucleotide-eyes", "japanese-head-spa", "rf-microneedling", "hifu", "prf", "tear-trough-filler",
+  "sculptra", "exosomes", "japanese-head-spa", "hifu", "prf", "tear-trough-filler",
   "carbon-laser", "reiki", "biostimulators", "temple-filler", "hand-filler", "profhilo", "dermaplaning", "led", "ipl", "prp-hair", "nose-filler",
 ]);
 // The ones every clinic posts about, picked last.
