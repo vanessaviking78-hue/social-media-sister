@@ -164,6 +164,7 @@ import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
 import Photoshoot, { PhotosView } from "@/pages/photoshoot";
 import Shop from "@/pages/shop";
+import SecretShop from "@/pages/secretshop";
 import PhotoshootAdmin from "@/pages/photoshoot-admin";
 
 const queryClient = new QueryClient();
@@ -342,6 +343,7 @@ function AppContent() {
   const [isOver50] = useRoute("/over50");
   const [isPhotoshoot] = useRoute("/photoshoot");
   const [isShop] = useRoute("/shop");
+  const [isSecretShop] = useRoute("/secretshop");
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
@@ -469,6 +471,9 @@ function AppContent() {
   }
   if (isOver50) {
     return <Over50 />;
+  }
+  if (isSecretShop) {
+    return <SecretShop />;
   }
   if (isShop) {
     return <Shop />;

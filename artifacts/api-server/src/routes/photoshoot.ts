@@ -15,7 +15,7 @@ import { notifyOwner } from "../lib/notify";
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 4 } });
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
-const MIN_PENCE = 4900;
+const MIN_PENCE = 3000;
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -71,7 +71,7 @@ async function checkStripe(sessionId: string, minPence = MIN_PENCE, linkEnv = "P
     if (s.payment_status !== "paid") return { ok: false, code: 402, error: "That payment has not gone through yet." };
     if ((s.currency || "gbp") !== "gbp" || (s.amount_total ?? 0) < minPence) return { ok: false, code: 400, error: `That payment is not for the ${what}.` };
     const link = process.env[linkEnv];
-    if (link && s.payment_link !== link) return { ok: false, code: 400, error: `That payment is not for the ${what}.` };
+    if (link && !link.split(",").map((x) => x.trim()).includes(String(s.payment_link))) return { ok: false, code: 400, error: `That payment is not for the ${what}.` };
     return { ok: true, email: s.customer_details?.email || "", amount: s.amount_total ?? 0 };
   } catch {
     return { ok: false, code: 502, error: "I could not reach the payment system just now. Please try again in a minute." };
@@ -79,7 +79,7 @@ async function checkStripe(sessionId: string, minPence = MIN_PENCE, linkEnv = "P
 }
 
 router.get("/over50/verify/:sid", async (req: Request, res: Response) => {
-  const c = await checkStripe(str(req.params.sid, 120), 2400, "OVER50_PAYMENT_LINK_ID", "Women Over 50 bundle");
+  const c = await checkStripe(str(req.params.sid, 120), 1500, "OVER50_PAYMENT_LINK_ID", "Women Over 50 bundle");
   if (!c.ok) {
     res.status(c.code).json({ error: c.error });
     return;
