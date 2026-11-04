@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { BRAND } from "@/config/brand";
 import { SECRET, SECRET_GROUPS, type SecretItem } from "@/lib/secretshop-config";
 
 const PINK = "#ff1f8e";
@@ -33,12 +34,14 @@ export default function SecretShop() {
     document.head.appendChild(m);
     return () => { m.remove(); };
   }, []);
+  const thanks = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("thanks");
   const groups = Object.keys(SECRET_GROUPS) as SecretItem["group"][];
   return (
     <div className="sh"><style>{CSS}</style>
       <div className="sh-w">
         <div className="sh-k">Shh. You found it</div>
         <h1 className="sh-h1">The secret shop, <span>one of each</span></h1>
+        {thanks && <p className="sh-p" style={{ color: PINK }}>Thank you, that is yours. I will be in touch very soon with your contract and next steps.</p>}
         <p className="sh-p">These are my lowest prices and there is only one of each. Once someone has bought it, it is gone for good.</p>
         {groups.map((g) => {
           const items = SECRET.filter((i) => i.group === g);
@@ -49,13 +52,14 @@ export default function SecretShop() {
               <div className="sh-g">
                 {items.map((i) => (
                   <div key={i.name} className={`sh-c${i.sold ? " sold" : ""}`}>
-                    <span className="sh-t">{i.sold ? "Sold" : "Only 1"}</span>
+                    <span className="sh-t">{i.sold ? "Sold" : i.tag || "Only 1"}</span>
                     {i.image && <img className="sh-img" src={i.image} alt={i.name} />}
                     <div className="sh-n">{i.name}</div>
                     <div><span className="sh-pr">{i.price}</span><span className="sh-was">{i.was}</span></div>
-                    <div className="sh-l">{i.line}</div>
+                    <div className="sh-l">{i.line}{i.bullets && <ul style={{ margin: "10px 0 0", paddingLeft: 18 }}>{i.bullets.map((b) => <li key={b}>{b}</li>)}</ul>}</div>
                     {!i.sold && <a className="sh-b" href={i.url}>Grab it</a>}
                     {!i.sold && i.alt && <a className="sh-b alt" href={i.alt.url}>{i.alt.label}: {i.alt.price} <span className="sh-was">{i.alt.was}</span></a>}
+                    {!i.sold && i.bank && <a className="sh-b alt" href={`mailto:${BRAND.supportEmail}?subject=${encodeURIComponent("Full management, bank transfer")}&body=${encodeURIComponent("Hello Vanessa, I would like the 12 months for the price of 6 and would like to pay £3,000 by bank transfer. Please send me an invoice. My name, clinic and best phone number are: ")}`}>Prefer a bank transfer? Ask me for an invoice</a>}
                   </div>
                 ))}
               </div>
