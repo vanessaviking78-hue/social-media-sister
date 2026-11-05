@@ -2,6 +2,11 @@
 // so each clinic's own photo and bio drop straight in. Single 1080 x 1350 posts.
 import { W, H } from "./tenfree-engine";
 
+const hx = (h: string) => { const v = parseInt((h || "#d6006f").replace("#", "").padEnd(6, "0").slice(0, 6), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
+const mix = (h: string, to: number, t: number) => "#" + hx(h).map((x) => Math.round(x + (to - x) * t).toString(16).padStart(2, "0")).join("");
+const lumOf = (h: string) => { const [r, g, b] = hx(h).map((c) => { const x = c / 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+export type AboutColours = { main: string; accent: string };
+
 const HEAD = "Anton, 'Bebas Neue', Impact, sans-serif";
 
 let loaded: Promise<unknown> | null = null;
@@ -48,15 +53,15 @@ function justified(ctx: CanvasRenderingContext2D, lines: string[], x: number, y:
 }
 
 // Template 1: cream page, huge sage headline overlapping a tall photo, italic justified bio beside it.
-function templateCream(photo: ImageBitmap, bio: string, headline: string): HTMLCanvasElement {
+function templateCream(photo: ImageBitmap, bio: string, headline: string, col: AboutColours): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#FFFFF5"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = mix(col.main, 255, 0.94); ctx.fillRect(0, 0, W, H);
   cover(ctx, photo, 108, 418, 448, 824, 0.3);
   // headline stretched to the page width
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "#D9D9A8";
+  ctx.fillStyle = lumOf(col.accent) > 0.6 ? mix(col.accent, 0, 0.1) : mix(col.accent, 255, 0.3);
   ctx.font = `400 400px ${HEAD}`;
   const m = ctx.measureText(headline);
   const capH = m.actualBoundingBoxAscent;
@@ -67,7 +72,7 @@ function templateCream(photo: ImageBitmap, bio: string, headline: string): HTMLC
   ctx.fillText(headline, 0, 0);
   ctx.restore();
   // bio
-  ctx.fillStyle = "#1c1c1c";
+  ctx.fillStyle = mix(col.main, 0, 0.8);
   let size = 29, lines: string[] = [];
   for (; size >= 20; size -= 1) {
     ctx.font = `italic 400 ${size}px "League Spartan", sans-serif`;
@@ -79,13 +84,13 @@ function templateCream(photo: ImageBitmap, bio: string, headline: string): HTMLC
 }
 
 // Template 2: peach page, tall red headline running up the left, short bio top right, photo bottom right with the name signed across it.
-function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string, cutout?: ImageBitmap | null): HTMLCanvasElement {
+function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string, col: AboutColours, cutout?: ImageBitmap | null): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#E6BAA7"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = mix(col.accent, 255, 0.62); ctx.fillRect(0, 0, W, H);
   // vertical headline, reading upwards
-  ctx.fillStyle = "#C00423";
+  ctx.fillStyle = lumOf(col.main) > 0.35 ? mix(col.main, 0, 0.35) : col.main;
   ctx.font = `400 400px ${HEAD}`;
   const m = ctx.measureText(headline);
   const capH = m.actualBoundingBoxAscent;
@@ -124,7 +129,7 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
   ctx.restore();
   }
   // bio
-  ctx.fillStyle = "#3b1a12";
+  ctx.fillStyle = mix(col.main, 0, 0.8);
   ctx.textBaseline = "alphabetic";
   let size = 31, lines: string[] = [];
   for (; size >= 22; size -= 1) {
@@ -148,8 +153,8 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
 }
 
 export type AboutLayout = "cream" | "peach";
-export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; cutout?: ImageBitmap | null; bio: string; name: string; headline?: string }): Promise<HTMLCanvasElement> {
+export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; colours: AboutColours; cutout?: ImageBitmap | null; bio: string; name: string; headline?: string }): Promise<HTMLCanvasElement> {
   await loadAboutFonts();
   const head = o.headline || "ABOUT ME";
-  return o.layout === "cream" ? templateCream(o.photo, o.bio, head) : templatePeach(o.photo, o.bio, head, o.name, o.cutout);
+  return o.layout === "cream" ? templateCream(o.photo, o.bio, head, o.colours) : templatePeach(o.photo, o.bio, head, o.name, o.colours, o.cutout);
 }

@@ -5,6 +5,8 @@ import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
+import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
+import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { renderAboutPost } from "@/lib/about-designs";
 import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
@@ -28,7 +30,7 @@ const authHeaders = (): Record<string, string> => {
 
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
-  mainHex: string; accentHex: string; treatments: string[]; seq?: number; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
+  mainHex: string; accentHex: string; treatments: string[]; seq?: number; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; personality?: string; font?: string; passion: string };
   logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string; kind?: string; photos?: string[]; presetId?: number | null;
 };
 type Poll = { question: string; a: string; b: string };
@@ -88,7 +90,8 @@ type Item = {
 const HOOK_SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
 const HOOK_SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
 
-const PREMIUM_VOICE = "VOICE FOR THIS POST: professional with a cheeky streak. She knows her stuff and says it with a raised eyebrow. Write like a clever friend who happens to be the expert: dry, warm, a little naughty, never rude. Every slide should have one line a reader would screenshot or send to a friend, an unexpected comparison, a wry aside or a blunt truth said kindly. Short sentences, everyday words, no stock phrases and nothing that could sit on any clinic's page. No emojis, no dashes, no tea or biscuit jokes, no 'not X but Y' phrasing, no medical lecture.";
+const voiceFor = (personality?: string) => `VOICE FOR THIS POST: ${personality?.trim() ? `her own words for her personality are "${personality.trim()}". Write exactly like that person: if it says northern grit, plain talking, dry and warm with a bit of bite; super professional, polished and assured with the odd dry line; professional with personality, expert first with a wink; cute and girly, giggly and sweet with a sparkle; sassy and feral, loud, savage and funny.` : "professional with a cheeky streak. She knows her stuff and says it with a raised eyebrow."} Write like a clever friend who happens to be the expert. Every slide should have one line a reader would screenshot or send to a friend, an unexpected comparison, a wry aside or a blunt truth. Short sentences, everyday words, no stock phrases and nothing that could sit on any clinic's page. No emojis, no dashes, no tea or biscuit jokes, no 'not X but Y' phrasing, no medical lecture.`;
+const UNI_FONTS = PREMIUM_FONTS.map((f) => ({ id: f.id, label: f.name }));
 
 const HEAD_FONTS = [
   { id: "instrument", label: "Instrument Serif", css: "'Instrument Serif', serif" },
@@ -113,6 +116,7 @@ function Builder({ id }: { id: string }) {
   const [attaching, setAttaching] = useState(false);
   // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
   const [chosenT, setChosenT] = useState<string[]>([]);
+  const [uniFont, setUniFont] = useState<string>("hatcher");
   const [about, setAbout] = useState<Req["answers"] | null>(null);
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
@@ -160,6 +164,8 @@ function Builder({ id }: { id: string }) {
     if (!req) return;
     setChosenT((c) => (c.length ? c : req.treatments.slice(0, 3)));
     setAbout((a) => a ?? req.answers);
+    if (req.answers.font) setUniFont(req.answers.font);
+    injectSuiteFontCss();
   }, [req?.id]);
   useEffect(() => {
     if (req?.aiStatus !== "working") return;
@@ -220,7 +226,7 @@ function Builder({ id }: { id: string }) {
       setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
       const photoBlob = req.photoUrl ? await fetch(req.photoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
-      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob });
+      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob, titleFont: uniFont });
       assetsRef.current = assets;
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
@@ -306,7 +312,7 @@ function Builder({ id }: { id: string }) {
       }
       const tcopy: any[] = [];
       for (const p of picks) {
-        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: isPremium ? PREMIUM_VOICE : "" }));
+        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: isPremium ? voiceFor(ans.personality) : "" }));
       }
 
       setStatus("Drawing the posts...");
@@ -338,7 +344,7 @@ function Builder({ id }: { id: string }) {
               if (rr.ok) cutout = await createImageBitmap(await rr.blob());
             } catch { /* plain photo */ }
           }
-          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, bio: w.body || w.subtitle || "", name: req.clinicianName });
+          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName });
           ai++;
           out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
@@ -347,7 +353,7 @@ function Builder({ id }: { id: string }) {
           const text = hookTexts[hi] || "";
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
-          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: PREMIUM_VOICE });
+          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
           const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0] };
           hi++;
           const canvases = renderUniversalPost(args, assets);
@@ -525,7 +531,7 @@ function Builder({ id }: { id: string }) {
           <h2 className="font-bold uppercase">2. About me (2 posts)</h2>
           <p className="text-xs text-muted-foreground">Their answers are below. Tidy them up and the posts are written from exactly this.</p>
           <div className="grid md:grid-cols-2 gap-3 text-sm">
-            {([["hobbies", "Hobbies"], ["pets", "Pets"], ["why", "Why aesthetics"], ["threeWords", "Three words"], ["passion", "Passion"], ["mum", "Mum"]] as const).map(([k, label]) => (
+            {([["hobbies", "Hobbies"], ["pets", "Pets"], ["why", "Why aesthetics"], ["threeWords", "Three words"], ["personality", "Personality (the voice)"], ["passion", "Passion"], ["mum", "Mum"]] as const).map(([k, label]) => (
               <label key={k} className="flex flex-col gap-1"><span className="font-semibold">{label}</span>
                 <textarea rows={k === "why" || k === "passion" ? 3 : 2} className="border rounded p-2" value={(about as Record<string, string>)[k] ?? ""} onChange={(e) => setAbout({ ...about, [k]: e.target.value })} />
               </label>
@@ -566,6 +572,14 @@ function Builder({ id }: { id: string }) {
           )}
         </div>
       )}
+      {req?.kind === "premium" && (
+        <div className="flex gap-2 items-center flex-wrap">
+          <span className="text-sm font-semibold">Headline font on the carousels (choose before you build):</span>
+          {UNI_FONTS.map((f) => (
+            <button key={f.id} onClick={() => setUniFont(f.id)} className={`px-3 py-1.5 rounded border text-sm ${uniFont === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`}>{f.label}</button>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2 items-center flex-wrap">
         <span className="text-sm font-semibold">Headline font for every post:</span>
         {HEAD_FONTS.map((f) => (
@@ -603,7 +617,10 @@ function Builder({ id }: { id: string }) {
       <div className="grid gap-6 md:grid-cols-2">
         {items.map((it) => (
           <div key={it.n} className="border rounded-xl p-3 space-y-2">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
+            <div className="flex justify-between items-center">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
+              <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
+            </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}

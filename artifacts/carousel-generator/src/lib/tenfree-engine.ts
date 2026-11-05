@@ -1,6 +1,6 @@
 import { BASE_TITLE, DEFAULT_LOOK, drawSlide, ensureFonts, type Look, type Photo, type Post, type TitleFont } from "@/pages/universal";
 import opentype from "opentype.js";
-import { drawTitle, layoutTitle, titleHeight, type LoadedFont } from "./suite-fonts";
+import { drawTitle, layoutTitle, titleHeight, loadSuiteFont, type LoadedFont } from "./suite-fonts";
 import { loadImage } from "./sample-post";
 import { logoLuma, makeClearLogo, recolourLogo } from "./logo-clear";
 
@@ -111,7 +111,13 @@ function loadHatcher(): Promise<LoadedFont> {
   }
   return hatcherP;
 }
-export async function buildTitleFont(): Promise<TitleFont> {
+export async function buildTitleFont(fontId = "hatcher"): Promise<TitleFont> {
+  if (fontId !== "hatcher") {
+    try {
+      const lf = await loadSuiteFont(fontId);
+      return { lf, style: { ...BASE_TITLE, fontId, tracking: 10, swaps: {}, rate: "off" } };
+    } catch { /* falls back to Hatcher */ }
+  }
   const lf = await loadHatcher();
   return { lf, style: { ...BASE_TITLE, fontId: "hatcher", tracking: 10, swaps: {}, rate: "off" } };
 }
@@ -134,11 +140,11 @@ function textLogoCanvas(name: string): HTMLCanvasElement {
   return c;
 }
 
-export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null }): Promise<Assets> {
+export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null; titleFont?: string }): Promise<Assets> {
   await ensureFonts();
   await loadSoft();
   await loadPlayfair();
-  const tf = await buildTitleFont();
+  const tf = await buildTitleFont(o.titleFont);
   let logo: HTMLCanvasElement | null = null;
   if (o.logoBlob) {
     try {

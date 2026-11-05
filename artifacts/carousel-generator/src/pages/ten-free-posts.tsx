@@ -1,3 +1,5 @@
+import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
+import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
@@ -108,7 +110,8 @@ async function toUsable(file: File): Promise<File> {
 }
 
 export default function TenFreePosts({ premium = false }: { premium?: boolean }) {
-  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
+  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", personality: "", font: "hatcher", passion: "" });
+  useEffect(() => { injectSuiteFontCss(); }, []);
   const [cols, setCols] = useState<Colours>({ main: "#c2185b", accent: "#1a1a1a" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
@@ -416,6 +419,24 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
                 {field("What made you get into aesthetics?", "why", { area: true, full: true })}
                 {field("Describe yourself in 3 words", "threeWords", { ph: "Warm, honest, nosy" })}
                 {field("What is your passion in life?", "passion", { area: true, full: true })}
+                {premium && (
+                  <>
+                    <div className="tf-f full">
+                      <span className="tf-l">Pick the font for your headlines</span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {PREMIUM_FONTS.map((ft) => (
+                          <button type="button" key={ft.id} onClick={() => setF((x) => ({ ...x, font: ft.id }))} className="tf-in" style={{ width: "auto", cursor: "pointer", fontFamily: `"${ft.family}", serif`, fontSize: 22, outline: f.font === ft.id ? "2px solid #e6007e" : "none" }}>{ft.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                    {field("Describe your personality, this is the voice your posts will be written in", "personality", { area: true, full: true, ph: "Northern grit, super professional, professional with personality, cute and girly, sassy and feral... or say it your own way" })}
+                    <div className="tf-f full" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {["Northern grit", "Super professional", "Professional with personality", "Cute and girly", "Sassy and feral"].map((v) => (
+                        <button type="button" key={v} className="tf-in" style={{ width: "auto", cursor: "pointer" }} onClick={() => setF((x) => ({ ...x, personality: v }))}>{v}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
