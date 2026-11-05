@@ -14,6 +14,7 @@ const INK = "#111111";
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@900&display=swap');
 .tf, .tf * { font-family: 'League Spartan', sans-serif !important; font-weight: 900 !important; box-sizing: border-box; }
+${PREMIUM_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; }`).join("\n")}
 .tf { background: #fff; color: ${INK}; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 .tf ::placeholder { color: #b9b9b9; font-weight: 900; }
 .tf-wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
@@ -425,7 +426,7 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
                       <span className="tf-l">Pick the font for your headlines</span>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         {PREMIUM_FONTS.map((ft) => (
-                          <button type="button" key={ft.id} onClick={() => setF((x) => ({ ...x, font: ft.id }))} className="tf-in" style={{ width: "auto", cursor: "pointer", fontFamily: `"${ft.family}", serif`, fontSize: 22, outline: f.font === ft.id ? "2px solid #e6007e" : "none" }}>{ft.name}</button>
+                          <button type="button" key={ft.id} onClick={() => setF((x) => ({ ...x, font: ft.id }))} className={`tf-in ff-${ft.id}`} style={{ width: "auto", cursor: "pointer", fontSize: 26, outline: f.font === ft.id ? "2px solid #e6007e" : "none" }}>{ft.name}</button>
                         ))}
                       </div>
                     </div>
