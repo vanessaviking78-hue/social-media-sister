@@ -79,7 +79,8 @@ function templateCream(photo: ImageBitmap, bio: string, headline: string, col: A
     lines = wrap(ctx, bio, 387);
     if (lines.length * size * 1.3 <= 640) break;
   }
-  justified(ctx, lines, 585, 620, 387, size * 1.3);
+  ctx.textAlign = "left";
+  lines.forEach((ln, i) => ctx.fillText(ln, 585, 620 + i * size * 1.3));
   return c;
 }
 
