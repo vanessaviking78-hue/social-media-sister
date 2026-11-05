@@ -258,7 +258,7 @@ export function universalLook(a: Assets): Look {
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
-export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[] }, a: Assets): HTMLCanvasElement[] {
+export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number }, a: Assets): HTMLCanvasElement[] {
   const post: Post = {
     id: `${o.treatmentId}-${o.angle}`,
     key: `${o.treatmentId}:${o.angle + 1}`,
@@ -276,7 +276,7 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     busy: false,
     scheduling: false,
   };
-  const look = universalLook(a);
+  const look = { ...universalLook(a), blockY: o.blockY || 0 };
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < 5; n++) {
     const c = document.createElement("canvas");

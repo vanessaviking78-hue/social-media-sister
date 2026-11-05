@@ -82,7 +82,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[] }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
@@ -620,6 +620,16 @@ function Builder({ id }: { id: string }) {
                   className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
+            {req.kind === "premium" && it.uniArgs && assetsRef.current && (
+              <label className="flex items-center gap-3 text-xs text-muted-foreground">Headline and writing position (drag up or down)
+                <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0}
+                  onChange={(e) => {
+                    const args = { ...it.uniArgs!, blockY: Number(e.target.value) };
+                    const cvs = renderUniversalPost(args, assetsRef.current!);
+                    patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+                  }} />
+              </label>
+            )}
             {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>

@@ -34,7 +34,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -255,21 +255,27 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
 
-  // Premium freebies carry the hook headline at the top of every slide after the cover.
-  const headerBottom = (): number => {
-    if (!look.left || !tf || !post.headline) return 0;
+  // Premium freebies carry the hook headline on every slide after the cover, in the lower third with the writing under it.
+  // look.blockY slides that whole block up (negative) or down (positive) so she can place it.
+  const headLayout = () => {
+    if (!look.left || !tf || !post.headline) return null;
     let size = Math.round(64 * ts);
     let lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1);
     while (size > 36 && titleHeight(lay) > 230) { size -= 4; lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1); }
-    ctx.save();
-    const shade = ctx.createLinearGradient(0, 0, 0, 420);
-    shade.addColorStop(0, "rgba(0,0,0,0.45)");
-    shade.addColorStop(1, "rgba(0,0,0,0)");
-    if (n !== 4) { ctx.fillStyle = shade; ctx.fillRect(0, 0, W, 420); }
-    ctx.restore();
-    drawTitle(ctx, tf.lf, lay, tf.style, 100, 90, "left", W - 200, inkPaint(ctx, ink, 90, titleHeight(lay)));
+    return lay;
+  };
+  const stackTop = (blockH: number) => Math.min(H - 60 - blockH, Math.max(60, H - 150 - blockH + (look.blockY || 0)));
+  const bottomShade = () => {
+    const sh = ctx.createLinearGradient(0, H * 0.3, 0, H);
+    sh.addColorStop(0, "rgba(0,0,0,0)");
+    sh.addColorStop(1, "rgba(0,0,0,0.5)");
+    ctx.fillStyle = sh;
+    ctx.fillRect(0, H * 0.3, W, H * 0.7);
+  };
+  const drawHead = (lay: ReturnType<typeof headLayout>, y: number) => {
+    if (!lay || !tf) return;
+    drawTitle(ctx, tf.lf, lay, tf.style, 100, y, "left", W - 200, inkPaint(ctx, ink, y, titleHeight(lay)));
     ctx.textAlign = "left";
-    return 90 + titleHeight(lay);
   };
 
   if (n === 4) {
@@ -282,12 +288,20 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       ctx.fillStyle = solidFill(ctx, look.wash);
     }
     ctx.fillRect(0, 0, W, H);
-    headerBottom();
     ctx.fillStyle = inkPaint(ctx, ink, H / 2 - 200, 400);
     ctx.textAlign = "left";
     const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
     const total = fit.lines.length * fit.px * 1.25;
+    const hl4 = headLayout();
+    const hH4 = hl4 ? titleHeight(hl4) : 0;
     let y = (H - total) / 2 - 20;
+    if (hl4) {
+      const blockH = hH4 + 30 + total + 40;
+      const t0 = stackTop(blockH);
+      drawHead(hl4, t0);
+      ctx.fillStyle = inkPaint(ctx, ink, t0, blockH);
+      y = t0 + hH4 + 30;
+    }
     ctx.font = body(fit.px, 600);
     for (const l of fit.lines) {
       ctx.fillText(l, LEFT, y);
@@ -351,12 +365,19 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   }
 
   wash(ctx, 0.3, look);
-  const hb = headerBottom();
+  if (look.left) bottomShade();
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
-  let y = top ? Math.max(190, hb + 40) : H - 170 - total;
+  let y = top ? 190 : H - 170 - total;
+  const hl = headLayout();
+  if (hl) {
+    const hH = titleHeight(hl);
+    const t0 = stackTop(hH + 26 + total);
+    drawHead(hl, t0);
+    y = t0 + hH + 26;
+  }
   ctx.fillStyle = inkPaint(ctx, ink, y, total);
   ctx.font = body(fit.px);
   for (const l of fit.lines) {
