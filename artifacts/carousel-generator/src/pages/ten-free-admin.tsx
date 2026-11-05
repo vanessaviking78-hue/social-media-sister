@@ -82,7 +82,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
@@ -116,6 +116,7 @@ function Builder({ id }: { id: string }) {
   const [attaching, setAttaching] = useState(false);
   // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
   const [chosenT, setChosenT] = useState<string[]>([]);
+  const [textHex, setTextHex] = useState<string>("");
   const [uniFont, setUniFont] = useState<string>("hatcher");
   const [about, setAbout] = useState<Req["answers"] | null>(null);
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
@@ -461,6 +462,19 @@ function Builder({ id }: { id: string }) {
     redraw(d.n, d.i);
   };
 
+  // Premium: one text colour for every carousel (blank means each post picks the colour that reads best on its gradient).
+  const applyTextColour = (hex: string) => {
+    setTextHex(hex);
+    const assets = assetsRef.current;
+    if (!assets) return;
+    for (const it of itemsRef.current) {
+      if (!it.uniArgs) continue;
+      const args = { ...it.uniArgs, textColour: hex || undefined };
+      const cvs = renderUniversalPost(args, assets);
+      patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+    }
+  };
+
   const publish = async () => {
     const client = clientRef.current;
     const assets = assetsRef.current;
@@ -570,6 +584,16 @@ function Builder({ id }: { id: string }) {
           {pickedHooks.length > 0 && (
             <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>
           )}
+        </div>
+      )}
+      {req?.kind === "premium" && items.length > 0 && (
+        <div className="flex gap-2 items-center flex-wrap">
+          <span className="text-sm font-semibold">Text colour on the carousels:</span>
+          <input type="color" value={textHex || "#ffffff"} onChange={(e) => applyTextColour(e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
+          {[["White", "#ffffff"], ["Black", "#111111"], ["Their main", req.mainHex], ["Their accent", req.accentHex]].map(([label, hex]) => (
+            <button key={label} onClick={() => applyTextColour(hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full border" style={{ background: hex }} />{label}</button>
+          ))}
+          <button onClick={() => applyTextColour("")} className={`px-2 py-1 rounded border text-xs ${textHex ? "" : "bg-pink-500 text-white border-pink-500"}`}>Auto</button>
         </div>
       )}
       {req?.kind !== "premium" && <div className="flex gap-2 items-center flex-wrap">
