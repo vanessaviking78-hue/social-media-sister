@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
+import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
+import { LUX_SLIDE_DEFS } from "@/lib/lux-designs";
 import { HOOKS as HOOK_BANK, HOOK_DAYS, hookTiming, pickedHookPayload, startOfDay, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
@@ -79,7 +81,7 @@ function List() {
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
   post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[] }; caption: string; tags: string; previews: string[];
-  poll: Poll & { instruction: string };
+  poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
 const HEAD_FONTS = [
@@ -103,6 +105,11 @@ function Builder({ id }: { id: string }) {
   const [pickedHooks, setPickedHooks] = useState<string[]>([]);
   const [hookDay, setHookDay] = useState<string>("Any day");
   const [attaching, setAttaching] = useState(false);
+  // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
+  const [chosenT, setChosenT] = useState<string[]>([]);
+  const [about, setAbout] = useState<Req["answers"] | null>(null);
+  const [aboutDesigns, setAboutDesigns] = useState<[number, number]>([0, 3]);
+  const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
   const itemsRef = useRef<Item[]>([]);
@@ -145,6 +152,11 @@ function Builder({ id }: { id: string }) {
   }, [id]);
   useEffect(() => { loadReq(); }, [loadReq]);
   useEffect(() => {
+    if (!req) return;
+    setChosenT((c) => (c.length ? c : req.treatments.slice(0, 3)));
+    setAbout((a) => a ?? req.answers);
+  }, [req?.id]);
+  useEffect(() => {
     if (req?.aiStatus !== "working") return;
     const t = setInterval(loadReq, 10000);
     return () => clearInterval(t);
@@ -172,6 +184,10 @@ function Builder({ id }: { id: string }) {
 
   const build = async () => {
     if (!req) return;
+    if (req.kind === "premium" && chosenT.length !== 3) {
+      toast.error(`Please pick exactly 3 treatments first. You have ${chosenT.length}.`);
+      return;
+    }
     if (req.kind === "premium" && pickedHooks.length !== 5) {
       toast.error(`Please tick exactly 5 hooks first. You have ${pickedHooks.length}.`);
       return;
@@ -182,13 +198,16 @@ function Builder({ id }: { id: string }) {
       setStatus("Reading the website...");
       let siteNotes = "";
       if (req.website) siteNotes = (await post("/ten-free/site-notes", { url: req.website }).catch(() => ({ notes: "" }))).notes || "";
-      const clinic = { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: req.treatments, siteNotes, month: monthNameUK() };
+      const isPremium = req.kind === "premium";
+      const tList = isPremium ? chosenT : req.treatments;
+      const ans = isPremium && about ? about : req.answers;
+      const clinic = { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, siteNotes, month: monthNameUK() };
 
       setStatus("Getting the photo library...");
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(req.treatments, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0);
+      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0);
       if (picks.length < 3) throw new Error("None of the treatments she ticked have photos in the Universal library");
       const distinct = new Set(picks.map((p) => p.treatment.id)).size;
       if (distinct < 3) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
@@ -201,7 +220,6 @@ function Builder({ id }: { id: string }) {
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
       const pool: PoolPhoto[] = [];
-      const isPremium = req.kind === "premium";
       const plan = isPremium ? PREMIUM_PLAN : TEN_PLAN;
       // Premium: her two AI portraits first, then the three photos the clinic sent. The free version has the AI portraits and the one photo.
       const sources = [...(req.aiUrls ?? []), ...(isPremium ? (req.photos ?? []) : req.photoUrl ? [req.photoUrl] : [])];
@@ -241,12 +259,13 @@ function Builder({ id }: { id: string }) {
       const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
       const packSlots = plan.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
       const cursor: { at: number; hookBase?: number; forced?: string[] } = { at: 0, hookBase: (req.seq ?? 0) * 5 };
-      if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, req.treatments, req.area.split(",")[0].trim()).map((h) => h.text);
+      if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text);
       const built = packSlots.map((s) => {
-        const relIds = relatableFor(req.answers.age, /^(yes|grandma)/i.test(req.answers.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
-        const design = s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
+        const relIds = relatableFor(ans.age, /^(yes|grandma)/i.test(ans.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
+        const aboutIdx = isPremium && s.kind === "lux" ? PREMIUM_PLAN.filter((x) => x.source === "pack" && x.kind === "lux").findIndex((x) => x.n === s.n) : -1;
+        const design = aboutIdx >= 0 ? String(aboutDesigns[aboutIdx]) : s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
         const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length, !!s.preset || design === "gatecrasher");
-        const facts = `About me (the only facts you may use): age group ${req.answers.age || "not given"} (never state it, and never use a memory or life stage that does not fit it); hobbies ${req.answers.hobbies}; mum: ${req.answers.mum}; pets: ${req.answers.pets}; why I got into aesthetics: ${req.answers.why}; three words: ${req.answers.threeWords}; passion: ${req.answers.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
+        const facts = `About me (the only facts you may use): age group ${ans.age || "not given"} (never state it, and never use a memory or life stage that does not fit it); hobbies ${ans.hobbies}; mum: ${ans.mum}; pets: ${ans.pets}; why I got into aesthetics: ${ans.why}; three words: ${ans.threeWords}; passion: ${ans.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
         const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;
         sk.spec.idea = `${rel ? `${s.idea}, in the style of this template: ${rel.idea}` : s.idea}. ${facts}`;
         const slot = s.design === "relatable" ? { ...s, label: rel?.name || s.label, preset: design === "gatecrasher" ? GATECRASHER_PRESET : undefined } : s;
@@ -257,7 +276,7 @@ function Builder({ id }: { id: string }) {
       for (let i = 0; i < built.length; i += 4) {
         setStatus(`Writing the posts... ${Math.min(i + 4, built.length)} of ${built.length}`);
         const chunk = built.slice(i, i + 4);
-        const j = await post("/post-packs/copy", { clinic: { name: req.clinicName, owner, role: "Aesthetic practitioner", area: req.area, treatments: req.treatments }, items: chunk.map((b) => ({ n: b.spec.n, kind: b.spec.kind, idea: b.spec.idea, fields: b.spec.fields, current: b.spec.current, photoSlides: b.spec.photoSlides })) });
+        const j = await post("/post-packs/copy", { clinic: { name: req.clinicName, owner, role: "Aesthetic practitioner", area: req.area, treatments: tList }, items: chunk.map((b) => ({ n: b.spec.n, kind: b.spec.kind, idea: b.spec.idea, fields: b.spec.fields, current: b.spec.current, photoSlides: b.spec.photoSlides })) });
         if (!tagsA && j.tagsA) tagsA = j.tagsA;
         if (!tagsB && j.tagsB) tagsB = j.tagsB;
         for (const r of j.items as CopyResult[]) {
@@ -288,7 +307,7 @@ function Builder({ id }: { id: string }) {
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
           const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0] };
           const canvases = renderUniversalPost(uniArgs, assets);
-          out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
+          out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, libUrls: urls.slice(0, 12), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
         } else {
           const pp = finalPack.find((x) => x.n === slot.n)!;
@@ -298,7 +317,7 @@ function Builder({ id }: { id: string }) {
       }
 
       setStatus("Picking the 10 reels and writing the story polls...");
-      const extras = await post("/ten-free/extras", { clinic, answers: req.answers, posts: out.map((o) => ({ n: o.n, label: o.label })) });
+      const extras = await post("/ten-free/extras", { clinic, answers: ans, posts: out.map((o) => ({ n: o.n, label: o.label })) });
       setHooks(pickReels(10));
       for (const o of out) {
         const pl = (extras.polls || []).find((x: any) => x.n === o.n);
@@ -341,6 +360,19 @@ function Builder({ id }: { id: string }) {
     if (!it.uniArgs || !assets || i > 3 || it.uniArgs.photos.length < 2) return;
     const shift = [...it.uniArgs.shift];
     shift[i] = (shift[i] || 0) + 1;
+    const args = { ...it.uniArgs, shift };
+    const cvs = renderUniversalPost(args, assets);
+    patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+  };
+  // Premium: choose exactly which library photo goes in a slide. The slide picks library photo number (angle*4 + slide + offset + shift) so the shift is worked out to land on the one she clicks.
+  const pickPhoto = (it: Item, i: number, k: number) => {
+    const assets = assetsRef.current;
+    if (!it.uniArgs || !assets) return;
+    const len = it.uniArgs.photos.length;
+    if (!len) return;
+    const base = it.uniArgs.angle * 4 + i + it.uniArgs.offset;
+    const shift = [...it.uniArgs.shift];
+    shift[i] = (((k - base) % len) + len) % len;
     const args = { ...it.uniArgs, shift };
     const cvs = renderUniversalPost(args, assets);
     patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
@@ -419,8 +451,47 @@ function Builder({ id }: { id: string }) {
       </div>
       {req.kind === "premium" && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
+          <h2 className="font-bold uppercase">1. The 3 treatments <span className="text-pink-500">({chosenT.length} of 3)</span></h2>
+          <p className="text-xs text-muted-foreground">They ticked: {ticked || "nothing"}. Change them if you like. Every Universal treatment is here, with its photos.</p>
+          {U_GROUPS.map((g) => (
+            <div key={g.id}>
+              <div className="text-xs font-semibold uppercase text-pink-500 mb-1">{g.label}</div>
+              <div className="flex flex-wrap gap-2">
+                {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
+                  const on = chosenT.includes(t.name);
+                  return <button key={t.id} disabled={!on && chosenT.length >= 3} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= 3 ? "opacity-40" : ""}`}>{t.name}</button>;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {req.kind === "premium" && about && (
+        <div className="border-2 border-black rounded-lg p-4 space-y-3">
+          <h2 className="font-bold uppercase">2. About me (2 posts)</h2>
+          <p className="text-xs text-muted-foreground">Their answers are below. Tidy them up and the posts are written from exactly this.</p>
+          <div className="grid md:grid-cols-2 gap-3 text-sm">
+            {([["hobbies", "Hobbies"], ["pets", "Pets"], ["why", "Why aesthetics"], ["threeWords", "Three words"], ["passion", "Passion"], ["mum", "Mum"]] as const).map(([k, label]) => (
+              <label key={k} className="flex flex-col gap-1"><span className="font-semibold">{label}</span>
+                <textarea rows={k === "why" || k === "passion" ? 3 : 2} className="border rounded p-2" value={(about as Record<string, string>)[k] ?? ""} onChange={(e) => setAbout({ ...about, [k]: e.target.value })} />
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-4 flex-wrap text-sm">
+            {[0, 1].map((idx) => (
+              <label key={idx} className="flex items-center gap-2"><span className="font-semibold">About me post {idx + 1} design</span>
+                <select className="border rounded p-1" value={aboutDesigns[idx]} onChange={(e) => setAboutDesigns((d) => (idx === 0 ? [Number(e.target.value), d[1]] : [d[0], Number(e.target.value)]))}>
+                  {LUX_SLIDE_DEFS.map((d, i) => <option key={i} value={i}>{d.name}</option>)}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+      {req.kind === "premium" && (
+        <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="font-bold uppercase">Pick the 5 hooks <span className="text-pink-500">({pickedHooks.length} of 5)</span></h2>
+            <h2 className="font-bold uppercase">3. Pick the 5 hooks <span className="text-pink-500">({pickedHooks.length} of 5)</span></h2>
             {pickedHooks.length > 0 && <button className="text-sm underline" onClick={() => setPickedHooks([])}>Clear</button>}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -431,7 +502,7 @@ function Builder({ id }: { id: string }) {
           <div className="max-h-96 overflow-y-auto space-y-1">
             {HOOK_BANK.filter((h: Hook) => h.day === hookDay && hookTiming(h, startOfDay(new Date())).ok).map((h: Hook) => {
               const on = pickedHooks.includes(h.code);
-              const shown = pickedHookPayload([h.code], req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
+              const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
               return (
                 <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
                   <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= 5} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
@@ -441,7 +512,7 @@ function Builder({ id }: { id: string }) {
             })}
           </div>
           {pickedHooks.length > 0 && (
-            <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>
+            <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>
           )}
         </div>
       )}
@@ -486,10 +557,18 @@ function Builder({ id }: { id: string }) {
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
-                  onClick={() => swapPhoto(it, i)} title={it.uniArgs && i <= 3 ? "Click to swap the photo" : undefined}
+                  onClick={() => (req?.kind === "premium" && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (req?.kind === "premium" ? "Click to choose the photo" : "Click to swap the photo") : undefined}
                   className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
+            {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
+              <div className="space-y-1">
+                <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {(it.libUrls ?? []).map((u, k) => <img key={u} src={u} onClick={() => pickPhoto(it, sel.i, k)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                </div>
+              </div>
+            )}
             {it.post?.kind === "empower" && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <label className="flex items-center gap-2">Zoom the photo
