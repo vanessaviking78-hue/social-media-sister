@@ -34,7 +34,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -365,7 +365,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   }
 
   wash(ctx, 0.3, look);
-  if (look.left) bottomShade();
+  if (look.left && !look.noShade) bottomShade();
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);

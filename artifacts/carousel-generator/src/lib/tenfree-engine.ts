@@ -94,6 +94,8 @@ export type Assets = {
   tf: TitleFont;
   /** premium freebies: Montserrat, everything left aligned */
   premium?: boolean;
+  /** the clinic's own two brand colours, for the alternate look */
+  colours?: { main: string; accent: string };
 };
 
 // The headline font on the three treatment carousels is Hatcher, loaded from the same files her NO 1 page uses. It has no curly
@@ -169,7 +171,7 @@ export async function buildAssets(o: { main: string; accent: string; clinicName:
   const forDark = logoLuma(logo) < 0.75 ? recolourLogo(logo, "#ffffff") : logo;
   const logoImg = await loadImage(forDark.toDataURL("image/png")).catch(() => null);
   const photo = o.photoBlob ? await createImageBitmap(o.photoBlob).catch(() => null) : null;
-  return { brand: makeBrand(o.main, o.accent), logo: forDark, logoImg, photo, handle: o.handle.replace(/^@/, ""), whatsapp: o.whatsapp.trim(), tf, premium: o.premium };
+  return { brand: makeBrand(o.main, o.accent), logo: forDark, logoImg, photo, handle: o.handle.replace(/^@/, ""), whatsapp: o.whatsapp.trim(), tf, premium: o.premium, colours: { main: o.main, accent: o.accent } };
 }
 
 // ---------- drawing helpers ----------
@@ -258,7 +260,7 @@ export function universalLook(a: Assets): Look {
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
-export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number }, a: Assets): HTMLCanvasElement[] {
+export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number; variant?: number }, a: Assets): HTMLCanvasElement[] {
   const post: Post = {
     id: `${o.treatmentId}-${o.angle}`,
     key: `${o.treatmentId}:${o.angle + 1}`,
@@ -276,7 +278,16 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     busy: false,
     scheduling: false,
   };
-  const look = { ...universalLook(a), blockY: o.blockY || 0 };
+  let look: Look = { ...universalLook(a), blockY: o.blockY || 0 };
+  // Alternate look: a bright gradient in the clinic's own accent colour with text that contrasts with it, so a run of posts swaps between dark and bright.
+  if (o.variant === 1 && a.colours) {
+    let wash = a.colours.accent;
+    if (lum(wash) > 0.5) wash = darkenTo(wash, 0.45);
+    if (lum(wash) < 0.08) wash = lightenTo(wash, 0.1);
+    let grad = darkenTo(a.colours.main, 0.3);
+    if (dist(wash, grad) < 60) grad = mixHex(wash, "#000000", 0.35);
+    look = { ...look, wash, grad, text: lum(wash) > 0.3 ? a.brand.deep : "#ffffff", noShade: true };
+  }
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < 5; n++) {
     const c = document.createElement("canvas");

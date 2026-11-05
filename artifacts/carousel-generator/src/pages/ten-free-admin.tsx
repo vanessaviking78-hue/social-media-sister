@@ -82,7 +82,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
@@ -327,7 +327,7 @@ function Builder({ id }: { id: string }) {
         aboutBmps = (await Promise.all(pool.map((p) => createImageBitmap(p.file).catch(() => null)))).filter((x): x is ImageBitmap => !!x);
       }
       const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
-      let ai = 0, hi = 0;
+      let ai = 0, hi = 0, vi = 0;
       const out: Item[] = [];
       let ti = 0;
       for (const slot of plan) {
@@ -354,7 +354,7 @@ function Builder({ id }: { id: string }) {
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
           const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
-          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0] };
+          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0 };
           hi++;
           const canvases = renderUniversalPost(args, assets);
           out.push({ n: slot.n, label: "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
@@ -365,7 +365,7 @@ function Builder({ id }: { id: string }) {
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0] };
+          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0 };
           const canvases = renderUniversalPost(uniArgs, assets);
           out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, libUrls: urls.slice(0, 12), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
