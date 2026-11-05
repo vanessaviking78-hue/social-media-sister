@@ -24,6 +24,7 @@ import Treatments from "@/pages/treatments";
 import No1Page from "@/pages/no1";
 import No1StaticsPage from "@/pages/no1-statics";
 import RyderPage from "@/pages/ryder";
+import ClarePage from "@/pages/clare";
 import UniversalPage from "@/pages/universal";
 import LisaPage from "@/pages/lisa";
 import CastlePage from "@/pages/castle";
@@ -202,6 +203,7 @@ function ProtectedRouter() {
       <Route path="/no1" component={No1Page} />
       <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
+      <Route path="/clare" component={ClarePage} />
       <Route path="/universal" component={UniversalPage} />
       <Route path="/lisa" component={LisaPage} />
       <Route path="/castle" component={CastlePage} />
