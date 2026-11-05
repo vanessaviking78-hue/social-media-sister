@@ -30,6 +30,19 @@ export const TEN_PLAN: TenSlot[] = [
     idea: "a nostalgic, funny, relatable post for women over 35" },
 ];
 
+// PREMIUM FREEBIES: three Universal treatment carousels, two about me carousels and five hook posts whose words are hooks Vanessa picks from the bank.
+// The hook posts are photo posts with the hook as the headline. Everything is drawn from the same designs her paying clients get.
+export const PREMIUM_PLAN: TenSlot[] = [
+  { n: 1, label: "Treatment carousel", carousel: true, source: "universal" },
+  { n: 2, label: "About me", carousel: true, source: "pack", kind: "lux", design: "0",
+    idea: "a carousel that introduces me as a person, built from the real things I told you about myself (hobbies, pets, being a mum or not, my area, my passion), funny and warm so a stranger feels she already knows me" },
+  { n: 3, label: "Treatment carousel", carousel: true, source: "universal" },
+  { n: 4, label: "Why I love what I do", carousel: true, source: "pack", kind: "lux", design: "3",
+    idea: "a carousel about how much I love making people feel good about themselves, why I got into aesthetics (use only what I told you), the moments I love most in my clinic" },
+  { n: 5, label: "Treatment carousel", carousel: true, source: "universal" },
+  ...[6, 7, 8, 9, 10].map((n): TenSlot => ({ n, label: "Hook post", carousel: false, source: "pack", kind: "portrait", design: "0", idea: "a photo post of me with my hook line as the headline" })),
+];
+
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
 const INTERESTING = new Set([
   "sculptra", "exosomes", "japanese-head-spa", "hifu", "prf", "tear-trough-filler",

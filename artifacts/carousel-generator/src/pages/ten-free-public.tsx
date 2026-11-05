@@ -8,6 +8,7 @@ import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Result = {
+  kind?: string;
   clinicName: string; clinicianName: string; logoUrl: string; code: string; fact: string;
   posts: { n: number; kind: string; label: string; images: string[]; caption: string; tags: string }[];
   stories: { n: number; image: string; instruction?: string; poll: { question: string; a: string; b: string } }[];
@@ -59,7 +60,7 @@ export default function TenFreePublic({ slug }: { slug: string }) {
   const [tab, setTab] = useState<"how" | "posts" | "stories" | "reels">("how");
 
   useEffect(() => {
-    document.title = "Your 10 free posts";
+    document.title = "Your free posts";
     const m = document.createElement("meta");
     m.name = "robots";
     m.content = "noindex";
@@ -130,8 +131,17 @@ export default function TenFreePublic({ slug }: { slug: string }) {
       <div className="tp-w">
         <div className="tp-top"><span>Social Media Sister</span><span className="tp-pink">{data.clinicName}</span></div>
         <div className="tp-k">Made for {data.clinicianName}</div>
-        <h1 className="tp-h1">Your <span>10 free</span> posts</h1>
-        <p className="tp-lede">Ten posts, ten matching stories, ten reels to film and one little secret. Save the images, copy the captions and post whenever you like.</p>
+        {data.kind === "premium" ? (
+          <>
+            <h1 className="tp-h1">Your <span>premium</span> posts</h1>
+            <p className="tp-lede">Ten posts made exactly the way I make them for my paying clients, ten matching stories, ten reels to film and one little secret. Save the images, copy the captions and post whenever you like.</p>
+          </>
+        ) : (
+          <>
+            <h1 className="tp-h1">Your <span>10 free</span> posts</h1>
+            <p className="tp-lede">Ten posts, ten matching stories, ten reels to film and one little secret. Save the images, copy the captions and post whenever you like.</p>
+          </>
+        )}
         <p style={{ marginTop: 22 }}><button className="tp-btn k" disabled={zipping} onClick={saveAll}>{zipping ? "Packing it up..." : "Save everything in one go"}</button></p>
 
         <div className="tp-tabs">
@@ -217,8 +227,8 @@ export default function TenFreePublic({ slug }: { slug: string }) {
         <div className="tp-sec">
           <h2>Know a clinic who needs this?</h2>
           <p style={{ fontSize: 17, lineHeight: 1.4, marginBottom: 14 }}>Share this with another clinic so they can have a freebie too. Good friends share good things.</p>
-          <a className="tp-btn" href={`https://wa.me/?text=${encodeURIComponent("I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts")}`}>Share on WhatsApp</a>
-          <button className="tp-btn" onClick={() => { const t = "I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts"; if (navigator.share) navigator.share({ text: t }).catch(() => {}); else navigator.clipboard?.writeText(t).then(() => alert("Copied, now paste it to a clinic friend")); }}>Share or copy link</button>
+          <a className="tp-btn" href={`https://wa.me/?text=${encodeURIComponent("I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + (data.kind === "premium" ? "https://www.thecybersuite.com/premiumfreebies" : "https://www.thecybersuite.com/10freeposts"))}`}>Share on WhatsApp</a>
+          <button className="tp-btn" onClick={() => { const t = "I just got 10 free posts made for my clinic by Social Media Sister, with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + (data.kind === "premium" ? "https://www.thecybersuite.com/premiumfreebies" : "https://www.thecybersuite.com/10freeposts"); if (navigator.share) navigator.share({ text: t }).catch(() => {}); else navigator.clipboard?.writeText(t).then(() => alert("Copied, now paste it to a clinic friend")); }}>Share or copy link</button>
         </div>
         <div className="tp-foot">Social Media Sister</div>
       </div>

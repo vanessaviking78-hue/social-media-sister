@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
-import { TEN_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
+import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
+import { HOOKS as HOOK_BANK, HOOK_DAYS, hookTiming, pickedHookPayload, startOfDay, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { EMPOWER } from "@/lib/empower-designs";
@@ -26,7 +27,7 @@ const authHeaders = (): Record<string, string> => {
 type Req = {
   id: string; email: string; status: string; clinicName: string; clinicianName: string; handle: string; area: string; website: string; whatsapp: string;
   mainHex: string; accentHex: string; treatments: string[]; seq?: number; answers: { bizType?: string; age?: string; hobbies: string; mum: string; pets: string; why: string; threeWords: string; passion: string };
-  logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string;
+  logoUrl: string; photoUrl: string; notes: string; slug: string; code: string; createdAt: string; aiUrls: string[]; aiStatus: string; kind?: string; photos?: string[]; presetId?: number | null;
 };
 type Poll = { question: string; a: string; b: string };
 
@@ -53,14 +54,14 @@ function List() {
   };
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">10 free posts: requests</h1><Link href="/10free-tracker" className="text-sm underline">Tracker of the ones done</Link></div>
-      <p className="text-sm text-muted-foreground">Public form: {window.location.origin}{BASE}/10freeposts</p>
+      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Free posts: requests</h1><Link href="/10free-tracker" className="text-sm underline">Tracker of the ones done</Link></div>
+      <p className="text-sm text-muted-foreground">Premium form: {window.location.origin}{BASE}/premiumfreebies · Old form: {window.location.origin}{BASE}/10freeposts</p>
       {loading && <p>Loading...</p>}
       {!loading && rows.length === 0 && <p>No requests yet.</p>}
       {rows.map((r) => (
         <div key={r.id} className="border rounded-lg p-4 flex flex-wrap items-center gap-3 justify-between">
           <div>
-            <div className="font-semibold">{r.clinicName} <span className="text-xs uppercase text-pink-500">{r.status}</span></div>
+            <div className="font-semibold">{r.clinicName} <span className="text-xs uppercase text-pink-500">{r.status}</span>{r.kind === "premium" && <span className="ml-2 text-xs uppercase bg-black text-white rounded px-2 py-0.5">Premium</span>}</div>
             <div className="text-sm text-muted-foreground">{r.clinicianName} · {r.email} · {r.area}</div>
           </div>
           <div className="flex gap-2 text-sm">
@@ -99,6 +100,9 @@ function Builder({ id }: { id: string }) {
   const [logoUrl, setLogoUrl] = useState("");
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
+  const [pickedHooks, setPickedHooks] = useState<string[]>([]);
+  const [hookDay, setHookDay] = useState<string>("Any day");
+  const [attaching, setAttaching] = useState(false);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
   const itemsRef = useRef<Item[]>([]);
@@ -168,6 +172,10 @@ function Builder({ id }: { id: string }) {
 
   const build = async () => {
     if (!req) return;
+    if (req.kind === "premium" && pickedHooks.length !== 5) {
+      toast.error(`Please tick exactly 5 hooks first. You have ${pickedHooks.length}.`);
+      return;
+    }
     setBusy(true);
     setLink("");
     try {
@@ -193,7 +201,10 @@ function Builder({ id }: { id: string }) {
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
       const pool: PoolPhoto[] = [];
-      const sources = [...(req.aiUrls ?? []), ...(req.photoUrl ? [req.photoUrl] : [])];
+      const isPremium = req.kind === "premium";
+      const plan = isPremium ? PREMIUM_PLAN : TEN_PLAN;
+      // Premium: her two AI portraits first, then the three photos the clinic sent. The free version has the AI portraits and the one photo.
+      const sources = [...(req.aiUrls ?? []), ...(isPremium ? (req.photos ?? []) : req.photoUrl ? [req.photoUrl] : [])];
       for (const [i, u] of sources.entries()) {
         try {
           const r = await fetch(`${API}/free-samples/source-image?url=${encodeURIComponent(u)}`);
@@ -228,8 +239,9 @@ function Builder({ id }: { id: string }) {
 
       // The personal posts, from the pack templates.
       const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
-      const packSlots = TEN_PLAN.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
-      const cursor: { at: number; hookBase?: number } = { at: 0, hookBase: (req.seq ?? 0) * 5 };
+      const packSlots = plan.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
+      const cursor: { at: number; hookBase?: number; forced?: string[] } = { at: 0, hookBase: (req.seq ?? 0) * 5 };
+      if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, req.treatments, req.area.split(",")[0].trim()).map((h) => h.text);
       const built = packSlots.map((s) => {
         const relIds = relatableFor(req.answers.age, /^(yes|grandma)/i.test(req.answers.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
         const design = s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
@@ -268,7 +280,7 @@ function Builder({ id }: { id: string }) {
       setStatus("Drawing the posts...");
       const out: Item[] = [];
       let ti = 0;
-      for (const slot of TEN_PLAN) {
+      for (const slot of plan) {
         if (slot.source === "universal") {
           const p = picks[ti];
           const c = tcopy[ti];
@@ -401,7 +413,38 @@ function Builder({ id }: { id: string }) {
           {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
         </div>
         {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
+        {req.kind === "premium" && (req.photos ?? []).length > 0 && (
+          <div><div className="font-semibold">Their 3 photos</div><div className="flex gap-2">{(req.photos ?? []).map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div></div>
+        )}
       </div>
+      {req.kind === "premium" && (
+        <div className="border-2 border-black rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="font-bold uppercase">Pick the 5 hooks <span className="text-pink-500">({pickedHooks.length} of 5)</span></h2>
+            {pickedHooks.length > 0 && <button className="text-sm underline" onClick={() => setPickedHooks([])}>Clear</button>}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {HOOK_DAYS.map((d) => (
+              <button key={d.day} onClick={() => setHookDay(d.day)} className={`px-3 py-1.5 rounded border text-sm ${hookDay === d.day ? "bg-pink-500 text-white border-pink-500" : ""}`}>{d.label}</button>
+            ))}
+          </div>
+          <div className="max-h-96 overflow-y-auto space-y-1">
+            {HOOK_BANK.filter((h: Hook) => h.day === hookDay && hookTiming(h, startOfDay(new Date())).ok).map((h: Hook) => {
+              const on = pickedHooks.includes(h.code);
+              const shown = pickedHookPayload([h.code], req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
+              return (
+                <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
+                  <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= 5} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
+                  <span>{shown}</span>
+                </label>
+              );
+            })}
+          </div>
+          {pickedHooks.length > 0 && (
+            <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>
+          )}
+        </div>
+      )}
       <div className="flex gap-2 items-center flex-wrap">
         <span className="text-sm font-semibold">Headline font for every post:</span>
         {HEAD_FONTS.map((f) => (
@@ -410,9 +453,23 @@ function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels are in Hatcher.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : "Build the 10 posts"}</button>
+        <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
+        <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
+          if (req.presetId) { window.location.href = `${BASE}/presets`; return; }
+          if (!confirm(`Attach ${req.clinicName} to the Cyber Suite as a client?`)) return;
+          setAttaching(true);
+          try {
+            const j = await post(`/ten-free/requests/${req.id}/attach`, {});
+            toast.success(j.already ? "They were already attached." : "Attached. They are now a client in your tools.");
+            loadReq();
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Could not attach them");
+          } finally {
+            setAttaching(false);
+          }
+        }}>{req.presetId ? "Attached, open my clients" : "Attach to the Cyber Suite"}</button>
       </div>
       {link && (
         <div className="border rounded p-4 space-y-2">

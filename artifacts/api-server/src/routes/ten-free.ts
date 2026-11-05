@@ -11,7 +11,7 @@ import { saveSampleFile, appLink, needsRewrite, rewriteFlagged } from "../lib/fr
 import { HOUSE_VOICE } from "../lib/houseRules";
 import { notifyTenFreeRequest } from "../lib/notify";
 import { creditStatus } from "../lib/aiCreditAlert";
-import { aiSourcePhotosTable } from "@workspace/db/schema";
+import { aiSourcePhotosTable, clientPresetsTable } from "@workspace/db/schema";
 import { readKey } from "../lib/freeSampleWorker";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 
@@ -21,7 +21,7 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 // browser, and only then sends the private link /10free/<slug>. One free turn per email address.
 
 const router: IRouter = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 2 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 5 } });
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -82,6 +82,9 @@ function ensureTable(): Promise<void> {
     .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_urls JSONB NOT NULL DEFAULT '[]'::jsonb`))
     .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ`))
     .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS ai_status TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'free'`))
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS photos JSONB NOT NULL DEFAULT '[]'::jsonb`))
+    .then(() => db.execute(sql`ALTER TABLE tenfree_requests ADD COLUMN IF NOT EXISTS preset_id INTEGER`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -105,15 +108,17 @@ function tooMany(ip: string): boolean {
 // ---------------------------------------------------------------------------
 
 const STUDIO_SLOTS = [{ id: "mx-01" }, { id: "mx-02" }, { id: "mx-16" }];
+// The premium version makes two, because the clinic sends three of her own photos and all five are used.
+const PREMIUM_STUDIO_SLOTS = [{ id: "mx-01" }, { id: "mx-02" }];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runStudio(id: string, photoKey: string, clinicName: string): Promise<void> {
+async function runStudio(id: string, photoKey: string, clinicName: string, slots = STUDIO_SLOTS): Promise<void> {
   try {
     await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'working' WHERE id = ${id}`);
     const buf = await readKey(photoKey);
     const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: clinicName, photoUrl: `/api/media/${photoKey}`, notes: "10 free posts" }).returning();
     const results = new Map<string, string>();
-    let pending = STUDIO_SLOTS.map((x) => x.id);
+    let pending = slots.map((x) => x.id);
     for (let round = 0; round < 3 && pending.length > 0; round++) {
       const jobId = `tf_${Date.now()}_${uuid().slice(0, 8)}`;
       createJob(jobId, pending);
@@ -122,7 +127,7 @@ async function runStudio(id: string, photoKey: string, clinicName: string): Prom
       pending = pending.filter((pid) => !results.has(pid));
       if (pending.length) await sleep(3000);
     }
-    const urls = STUDIO_SLOTS.map((x) => results.get(x.id)).filter((u): u is string => !!u);
+    const urls = slots.map((x) => results.get(x.id)).filter((u): u is string => !!u);
     await db.execute(sql`UPDATE tenfree_requests SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"}, updated_at = now() WHERE id = ${id}`);
   } catch {
     await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'failed' WHERE id = ${id}`).catch(() => undefined);
@@ -139,7 +144,7 @@ type Files = { [field: string]: Express.Multer.File[] };
 // ---------------------------------------------------------------------------
 
 const intakeUpload = (req: Request, res: Response, next: NextFunction) =>
-  upload.fields([{ name: "logo", maxCount: 1 }, { name: "photo", maxCount: 1 }])(req, res, (err: unknown) => {
+  upload.fields([{ name: "logo", maxCount: 1 }, { name: "photo", maxCount: 1 }, { name: "photos", maxCount: 3 }])(req, res, (err: unknown) => {
     if (!err) return next();
     const code = (err as { code?: string }).code;
     req.log?.error({ err }, "ten-free upload failed");
@@ -155,8 +160,11 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     }
     const files = (req.files ?? {}) as Files;
     const logo = files.logo?.[0];
-    const photo = files.photo?.[0];
     const b = req.body as Record<string, string>;
+    // The premium form sends three photos of the clinician. The first one is the main photo that the Studio portraits are made from.
+    const premium = b.kind === "premium";
+    const extraPhotos = files.photos ?? [];
+    const photo = files.photo?.[0] ?? extraPhotos[0];
 
     const clinicName = str(b.clinicName, 120);
     const clinicianName = str(b.clinicianName, 80);
@@ -198,11 +206,15 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       res.status(400).json({ error: "Please answer every question about you, the posts are built from them" });
       return;
     }
+    if (premium && extraPhotos.length < 3) {
+      res.status(400).json({ error: "Please add all 3 photos of you, so the posts and your AI photos look just like you" });
+      return;
+    }
     if (b.consent !== "yes") {
       res.status(400).json({ error: "Please tick the box so I know you are happy for me to use your logo and photo" });
       return;
     }
-    for (const f of [logo, photo]) {
+    for (const f of [logo, photo, ...extraPhotos]) {
       if (f && !IMAGE_MIMES.includes(f.mimetype)) {
         res.status(400).json({ error: "Please upload JPG, PNG or WebP images" });
         return;
@@ -222,23 +234,28 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     const who = `${clinicName} ${handle} ${email}`.toLowerCase().replace(/[^a-z0-9]/g, "");
     const isTester = testers.some((t) => who.includes(t));
     const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
-    const key = isTest ? `${emailKey(email)}#test${Date.now()}` : emailKey(email);
+    // Premium has its own list, so everyone who had a free turn before gets a fresh one and the old requests stay untouched.
+    const kind = premium ? "premium" : "free";
+    const base = premium ? `premium:${emailKey(email)}` : emailKey(email);
+    const key = isTest ? `${base}#test${Date.now()}` : base;
     const existing = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
-    const sameClinic = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} LIMIT 1`);
+    const sameClinic = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} AND kind = ${kind} LIMIT 1`);
     if (existing.rows.length || sameClinic.rows.length) {
       res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
       return;
     }
 
     const logoKey = logo ? await saveSampleFile(logo.buffer, logo.mimetype, "logo") : "";
-    const photoKey = photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
+    const photoUrls: string[] = [];
+    for (const f of premium ? extraPhotos : []) photoUrls.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
+    const photoKey = premium ? (photoUrls[0] ?? "").replace("/api/free-samples/media/", "") : photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
     const id = uuid();
     try {
       await db.execute(sql`INSERT INTO tenfree_requests
-        (id, email, email_key, clinic_name, clinician_name, handle, area, website, whatsapp, main_hex, accent_hex, treatments, answers, logo_url, photo_url)
+        (id, email, email_key, clinic_name, clinician_name, handle, area, website, whatsapp, main_hex, accent_hex, treatments, answers, logo_url, photo_url, kind, photos)
         VALUES (${id}, ${email}, ${key}, ${clinicName}, ${clinicianName}, ${handle}, ${area}, ${website}, ${whatsapp},
           ${hex(b.mainHex, "#d6006f")}, ${hex(b.accentHex, "#1a1a1a")}, ${JSON.stringify(treatments)}::jsonb, ${JSON.stringify(answers)}::jsonb,
-          ${logoKey ? `/api/free-samples/media/${logoKey}` : ""}, ${photoKey ? `/api/free-samples/media/${photoKey}` : ""})`);
+          ${logoKey ? `/api/free-samples/media/${logoKey}` : ""}, ${photoKey ? `/api/free-samples/media/${photoKey}` : ""}, ${kind}, ${JSON.stringify(photoUrls)}::jsonb)`);
     } catch (err: unknown) {
       if ((err as { code?: string })?.code === "23505") {
         res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
@@ -246,7 +263,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       }
       throw err;
     }
-    if (photoKey) void runStudio(id, photoKey, clinicName);
+    if (photoKey) void runStudio(id, photoKey, clinicName, premium ? PREMIUM_STUDIO_SLOTS : STUDIO_SLOTS);
     void notifyTenFreeRequest({ clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
@@ -262,7 +279,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
 type Row = {
   id: string; email: string; status: string; clinic_name: string; clinician_name: string; handle: string; area: string; website: string; whatsapp: string;
   main_hex: string; accent_hex: string; treatments: string[]; answers: Record<string, string>; logo_url: string; photo_url: string; notes: string; slug: string; code: string;
-  created_at: string; sent_at?: string | null; ai_urls?: string[]; ai_status?: string; photo_key?: string;
+  created_at: string; sent_at?: string | null; ai_urls?: string[]; ai_status?: string; photo_key?: string; kind?: string; photos?: string[]; preset_id?: number | null;
 };
 
 const shape = (r: Row) => ({
@@ -288,6 +305,9 @@ const shape = (r: Row) => ({
   aiStatus: r.ai_status ?? "",
   createdAt: r.created_at,
   sentAt: r.sent_at ?? null,
+  kind: r.kind ?? "free",
+  photos: r.photos ?? [],
+  presetId: r.preset_id ?? null,
 });
 
 router.get("/ai-credit-status", requireAuth, async (_req: Request, res: Response) => {
@@ -361,14 +381,14 @@ router.delete("/ten-free/requests/:id", requireAuth, async (req: Request, res: R
 router.post("/ten-free/requests/:id/studio", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTable();
-    const r = await db.execute(sql`SELECT photo_url, clinic_name FROM tenfree_requests WHERE id = ${String(req.params.id)}`);
-    const row = r.rows[0] as { photo_url?: string; clinic_name?: string } | undefined;
+    const r = await db.execute(sql`SELECT photo_url, clinic_name, kind FROM tenfree_requests WHERE id = ${String(req.params.id)}`);
+    const row = r.rows[0] as { photo_url?: string; clinic_name?: string; kind?: string } | undefined;
     const key = (row?.photo_url ?? "").replace("/api/free-samples/media/", "");
     if (!row || !key) {
       res.status(400).json({ error: "She did not send a photo" });
       return;
     }
-    void runStudio(String(req.params.id), key, row.clinic_name ?? "");
+    void runStudio(String(req.params.id), key, row.clinic_name ?? "", row.kind === "premium" ? PREMIUM_STUDIO_SLOTS : STUDIO_SLOTS);
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not start" });
@@ -670,6 +690,46 @@ const makeCode = () => `3FOR1-${Array.from(randomBytes(5), (b) => CODE_CHARS[b %
 type PubPost = { n: number; kind: string; label: string; images: string[]; caption: string; tags: string };
 type PubStory = { n: number; image: string; instruction?: string; poll: { question: string; a: string; b: string } };
 
+// "Attach to the Cyber Suite": when a clinic comes on board, this turns the request into a client in her tools, with the logo, photo, colours and website carried over.
+router.post("/ten-free/requests/:id/attach", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTable();
+    const found = await db.execute(sql`SELECT * FROM tenfree_requests WHERE id = ${String(req.params.id)}`);
+    const r = found.rows[0] as unknown as Row | undefined;
+    if (!r) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+    if (r.preset_id) {
+      res.json({ presetId: r.preset_id, already: true });
+      return;
+    }
+    const a = r.answers ?? {};
+    const [preset] = await db
+      .insert(clientPresetsTable)
+      .values({
+        name: r.clinic_name,
+        pageColor: r.main_hex,
+        accentColor: r.accent_hex,
+        logoUrl: r.logo_url || null,
+        clientPhotoUrl: r.photo_url || null,
+        websiteUrl: r.website || null,
+        seoArea: r.area || null,
+        brandNotes: noDashes(`${r.clinician_name}. Instagram @${r.handle}. Three words: ${a.threeWords ?? ""}. Passion: ${a.passion ?? ""}. Why aesthetics: ${a.why ?? ""}. Hobbies: ${a.hobbies ?? ""}.`).slice(0, 1500),
+      })
+      .returning();
+    await db.execute(sql`UPDATE tenfree_requests SET preset_id = ${preset.id}, updated_at = now() WHERE id = ${r.id}`);
+    res.json({ presetId: preset.id });
+  } catch (err: unknown) {
+    const code = (err as { code?: string; cause?: { code?: string } })?.code ?? (err as { cause?: { code?: string } })?.cause?.code;
+    if (code === "23505") {
+      res.status(409).json({ error: "A client with that clinic name already exists in your tools." });
+      return;
+    }
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not attach this clinic" });
+  }
+});
+
 router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTable();
@@ -702,6 +762,7 @@ router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response
     const result = {
       clinicName: r.clinic_name,
       clinicianName: r.clinician_name,
+      kind: r.kind ?? "free",
       mainHex: r.main_hex,
       accentHex: r.accent_hex,
       logoUrl: str(b.logoUrl, 400),

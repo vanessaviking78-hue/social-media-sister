@@ -107,7 +107,7 @@ async function toUsable(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.(heic|heif)$/i, "") + ".jpg", { type: "image/jpeg" });
 }
 
-export default function TenFreePosts() {
+export default function TenFreePosts({ premium = false }: { premium?: boolean }) {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", passion: "" });
   const [cols, setCols] = useState<Colours>({ main: "#c2185b", accent: "#1a1a1a" });
   const [ticked, setTicked] = useState<string[]>([]);
@@ -115,6 +115,8 @@ export default function TenFreePosts() {
   const [logoPreview, setLogoPreview] = useState("");
   const [logoBusy, setLogoBusy] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
+  const [photos, setPhotos] = useState<File[]>([]);
+  const photosRef = useRef<HTMLInputElement>(null);
   const [consent, setConsent] = useState(false);
   const [tips, setTips] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -171,11 +173,25 @@ export default function TenFreePosts() {
     }
   }
 
+  // The premium form takes three photos in one go. Each one is shrunk so a big phone photo uploads easily.
+  async function onPhotos(list: FileList | null) {
+    if (!list || !list.length) return;
+    try {
+      setErr("");
+      const made: File[] = [];
+      for (const file of Array.from(list).slice(0, 3)) made.push(await shrinkPhoto(await toUsable(file)));
+      setPhotos((old) => [...old, ...made].slice(0, 3));
+    } catch {
+      setErr("I could not read one of those photos, a JPG or PNG will work.");
+    }
+  }
+
   const toggle = (name: string) => setTicked((p) => (p.includes(name) ? p.filter((x) => x !== name) : p.length >= 3 ? p : [...p, name]));
 
   async function submit() {
     setErr("");
-    if (!photo) return setErr("Please add a photo of you. No filter needed, and get your full face, head and shoulders in.");
+    if (premium && photos.length < 3) return setErr("Please add 3 photos of you. No filter needed, and get your face, head and shoulders in.");
+    if (!premium && !photo) return setErr("Please add a photo of you. No filter needed, and get your full face, head and shoulders in.");
     if (!consent) return setErr("Please tick the box at the bottom so I know you are happy.");
     setBusy(true);
     try {
@@ -186,7 +202,10 @@ export default function TenFreePosts() {
       fd.append("treatments", JSON.stringify(ticked));
       fd.append("consent", "yes");
       if (logoBlob) fd.append("logo", new File([logoBlob], "logo.png", { type: "image/png" }));
-      if (photo) fd.append("photo", photo);
+      if (premium) {
+        fd.append("kind", "premium");
+        photos.forEach((ph) => fd.append("photos", ph));
+      } else if (photo) fd.append("photo", photo);
       const r = await fetch("/api/ten-free/intake", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
       if (r.status === 409) setRepeat(true);
@@ -231,26 +250,42 @@ export default function TenFreePosts() {
             </h1>
             <p className="tf-lede">Your details have landed with me. I check every one by hand, then build your posts and send you a private link. Keep an eye on your inbox, and your junk folder just in case.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another clinic who would love a freebie too? Send them this.</p>
-            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Social Media Sister for 10 free posts made with my own logo and photo. She is doing a free set for other clinics too. Grab yours here: " + "https://www.thecybersuite.com/10freeposts")}`}>Share with another clinic</a>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Social Media Sister for my free premium posts, made with my own logo and photos. She is doing a free set for other clinics too. Grab yours here: " + (premium ? "https://www.thecybersuite.com/premiumfreebies" : "https://www.thecybersuite.com/10freeposts"))}`}>Share with another clinic</a>
           </div>
         ) : (
           <>
             <div className="tf-hero">
-              <div className="tf-kicker">One free turn per email</div>
+              <div className="tf-kicker">{premium ? "Premium, and still free" : "One free turn per email"}</div>
               <h1 className="tf-h1">
-                Your <span>10 free</span> posts
+                {premium ? <>Premium <span>freebies</span></> : <>Your <span>10 free</span> posts</>}
               </h1>
-              <p className="tf-lede">Tell me a little about you and your clinic. I build ten posts in your colours with your logo, plus matching stories, reel hooks and a surprise at the end.</p>
-              <div className="tf-list">
-                <div><b>3</b>Treatment carousels</div>
-                <div><b>2</b>About you</div>
-                <div><b>1</b>Empowering post</div>
-                <div><b>1</b>Safety post</div>
-                <div><b>2</b>Just for fun</div>
-                <div><b>1</b>This month</div>
-                <div><b>10</b>Matching stories</div>
-                <div><b>10</b>Reel hooks to film</div>
-              </div>
+              {premium ? (
+                <>
+                  <p className="tf-lede">These are the very same designs my paying clients get. Tell me a little about you and your clinic. I build ten premium posts in your colours with your logo and your own photos, plus matching stories and reel scripts.</p>
+                  <div className="tf-list">
+                    <div><b>3</b>Treatment carousels</div>
+                    <div><b>2</b>About you carousels</div>
+                    <div><b>5</b>Hook posts</div>
+                    <div><b>10</b>Matching stories</div>
+                    <div><b>10</b>Reel scripts</div>
+                    <div><b>5</b>Photos of you, 2 made by AI</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="tf-lede">Tell me a little about you and your clinic. I build ten posts in your colours with your logo, plus matching stories, reel hooks and a surprise at the end.</p>
+                  <div className="tf-list">
+                    <div><b>3</b>Treatment carousels</div>
+                    <div><b>2</b>About you</div>
+                    <div><b>1</b>Empowering post</div>
+                    <div><b>1</b>Safety post</div>
+                    <div><b>2</b>Just for fun</div>
+                    <div><b>1</b>This month</div>
+                    <div><b>10</b>Matching stories</div>
+                    <div><b>10</b>Reel hooks to film</div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="tf-sec">
@@ -292,14 +327,35 @@ export default function TenFreePosts() {
                 </label>
               </div>
               <div className="tf-note">I picked these from your logo. Change them if I missed.</div>
-              <div className="tf-drop" style={{ marginTop: 26 }} onClick={() => photoRef.current?.click()}>
-                <div className="tf-l" style={{ width: 150, flex: "none" }}>{photo ? "Photo added" : "Your photo"}</div>
-                <div>
-                  <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photo ? photo.name : "Add a photo of you (needed)"}</div>
-                  <div className="tf-note">No filter needed. Please get your full face, head and shoulders in.</div>
+              {premium ? (
+                <>
+                  <div className="tf-drop" style={{ marginTop: 26 }} onClick={() => photosRef.current?.click()}>
+                    <div className="tf-l" style={{ width: 150, flex: "none" }}>{photos.length >= 3 ? "3 photos added" : `${photos.length} of 3 photos`}</div>
+                    <div>
+                      <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photos.length >= 3 ? "Tap to add more or start again" : "Add 3 photos of you (needed)"}</div>
+                      <div className="tf-note">No filter needed. Head and shoulders, nice and clear, in good light. Two of them become your AI photos too.</div>
+                    </div>
+                    <input ref={photosRef} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => { onPhotos(e.target.files); e.target.value = ""; }} />
+                  </div>
+                  {photos.length > 0 && (
+                    <div style={{ display: "flex", gap: 12, marginTop: 14, alignItems: "center", flexWrap: "wrap" }}>
+                      {photos.map((ph, i) => (
+                        <img key={i} src={URL.createObjectURL(ph)} alt={`Photo ${i + 1}`} style={{ height: 120, width: "auto", objectFit: "cover", border: `2px solid ${INK}` }} />
+                      ))}
+                      <button type="button" className="tf-chip" onClick={() => setPhotos([])}>Start again</button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="tf-drop" style={{ marginTop: 26 }} onClick={() => photoRef.current?.click()}>
+                  <div className="tf-l" style={{ width: 150, flex: "none" }}>{photo ? "Photo added" : "Your photo"}</div>
+                  <div>
+                    <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photo ? photo.name : "Add a photo of you (needed)"}</div>
+                    <div className="tf-note">No filter needed. Please get your full face, head and shoulders in.</div>
+                  </div>
+                  <input ref={photoRef} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => onPhoto(e.target.files?.[0])} />
                 </div>
-                <input ref={photoRef} type="file" accept="image/*,.heic,.heif" hidden onChange={(e) => onPhoto(e.target.files?.[0])} />
-              </div>
+              )}
             </div>
 
             <div className="tf-sec">
@@ -374,7 +430,7 @@ export default function TenFreePosts() {
             {err && <div className="tf-err">{err}</div>}
             {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I would like my discount for a monthly membership")}`}>Claim my discount on WhatsApp</a>}
             <button className="tf-go" disabled={busy || logoBusy} onClick={submit}>
-              {busy ? "Sending..." : "Send me my 10 free posts"}
+              {busy ? "Sending..." : premium ? "Send me my premium freebies" : "Send me my 10 free posts"}
             </button>
             <div className="tf-note">I review every request by hand. One free turn per email.</div>
           </>

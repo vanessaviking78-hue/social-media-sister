@@ -355,6 +355,7 @@ function AppContent() {
   const [isSecretShop] = useRoute("/secretshop");
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
+  const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -496,6 +497,9 @@ function AppContent() {
   }
   if (isTenFreeForm) {
     return <TenFreePosts />;
+  }
+  if (isPremiumFreebies) {
+    return <TenFreePosts premium />;
   }
   if (isYearPass && yearPassParams?.token) {
     return <YearPass token={yearPassParams.token} />;
