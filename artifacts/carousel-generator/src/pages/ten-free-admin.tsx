@@ -604,7 +604,8 @@ function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels are in Hatcher.</span>
       </div>}
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
+        <button disabled={busy} onClick={() => { if (req.aiStatus === "working" && !confirm("Her AI photos are still being made. Build now with only the photos she uploaded? Press Cancel to wait, then use Rebuild when they are ready.")) return; void build(); }} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
+        {req.kind === "premium" && !items.length && (chosenT.length !== 3 || pickedHooks.length !== 5) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of 3 treatments and {pickedHooks.length} of 5 hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
         <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
