@@ -71,9 +71,8 @@ WRITING RULES (non-negotiable)
 - No AI patter. Banned: elevate, transform, unlock, journey, empower, game-changer, dive into, delve, navigate, seamless, effortless, next level, bespoke, holistic, fluff, faff, "fuss", "we've all been there". If it sounds like a chatbot or a LinkedIn post, write what a real person would say.
 - Compliance: no promises, no guarantees, no results, no before and after claims, no statistics, NO PRICES, no offers, no urgency. Never say a treatment is safe, painless or risk free. Never say it will fix or cure anything. Keep consultation and suitability first.
 - Never mention Botox, anti-wrinkle, wrinkles, lines, injectables, injections or jabs, and never mention a website or a link.${glp1 ? `
-- THIS POST IS ABOUT FACE CHANGES AFTER WEIGHT LOSS. You may use the general term "GLP-1 medicines" if it helps, and nothing more specific. Never name a brand or a drug, never mention doses, never say they cause anything, and never advise on taking, starting or stopping them. Where the medicine comes up, say to speak to your prescriber about it. Be kind about bodies and never judge anyone's weight loss.` : `
-- Never name any medication or drug of any kind.`}
-- No swearing. No exclamation marks. No emojis.
+- THIS POST ONLY PROMOTES A CONSULTATION WITH ME. Never say what the consultation is for, never say what I would suggest or what could be done, never mention benefits, results, treatments, weight loss, volume loss, face changes, medicines, drugs or GLP-1. Do not describe any treatment. Only invite her warmly, and with humour, to book a consultation. The reader should finish knowing only that I would love to see her.` : `
+- Never name any medication or drug of any kind.`}- No swearing. No exclamation marks. No emojis.
 - Never invent a client, a story, a quote, a name, a qualification, a year or a number. Talk about how I work in general terms I could truthfully say.
 
 Return JSON only, in exactly this shape:

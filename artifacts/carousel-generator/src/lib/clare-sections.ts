@@ -1,6 +1,6 @@
 // CLARE CONNOLLY AESTHETICS, Wakefield: 6 sections of 6 posts each, the same layout as the Castle Clinic and NO 1 pages.
 // One section per treatment she lists on her Instagram and in her Getting to know you answers (skin boosters, polynucleotides,
-// skin peels, dermal fillers), plus "Keeping fit over 40" and "GLP1 volume loss".
+// skin peels, dermal fillers), plus "Keeping fit over 40" and "GLP1 volume loss" (consultation promotion only, nothing about what it is for).
 // Her voice: honest, realistic, friendly and hard working. Natural, lifting and regenerative. She manages expectations and never
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
@@ -14,7 +14,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "peels", label: "Skin peels", word: "PEELS" },
   { id: "filler", label: "Dermal fillers", word: "FILLER" },
   { id: "fit", label: "Keeping fit over 40", word: "" },
-  { id: "glp1", label: "GLP1 volume loss", word: "" },
+  { id: "glp1", label: "GLP1 volume loss", word: "CONSULTATION" },
 ];
 
 export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string };
@@ -23,6 +23,8 @@ const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
 
 const NOTE = " Honest, realistic and friendly, in plain words, with a dry, warm touch of humour. Natural looking is the whole point. No promises, no results, no prices. A consultation always comes first and I only ever suggest what someone actually needs.";
+
+const CONSULT = " ALL ABOUT BOOKING A CONSULTATION WITH ME. Never say what the consultation is for, never say what I would suggest or what it could do, never mention benefits, treatments, results, weight loss, volume loss, medicines or GLP-1. Only invite her to book a consultation. Warm, funny and friendly, in plain words. No promises, no prices.";
 
 export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
   // SKIN BOOSTERS
@@ -65,13 +67,13 @@ export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
   p("ft5", "fit", "Feeding yourself properly", "A friendly, general post about eating well in your 40s, with food and cooking as something I enjoy. Nothing medical, no diets, no numbers." + NOTE),
   p("ft6", "fit", "Looking after yourself is not selfish", "A warm post giving women in their 40s permission to put themselves on the list. Kind, funny, no claims." + NOTE),
 
-  // GLP1 VOLUME LOSS
-  p("gl1", "glp1", "Volume loss, explained kindly", "A warm, plain explanation of why the face can lose volume after weight loss, with no judgement. Use only the general term GLP-1 medicines if it comes up, never a brand name, a dose or any advice about taking or stopping them. Say to speak to your prescriber about the medicine itself." + NOTE),
-  p("gl2", "glp1", "The weight came off, the face changed", "A relatable post about the face looking different after weight loss and a kind invitation to talk about it. Use only the general term GLP-1 medicines if needed, never a brand name or advice about the medicine." + NOTE),
-  p("gl3", "glp1", "Why a face can look tired after weight loss", "A kind, honest explanation of how weight loss can change the way the face looks, without alarm. No promises, no medicine advice." + NOTE),
-  p("gl4", "glp1", "What I look at in the consultation", "How I assess the whole face and what is going on before I suggest anything, including when the honest answer is to wait. Never give advice about any medicine." + NOTE),
-  p("gl5", "glp1", "Looking after your skin through weight loss", "General, friendly habits that support skin during weight loss: water, protein, sun care, sleep. Nothing medical, and say to speak to your prescriber about anything to do with the medicine." + NOTE),
-  p("gl6", "glp1", "Feeling like yourself again", "A warm, supportive post for anyone whose reflection no longer feels like her own after weight loss. Kind, a little funny, no promises, no medicine advice." + NOTE),
+  // GLP1 VOLUME LOSS (consultation promotion only)
+  p("gl1", "glp1", "Tried every diet going", "Speak to the woman who has tried every diet going, with humour and kindness, and invite her to book a consultation with me." + CONSULT),
+  p("gl2", "glp1", "Your reflection and you", "A warm, relatable post about not quite recognising yourself in the mirror lately, and a gentle invitation to book a consultation with me." + CONSULT),
+  p("gl3", "glp1", "The wardrobe that no longer fits", "A funny, relatable post about a wardrobe that no longer fits the way it used to, and a friendly invitation to book a consultation." + CONSULT),
+  p("gl4", "glp1", "A chat with someone who listens", "A friendly post about what a consultation with me feels like as a conversation: unhurried, honest and judgement free. Do not say what it is about." + CONSULT),
+  p("gl5", "glp1", "Nobody has to do this alone", "A kind, supportive post for a woman who has been going it alone, inviting her to book a consultation with me." + CONSULT),
+  p("gl6", "glp1", "Book the consultation", "A warm, straightforward and funny nudge for the woman who keeps meaning to get in touch, inviting her to book a consultation with me." + CONSULT),
 ];
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
