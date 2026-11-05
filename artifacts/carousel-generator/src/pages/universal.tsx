@@ -34,7 +34,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -268,7 +268,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const bottomShade = () => {
     const sh = ctx.createLinearGradient(0, H * 0.3, 0, H);
     sh.addColorStop(0, "rgba(0,0,0,0)");
-    sh.addColorStop(1, "rgba(0,0,0,0.5)");
+    sh.addColorStop(1, `rgba(0,0,0,${0.5 * Math.min(1, (look.opacity ?? 60) / 60)})`);
     ctx.fillStyle = sh;
     ctx.fillRect(0, H * 0.3, W, H * 0.7);
   };
@@ -332,18 +332,20 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const sx = look.left ? 100 : W / 2;
     ctx.textAlign = look.left ? "left" : "center";
     // subtitle first, so the headline can sit above it (or below it when the wash is at the top)
-    const sub = fitText(ctx, post.subtitle || "", (px) => body(px), W - 220, 170, Math.round(36 * bs), Math.round(24 * bs), 1.45);
+    const cs = look.coverScale || 1;
+    const sub = fitText(ctx, post.subtitle || "", (px) => body(px), W - 220, 170 * cs, Math.round(36 * bs * cs), Math.round(24 * bs * cs), 1.45);
     const subH = sub.lines.length * sub.px * 1.45;
-    let size = Math.round(120 * ts);
+    let size = Math.round(120 * ts * cs);
     const make = (s: number) => (tf ? layoutTitle(tf.lf, post.headline || "", tf.style, s, W - 200, 1.12) : null);
     let layout = make(size);
-    while (layout && size > Math.round(50 * ts) && titleHeight(layout) > 330 * Math.max(1, ts)) {
+    while (layout && size > Math.round(50 * ts * cs) && titleHeight(layout) > 330 * Math.max(1, ts * cs)) {
       size -= 4;
       layout = make(size);
     }
     const headH = layout ? titleHeight(layout) : 110;
     const gap = 30;
-    const startY = top ? 190 : H - 110 - subH - gap - headH;
+    const baseY = top ? 190 : H - 110 - subH - gap - headH;
+    const startY = Math.min(H - 60 - (headH + gap + subH), Math.max(40, baseY + (look.coverY || 0)));
     if (tf && layout) {
       drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, look.left ? "left" : "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
     } else {

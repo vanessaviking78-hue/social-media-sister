@@ -82,7 +82,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
@@ -644,16 +644,33 @@ function Builder({ id }: { id: string }) {
                   className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
-            {req.kind === "premium" && it.uniArgs && assetsRef.current && (
-              <label className="flex items-center gap-3 text-xs text-muted-foreground">Headline and writing position (drag up or down)
-                <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0}
-                  onChange={(e) => {
-                    const args = { ...it.uniArgs!, blockY: Number(e.target.value) };
-                    const cvs = renderUniversalPost(args, assetsRef.current!);
-                    patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
-                  }} />
-              </label>
-            )}
+            {req.kind === "premium" && it.uniArgs && assetsRef.current && (() => {
+              const upd = (patch: Partial<NonNullable<Item["uniArgs"]>>) => {
+                const args = { ...it.uniArgs!, ...patch };
+                const cvs = renderUniversalPost(args, assetsRef.current!);
+                patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+              };
+              const row = "flex items-center gap-3 text-xs text-muted-foreground";
+              return (
+                <div className="space-y-1">
+                  <label className={row}><span className="w-44 shrink-0">Headline and writing position</span>
+                    <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
+                  <label className={row}><span className="w-44 shrink-0">Cover text position</span>
+                    <input type="range" min={-900} max={200} step={10} className="flex-1" value={it.uniArgs.coverY ?? 0} onChange={(e) => upd({ coverY: Number(e.target.value) })} /></label>
+                  <label className={row}><span className="w-44 shrink-0">Cover text size</span>
+                    <input type="range" min={0.5} max={1.6} step={0.05} className="flex-1" value={it.uniArgs.coverScale ?? 1} onChange={(e) => upd({ coverScale: Number(e.target.value) })} /></label>
+                  <label className={row}><span className="w-44 shrink-0">Gradient strength</span>
+                    <input type="range" min={0} max={100} step={5} className="flex-1" value={it.uniArgs.gradOpacity ?? 60} onChange={(e) => upd({ gradOpacity: Number(e.target.value) })} /></label>
+                  <div className={row}><span className="w-44 shrink-0">Gradient colour</span>
+                    <input type="color" value={it.uniArgs.gradColour || "#111111"} onChange={(e) => upd({ gradColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
+                    {[["Main", req.mainHex], ["Accent", req.accentHex], ["Black", "#111111"], ["White", "#ffffff"]].map(([label, hex]) => (
+                      <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                    ))}
+                    <button onClick={() => upd({ gradColour: undefined })} className="px-2 py-0.5 rounded border">Auto</button>
+                  </div>
+                </div>
+              );
+            })()}
             {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>
