@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Check, Copy, Download, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Check, Copy, Download, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
+import { usePresets } from "@/lib/use-presets";
+import { uploadPngs } from "@/lib/month-engine";
 import { NO1_CLINIC, NO1_COLOURS, NO1_GROUPS, NO1_POST_TYPES, type No1PostType } from "@/lib/no1-posts";
 
 // NO 1 BODY SCULPTING, her own page. Hatcher on the front slide, Merriweather for everything else.
@@ -79,9 +81,16 @@ type Post = {
   photos: number[]; // pool index for each of the 5 slides
   note: string;
   busy: boolean;
+  when: string; // local date and time she wants it to go out
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+const p2 = (x: number) => String(x).padStart(2, "0");
+const nextDay = (hhmm: string) => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hhmm || "09:00"}`;
+};
 const TYPE_BY_ID = new Map(NO1_POST_TYPES.map((t) => [t.id, t]));
 
 async function ensureFonts() {
@@ -314,6 +323,9 @@ function LogoEditor({ post, photoFor, onChange }: { post: Post; photoFor: (n: nu
 }
 
 export default function No1Page() {
+  const { presets } = usePresets();
+  const preset = useMemo(() => presets.find((p) => /no\s*1|no1/i.test(p.name)) ?? null, [presets]);
+  const [scheduling, setScheduling] = useState<string | null>(null);
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(NO1_GROUPS[0].id);
@@ -405,6 +417,7 @@ export default function No1Page() {
         photos: [0, 1, 2, 3, 4].map((i) => start + i),
         note: "",
         busy: false,
+        when: nextDay(preset?.defaultPostTime ?? "09:00"),
       },
       ...l,
     ]);
@@ -492,6 +505,52 @@ export default function No1Page() {
       toast.error(e instanceof Error ? e.message : "That did not send, try again");
     } finally {
       setSending(null);
+    }
+  };
+
+  // Draws the five slides, saves them and puts the post in the scheduler, which sends it on at the time chosen.
+  const scheduleIt = async (post: Post) => {
+    if (!preset) { toast.error("I cannot find her client preset. It needs No 1 in its name"); return; }
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    const when = new Date(post.when);
+    if (Number.isNaN(when.getTime())) { toast.error("Pick a date and time first"); return; }
+    setScheduling(post.id);
+    try {
+      await ensureFonts();
+      await ensureLogo();
+      const dataUrls: string[] = [];
+      for (let n = 0; n < 5; n++) {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        drawSlide(c.getContext("2d")!, post, n, photoFor(post, n));
+        dataUrls.push(c.toDataURL("image/png"));
+      }
+      const urls = await uploadPngs(dataUrls, dataUrls.map((_, i) => `no1-${t.id}-${i + 1}-${Date.now()}.png`));
+      const foot = (preset.captionFootnote || "").trim();
+      const caption = [post.caption.trim(), post.hashtags.join(" "), foot].filter(Boolean).join("\n\n");
+      const r = await fetch(`${BASE}/api/scheduler/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postType: "carousel",
+          content: { caption, title: `${t.label} · ${NO1_CLINIC}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "no1" },
+          scheduledAt: when.toISOString(),
+          isTrial: false,
+          notes: "",
+          presetId: preset.id,
+        }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error || "Failed to schedule");
+      }
+      markDone(t.id);
+      toast.success("Scheduled");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not schedule");
+    } finally {
+      setScheduling(null);
     }
   };
 
@@ -587,11 +646,15 @@ export default function No1Page() {
               <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <h3 className="font-semibold">{t.label}</h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap items-center">
                     <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
+                    <Button size="sm" onClick={() => scheduleIt(post)} disabled={!post.caption || scheduling === post.id || !preset}>
+                      {scheduling === post.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
+                    </Button>
                     <Button size="sm" onClick={() => sendToHer(post)} disabled={!post.caption || sending === post.id}>
                       {sending === post.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}Send to her link
                     </Button>
