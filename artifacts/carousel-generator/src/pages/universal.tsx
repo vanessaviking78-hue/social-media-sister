@@ -255,6 +255,23 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
 
+  // Premium freebies carry the hook headline at the top of every slide after the cover.
+  const headerBottom = (): number => {
+    if (!look.left || !tf || !post.headline) return 0;
+    let size = Math.round(64 * ts);
+    let lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1);
+    while (size > 36 && titleHeight(lay) > 230) { size -= 4; lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1); }
+    ctx.save();
+    const shade = ctx.createLinearGradient(0, 0, 0, 420);
+    shade.addColorStop(0, "rgba(0,0,0,0.45)");
+    shade.addColorStop(1, "rgba(0,0,0,0)");
+    if (n !== 4) { ctx.fillStyle = shade; ctx.fillRect(0, 0, W, 420); }
+    ctx.restore();
+    drawTitle(ctx, tf.lf, lay, tf.style, 100, 90, "left", W - 200, inkPaint(ctx, ink, 90, titleHeight(lay)));
+    ctx.textAlign = "left";
+    return 90 + titleHeight(lay);
+  };
+
   if (n === 4) {
     if (look.grad && isHex(look.grad) && isHex(look.wash)) {
       const g = ctx.createLinearGradient(0, 0, W, H);
@@ -265,6 +282,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       ctx.fillStyle = solidFill(ctx, look.wash);
     }
     ctx.fillRect(0, 0, W, H);
+    headerBottom();
     ctx.fillStyle = inkPaint(ctx, ink, H / 2 - 200, 400);
     ctx.textAlign = "left";
     const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
@@ -333,11 +351,12 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   }
 
   wash(ctx, 0.3, look);
+  const hb = headerBottom();
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
-  let y = top ? 190 : H - 170 - total;
+  let y = top ? Math.max(190, hb + 40) : H - 170 - total;
   ctx.fillStyle = inkPaint(ctx, ink, y, total);
   ctx.font = body(fit.px);
   for (const l of fit.lines) {
