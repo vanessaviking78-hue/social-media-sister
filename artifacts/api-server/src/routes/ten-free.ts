@@ -538,12 +538,12 @@ const KIND_BRIEF: Record<string, { shape: "carousel" | "static"; brief: string }
     brief: "ONE EMPOWERING POST for women over 35 about midlife confidence. Warm, a little cheeky, shareable. It should make her feel capable and seen, never lecture, never mention ageing as a problem, never mention a treatment.",
   },
   "about-me": {
-    shape: "carousel",
-    brief: "ABOUT THE CLINICIAN, a carousel that introduces her as a person. The cover headline is a warm, funny hook like a title of a short story about her (3 to 6 words) with a subtitle. Slides 2 to 4 each carry one real thing from her answers (her hobbies, her pets, whether she is a mum, her area, her passion) told with humour so a stranger feels she already knows her.",
+    shape: "static",
+    brief: "ABOUT ME BIO for a poster. In the body (this one overrides the 30 word limit: 45 to 55 words), write her short first person bio: who she is, where she is, one or two real things from her answers (hobbies, pets, being a mum or not) and what she loves about looking after people. Warm, a touch of humour, never invent facts, no qualifications or results. Start it with 'Hi, I am' and her first name.",
   },
   "about-love": {
-    shape: "carousel",
-    brief: "WHY SHE LOVES WHAT SHE DOES, a carousel. The cover headline is a warm hook (3 to 6 words) with a subtitle. Slides 2 to 4 carry what she told us about why she got into aesthetics, her three words and her passion, in her own spirit: the moments she loves, how she wants people to feel, what she hopes they leave with. Never invent a backstory beyond what she wrote, never claim a qualification, no results or promises.",
+    shape: "static",
+    brief: "ABOUT ME, WHY I LOVE WHAT I DO, for a poster. In the body (this one overrides the 30 word limit: 40 to 50 words) write first person why she loves aesthetics, using only what she told us (her three words, her passion, why she started) and how she wants people to feel. Warm, human, a touch of humour, never invent a backstory, no results or promises, do not start with 'Hi'.",
   },
   "about-why": {
     shape: "static",
@@ -622,7 +622,7 @@ Return JSON only: {"posts":[{"kind":"","headline":"","subtitle":"","slides":[],"
         headline: noDashes(w.headline).slice(0, 120),
         subtitle: noDashes(w.subtitle).slice(0, 160),
         slides: (w.slides ?? []).slice(0, 3).map((s) => noDashes(s).slice(0, 360)),
-        body: noDashes(w.body).slice(0, 260),
+        body: noDashes(w.body).slice(0, 420),
         caption: noDashes(w.caption).slice(0, 1100),
         poll: { question: noDashes(w.poll?.question).slice(0, 70), a: noDashes(w.poll?.a).slice(0, 24), b: noDashes(w.poll?.b).slice(0, 24) },
         hashtags: fiveTags(w.hashtags, clinic.area),

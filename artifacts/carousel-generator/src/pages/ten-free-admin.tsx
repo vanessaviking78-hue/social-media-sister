@@ -5,6 +5,7 @@ import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
+import { renderAboutPost } from "@/lib/about-designs";
 import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
@@ -300,23 +301,35 @@ function Builder({ id }: { id: string }) {
       setStatus("Drawing the posts...");
       // Premium about me posts: written from her answers, drawn in the usual photo, gradient and text look with the clinic's own five photos.
       const aboutSlots = plan.filter((s) => s.source === "about") as Extract<(typeof PREMIUM_PLAN)[number], { source: "about" }>[];
-      let aboutCopy: { posts: { headline: string; subtitle: string; slides: string[]; caption: string; hashtags: string[]; poll: Poll }[] } = { posts: [] };
+      let aboutCopy: { posts: { headline: string; subtitle: string; body: string; slides: string[]; caption: string; hashtags: string[]; poll: Poll }[] } = { posts: [] };
       let aboutBmps: ImageBitmap[] = [];
-      if (aboutSlots.length) {
+      const hookSlots = plan.filter((x) => x.source === "hook");
+      if (aboutSlots.length || hookSlots.length) {
         setStatus("Writing the about me posts...");
-        aboutCopy = await post("/ten-free/copy", { clinic: { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, month: monthNameUK() }, answers: ans, kinds: aboutSlots.map((x) => x.kind) });
+        if (aboutSlots.length) aboutCopy = await post("/ten-free/copy", { clinic: { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, month: monthNameUK() }, answers: ans, kinds: aboutSlots.map((x) => x.kind) });
         aboutBmps = (await Promise.all(pool.map((p) => createImageBitmap(p.file).catch(() => null)))).filter((x): x is ImageBitmap => !!x);
       }
-      let ai = 0;
+      const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
+      let ai = 0, hi = 0;
       const out: Item[] = [];
       let ti = 0;
       for (const slot of plan) {
         if (slot.source === "about") {
           const w = aboutCopy.posts[ai];
-          const args = { treatmentId: "about-me", headline: w.headline, copy: { subtitle: w.subtitle, slides: w.slides, cta: dm }, photos: aboutBmps, offset: ai * 2, angle: 0, shift: [0, 0, 0, 0] };
+          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], bio: w.body || w.subtitle || "", name: req.clinicianName });
           ai++;
+          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
+          continue;
+        }
+        if (slot.source === "hook") {
+          const text = hookTexts[hi] || "";
+          const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
+          setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
+          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: "" });
+          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0] };
+          hi++;
           const canvases = renderUniversalPost(args, assets);
-          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
+          out.push({ n: slot.n, label: "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
         }
         if (slot.source === "universal") {

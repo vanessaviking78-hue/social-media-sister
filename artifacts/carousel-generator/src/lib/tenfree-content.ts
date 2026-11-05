@@ -6,8 +6,10 @@ import { hashSeed, type PackKind } from "./pack-plan";
 export type TenSlot =
   | { n: number; label: string; carousel: boolean; source: "universal" }
   | { n: number; label: string; carousel: boolean; source: "pack"; kind: PackKind; design: string; idea: string; preset?: Record<string, string> }
-  // An about me carousel drawn in the usual Universal look (photo, gradient and text) from the clinic's own photos.
-  | { n: number; label: string; carousel: boolean; source: "about"; kind: "about-me" | "about-love" };
+  // An about me poster drawn from one of her two About me templates (cream or peach) with the clinic's own photo and bio.
+  | { n: number; label: string; carousel: boolean; source: "about"; kind: "about-me" | "about-love"; layout: "cream" | "peach" }
+  // A hook she picked from the bank as the cover of a Universal layout carousel.
+  | { n: number; label: string; carousel: boolean; source: "hook" };
 
 // The order the ten sit in on the feed. Treatments are Universal carousels. Everything else is drawn from the same templates as the paid post packs.
 // The idea is handed to the writer along with her answers from the form. A preset is wording Vanessa wrote herself, which is kept exactly.
@@ -36,11 +38,11 @@ export const TEN_PLAN: TenSlot[] = [
 // The hook posts are photo posts with the hook as the headline. Everything is drawn from the same designs her paying clients get.
 export const PREMIUM_PLAN: TenSlot[] = [
   { n: 1, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 2, label: "About me", carousel: true, source: "about", kind: "about-me" },
+  { n: 2, label: "About me", carousel: false, source: "about", kind: "about-me", layout: "cream" },
   { n: 3, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 4, label: "Why I love what I do", carousel: true, source: "about", kind: "about-love" },
+  { n: 4, label: "About me: why I love it", carousel: false, source: "about", kind: "about-love", layout: "peach" },
   { n: 5, label: "Treatment carousel", carousel: true, source: "universal" },
-  ...[6, 7, 8, 9, 10].map((n): TenSlot => ({ n, label: "Hook post", carousel: false, source: "pack", kind: "portrait", design: "0", idea: "a photo post of me with my hook line as the headline" })),
+  ...[6, 7, 8, 9, 10].map((n): TenSlot => ({ n, label: "Hook carousel", carousel: true, source: "hook" })),
 ];
 
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
