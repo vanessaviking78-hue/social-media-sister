@@ -13,6 +13,7 @@ import { notifyTenFreeRequest } from "../lib/notify";
 import { creditStatus } from "../lib/aiCreditAlert";
 import { aiSourcePhotosTable, clientPresetsTable } from "@workspace/db/schema";
 import { readKey } from "../lib/freeSampleWorker";
+import { signedTransformUrl } from "../lib/objectStorage";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 
 // 10 FREE POSTS. A public form at /10freeposts where a clinic asks for nine free posts (3 treatment carousels, an empowering post,
@@ -562,6 +563,32 @@ const KIND_BRIEF: Record<string, { shape: "carousel" | "static"; brief: string }
     brief: "A SEASONAL POST for the current month in the UK (the month is given). Tie the real mood of the season (the weather, the diary, the things women over 35 are juggling) to how a woman might want to feel. Gently relevant to a clinic, never an offer, never a deadline, never a skin claim.",
   },
 };
+
+// Background removal with ImageKit's own AI (the e-bgremove transformation). The photo goes up, ImageKit returns it with the background gone.
+// If anything fails the caller gets a 502 and simply uses the plain photo.
+const cutoutUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 1 } });
+router.post("/ten-free/cutout", requireAuth, cutoutUpload.single("image"), async (req: Request, res: Response) => {
+  try {
+    const f = req.file;
+    if (!f) { res.status(400).json({ error: "No image" }); return; }
+    const key = await saveSampleFile(f.buffer, f.mimetype, "cutout-source");
+    let last = "";
+    for (let i = 0; i < 6; i++) {
+      const r = await fetch(signedTransformUrl(key, "e-bgremove"));
+      const type = r.headers.get("content-type") || "";
+      if (r.ok && type.startsWith("image/")) {
+        res.setHeader("Content-Type", type);
+        res.send(Buffer.from(await r.arrayBuffer()));
+        return;
+      }
+      last = `${r.status} ${(await r.text().catch(() => "")).slice(0, 120)}`;
+      await new Promise((ok) => setTimeout(ok, 2500));
+    }
+    res.status(502).json({ error: `Background removal not ready: ${last}` });
+  } catch (err: unknown) {
+    res.status(502).json({ error: err instanceof Error ? err.message : "Background removal failed" });
+  }
+});
 
 router.post("/ten-free/copy", requireAuth, async (req: Request, res: Response) => {
   try {

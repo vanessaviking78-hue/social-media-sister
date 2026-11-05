@@ -88,6 +88,8 @@ type Item = {
 const HOOK_SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
 const HOOK_SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
 
+const PREMIUM_VOICE = "VOICE FOR THIS POST: professional with a cheeky streak. She knows her stuff and says it with a raised eyebrow. Write like a clever friend who happens to be the expert: dry, warm, a little naughty, never rude. Every slide should have one line a reader would screenshot or send to a friend, an unexpected comparison, a wry aside or a blunt truth said kindly. Short sentences, everyday words, no stock phrases and nothing that could sit on any clinic's page. No emojis, no dashes, no tea or biscuit jokes, no 'not X but Y' phrasing, no medical lecture.";
+
 const HEAD_FONTS = [
   { id: "instrument", label: "Instrument Serif", css: "'Instrument Serif', serif" },
   { id: "playfair", label: "Playfair Display", css: "'Playfair Display', serif" },
@@ -293,9 +295,18 @@ function Builder({ id }: { id: string }) {
       });
 
       setStatus("Writing the treatment posts...");
+      // Premium: every treatment carousel opens on a scroll stopping hook from the Treatment section of the bank, filled with the treatment.
+      if (isPremium) {
+        const taken = new Set(pickedHooks);
+        const tHooks = HOOK_BANK.filter((h: Hook) => h.theme === "Treatment" && /\[treatment\]/i.test(h.text) && !taken.has(h.code));
+        picks.forEach((p, i) => {
+          const h = tHooks[(hashSeed(req.id) + (req.seq ?? 0) * 3 + i * 7) % Math.max(1, tHooks.length)];
+          if (h) p.headline = pickedHookPayload([h.code], [p.treatment.name], req.area.split(",")[0].trim())[0]?.text || p.headline;
+        });
+      }
       const tcopy: any[] = [];
       for (const p of picks) {
-        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: "" }));
+        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: isPremium ? PREMIUM_VOICE : "" }));
       }
 
       setStatus("Drawing the posts...");
@@ -316,7 +327,18 @@ function Builder({ id }: { id: string }) {
       for (const slot of plan) {
         if (slot.source === "about") {
           const w = aboutCopy.posts[ai];
-          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], bio: w.body || w.subtitle || "", name: req.clinicianName });
+          let cutout: ImageBitmap | null = null;
+          if (slot.layout === "peach") {
+            // ImageKit takes the background off so she stands on the peach page. If that fails the plain photo is used.
+            try {
+              setStatus("Removing the photo background...");
+              const fd = new FormData();
+              fd.append("image", pool[ai % pool.length].file, "photo.jpg");
+              const rr = await fetch(`${API}/ten-free/cutout`, { method: "POST", headers: { ...authHeaders(), "Content-Type": undefined as unknown as string }, body: fd });
+              if (rr.ok) cutout = await createImageBitmap(await rr.blob());
+            } catch { /* plain photo */ }
+          }
+          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, bio: w.body || w.subtitle || "", name: req.clinicianName });
           ai++;
           out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
@@ -325,7 +347,7 @@ function Builder({ id }: { id: string }) {
           const text = hookTexts[hi] || "";
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
-          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: "" });
+          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: PREMIUM_VOICE });
           const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0] };
           hi++;
           const canvases = renderUniversalPost(args, assets);

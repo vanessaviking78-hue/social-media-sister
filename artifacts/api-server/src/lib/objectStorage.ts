@@ -391,3 +391,11 @@ export async function signObjectURL({
   }
   return signedUrlForKey(objectName, _ttlSec);
 }
+
+// A signed ImageKit URL with a transformation on it (for example "e-bgremove"). ImageKit signs the whole URL, query included.
+export function signedTransformUrl(key: string, tr: string, ttlSec = 600): string {
+  const base = `${getUrlEndpoint()}/${key.replace(/^\/+/, "")}?tr=${tr}`;
+  const expire = Math.floor(Date.now() / 1000) + ttlSec;
+  const signature = createHmac("sha1", getPrivateKey()).update(base + expire).digest("hex");
+  return `${base}&ik-t=${expire}&ik-s=${signature}`;
+}

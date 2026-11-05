@@ -79,7 +79,7 @@ function templateCream(photo: ImageBitmap, bio: string, headline: string): HTMLC
 }
 
 // Template 2: peach page, tall red headline running up the left, short bio top right, photo bottom right with the name signed across it.
-function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string): HTMLCanvasElement {
+function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string, cutout?: ImageBitmap | null): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
@@ -95,6 +95,15 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
   ctx.scale((H - 100) / m.width, 345 / capH);
   ctx.fillText(headline, 0, 0);
   ctx.restore();
+  if (cutout) {
+    // Background removed: she stands straight on the peach page, overlapping the headline, with a soft shadow.
+    const s2 = Math.min(1000 / cutout.height, 700 / cutout.width * 1.15);
+    const dw = cutout.width * s2, dh = cutout.height * s2;
+    ctx.save();
+    ctx.shadowColor = "rgba(60,20,10,0.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetX = -12; ctx.shadowOffsetY = 12;
+    ctx.drawImage(cutout, W - dw + 40, H - dh, dw, dh);
+    ctx.restore();
+  } else {
   // photo with a soft shadow, bleeding off the bottom right
   const px = 410, py = 340, pw = W - px, ph = H - py, r = 220;
   ctx.save();
@@ -113,6 +122,7 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
   ctx.clip();
   cover(ctx, photo, px, py, pw, ph, 0.25);
   ctx.restore();
+  }
   // bio
   ctx.fillStyle = "#3b1a12";
   ctx.textBaseline = "alphabetic";
@@ -138,8 +148,8 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
 }
 
 export type AboutLayout = "cream" | "peach";
-export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; bio: string; name: string; headline?: string }): Promise<HTMLCanvasElement> {
+export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; cutout?: ImageBitmap | null; bio: string; name: string; headline?: string }): Promise<HTMLCanvasElement> {
   await loadAboutFonts();
   const head = o.headline || "ABOUT ME";
-  return o.layout === "cream" ? templateCream(o.photo, o.bio, head) : templatePeach(o.photo, o.bio, head, o.name);
+  return o.layout === "cream" ? templateCream(o.photo, o.bio, head) : templatePeach(o.photo, o.bio, head, o.name, o.cutout);
 }
