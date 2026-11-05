@@ -226,7 +226,7 @@ function Builder({ id }: { id: string }) {
       setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
       const photoBlob = req.photoUrl ? await fetch(req.photoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
-      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob, titleFont: uniFont });
+      const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob, titleFont: uniFont, premium: isPremium });
       assetsRef.current = assets;
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
@@ -572,21 +572,13 @@ function Builder({ id }: { id: string }) {
           )}
         </div>
       )}
-      {req?.kind === "premium" && (
-        <div className="flex gap-2 items-center flex-wrap">
-          <span className="text-sm font-semibold">Headline font on the carousels (choose before you build):</span>
-          {UNI_FONTS.map((f) => (
-            <button key={f.id} onClick={() => setUniFont(f.id)} className={`px-3 py-1.5 rounded border text-sm ${uniFont === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`}>{f.label}</button>
-          ))}
-        </div>
-      )}
-      <div className="flex gap-2 items-center flex-wrap">
+      {req?.kind !== "premium" && <div className="flex gap-2 items-center flex-wrap">
         <span className="text-sm font-semibold">Headline font for every post:</span>
         {HEAD_FONTS.map((f) => (
           <button key={f.id} onClick={() => setHeadChoice(f.id)} className={`px-3 py-1.5 rounded border text-sm ${headChoice === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`} style={{ fontFamily: f.css }}>{f.label}</button>
         ))}
         <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels are in Hatcher.</span>
-      </div>
+      </div>}
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy || req.aiStatus === "working"} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}

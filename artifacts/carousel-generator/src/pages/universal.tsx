@@ -34,7 +34,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -297,7 +297,8 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
 
   if (n === 0) {
     wash(ctx, 0.5, look);
-    ctx.textAlign = "center";
+    const sx = look.left ? 100 : W / 2;
+    ctx.textAlign = look.left ? "left" : "center";
     // subtitle first, so the headline can sit above it (or below it when the wash is at the top)
     const sub = fitText(ctx, post.subtitle || "", (px) => body(px), W - 220, 170, Math.round(36 * bs), Math.round(24 * bs), 1.45);
     const subH = sub.lines.length * sub.px * 1.45;
@@ -312,18 +313,18 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const gap = 30;
     const startY = top ? 190 : H - 110 - subH - gap - headH;
     if (tf && layout) {
-      drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
+      drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, look.left ? "left" : "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
     } else {
       ctx.fillStyle = inkPaint(ctx, ink, startY, 120);
       ctx.font = `400 90px "${BODY_FONT}", sans-serif`;
-      ctx.fillText(post.headline || "", W / 2, startY);
+      ctx.fillText(post.headline || "", sx, startY);
     }
     ctx.fillStyle = inkPaint(ctx, ink, startY, headH + subH + gap);
     ctx.globalAlpha = 0.92;
     ctx.font = body(sub.px);
     let y = startY + headH + gap;
     for (const l of sub.lines) {
-      ctx.fillText(l, W / 2, y);
+      ctx.fillText(l, sx, y);
       y += sub.px * 1.45;
     }
     ctx.globalAlpha = 1;

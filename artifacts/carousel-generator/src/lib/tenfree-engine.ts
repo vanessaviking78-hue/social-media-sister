@@ -92,6 +92,8 @@ export type Assets = {
   /** shown on the closing slide when it is set */
   whatsapp: string;
   tf: TitleFont;
+  /** premium freebies: Montserrat, everything left aligned */
+  premium?: boolean;
 };
 
 // The headline font on the three treatment carousels is Hatcher, loaded from the same files her NO 1 page uses. It has no curly
@@ -140,10 +142,19 @@ function textLogoCanvas(name: string): HTMLCanvasElement {
   return c;
 }
 
-export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null; titleFont?: string }): Promise<Assets> {
+export async function buildAssets(o: { main: string; accent: string; clinicName: string; handle: string; whatsapp: string; logoBlob: Blob | null; photoBlob: Blob | null; titleFont?: string; premium?: boolean }): Promise<Assets> {
   await ensureFonts();
   await loadSoft();
   await loadPlayfair();
+  if (o.premium) {
+    if (!document.getElementById("mont-font")) {
+      const l = document.createElement("link");
+      l.id = "mont-font"; l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap";
+      document.head.appendChild(l);
+    }
+    await Promise.all(["400 40px Montserrat", "600 40px Montserrat"].map((f) => document.fonts.load(f).catch(() => [])));
+  }
   const tf = await buildTitleFont(o.titleFont);
   let logo: HTMLCanvasElement | null = null;
   if (o.logoBlob) {
@@ -158,7 +169,7 @@ export async function buildAssets(o: { main: string; accent: string; clinicName:
   const forDark = logoLuma(logo) < 0.75 ? recolourLogo(logo, "#ffffff") : logo;
   const logoImg = await loadImage(forDark.toDataURL("image/png")).catch(() => null);
   const photo = o.photoBlob ? await createImageBitmap(o.photoBlob).catch(() => null) : null;
-  return { brand: makeBrand(o.main, o.accent), logo: forDark, logoImg, photo, handle: o.handle.replace(/^@/, ""), whatsapp: o.whatsapp.trim(), tf };
+  return { brand: makeBrand(o.main, o.accent), logo: forDark, logoImg, photo, handle: o.handle.replace(/^@/, ""), whatsapp: o.whatsapp.trim(), tf, premium: o.premium };
 }
 
 // ---------- drawing helpers ----------
@@ -243,7 +254,7 @@ function handleStamp(ctx: CanvasRenderingContext2D, a: Assets, y: number) {
 export type UniversalCopy = { subtitle: string; slides: string[]; cta: string };
 
 export function universalLook(a: Assets): Look {
-  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 60, logoWhite: false, bw: false, bodyFont: "Playfair Display" };
+  return { ...DEFAULT_LOOK, wash: a.brand.deep, grad: a.brand.mid, text: "#ffffff", dir: "bottom", opacity: 60, logoWhite: false, bw: false, bodyFont: a.premium ? "Montserrat" : "Playfair Display", left: !!a.premium };
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
