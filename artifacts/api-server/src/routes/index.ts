@@ -100,6 +100,7 @@ import toastPhotoRouter from "./toast-photo";
 import freeSamplesRouter from "./free-samples";
 import postPacksRouter from "./post-packs";
 import tenFreeRouter from "./ten-free";
+import yearpassRouter from "./yearpass";
 import photoshootRouter from "./photoshoot";
 
 const router: IRouter = Router();
@@ -108,6 +109,7 @@ router.use(healthRouter);
 router.use(freeSamplesRouter);
 router.use(postPacksRouter);
 router.use(tenFreeRouter);
+router.use(yearpassRouter);
 router.use(photoshootRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);

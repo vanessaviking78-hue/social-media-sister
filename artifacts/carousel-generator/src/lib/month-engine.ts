@@ -937,3 +937,38 @@ export async function urlToFile(url: string, i: number): Promise<File> {
   const blob = await res.blob();
   return new File([blob], `approved-${i + 1}.${blob.type.includes("png") ? "png" : "jpg"}`, { type: blob.type });
 }
+
+// Sends a checked month to a Year Pass buyer's portal. Every slide of every post is drawn and uploaded, then each post's story, then it is published.
+export async function publishToYearPass(posts: MPost[], c: Client, monthId: number, onProgress?: (done: number, total: number) => void): Promise<void> {
+  const pw = (() => { try { return localStorage.getItem("cybersuite-pw") || ""; } catch { return ""; } })();
+  const headers = { "Content-Type": "application/json", "x-app-password": pw, Authorization: `Bearer ${pw}` };
+  const out: { n: number; day: string; label: string; images: string[]; caption: string; tags: string }[] = [];
+  const stories: { n: number; image: string; question: string }[] = [];
+  const ordered = [...posts].sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
+  for (let i = 0; i < ordered.length; i++) {
+    const post = ordered[i];
+    onProgress?.(i, ordered.length);
+    const cs = await renderPostImages(post, c, 1);
+    const urls = await uploadPngs(cs.map((x) => x.toDataURL("image/png")), cs.map((_, k) => `yp-${post.tool}-${post.design}-${k + 1}-${Date.now()}.png`));
+    out.push({
+      n: i + 1,
+      day: new Date(post.when).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" }),
+      label: designName(post),
+      images: urls,
+      caption: noEmoji(post.caption.trim()),
+      tags: post.hashtags.join(" "),
+    });
+    if (post.story?.on !== false && post.story?.q.trim()) {
+      const sc = document.createElement("canvas");
+      await renderStory(post, c, sc, 1);
+      const [storyUrl] = await uploadPngs([sc.toDataURL("image/png")], [`yp-story-${post.tool}-${post.design}-${Date.now()}.png`]);
+      stories.push({ n: stories.length + 1, image: storyUrl, question: post.story.q.trim() });
+    }
+  }
+  onProgress?.(ordered.length, ordered.length);
+  const r = await fetch(`${BASE}/api/yearpass/admin/months/${monthId}/publish`, { method: "POST", headers, body: JSON.stringify({ posts: out, stories }) });
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: "Failed" }));
+    throw new Error(err.error || "Could not publish to the portal");
+  }
+}

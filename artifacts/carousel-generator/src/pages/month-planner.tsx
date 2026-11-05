@@ -23,7 +23,7 @@ import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import {
-  TOOL_LABEL, METALS, coverEditFields, renderStory, STORY_W, sendToFlip, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  TOOL_LABEL, METALS, coverEditFields, renderStory, STORY_W, sendToFlip, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, publishToYearPass, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
 } from "@/lib/month-engine";
 
@@ -380,6 +380,19 @@ export default function MonthPlanner() {
   const [clientId, setClientId] = useState("");
   const [prospectName, setProspectName] = useState("");
   const [sampleLink, setSampleLink] = useState("");
+  // Year Pass buyers who have sent their answers, so a checked month can go to their portal.
+  const [ypList, setYpList] = useState<{ id: number; label: string }[]>([]);
+  const [ypId, setYpId] = useState(() => { try { return new URLSearchParams(window.location.search).get("yp") || ""; } catch { return ""; } });
+  useEffect(() => {
+    const pw = (() => { try { return localStorage.getItem("cybersuite-pw") || ""; } catch { return ""; } })();
+    fetch(`${API}/yearpass/admin/members`, { headers: { "x-app-password": pw, Authorization: `Bearer ${pw}` } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { members: { id: string; email: string }[]; months: { id: number; member_id: string; month_no: number; status: string; clinic_name: string }[] } | null) => {
+        if (!d) return;
+        setYpList(d.months.filter((m) => m.status === "submitted").map((m) => ({ id: m.id, label: `${m.clinic_name || d.members.find((x) => x.id === m.member_id)?.email || "Buyer"}, month ${m.month_no}` })));
+      })
+      .catch(() => undefined);
+  }, []);
   const photoFileRef = useRef<HTMLInputElement>(null);
   const [ym, setYm] = useState(`${now.getFullYear()}-${now.getMonth()}`);
   const [owner, setOwner] = useState("");
@@ -712,6 +725,28 @@ export default function MonthPlanner() {
       toast.success(`${ok} posts scheduled.`, { id: toastId });
     } catch (e) {
       toast.error(`${ok} scheduled, then it stopped: ${e instanceof Error ? e.message : "failed"}`, { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const sendToYearPass = async () => {
+    const id = Number(ypId);
+    if (!id) { toast.error("Pick which Year Pass month this is for."); return; }
+    const todo = posts.filter((p) => p.selected && !p.scheduled);
+    if (!todo.length) { toast.error("Tick the posts you want to send first."); return; }
+    const missing = todo.filter((p) => !p.caption.trim());
+    if (missing.length) { toast.error(`${missing.length} post${missing.length > 1 ? "s have" : " has"} no caption yet. Press Rewrite on them first.`); return; }
+    setBusy("yp");
+    const toastId = toast.loading("Sending to their portal…");
+    try {
+      await ensureFonts(client.headFont, client.bodyFont);
+      await publishToYearPass(todo, client, id, (d, t) => toast.loading(`Drawing and uploading ${Math.min(d + 1, t)} of ${t}`, { id: toastId }));
+      toast.success("It is on their portal. Tell them their month is ready.", { id: toastId });
+      setYpList((l) => l.filter((x) => x.id !== id));
+      setYpId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not send it", { id: toastId });
     } finally {
       setBusy(null);
     }
@@ -1224,7 +1259,12 @@ export default function MonthPlanner() {
           ) : (
             <>
               <span className="text-sm text-muted-foreground">{ready.length} ticked, nothing is scheduled until you press the button.</span>
-              <Button className="ml-auto" disabled={!!busy || !ready.length} onClick={() => setConfirm(true)}>Schedule the ticked posts</Button>
+              <select className="ml-auto rounded-md border border-border/40 bg-background px-2 py-2 text-sm" value={ypId} onChange={(e) => setYpId(e.target.value)} aria-label="Year Pass month">
+                <option value="">Year Pass month…</option>
+                {ypList.map((x) => <option key={x.id} value={String(x.id)}>{x.label}</option>)}
+              </select>
+              <Button variant="outline" disabled={!!busy || !ready.length || !ypId} onClick={sendToYearPass}>{busy === "yp" ? "Sending…" : "Send to Year Pass portal"}</Button>
+              <Button disabled={!!busy || !ready.length} onClick={() => setConfirm(true)}>Schedule the ticked posts</Button>
             </>
           )}
         </div>

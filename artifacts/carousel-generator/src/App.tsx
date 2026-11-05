@@ -161,6 +161,8 @@ import DailyFive from "@/pages/daily-five";
 import InjectorReels from "@/pages/injector-reels";
 import TenFreePosts from "@/pages/ten-free-posts";
 import TenFreePublic from "@/pages/ten-free-public";
+import YearPass from "@/pages/yearpass";
+import YearPassAdmin from "@/pages/yearpass-admin";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
@@ -184,6 +186,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
+      <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
@@ -351,6 +354,7 @@ function AppContent() {
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
+  const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
@@ -490,6 +494,9 @@ function AppContent() {
   }
   if (isTenFreeForm) {
     return <TenFreePosts />;
+  }
+  if (isYearPass && yearPassParams?.token) {
+    return <YearPass token={yearPassParams.token} />;
   }
   if (isTenFreePublic && tenFreeParams?.slug) {
     return <TenFreePublic slug={tenFreeParams.slug} />;
