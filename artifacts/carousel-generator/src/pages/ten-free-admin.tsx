@@ -646,14 +646,18 @@ function Builder({ id }: { id: string }) {
               ))}
             </div>
             {req.kind === "premium" && it.uniArgs && assetsRef.current && (() => {
-              const upd = (patch: Partial<NonNullable<Item["uniArgs"]>>) => {
-                const args = { ...it.uniArgs!, ...patch };
-                const cvs = renderUniversalPost(args, assetsRef.current!);
-                patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+              const upd = (patch: Partial<NonNullable<Item["uniArgs"]>>, clear: string[] = []) => {
+                const args: Record<string, unknown> = { ...it.uniArgs!, ...patch };
+                for (const k of clear) delete args[k];
+                for (const k of Object.keys(args)) if (args[k] === undefined) delete args[k];
+                const a2 = args as unknown as NonNullable<Item["uniArgs"]>;
+                const cvs = renderUniversalPost(a2, assetsRef.current!);
+                patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
               };
               const row = "flex items-center gap-3 text-xs text-muted-foreground";
               return (
                 <div className="space-y-1">
+                  <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
                   <label className={row}><span className="w-44 shrink-0">Headline and writing position</span>
                     <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-44 shrink-0">Cover text position</span>
@@ -667,14 +671,14 @@ function Builder({ id }: { id: string }) {
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["Black", "#111111"], ["White", "#ffffff"]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
-                    <button onClick={() => upd({ gradColour: undefined })} className="px-2 py-0.5 rounded border">Auto</button>
+                    <button onClick={() => upd({}, ["gradColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
                   <div className={row}><span className="w-44 shrink-0">Background colour (instead of the photo)</span>
                     <input type="color" value={it.uniArgs.bgColour || "#ffffff"} onChange={(e) => upd({ bgColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ bgColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
-                    <button onClick={() => upd({ bgColour: undefined })} className={`px-2 py-0.5 rounded border ${it.uniArgs.bgColour ? "" : "bg-pink-500 text-white border-pink-500"}`}>Photo</button>
+                    <button onClick={() => upd({}, ["bgColour"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.bgColour ? "" : "bg-pink-500 text-white border-pink-500"}`}>Photo</button>
                   </div>
                 </div>
               );
