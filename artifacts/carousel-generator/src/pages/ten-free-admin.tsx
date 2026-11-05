@@ -7,7 +7,7 @@ import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
-import { renderAboutPost } from "@/lib/about-designs";
+import { renderAboutPost, aboutDefaults } from "@/lib/about-designs";
 import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
@@ -84,7 +84,7 @@ type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
   post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
-  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string } };
+  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string; bg?: string; head?: string; text?: string } };
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
@@ -692,27 +692,30 @@ function Builder({ id }: { id: string }) {
                 </div>
               );
             })()}
-            {it.aboutArgs && (
-              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span>Headline and text colour</span>
-                <input type="color" value={it.aboutArgs.colours.main} className="h-7 w-12 cursor-pointer rounded border" onChange={async (e) => {
-                  const aa = { ...it.aboutArgs!, colours: { ...it.aboutArgs!.colours, main: e.target.value } };
-                  const cv = await renderAboutPost(aa);
-                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
-                }} />
-                <span>Page colour</span>
-                <input type="color" value={it.aboutArgs.colours.accent} className="h-7 w-12 cursor-pointer rounded border" onChange={async (e) => {
-                  const aa = { ...it.aboutArgs!, colours: { ...it.aboutArgs!.colours, accent: e.target.value } };
-                  const cv = await renderAboutPost(aa);
-                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
-                }} />
-                <button className="px-2 py-0.5 rounded border" onClick={async () => {
-                  const aa = { ...it.aboutArgs!, colours: { main: req.mainHex, accent: req.accentHex } };
-                  const cv = await renderAboutPost(aa);
-                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
-                }}>Back to their brand</button>
-              </div>
-            )}
+            {it.aboutArgs && (() => {
+              const aa0 = it.aboutArgs!;
+              const d = aboutDefaults(aa0.layout, aa0.colours);
+              const cur = { bg: aa0.colours.bg || d.bg, head: aa0.colours.head || d.head, text: aa0.colours.text || d.text };
+              const set = async (patch: Partial<typeof aa0.colours>, reset = false) => {
+                const aa = { ...aa0, colours: reset ? { main: req.mainHex, accent: req.accentHex } : { ...aa0.colours, ...patch } };
+                const cv = await renderAboutPost(aa);
+                patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+              };
+              const sw = (k: "bg" | "head" | "text") => [["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
+                <button key={label} onClick={() => void set({ [k]: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+              ));
+              return (
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Background colour</span>
+                    <input type="color" value={cur.bg} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ bg: e.target.value })} />{sw("bg")}</div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Headline colour</span>
+                    <input type="color" value={cur.head} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ head: e.target.value })} />{sw("head")}</div>
+                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Text colour</span>
+                    <input type="color" value={cur.text} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ text: e.target.value })} />{sw("text")}</div>
+                  <button className="px-2 py-0.5 rounded border" onClick={() => void set({}, true)}>Back to their brand colours</button>
+                </div>
+              );
+            })()}
             {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>
