@@ -20,3 +20,7 @@
 [[edge_functions]]
   path = "/10free/*"
   function = "ten-free-og"
+
+[[edge_functions]]
+  path = "/premiumfreebies"
+  function = "premium-og"
