@@ -541,6 +541,10 @@ const KIND_BRIEF: Record<string, { shape: "carousel" | "static"; brief: string }
     shape: "carousel",
     brief: "ABOUT THE CLINICIAN, a carousel that introduces her as a person. The cover headline is a warm, funny hook like a title of a short story about her (3 to 6 words) with a subtitle. Slides 2 to 4 each carry one real thing from her answers (her hobbies, her pets, whether she is a mum, her area, her passion) told with humour so a stranger feels she already knows her.",
   },
+  "about-love": {
+    shape: "carousel",
+    brief: "WHY SHE LOVES WHAT SHE DOES, a carousel. The cover headline is a warm hook (3 to 6 words) with a subtitle. Slides 2 to 4 carry what she told us about why she got into aesthetics, her three words and her passion, in her own spirit: the moments she loves, how she wants people to feel, what she hopes they leave with. Never invent a backstory beyond what she wrote, never claim a qualification, no results or promises.",
+  },
   "about-why": {
     shape: "static",
     brief: "WHY SHE GOT INTO AESTHETICS, told from her own answer plus her three words. One honest, human line or two that makes a woman trust her. Never invent a backstory beyond what she wrote, never claim a qualification.",

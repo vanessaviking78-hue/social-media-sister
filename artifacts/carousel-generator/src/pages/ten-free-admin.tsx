@@ -5,8 +5,7 @@ import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
-import { LUX_SLIDE_DEFS } from "@/lib/lux-designs";
-import { HOOKS as HOOK_BANK, HOOK_DAYS, hookTiming, pickedHookPayload, startOfDay, type Hook } from "@/lib/hook-bank";
+import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { EMPOWER } from "@/lib/empower-designs";
@@ -84,6 +83,10 @@ type Item = {
   poll: Poll & { instruction: string }; libUrls?: string[];
 };
 
+// The Month tool's hook sections, in the same order as the clinic pages.
+const HOOK_SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
+const HOOK_SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
+
 const HEAD_FONTS = [
   { id: "instrument", label: "Instrument Serif", css: "'Instrument Serif', serif" },
   { id: "playfair", label: "Playfair Display", css: "'Playfair Display', serif" },
@@ -103,12 +106,11 @@ function Builder({ id }: { id: string }) {
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
   const [pickedHooks, setPickedHooks] = useState<string[]>([]);
-  const [hookDay, setHookDay] = useState<string>("Any day");
+  const [hookSection, setHookSection] = useState<string>("Treatment");
   const [attaching, setAttaching] = useState(false);
   // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
   const [chosenT, setChosenT] = useState<string[]>([]);
   const [about, setAbout] = useState<Req["answers"] | null>(null);
-  const [aboutDesigns, setAboutDesigns] = useState<[number, number]>([0, 3]);
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
@@ -262,8 +264,7 @@ function Builder({ id }: { id: string }) {
       if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text);
       const built = packSlots.map((s) => {
         const relIds = relatableFor(ans.age, /^(yes|grandma)/i.test(ans.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
-        const aboutIdx = isPremium && s.kind === "lux" ? PREMIUM_PLAN.filter((x) => x.source === "pack" && x.kind === "lux").findIndex((x) => x.n === s.n) : -1;
-        const design = aboutIdx >= 0 ? String(aboutDesigns[aboutIdx]) : s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
+        const design = s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
         const sk = skeleton({ n: s.n, kind: s.kind, design }, cursor, pool.length, !!s.preset || design === "gatecrasher");
         const facts = `About me (the only facts you may use): age group ${ans.age || "not given"} (never state it, and never use a memory or life stage that does not fit it); hobbies ${ans.hobbies}; mum: ${ans.mum}; pets: ${ans.pets}; why I got into aesthetics: ${ans.why}; three words: ${ans.threeWords}; passion: ${ans.passion}; area: ${req.area}; month: ${monthNameUK()}. ${siteNotes ? "My clinic offers things in line with: " + siteNotes.slice(0, 600) : ""}`;
         const rel = s.design === "relatable" ? EMPOWER.find((e) => e.id === design) : null;
@@ -297,9 +298,27 @@ function Builder({ id }: { id: string }) {
       }
 
       setStatus("Drawing the posts...");
+      // Premium about me posts: written from her answers, drawn in the usual photo, gradient and text look with the clinic's own five photos.
+      const aboutSlots = plan.filter((s) => s.source === "about") as Extract<(typeof PREMIUM_PLAN)[number], { source: "about" }>[];
+      let aboutCopy: { posts: { headline: string; subtitle: string; slides: string[]; caption: string; hashtags: string[]; poll: Poll }[] } = { posts: [] };
+      let aboutBmps: ImageBitmap[] = [];
+      if (aboutSlots.length) {
+        setStatus("Writing the about me posts...");
+        aboutCopy = await post("/ten-free/copy", { clinic: { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, month: monthNameUK() }, answers: ans, kinds: aboutSlots.map((x) => x.kind) });
+        aboutBmps = (await Promise.all(pool.map((p) => createImageBitmap(p.file).catch(() => null)))).filter((x): x is ImageBitmap => !!x);
+      }
+      let ai = 0;
       const out: Item[] = [];
       let ti = 0;
       for (const slot of plan) {
+        if (slot.source === "about") {
+          const w = aboutCopy.posts[ai];
+          const args = { treatmentId: "about-me", headline: w.headline, copy: { subtitle: w.subtitle, slides: w.slides, cta: dm }, photos: aboutBmps, offset: ai * 2, angle: 0, shift: [0, 0, 0, 0] };
+          ai++;
+          const canvases = renderUniversalPost(args, assets);
+          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
+          continue;
+        }
         if (slot.source === "universal") {
           const p = picks[ti];
           const c = tcopy[ti];
@@ -477,15 +496,6 @@ function Builder({ id }: { id: string }) {
               </label>
             ))}
           </div>
-          <div className="flex gap-4 flex-wrap text-sm">
-            {[0, 1].map((idx) => (
-              <label key={idx} className="flex items-center gap-2"><span className="font-semibold">About me post {idx + 1} design</span>
-                <select className="border rounded p-1" value={aboutDesigns[idx]} onChange={(e) => setAboutDesigns((d) => (idx === 0 ? [Number(e.target.value), d[1]] : [d[0], Number(e.target.value)]))}>
-                  {LUX_SLIDE_DEFS.map((d, i) => <option key={i} value={i}>{d.name}</option>)}
-                </select>
-              </label>
-            ))}
-          </div>
         </div>
       )}
       {req.kind === "premium" && (
@@ -495,21 +505,26 @@ function Builder({ id }: { id: string }) {
             {pickedHooks.length > 0 && <button className="text-sm underline" onClick={() => setPickedHooks([])}>Clear</button>}
           </div>
           <div className="flex gap-2 flex-wrap">
-            {HOOK_DAYS.map((d) => (
-              <button key={d.day} onClick={() => setHookDay(d.day)} className={`px-3 py-1.5 rounded border text-sm ${hookDay === d.day ? "bg-pink-500 text-white border-pink-500" : ""}`}>{d.label}</button>
+            {HOOK_SECTIONS.map((sec) => (
+              <button key={sec} onClick={() => setHookSection(sec)} className={`px-3 py-1.5 rounded border text-sm ${hookSection === sec ? "bg-pink-500 text-white border-pink-500" : ""}`}>{HOOK_SECTION_LABEL[sec] ?? sec} <span className="opacity-60">({HOOK_BANK.filter((h: Hook) => (h.theme || "Original") === sec).length})</span></button>
             ))}
           </div>
-          <div className="max-h-96 overflow-y-auto space-y-1">
-            {HOOK_BANK.filter((h: Hook) => h.day === hookDay && hookTiming(h, startOfDay(new Date())).ok).map((h: Hook) => {
-              const on = pickedHooks.includes(h.code);
-              const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
-              return (
-                <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
-                  <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= 5} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
-                  <span>{shown}</span>
-                </label>
-              );
-            })}
+          <div className="max-h-[28rem] overflow-y-auto space-y-3">
+            {Array.from(HOOK_BANK.filter((h: Hook) => (h.theme || "Original") === hookSection).reduce((m, h: Hook) => m.set(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection, [...(m.get(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection) ?? []), h]), new Map<string, Hook[]>())).map(([g, list]) => (
+              <div key={g}>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{g}</div>
+                {list.map((h: Hook) => {
+                  const on = pickedHooks.includes(h.code);
+                  const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
+                  return (
+                    <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
+                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= 5} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
+                      <span>{shown}{h.season && <span className="ml-2 text-xs text-muted-foreground">({h.season})</span>}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ))}
           </div>
           {pickedHooks.length > 0 && (
             <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>

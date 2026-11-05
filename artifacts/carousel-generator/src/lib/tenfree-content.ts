@@ -5,7 +5,9 @@ import { hashSeed, type PackKind } from "./pack-plan";
 
 export type TenSlot =
   | { n: number; label: string; carousel: boolean; source: "universal" }
-  | { n: number; label: string; carousel: boolean; source: "pack"; kind: PackKind; design: string; idea: string; preset?: Record<string, string> };
+  | { n: number; label: string; carousel: boolean; source: "pack"; kind: PackKind; design: string; idea: string; preset?: Record<string, string> }
+  // An about me carousel drawn in the usual Universal look (photo, gradient and text) from the clinic's own photos.
+  | { n: number; label: string; carousel: boolean; source: "about"; kind: "about-me" | "about-love" };
 
 // The order the ten sit in on the feed. Treatments are Universal carousels. Everything else is drawn from the same templates as the paid post packs.
 // The idea is handed to the writer along with her answers from the form. A preset is wording Vanessa wrote herself, which is kept exactly.
@@ -34,11 +36,9 @@ export const TEN_PLAN: TenSlot[] = [
 // The hook posts are photo posts with the hook as the headline. Everything is drawn from the same designs her paying clients get.
 export const PREMIUM_PLAN: TenSlot[] = [
   { n: 1, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 2, label: "About me", carousel: true, source: "pack", kind: "lux", design: "0",
-    idea: "a carousel that introduces me as a person, built from the real things I told you about myself (hobbies, pets, being a mum or not, my area, my passion), funny and warm so a stranger feels she already knows me" },
+  { n: 2, label: "About me", carousel: true, source: "about", kind: "about-me" },
   { n: 3, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 4, label: "Why I love what I do", carousel: true, source: "pack", kind: "lux", design: "3",
-    idea: "a carousel about how much I love making people feel good about themselves, why I got into aesthetics (use only what I told you), the moments I love most in my clinic" },
+  { n: 4, label: "Why I love what I do", carousel: true, source: "about", kind: "about-love" },
   { n: 5, label: "Treatment carousel", carousel: true, source: "universal" },
   ...[6, 7, 8, 9, 10].map((n): TenSlot => ({ n, label: "Hook post", carousel: false, source: "pack", kind: "portrait", design: "0", idea: "a photo post of me with my hook line as the headline" })),
 ];
