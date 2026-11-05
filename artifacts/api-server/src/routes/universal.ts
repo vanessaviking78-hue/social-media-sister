@@ -91,7 +91,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     const treatment = str(b.treatment, 80);
     const headline = str(b.headline, 160);
     const brief = str(b.brief, 1500);
-    const note = str(b.note, 300);
+    const note = str(b.note, 900);
     const intro = b.intro === true;
     if (!client || !treatment || !headline || !brief) {
       res.status(400).json({ error: "Pick a client and a post first" });
