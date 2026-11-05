@@ -7,6 +7,7 @@ import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
+import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { NO1_CLINIC, NO1_COLOURS, NO1_GROUPS, NO1_POST_TYPES, type No1PostType } from "@/lib/no1-posts";
 
@@ -669,7 +670,7 @@ export default function No1Page() {
                 <LogoEditor post={post} photoFor={(n) => photoFor(post, n)} onChange={(l) => { setLogoDefault(l); patch(post.id, { logo: l }); }} />
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60">Front slide</span>
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "NO 1 Body Sculpting"} treatment={t.label} area="Birmingham" onPick={(h) => patch(post.id, { hook: h })} /></span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
                   </label>
                   {[0, 1, 2].map((i) => (

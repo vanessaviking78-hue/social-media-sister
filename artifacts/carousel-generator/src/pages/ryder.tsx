@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
+import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, clientSlug, fontById, injectSuiteFontCss, drawTitle, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { RYDER_CLINIC, RYDER_GROUPS, RYDER_POST_TYPES, type RyderPostType } from "@/lib/ryder-posts";
@@ -705,7 +706,7 @@ export default function RyderPage() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60">Front slide</span>
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "The Ryder Clinic"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} /></span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
                   </label>
                   {[0, 1, 2].map((i) => (
