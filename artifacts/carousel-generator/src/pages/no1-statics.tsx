@@ -9,7 +9,7 @@ import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
 import { STATIC_CLINIC, STATIC_GROUPS, STATIC_POST_TYPES, type StaticPostType } from "@/lib/no1-statics";
 
-// NO 1 BODY SCULPTING, her static page. One image per post, 16 sections of 6.
+// NO 1 BODY SCULPTING, her static page. One image per post, 17 sections of 6.
 // Hatcher on the headline, Merriweather for the supporting line, her logo top right.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -459,7 +459,7 @@ export default function No1StaticsPage() {
           </Link>
           <div>
             <h1 className="text-3xl" style={{ fontFamily: `"${HEAD}", serif` }}>{STATIC_CLINIC} statics</h1>
-            <p className="text-white/60 text-sm">One image per post. 16 sections of 6. Names cross out once scheduled.{!preset && " (I cannot see her client preset yet, so scheduling is off.)"}</p>
+            <p className="text-white/60 text-sm">One image per post. 17 sections of 6. Names cross out once scheduled.{!preset && " (I cannot see her client preset yet, so scheduling is off.)"}</p>
           </div>
         </div>
 

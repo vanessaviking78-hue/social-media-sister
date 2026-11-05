@@ -90,14 +90,29 @@ const otherTypes: StaticPostType[] = [
   tw(6, "Weight loss tweet: be kind", "A short, blunt, shareable tweet reminding women to be kind to themselves on any day of any journey."),
 ];
 
+// About Lizzie: built only from her own "Getting to know you" answers. Honest, down to earth, never about the money,
+// friendly and trustworthy; glamorous, warm and loyal; very dry and playful; gym, her sons, her friends and Ralph the
+// sausage dog; her clients' biggest worry is showing their bodies. Nothing else is invented.
+const ab = (n: number, label: string, brief: string): StaticPostType => ({ id: `st-about-${n}`, group: "about", label, brief, word: "" });
+const LIZZIE = "Use only these facts about me, from my own answers: I run No 1 Body Sculpting in Birmingham. I am honest, down to earth and never about the money, friendly and trustworthy. Friends would call me glamorous, warm and loyal. My humour is very dry and playful. Outside work I love the gym, my sons, my friends and Ralph, my sausage dog. My clients' biggest worry is showing their bodies. Invent nothing else: no ages, names, years, stories or numbers.";
+const aboutTypes: StaticPostType[] = [
+  ab(1, "About Lizzie: meet me", `A warm, plain introduction from me, the woman behind No 1 Body Sculpting in Birmingham, in two or three honest sentences. ${LIZZIE}`),
+  ab(2, "About Lizzie: never about the money", `A post about how I run my clinic: honest, down to earth and never about the money. Never mention a price, an offer or a discount. ${LIZZIE}`),
+  ab(3, "About Lizzie: Ralph the sausage dog", `A dry, playful post about Ralph, my sausage dog, and what he thinks of my job. Keep it light and affectionate. ${LIZZIE}`),
+  ab(4, "About Lizzie: the gym, my boys and my girls", `A post about life outside the clinic: the gym, my sons and my friends. Never assume the reader has children. ${LIZZIE}`),
+  ab(5, "About Lizzie: showing your body", `A kind, direct post about the worry I hear most from clients, showing their bodies, and how I make the room feel safe and unjudged. ${LIZZIE}`),
+  ab(6, "About Lizzie: glamorous, warm and loyal", `A playful post about what it is like to be looked after by me: glamorous, warm and loyal, with my very dry humour. ${LIZZIE}`),
+];
+
 export const STATIC_GROUPS: StaticGroup[] = [
   ...treatmentGroups,
   { id: "volume", label: "Volume loss and why it happens" },
   { id: "weightloss", label: "Weight loss support" },
   { id: "menopause", label: "Menopause memes and jokes" },
   { id: "tweets", label: "Weight loss tweets" },
+  { id: "about", label: "About Lizzie" },
 ];
 
-export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes];
+export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes];
 
 export const STATIC_CLINIC = "NO 1 BODY SCULPTING";
