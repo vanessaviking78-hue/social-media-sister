@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type NextFunction, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
@@ -284,6 +284,81 @@ router.get("/no1/published", async (_req: Request, res: Response) => {
     res.json({ slug: PUBLISH_SLUG, posts });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Feed preview for the owner. Vanessa sends her written statics here, newest first, and the owner opens one
+// private link (/no1feed) to see them laid out like her Instagram grid. Nothing is posted from this.
+// ---------------------------------------------------------------------------
+const FEED_SLUG = "no1-statics-feed";
+type FeedPost = { id: string; label: string; image: string; caption: string; tags: string };
+
+function feedAuth(req: Request, res: Response, next: NextFunction) {
+  const appPassword = process.env.APP_PASSWORD;
+  if (!appPassword) return next();
+  const expected = appPassword.trim().toLowerCase();
+  const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
+  if (provided === expected) return next();
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected) return next();
+  res.status(401).json({ error: "Unauthorized" });
+}
+
+async function loadFeed(): Promise<FeedPost[]> {
+  const [row] = await db.select().from(freeSamplesTable).where(eq(freeSamplesTable.slug, FEED_SLUG));
+  return (((row?.data as { posts?: FeedPost[] } | undefined)?.posts) ?? []).filter((p) => p && p.image);
+}
+
+async function saveFeed(posts: FeedPost[]) {
+  const [row] = await db.select().from(freeSamplesTable).where(eq(freeSamplesTable.slug, FEED_SLUG));
+  const data = { feed: true, posts };
+  if (row) await db.update(freeSamplesTable).set({ data }).where(eq(freeSamplesTable.slug, FEED_SLUG));
+  else await db.insert(freeSamplesTable).values({ slug: FEED_SLUG, clinicName: CLINIC, data });
+}
+
+router.get("/no1/feed", async (_req: Request, res: Response) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json({ clinic: CLINIC, posts: await loadFeed() });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not load" });
+  }
+});
+
+router.post("/no1/feed", feedAuth, async (req: Request, res: Response) => {
+  try {
+    const incoming = Array.isArray((req.body as { posts?: unknown }).posts) ? ((req.body as { posts: unknown[] }).posts as Record<string, unknown>[]) : [];
+    const fresh: FeedPost[] = incoming
+      .map((p) => ({
+        id: clean(p.id, 60),
+        label: clean(p.label, 140),
+        image: String(p.image ?? "").trim().slice(0, 400),
+        caption: clean(p.caption, 1800),
+        tags: clean(p.tags, 300),
+      }))
+      .filter((p) => p.id && p.image);
+    if (fresh.length === 0) {
+      res.status(400).json({ error: "There are no posts to show" });
+      return;
+    }
+    const ids = new Set(fresh.map((p) => p.id));
+    const kept = (await loadFeed()).filter((p) => !ids.has(p.id));
+    const posts = [...fresh, ...kept].slice(0, 120);
+    await saveFeed(posts);
+    res.json({ total: posts.length });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "no1: feed save error");
+    res.status(500).json({ error: err instanceof Error ? err.message : "That did not save, try again" });
+  }
+});
+
+router.post("/no1/feed/clear", feedAuth, async (_req: Request, res: Response) => {
+  try {
+    await saveFeed([]);
+    res.json({ total: 0 });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "That did not clear, try again" });
   }
 });
 

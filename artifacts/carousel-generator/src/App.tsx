@@ -80,6 +80,7 @@ import SampleRequest from "@/pages/sample-request";
 import PackOrder from "@/pages/pack-order";
 import PackReview from "@/pages/pack-review";
 import PackPublic from "@/pages/pack-public";
+import No1Feed from "@/pages/no1-feed";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -173,6 +174,15 @@ import SecretShop from "@/pages/secretshop";
 import PhotoshootAdmin from "@/pages/photoshoot-admin";
 
 const queryClient = new QueryClient();
+
+// Client facing pages wear the same brilliant white theme as the signed in CyberSuite (the cs-light class on <html>).
+function LightPage({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    document.documentElement.classList.add("cs-light");
+    return () => document.documentElement.classList.remove("cs-light");
+  }, []);
+  return <>{children}</>;
+}
 
 function ScrollToTop() {
   const [location] = useLocation();
@@ -359,6 +369,7 @@ function AppContent() {
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
+  const [isNo1Feed] = useRoute("/no1feed");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -379,7 +390,7 @@ function AppContent() {
     return <KnowMePublic token={knowMeParams.token} />;
   }
   if (isPortal && portalParams?.token) {
-    return <ClientPortal token={portalParams.token} />;
+    return <LightPage><ClientPortal token={portalParams.token} /></LightPage>;
   }
   if (isSubmit && submitParams?.token) {
     return <SubmitBeforeAfter token={submitParams.token} />;
@@ -391,10 +402,10 @@ function AppContent() {
     return <ShowcasePlayer token={showcaseParams.token} />;
   }
   if (isClientApproval && clientApprovalParams?.token) {
-    return <ClientApproval token={clientApprovalParams.token} />;
+    return <LightPage><ClientApproval token={clientApprovalParams.token} /></LightPage>;
   }
   if (isApprove && approveParams?.token) {
-    return <ApprovePublic token={approveParams.token} />;
+    return <LightPage><ApprovePublic token={approveParams.token} /></LightPage>;
   }
   if (isOnboardSuccess && onboardSuccessParams?.token) {
     return <OnboardSuccess />;
@@ -476,6 +487,9 @@ function AppContent() {
   }
   if (isNo1Client) {
     return <PackPublic slug="no1-body-sculpting-posts" />;
+  }
+  if (isNo1Feed) {
+    return <No1Feed />;
   }
   if (isPackOrder) {
     return <PackOrder />;

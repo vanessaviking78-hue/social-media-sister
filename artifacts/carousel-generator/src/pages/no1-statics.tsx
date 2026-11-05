@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, CalendarClock, Download, Eye, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
@@ -295,6 +295,7 @@ export default function No1StaticsPage() {
   const [perDay, setPerDay] = useState(7);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [feedBusy, setFeedBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -416,6 +417,60 @@ export default function No1StaticsPage() {
     c.height = H;
     drawPost(c.getContext("2d")!, post, isTweet(t), photoFor(post), logo);
     return c;
+  };
+
+  const feedLink = `${window.location.origin}${BASE}/no1feed`;
+  const pw = () => {
+    try {
+      return localStorage.getItem("cybersuite-pw") || "";
+    } catch {
+      return "";
+    }
+  };
+  const feedHeaders = () => ({ "Content-Type": "application/json", "x-app-password": pw(), Authorization: `Bearer ${pw()}` });
+
+  const previewFeed = async () => {
+    const written = posts.filter((p) => p.caption);
+    if (written.length === 0) {
+      toast.error("Write at least one post first, then press Preview feed");
+      return;
+    }
+    setFeedBusy(true);
+    try {
+      const canvases: HTMLCanvasElement[] = [];
+      for (const p of written) canvases.push(await render(p));
+      const urls = await uploadPngs(
+        canvases.map((c) => c.toDataURL("image/png")),
+        written.map((p) => `no1-feed-${p.typeId}-${Date.now()}.png`),
+      );
+      const body = {
+        posts: written.map((p, i) => ({ id: p.typeId, label: TYPE_BY_ID.get(p.typeId)?.label ?? "", image: urls[i], caption: noFoot(p.caption), tags: p.hashtags.join(" ") })),
+      };
+      const r = await fetch(`${BASE}/api/no1/feed`, { method: "POST", headers: feedHeaders(), body: JSON.stringify(body) });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data?.error || "The feed would not save, try again");
+      try {
+        await navigator.clipboard.writeText(feedLink);
+      } catch {
+        /* the link is shown anyway */
+      }
+      toast.success(`Feed updated with ${data.total} posts. The link is copied: ${feedLink}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The feed would not save, try again");
+    } finally {
+      setFeedBusy(false);
+    }
+  };
+
+  const clearFeed = async () => {
+    if (!window.confirm("Take every post off Lizzie's feed preview?")) return;
+    try {
+      const r = await fetch(`${BASE}/api/no1/feed/clear`, { method: "POST", headers: feedHeaders(), body: "{}" });
+      if (!r.ok) throw new Error("That did not clear, try again");
+      toast.success("Her feed preview is empty again");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "That did not clear, try again");
+    }
   };
 
   const download = async (post: Post) => {
@@ -578,6 +633,11 @@ export default function No1StaticsPage() {
             })}
           </div>
           <div className="flex gap-2 flex-wrap">
+            <Button size="sm" variant="secondary" onClick={previewFeed} disabled={feedBusy}>
+              {feedBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Eye className="w-4 h-4 mr-2" />}Preview feed (link for Lizzie)
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(feedLink); toast.success(`Link copied: ${feedLink}`); }}>Copy feed link</Button>
+            <Button size="sm" variant="ghost" onClick={clearFeed}>Clear feed</Button>
             <Button size="sm" variant="secondary" onClick={writeAllInSection}><Sparkles className="w-4 h-4 mr-2" />Open and write all 6 in this section</Button>
             <Button size="sm" onClick={scheduleAll} disabled={bulkBusy || ready.length === 0}>
               {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}Schedule all written ({ready.length}), {perDay} a day
