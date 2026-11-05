@@ -249,10 +249,10 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
           <div className="tf-done">
             <div className="tf-kicker">Got it</div>
             <h1 className="tf-h1">
-              Lovely.<br />
-              <span>Sit tight.</span>
+              Right then, lass.<br />
+              <span>I have got your stuff.</span>
             </h1>
-            <p className="tf-lede">Your details have landed with me. I check every one by hand, then build your posts and send you a private link. Keep an eye on your inbox, and your junk folder just in case.</p>
+            <p className="tf-lede">I will get these over to you as soon as I can. I will send you a WhatsApp and an email, xxx. Thanks for trying these. If you do not like them, you are an alien.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another clinic who would love a freebie too? Send them this.</p>
             <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Social Media Sister for my free premium posts, made with my own logo and photos. She is doing a free set for other clinics too. Grab yours here: " + (premium ? "https://www.thecybersuite.com/premiumfreebies" : "https://www.thecybersuite.com/10freeposts"))}`}>Share with another clinic</a>
           </div>
