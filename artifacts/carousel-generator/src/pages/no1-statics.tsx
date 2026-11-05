@@ -38,7 +38,15 @@ type Post = {
   when: string;
   busy: boolean;
   scheduling: boolean;
+  px: number; // photo offset, canvas pixels
+  py: number;
+  pz: number; // photo zoom, 1 or more
+  tx: number; // text offset, canvas pixels
+  ty: number;
+  ts: number; // text size multiplier
 };
+const LAYOUT0 = { px: 0, py: 0, pz: 1, tx: 0, ty: 0, ts: 1 };
+type Box = { x: number; y: number; w: number; h: number };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const TYPE_BY_ID = new Map(STATIC_POST_TYPES.map((t) => [t.id, t]));
@@ -108,11 +116,15 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, font: (px: number)
   return { px: min, lines: wrap(ctx, text, maxW) };
 }
 
-function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
-  const s = Math.max(W / bmp.width, H / bmp.height);
+function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap, px = 0, py = 0, pz = 1) {
+  const s = Math.max(W / bmp.width, H / bmp.height) * Math.max(1, pz);
   const w = bmp.width * s;
   const h = bmp.height * s;
-  ctx.drawImage(bmp, (W - w) / 2, (H - h) / 2, w, h);
+  const mx = (w - W) / 2;
+  const my = (h - H) / 2;
+  const ox = Math.max(-mx, Math.min(mx, px));
+  const oy = Math.max(-my, Math.min(my, py));
+  ctx.drawImage(bmp, (W - w) / 2 + ox, (H - h) / 2 + oy, w, h);
 }
 
 function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) {
@@ -130,10 +142,10 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) 
   ctx.drawImage(c, W - 60 - w, 60);
 }
 
-function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, photo: Photo | null, logo: HTMLImageElement | null) {
+function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, photo: Photo | null, logo: HTMLImageElement | null): Box {
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
-  if (photo) coverFit(ctx, photo.bmp);
+  if (photo) coverFit(ctx, photo.bmp, post.px, post.py, post.pz);
   else {
     ctx.fillStyle = "#2a2a2a";
     ctx.fillRect(0, 0, W, H);
@@ -146,6 +158,12 @@ function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, pho
 
   ctx.fillStyle = "#ffffff";
   ctx.textAlign = "left";
+  const ANCHOR_Y = H - 110;
+  const ts = Math.max(0.4, post.ts || 1);
+  ctx.save();
+  ctx.translate(80 + (post.tx || 0), ANCHOR_Y + (post.ty || 0));
+  ctx.scale(ts, ts);
+  ctx.translate(-80, -ANCHOR_Y);
   const lineText = (post.line || "").trim();
   let bottom = H - 110;
 
@@ -174,14 +192,26 @@ function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, pho
     y += hf.px * lh;
   }
 
+  const topY = y - hf.lines.length * hf.px * lh;
+  ctx.restore();
+  const box: Box = {
+    x: 80 + (post.tx || 0),
+    y: ANCHOR_Y + (post.ty || 0) + (topY - ANCHOR_Y) * ts,
+    w: (W - 160) * ts,
+    h: (ANCHOR_Y - topY) * ts,
+  };
+
   ctx.font = `700 24px "${BODY}", serif`;
   ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.fillText(STATIC_CLINIC, 80, 70);
   drawLogo(ctx, logo);
+  return box;
 }
 
-function PostCanvas({ post, tweet, photo, logo, onClick }: { post: Post; tweet: boolean; photo: Photo | null; logo: HTMLImageElement | null; onClick?: () => void }) {
+function PostCanvas({ post, tweet, photo, logo, onChange }: { post: Post; tweet: boolean; photo: Photo | null; logo: HTMLImageElement | null; onChange: (c: Partial<Post>) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const box = useRef<Box>({ x: 0, y: 0, w: 0, h: 0 });
+  const drag = useRef<{ mode: "text" | "photo"; sx: number; sy: number; ox: number; oy: number } | null>(null);
   useEffect(() => {
     let live = true;
     (async () => {
@@ -189,13 +219,48 @@ function PostCanvas({ post, tweet, photo, logo, onClick }: { post: Post; tweet: 
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
-      if (ctx) drawPost(ctx, post, tweet, photo, logo);
+      if (ctx) box.current = drawPost(ctx, post, tweet, photo, logo);
     })();
     return () => {
       live = false;
     };
   }, [post, tweet, photo, logo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[220px] h-auto rounded-md border border-white/10 cursor-pointer" title={onClick ? "Click to swap the photo" : undefined} />;
+
+  const toCanvas = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H, k: W / r.width };
+  };
+  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const pt = toCanvas(e);
+    const b = box.current;
+    const inText = pt.x >= b.x - 20 && pt.x <= b.x + b.w + 20 && pt.y >= b.y - 20 && pt.y <= b.y + b.h + 20;
+    drag.current = inText ? { mode: "text", sx: pt.x, sy: pt.y, ox: post.tx, oy: post.ty } : { mode: "photo", sx: pt.x, sy: pt.y, ox: post.px, oy: post.py };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    const pt = toCanvas(e);
+    const dx = pt.x - d.sx;
+    const dy = pt.y - d.sy;
+    onChange(d.mode === "text" ? { tx: d.ox + dx, ty: d.oy + dy } : { px: d.ox + dx, py: d.oy + dy });
+  };
+  const up = () => {
+    drag.current = null;
+  };
+  return (
+    <canvas
+      ref={ref}
+      width={W}
+      height={H}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      className="w-[260px] max-w-full h-auto rounded-md border border-white/10 cursor-move touch-none"
+      title="Drag the words to move them. Drag anywhere else to move the photo."
+    />
+  );
 }
 
 const p2 = (x: number) => String(x).padStart(2, "0");
@@ -319,7 +384,7 @@ export default function No1StaticsPage() {
   const photoFor = (post: Post): Photo | null => (pool.length ? pool[post.photo % pool.length] ?? null : null);
 
   const addPost = (t: StaticPostType) => {
-    setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: l.length, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false }, ...l]);
+    setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: l.length, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, ...LAYOUT0 }, ...l]);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
@@ -434,7 +499,7 @@ export default function No1StaticsPage() {
       toast.error("Every post in this section is already open or scheduled");
       return;
     }
-    const fresh: Post[] = wanted.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: posts.length + i, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: true, scheduling: false }));
+    const fresh: Post[] = wanted.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: posts.length + i, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: true, scheduling: false, ...LAYOUT0 }));
     setPosts((l) => [...fresh.slice().reverse(), ...l]);
     for (const post of fresh) {
       const t = TYPE_BY_ID.get(post.typeId)!;
@@ -541,8 +606,21 @@ export default function No1StaticsPage() {
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>
-                <div className="grid md:grid-cols-[220px_1fr] gap-4">
-                  <PostCanvas post={post} tweet={tweet} photo={photoFor(post)} logo={logo} onClick={pool.length > 1 ? () => patch(post.id, { photo: post.photo + 1 }) : undefined} />
+                <div className="grid md:grid-cols-[260px_1fr] gap-4">
+                  <div className="space-y-3">
+                    <PostCanvas post={post} tweet={tweet} photo={photoFor(post)} logo={logo} onChange={(c) => patch(post.id, c)} />
+                    <p className="text-xs text-white/50 w-[260px] max-w-full">Drag the words to move them. Drag anywhere else to move the photo.</p>
+                    <label className="block text-xs text-white/60 w-[260px] max-w-full">Photo zoom
+                      <input type="range" min={1} max={3} step={0.01} value={post.pz} onChange={(e) => patch(post.id, { pz: Number(e.target.value) })} className="w-full" />
+                    </label>
+                    <label className="block text-xs text-white/60 w-[260px] max-w-full">Text size
+                      <input type="range" min={0.5} max={1.6} step={0.01} value={post.ts} onChange={(e) => patch(post.id, { ts: Number(e.target.value) })} className="w-full" />
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      {pool.length > 1 && <Button size="sm" variant="secondary" onClick={() => patch(post.id, { photo: post.photo + 1, px: 0, py: 0, pz: 1 })}>Swap photo</Button>}
+                      <Button size="sm" variant="ghost" onClick={() => patch(post.id, { ...LAYOUT0 })}>Reset</Button>
+                    </div>
+                  </div>
                   <div className="grid gap-3 text-sm content-start">
                     <label className="space-y-1 block">
                       <span className="text-white/60">{tweet ? "The tweet on the picture" : "Words on the picture"}</span>
