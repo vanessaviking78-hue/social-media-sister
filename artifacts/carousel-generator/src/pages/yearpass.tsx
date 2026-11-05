@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 // cybersuite.com/yearpass/start?session_id=... : where Stripe sends them after paying, which claims their portal.
 
 const PINK = "#ff1f8e";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 const INK = "#111";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -107,7 +108,7 @@ function MonthForm({ token, month, prefill, onDone }: { token: string; month: Mo
       <div className="yp-chips">{TREATMENTS.map((t) => <button type="button" key={t} className={`yp-chip${picked.includes(t) ? " on" : ""}`} onClick={() => toggle(t)}>{t}</button>)}</div>
       <label><span className="yp-l">Anything else? Type it here, separated by commas</span><input className="yp-in" value={other} onChange={(e) => setOther(e.target.value)} /></label>
       <label><span className="yp-l">Offers, dates or news I should know about</span><textarea className="yp-ta" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
-      <label><span className="yp-l">A clear photo of you {month.n > 1 ? "(optional, I will reuse your last one)" : ""}</span><input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} /></label>
+      <label><span className="yp-l">A clear photo of you {month.n > 1 ? "(optional, I will reuse your last one)" : ""}</span><input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; setPhoto(f ? await shrinkPhoto(f) : null); }} /></label>
       <label><span className="yp-l">Your logo, a PNG with a see through background is best {month.n > 1 ? "(optional)" : ""}</span><input type="file" accept="image/*" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} /></label>
       {err && <div className="yp-err">{err}</div>}
       <p style={{ marginTop: 20 }}><button className="yp-btn" disabled={busy} onClick={submit}>{busy ? "Sending..." : "Send to Vanessa"}</button></p>

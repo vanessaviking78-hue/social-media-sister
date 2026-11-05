@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 import { canvasToPng, makeClearLogo } from "@/lib/logo-clear";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 
 // cybersuite.com/10freeposts : the public form. League Spartan Black everywhere, white page, hot pink accents.
 
@@ -163,7 +164,8 @@ export default function TenFreePosts() {
   async function onPhoto(file: File | undefined) {
     if (!file) return;
     try {
-      setPhoto(await toUsable(file));
+      setErr("");
+      setPhoto(await shrinkPhoto(await toUsable(file)));
     } catch {
       setErr("I could not read that photo, a JPG or PNG will work.");
     }

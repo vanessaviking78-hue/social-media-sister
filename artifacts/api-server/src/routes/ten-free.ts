@@ -21,7 +21,7 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 // browser, and only then sends the private link /10free/<slug>. One free turn per email address.
 
 const router: IRouter = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 2 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 2 } });
 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -138,7 +138,15 @@ type Files = { [field: string]: Express.Multer.File[] };
 // The public form
 // ---------------------------------------------------------------------------
 
-router.post("/ten-free/intake", upload.fields([{ name: "logo", maxCount: 1 }, { name: "photo", maxCount: 1 }]), async (req: Request, res: Response) => {
+const intakeUpload = (req: Request, res: Response, next: NextFunction) =>
+  upload.fields([{ name: "logo", maxCount: 1 }, { name: "photo", maxCount: 1 }])(req, res, (err: unknown) => {
+    if (!err) return next();
+    const code = (err as { code?: string }).code;
+    req.log?.error({ err }, "ten-free upload failed");
+    res.status(400).json({ error: code === "LIMIT_FILE_SIZE" ? "That photo is very large. Please pick a smaller one, or take a screenshot of it and upload that." : "I could not receive that upload. Please try again, or pick a different photo." });
+  });
+
+router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response) => {
   try {
     await ensureTable();
     if (tooMany(req.ip || "unknown")) {
