@@ -260,7 +260,7 @@ export function universalLook(a: Assets): Look {
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
-export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string }, a: Assets): HTMLCanvasElement[] {
+export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string }, a: Assets): HTMLCanvasElement[] {
   const post: Post = {
     id: `${o.treatmentId}-${o.angle}`,
     key: `${o.treatmentId}:${o.angle + 1}`,
@@ -291,6 +291,10 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
   if (o.textColour && /^#[0-9a-f]{6}$/i.test(o.textColour)) look = { ...look, text: o.textColour };
   if (o.gradColour && /^#[0-9a-f]{6}$/i.test(o.gradColour)) look = { ...look, wash: o.gradColour, grad: mixHex(o.gradColour, "#000000", 0.35) };
   if (typeof o.gradOpacity === "number") look = { ...look, opacity: o.gradOpacity };
+  if (o.bgColour && /^#[0-9a-f]{6}$/i.test(o.bgColour)) {
+    // A plain colour page instead of the photo. The writing flips to dark or white to suit unless she chose a text colour.
+    look = { ...look, bgColour: o.bgColour, noShade: true, text: o.textColour ? look.text : lum(o.bgColour) > 0.4 ? a.brand.deep : "#ffffff" };
+  }
   look = { ...look, coverY: o.coverY || 0, coverScale: o.coverScale || 1 };
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < 5; n++) {
