@@ -84,6 +84,7 @@ type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
   post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
+  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string } };
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
@@ -345,9 +346,10 @@ function Builder({ id }: { id: string }) {
               if (rr.ok) cutout = await createImageBitmap(await rr.blob());
             } catch { /* plain photo */ }
           }
-          const cv = await renderAboutPost({ layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName });
+          const aboutArgs = { layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName };
+          const cv = await renderAboutPost(aboutArgs);
           ai++;
-          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
+          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], aboutArgs, caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
         }
         if (slot.source === "hook") {
@@ -673,6 +675,13 @@ function Builder({ id }: { id: string }) {
                     ))}
                     <button onClick={() => upd({}, ["gradColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
+                  <div className={row}><span className="w-44 shrink-0">Text colour (this post)</span>
+                    <input type="color" value={it.uniArgs.textColour || "#ffffff"} onChange={(e) => upd({ textColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
+                    {[["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
+                      <button key={label} onClick={() => upd({ textColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                    ))}
+                    <button onClick={() => upd({}, ["textColour"])} className="px-2 py-0.5 rounded border">Auto</button>
+                  </div>
                   <div className={row}><span className="w-44 shrink-0">Background colour (instead of the photo)</span>
                     <input type="color" value={it.uniArgs.bgColour || "#ffffff"} onChange={(e) => upd({ bgColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
@@ -683,6 +692,27 @@ function Builder({ id }: { id: string }) {
                 </div>
               );
             })()}
+            {it.aboutArgs && (
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <span>Headline and text colour</span>
+                <input type="color" value={it.aboutArgs.colours.main} className="h-7 w-12 cursor-pointer rounded border" onChange={async (e) => {
+                  const aa = { ...it.aboutArgs!, colours: { ...it.aboutArgs!.colours, main: e.target.value } };
+                  const cv = await renderAboutPost(aa);
+                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+                }} />
+                <span>Page colour</span>
+                <input type="color" value={it.aboutArgs.colours.accent} className="h-7 w-12 cursor-pointer rounded border" onChange={async (e) => {
+                  const aa = { ...it.aboutArgs!, colours: { ...it.aboutArgs!.colours, accent: e.target.value } };
+                  const cv = await renderAboutPost(aa);
+                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+                }} />
+                <button className="px-2 py-0.5 rounded border" onClick={async () => {
+                  const aa = { ...it.aboutArgs!, colours: { main: req.mainHex, accent: req.accentHex } };
+                  const cv = await renderAboutPost(aa);
+                  patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+                }}>Back to their brand</button>
+              </div>
+            )}
             {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
               <div className="space-y-1">
                 <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>
