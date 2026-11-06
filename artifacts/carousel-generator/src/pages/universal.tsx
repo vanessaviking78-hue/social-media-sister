@@ -7,6 +7,8 @@ import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
+import { useForcedClient } from "@/lib/forced-client";
+
 import { uploadPngs } from "@/lib/month-engine";
 import { drawTitle, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
@@ -452,6 +454,15 @@ export default function UniversalPage() {
   // Always starts with no client chosen, so it asks every time and never carries the last client over.
   const [presetId, setPresetId] = useState<number | null>(null);
   const preset = useMemo(() => presets.find((p) => p.id === presetId) ?? null, [presets, presetId]);
+  const forcedClient = useForcedClient();
+  useEffect(() => {
+    if (!forcedClient || presetId || !presets.length) return;
+    const p = presets.find((x) => forcedClient.pattern.test(x.name) && !/academy/i.test(x.name));
+    if (p) setPresetId(p.id);
+  }, [forcedClient, presets, presetId]);
+  // A client page can limit Universal to the treatments that client offers.
+  const offered = useMemo(() => (forcedClient?.treatmentIds ? U_TREATMENTS.filter((x) => forcedClient.treatmentIds!.includes(x.id)) : U_TREATMENTS), [forcedClient]);
+  const offeredGroups = useMemo(() => U_GROUPS.filter((g) => offered.some((x) => x.group === g.id)), [offered]);
 
   const [look, setLook] = useState<Look>(() => {
     try {
@@ -559,8 +570,8 @@ export default function UniversalPage() {
     return m;
   }, [lib]);
 
-  const [groupId, setGroupId] = useState<UGroupId>(U_GROUPS[0].id);
-  const [treatmentId, setTreatmentId] = useState<string>(U_TREATMENTS[0].id);
+  const [groupId, setGroupId] = useState<UGroupId>(offeredGroups[0].id);
+  const [treatmentId, setTreatmentId] = useState<string>(offered[0].id);
   const treatment = U_BY_ID.get(treatmentId) as UTreatment;
   const [posts, setPosts] = useState<Post[]>([]);
   const [bitmaps, setBitmaps] = useState<Record<string, ImageBitmap>>({});
@@ -908,7 +919,7 @@ export default function UniversalPage() {
   const washSwatches = [{ name: "Black", hex: "#0d0d0d" }, { name: "White", hex: "#ffffff" }, ...brand, ...metalSwatches];
   const textSwatches = [{ name: "White", hex: "#ffffff" }, { name: "Black", hex: "#0d0d0d" }, ...brand, ...metalSwatches];
 
-  const groupTreatments = U_TREATMENTS.filter((x) => x.group === groupId);
+  const groupTreatments = offered.filter((x) => x.group === groupId);
   const imgs = libBy.get(treatmentId) ?? [];
 
   return (
@@ -992,8 +1003,8 @@ export default function UniversalPage() {
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {U_GROUPS.map((g) => (
-              <button key={g.id} onClick={() => { setGroupId(g.id); setTreatmentId(U_TREATMENTS.find((x) => x.group === g.id)!.id); }} className={`px-3 py-1.5 rounded-full text-sm border ${groupId === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>{g.label}</button>
+            {offeredGroups.map((g) => (
+              <button key={g.id} onClick={() => { setGroupId(g.id); setTreatmentId(offered.find((x) => x.group === g.id)!.id); }} className={`px-3 py-1.5 rounded-full text-sm border ${groupId === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>{g.label}</button>
             ))}
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">

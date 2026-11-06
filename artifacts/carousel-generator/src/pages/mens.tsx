@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
+import { useForcedClient } from "@/lib/forced-client";
+
 import { MENS_SETS } from "@/lib/mens-sets";
 import { uploadPngs } from "@/lib/month-engine";
 
@@ -75,6 +77,13 @@ export default function Mens() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
   }, [preset?.id, owner, role, area]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const forcedClient = useForcedClient();
+  useEffect(() => {
+    if (!forcedClient || clientId || !presets.length) return;
+    const p = presets.find((x) => forcedClient.pattern.test(x.name) && !/academy/i.test(x.name));
+    if (p) setClientId(String(p.id));
+  }, [forcedClient, presets, clientId]);
 
   const patch = (id: string, c: Partial<Entry>) => setEntries((o) => ({ ...o, [id]: { ...o[id], ...c } }));
 
