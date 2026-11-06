@@ -266,7 +266,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     if (!look.left || !tf || !post.headline || look.noHead) return null;
     let size = Math.round(64 * ts);
     let lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1);
-    while (size > 36 && titleHeight(lay) > 230) { size -= 4; lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1); }
+    while (size > 30 && titleHeight(lay) > (blk ? 120 : 230)) { size -= 4; lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1); }
     return lay;
   };
   const stackTop = (blockH: number) => Math.min(H - 60 - blockH, Math.max(60, H - 150 - blockH + (look.blockY || 0)));
@@ -389,13 +389,13 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   }
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
-  const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
+  const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, (blk ? 250 : 520) * Math.max(1, bs), Math.round(40 * bs), Math.round((blk ? 22 : 26) * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = top ? 190 : H - 170 - total;
   const hl = headLayout();
   if (blk) {
     const hH = hl ? titleHeight(hl) + 26 : 0;
-    const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.7), hH + total + 110));
+    const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), hH + total + 100));
     const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
     ctx.fillStyle = blk;
     ctx.fillRect(0, bt, W, bh);
