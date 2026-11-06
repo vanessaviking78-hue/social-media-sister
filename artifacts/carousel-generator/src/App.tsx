@@ -123,6 +123,8 @@ import Stylish from "@/pages/stylish";
 import ClientStylish from "@/pages/client-stylish";
 import GettingToKnowYou from "@/pages/getting-to-know-you";
 import KnowMePublic from "@/pages/know-me-public";
+import TreatmentsForm from "@/pages/treatments-form";
+import ClientTreatments from "@/pages/client-treatments";
 import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
 import ClientBankView from "@/pages/client-bank-view";
@@ -214,6 +216,7 @@ function ProtectedRouter() {
       <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
       <Route path="/clare" component={ClarePage} />
+      <Route path="/client-treatments" component={ClientTreatments} />
       <Route path="/universal" component={UniversalPage} />
       <Route path="/lisa" component={LisaPage} />
       <Route path="/castle" component={CastlePage} />
@@ -324,6 +327,7 @@ function AppContent() {
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isKnowMe, knowMeParams] = useRoute("/know-me/:token");
   const [isKnowMeShared] = useRoute("/know-me");
+  const [isTreatmentsForm] = useRoute("/treatments-form");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
   const [isClientQuestion] = useRoute("/clientquestion");
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
@@ -385,6 +389,9 @@ function AppContent() {
   }
   if (isKnowMeShared) {
     return <KnowMePublic />;
+  }
+  if (isTreatmentsForm) {
+    return <TreatmentsForm />;
   }
   if (isKnowMe && knowMeParams?.token) {
     return <KnowMePublic token={knowMeParams.token} />;

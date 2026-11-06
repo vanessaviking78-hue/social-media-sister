@@ -371,7 +371,7 @@ router.put("/know-me/:token", async (req, res) => {
 // check it, so nobody can overwrite someone else's answers by typing their name.
 const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
-async function matchClient(typed: string): Promise<string | null> {
+export async function matchClient(typed: string): Promise<string | null> {
   const t = norm(typed);
   if (t.length < 3) return null;
   const rows = await db.select({ name: clientPresetsTable.name }).from(clientPresetsTable);
