@@ -36,7 +36,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -63,7 +63,7 @@ const rgbOf = (hex: string) => {
   return `${parseInt(h.slice(1, 3), 16)},${parseInt(h.slice(3, 5), 16)},${parseInt(h.slice(5, 7), 16)}`;
 };
 
-export type Photo = { url: string; bmp: ImageBitmap };
+export type Photo = { url: string; bmp: ImageBitmap; zoom?: number; px?: number; py?: number };
 type LibImage = { id: number; treatmentId: string; name: string; url: string };
 
 export type Post = {
@@ -173,11 +173,12 @@ function toGrey(ctx: CanvasRenderingContext2D) {
   ctx.putImageData(img, 0, 0);
 }
 
-function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
-  const s = Math.max(W / bmp.width, H / bmp.height);
+function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap, zoom = 1, px = 0, py = 0) {
+  const s = Math.max(W / bmp.width, H / bmp.height) * Math.max(1, zoom);
   const w = bmp.width * s;
   const h = bmp.height * s;
-  ctx.drawImage(bmp, (W - w) / 2, (H - h) * 0.3, w, h);
+  // px and py run from -1 to 1 and slide the picture inside the frame without ever leaving a gap
+  ctx.drawImage(bmp, (W - w) / 2 + px * Math.max(0, w - W) / 2, (H - h) * 0.3 + py * Math.max(0, h - H) / 2, w, h);
 }
 
 // The wash: clear where the picture shows, solid where the writing sits. It grows from the bottom or from the top.
@@ -254,6 +255,8 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const body = (px: number, w = 400) => `${w} ${px}px "${look.bodyFont || BODY_FONT}", serif`;
   const LEFT = 100;
   const top = look.dir === "top";
+  // A solid block along the bottom of the page instead of the gradient (at least a quarter of the page, taller if the writing needs it).
+  const blk = look.block && isHex(look.block) ? look.block : null;
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
 
@@ -281,7 +284,9 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   };
 
   if (n === 4) {
-    if (look.grad && isHex(look.grad) && isHex(look.wash)) {
+    if (blk) {
+      ctx.fillStyle = blk;
+    } else if (look.grad && isHex(look.grad) && isHex(look.wash)) {
       const g = ctx.createLinearGradient(0, 0, W, H);
       g.addColorStop(0, look.wash);
       g.addColorStop(1, look.grad);
@@ -325,7 +330,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     ctx.fillStyle = look.bgColour;
     ctx.fillRect(0, 0, W, H);
   } else if (photo) {
-    coverFit(ctx, photo.bmp);
+    coverFit(ctx, photo.bmp, photo.zoom, photo.px, photo.py);
     if (look.bw) toGrey(ctx);
   } else {
     ctx.fillStyle = "#3a3633";
@@ -333,14 +338,14 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   }
 
   if (n === 0) {
-    wash(ctx, 0.5, look);
+    if (!blk) wash(ctx, 0.5, look);
     const sx = look.left ? 100 : W / 2;
     ctx.textAlign = look.left ? "left" : "center";
     // subtitle first, so the headline can sit above it (or below it when the wash is at the top)
     const cs = look.coverScale || 1;
     const sub = fitText(ctx, post.subtitle || "", (px) => body(px), W - 220, 170 * cs, Math.round(36 * bs * cs), Math.round(24 * bs * cs), 1.45);
     const subH = sub.lines.length * sub.px * 1.45;
-    let size = Math.round(120 * ts * cs);
+    let size = Math.round(120 * ts * cs * (blk ? 0.62 : 1));
     const make = (s: number) => (tf ? layoutTitle(tf.lf, post.headline || "", tf.style, s, W - 200, 1.12) : null);
     let layout = make(size);
     while (layout && size > Math.round(50 * ts * cs) && titleHeight(layout) > 330 * Math.max(1, ts * cs)) {
@@ -350,7 +355,14 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const headH = layout ? titleHeight(layout) : 110;
     const gap = 30;
     const baseY = top ? 190 : H - 110 - subH - gap - headH;
-    const startY = Math.min(H - 60 - (headH + gap + subH), Math.max(40, baseY + (look.coverY || 0)));
+    let startY = Math.min(H - 60 - (headH + gap + subH), Math.max(40, baseY + (look.coverY || 0)));
+    if (blk) {
+      const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.55), headH + gap + subH + 110));
+      const bt = Math.max(0, Math.min(H - bh, H - bh + (look.coverY || 0)));
+      ctx.fillStyle = blk;
+      ctx.fillRect(0, bt, W, bh);
+      startY = bt + Math.round((bh - (headH + gap + subH)) / 2);
+    }
     if (tf && layout) {
       drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, look.left ? "left" : "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
     } else {
@@ -371,15 +383,30 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     return;
   }
 
-  wash(ctx, 0.3, look);
-  if (look.left && !look.noShade) bottomShade();
+  if (!blk) {
+    wash(ctx, 0.3, look);
+    if (look.left && !look.noShade) bottomShade();
+  }
   ctx.textAlign = "left";
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = top ? 190 : H - 170 - total;
   const hl = headLayout();
-  if (hl) {
+  if (blk) {
+    const hH = hl ? titleHeight(hl) + 26 : 0;
+    const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.7), hH + total + 110));
+    const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
+    ctx.fillStyle = blk;
+    ctx.fillRect(0, bt, W, bh);
+    const t0 = bt + Math.round((bh - (hH + total)) / 2);
+    if (hl) {
+      drawHead(hl, t0);
+      y = t0 + hH;
+    } else {
+      y = t0;
+    }
+  } else if (hl) {
     const hH = titleHeight(hl);
     const t0 = stackTop(hH + 26 + total);
     drawHead(hl, t0);

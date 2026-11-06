@@ -260,7 +260,7 @@ export function universalLook(a: Assets): Look {
 }
 
 /** Draws a treatment post with Universal's own drawer: the cover, three writing slides and the closing slide. */
-export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string }, a: Assets): HTMLCanvasElement[] {
+export function renderUniversalPost(o: { treatmentId: string; headline: string; copy: UniversalCopy; photos: ImageBitmap[]; offset: number; angle: number; shift?: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }, a: Assets): HTMLCanvasElement[] {
   const post: Post = {
     id: `${o.treatmentId}-${o.angle}`,
     key: `${o.treatmentId}:${o.angle + 1}`,
@@ -288,6 +288,7 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     if (dist(wash, grad) < 60) grad = mixHex(wash, "#000000", 0.35);
     look = { ...look, wash, grad, text: lum(wash) > 0.3 ? a.brand.deep : "#ffffff", noShade: true };
   }
+  if (o.block && /^#[0-9a-f]{6}$/i.test(o.block)) look = { ...look, block: o.block, noShade: true, text: lum(o.block) > 0.45 ? a.brand.deep : "#ffffff" };
   if (o.textColour && /^#[0-9a-f]{6}$/i.test(o.textColour)) look = { ...look, text: o.textColour };
   if (o.gradColour && /^#[0-9a-f]{6}$/i.test(o.gradColour)) look = { ...look, wash: o.gradColour, grad: mixHex(o.gradColour, "#000000", 0.35) };
   if (typeof o.gradOpacity === "number") look = { ...look, opacity: o.gradOpacity };
@@ -302,8 +303,8 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     c.width = W;
     c.height = H;
     const ctx = c.getContext("2d")!;
-    const bmp = n <= 3 && o.photos.length ? o.photos[post.photos[n] % o.photos.length] : null;
-    const photo: Photo | null = bmp ? { url: "", bmp } : null;
+    const bmp = n <= 3 ? (o.custom?.[n] ?? (o.photos.length ? o.photos[post.photos[n] % o.photos.length] : null)) : null;
+    const photo: Photo | null = bmp ? { url: "", bmp, zoom: o.zoom?.[n], px: o.panX?.[n], py: o.panY?.[n] } : null;
     drawSlide(ctx, post, n, photo, a.tf, look, a.logoImg);
     if (n === 4) whatsappStamp(ctx, a, H - 250);
     out.push(c);

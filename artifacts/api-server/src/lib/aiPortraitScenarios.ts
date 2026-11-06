@@ -2907,19 +2907,36 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-// Female wording of the David Bailey black and white set, so the freebies can use them for women. Same shots, same prompts, pronouns swapped.
-const BAILEY_FEMALE: PhotoStudioPreset[] = MEN_STUDIO_PRESETS.filter((p) => p.id.startsWith("db-")).map((p) => ({
-  ...p,
-  id: p.id.replace("db-", "dbf-"),
-  promptTemplate: p.promptTemplate
-    .replace(/distinguished male/g, "distinguished female")
-    .replace(/\bmale (medical professional|doctor)/g, "female $1")
-    .replace(/\bHe wears\b/g, "She wears")
-    .replace(/\bHe\b/g, "She")
-    .replace(/effortless masculinity/g, "effortless femininity"),
-}));
-MEN_STUDIO_PRESETS.push(...BAILEY_FEMALE);
-export const BAILEY_FEMALE_IDS = BAILEY_FEMALE.map((p) => p.id);
+// The four portraits made for every freebie: two David Bailey black and white shots, scrubs with arms folded, and a pensive coffee shop shot. Always closed mouth, never any teeth.
+const CLOSED_MOUTH = " Mouth gently closed with lips together, no teeth showing at all, calm composed expression. Natural unretouched skin texture with real pores, no airbrushing, same facial features and likeness as the reference photo.";
+const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
+  {
+    id: "fb-01",
+    name: "Freebie: Bailey, black background",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad medium-format studio portrait of a woman who is a medical professional, same facial features and likeness as the reference photo. She wears a crisp white shirt with the sleeves casually rolled and dark jeans, standing against a seamless pure black studio backdrop. Waist-up centred composition, direct eye contact, iconic 1960s British fashion editorial framing in the style of David Bailey. One large soft source with a frontal fill, clean shadows, luminous skin separation against the deep black. 80mm lens, f/8, ultra-sharp focus, subtle Ilford HP5 film grain, rich monochrome tonal range, deep blacks and luminous whites. Hands relaxed, understated confidence.${CLOSED_MOUTH}`,
+  },
+  {
+    id: "fb-02",
+    name: "Freebie: Bailey, white background",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad medium-format studio portrait of a woman who is a medical professional, same facial features and likeness as the reference photo. She wears a crisp white shirt with the sleeves casually rolled and dark jeans, standing against a seamless white infinity backdrop. Waist-up centred composition, direct eye contact, iconic 1960s British fashion editorial framing in the style of David Bailey. Large overhead soft source combined with frontal fill, classic high-key Bailey lighting, clean shadows. 80mm lens, f/8, ultra-sharp focus, subtle film grain, deep tonal range. Hands casually in pockets, understated confidence.${CLOSED_MOUTH}`,
+  },
+  {
+    id: "fb-03",
+    name: "Freebie: scrubs, arms folded, white studio",
+    hasColour: false,
+    promptTemplate: `A woman who is a clinician, same facial features and likeness as the reference photo, wearing smart navy blue medical scrubs, standing with her arms folded across her chest against a clean white studio background. Waist-up, relaxed confident posture, looking straight into the camera. Bright even soft studio lighting, crisp and clean, high-end healthcare brand portrait, shot in colour, shallow depth of field.${CLOSED_MOUTH}`,
+  },
+  {
+    id: "fb-04",
+    name: "Freebie: coffee shop, pensive",
+    hasColour: false,
+    promptTemplate: `A candid lifestyle portrait in colour of a woman, same facial features and likeness as the reference photo, sitting at a table in a cosy independent coffee shop with a coffee cup in front of her. She wears jeans and a white shirt. She is looking away from the camera, thoughtful and pensive, lost in thought. Warm natural window light, soft shallow depth of field with the coffee shop softly blurred behind her, documentary realism.${CLOSED_MOUTH}`,
+  },
+];
+MEN_STUDIO_PRESETS.push(...FREEBIE_PORTRAITS);
+export const FREEBIE_PORTRAIT_IDS = FREEBIE_PORTRAITS.map((p) => p.id);
 
 // ─── Injector Collection — 100 presets across 10 categories ────────────────
 

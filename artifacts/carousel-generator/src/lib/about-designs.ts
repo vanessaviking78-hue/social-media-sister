@@ -29,10 +29,11 @@ export function loadAboutFonts(): Promise<unknown> {
   return loaded;
 }
 
-function cover(ctx: CanvasRenderingContext2D, img: ImageBitmap, x: number, y: number, w: number, h: number, focusY = 0.35) {
-  const s = Math.max(w / img.width, h / img.height);
+export type AboutView = { z?: number; x?: number; y?: number };
+function cover(ctx: CanvasRenderingContext2D, img: ImageBitmap, x: number, y: number, w: number, h: number, focusY = 0.35, v?: AboutView) {
+  const s = Math.max(w / img.width, h / img.height) * Math.max(1, v?.z ?? 1);
   const dw = img.width * s, dh = img.height * s;
-  ctx.drawImage(img, x + (w - dw) / 2, y - (dh - h) * focusY, dw, dh);
+  ctx.drawImage(img, x + (w - dw) / 2 + (v?.x ?? 0) * Math.max(0, dw - w) / 2, y - (dh - h) * focusY + (v?.y ?? 0) * Math.max(0, dh - h) / 2, dw, dh);
 }
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -58,12 +59,12 @@ function justified(ctx: CanvasRenderingContext2D, lines: string[], x: number, y:
 }
 
 // Template 1: cream page, huge sage headline overlapping a tall photo, italic justified bio beside it.
-function templateCream(photo: ImageBitmap, bio: string, headline: string, col: AboutColours): HTMLCanvasElement {
+function templateCream(photo: ImageBitmap, bio: string, headline: string, col: AboutColours, view?: AboutView): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
   ctx.fillStyle = col.bg || aboutDefaults("cream", col).bg; ctx.fillRect(0, 0, W, H);
-  cover(ctx, photo, 108, 418, 448, 824, 0.3);
+  cover(ctx, photo, 108, 418, 448, 824, 0.3, view);
   // headline stretched to the page width
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = col.head || aboutDefaults("cream", col).head;
@@ -90,7 +91,7 @@ function templateCream(photo: ImageBitmap, bio: string, headline: string, col: A
 }
 
 // Template 2: peach page, tall red headline running up the left, short bio top right, photo bottom right with the name signed across it.
-function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string, col: AboutColours, cutout?: ImageBitmap | null): HTMLCanvasElement {
+function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: string, col: AboutColours, cutout?: ImageBitmap | null, view?: AboutView): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
@@ -108,11 +109,11 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
   ctx.restore();
   if (cutout) {
     // Background removed: she stands straight on the peach page, overlapping the headline, with a soft shadow.
-    const s2 = Math.min(1000 / cutout.height, 700 / cutout.width * 1.15);
+    const s2 = Math.min(1000 / cutout.height, 700 / cutout.width * 1.15) * Math.max(1, view?.z ?? 1);
     const dw = cutout.width * s2, dh = cutout.height * s2;
     ctx.save();
     ctx.shadowColor = "rgba(60,20,10,0.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetX = -12; ctx.shadowOffsetY = 12;
-    ctx.drawImage(cutout, W - dw + 40, H - dh, dw, dh);
+    ctx.drawImage(cutout, W - dw + 40 + (view?.x ?? 0) * 120, H - dh + (view?.y ?? 0) * 120, dw, dh);
     ctx.restore();
   } else {
   // photo with a soft shadow, bleeding off the bottom right
@@ -131,7 +132,7 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
   ctx.quadraticCurveTo(px, py, px + r, py);
   ctx.closePath();
   ctx.clip();
-  cover(ctx, photo, px, py, pw, ph, 0.25);
+  cover(ctx, photo, px, py, pw, ph, 0.25, view);
   ctx.restore();
   }
   // bio
@@ -159,8 +160,8 @@ function templatePeach(photo: ImageBitmap, bio: string, headline: string, name: 
 }
 
 export type AboutLayout = "cream" | "peach";
-export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; colours: AboutColours; cutout?: ImageBitmap | null; bio: string; name: string; headline?: string }): Promise<HTMLCanvasElement> {
+export async function renderAboutPost(o: { layout: AboutLayout; photo: ImageBitmap; colours: AboutColours; cutout?: ImageBitmap | null; bio: string; name: string; headline?: string; view?: AboutView }): Promise<HTMLCanvasElement> {
   await loadAboutFonts();
   const head = o.headline || "ABOUT ME";
-  return o.layout === "cream" ? templateCream(o.photo, o.bio, head, o.colours) : templatePeach(o.photo, o.bio, head, o.name, o.colours, o.cutout);
+  return o.layout === "cream" ? templateCream(o.photo, o.bio, head, o.colours, o.view) : templatePeach(o.photo, o.bio, head, o.name, o.colours, o.cutout, o.view);
 }

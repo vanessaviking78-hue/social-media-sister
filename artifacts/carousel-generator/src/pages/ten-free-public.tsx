@@ -216,12 +216,11 @@ export default function TenFreePublic({ slug }: { slug: string }) {
         </div>
 
         <div className="tp-sec">
-          <h2>A little thank you</h2>
+          <h2>A little note from me</h2>
           <div className="tp-code">
-            <div>3 months of social media for the price of 1</div>
-            <b>{data.code}</b>
-            <div style={{ fontSize: 15, color: "#666" }}>Message me and quote your code.</div>
-            {TENFREE_WHATSAPP && <a className="tp-btn" style={{ marginTop: 16 }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent(`Hi Vanessa, my code is ${data.code}`)}`}>Message me on WhatsApp</a>}
+            <div style={{ fontSize: 20, lineHeight: 1.45 }}>If you think we would be a good fit to work together, drop me a WhatsApp message and we can discuss rates and what&apos;s included to suit your budget.</div>
+            {TENFREE_WHATSAPP && <a className="tp-btn" style={{ marginTop: 20 }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I would love to chat about working together")}`}>Message me on WhatsApp</a>}
+            <div style={{ fontSize: 18, lineHeight: 1.5, marginTop: 24 }}>Lots of Love and Led Zep,<br />Your aesthetic Angel/digital devil,<br /><b className="tp-pink" style={{ display: "inline", fontSize: 18, letterSpacing: 0, margin: 0 }}>Vanessa xxxx</b></div>
           </div>
         </div>
         <div className="tp-sec">

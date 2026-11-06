@@ -82,9 +82,9 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
-  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string; bg?: string; head?: string; text?: string } };
+  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string; bg?: string; head?: string; text?: string }; view?: { z?: number; x?: number; y?: number } };
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
@@ -123,6 +123,8 @@ function Builder({ id }: { id: string }) {
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
+  // The clinic's own photos (Studio portraits and the ones they sent) as pictures, so any post can use them.
+  const ownRef = useRef<{ url: string; bmp: ImageBitmap }[]>([]);
   const itemsRef = useRef<Item[]>([]);
   itemsRef.current = items;
 
@@ -328,6 +330,10 @@ function Builder({ id }: { id: string }) {
         if (aboutSlots.length) aboutCopy = await post("/ten-free/copy", { clinic: { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, month: monthNameUK() }, answers: ans, kinds: aboutSlots.map((x) => x.kind) });
         aboutBmps = (await Promise.all(pool.map((p) => createImageBitmap(p.file).catch(() => null)))).filter((x): x is ImageBitmap => !!x);
       }
+      ownRef.current = (await Promise.all(pool.map(async (p) => { const bmp = await createImageBitmap(p.file).catch(() => null); return bmp ? { url: p.url, bmp } : null; }))).filter((x): x is { url: string; bmp: ImageBitmap } => !!x);
+      // Five of the ten posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
+      const BLOCK_N = [1, 3, 6, 8, 10];
+      const blockFor = (n: number) => (isPremium && BLOCK_N.includes(n) ? (BLOCK_N.indexOf(n) % 2 ? accent : req.mainHex) : undefined);
       const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
       let ai = 0, hi = 0, vi = 0;
       const out: Item[] = [];
@@ -357,7 +363,7 @@ function Builder({ id }: { id: string }) {
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
           const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
-          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0 };
+          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           hi++;
           const canvases = renderUniversalPost(args, assets);
           out.push({ n: slot.n, label: "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
@@ -368,7 +374,7 @@ function Builder({ id }: { id: string }) {
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0 };
+          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           const canvases = renderUniversalPost(uniArgs, assets);
           out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, libUrls: urls.slice(0, 12), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;
@@ -439,6 +445,48 @@ function Builder({ id }: { id: string }) {
     const args = { ...it.uniArgs, shift };
     const cvs = renderUniversalPost(args, assets);
     patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+  };
+  // Picture controls for every post: swap the photo for one of theirs or one uploaded, zoom, and slide it about inside the frame.
+  const applyUni = (it: Item, args: NonNullable<Item["uniArgs"]>) => {
+    const assets = assetsRef.current;
+    if (!assets) return;
+    const cvs = renderUniversalPost(args, assets);
+    patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+  };
+  const withArr = (arr: (number | undefined)[] | undefined, i: number, v: number, def: number) => { const out = [0, 1, 2, 3].map((k) => arr?.[k] ?? def); out[i] = v; return out; };
+  const setAdj = (it: Item, i: number, key: "zoom" | "panX" | "panY", v: number) => applyUni(it, { ...it.uniArgs!, [key]: withArr(it.uniArgs![key], i, v, key === "zoom" ? 1 : 0) });
+  const setCustom = (it: Item, i: number, bmp: ImageBitmap | null) => {
+    const c = [0, 1, 2, 3].map((k) => it.uniArgs!.custom?.[k] ?? null);
+    c[i] = bmp;
+    applyUni(it, { ...it.uniArgs!, custom: c });
+  };
+  const aboutApply = async (it: Item, patch: Partial<NonNullable<Item["aboutArgs"]>>) => {
+    const aa = { ...it.aboutArgs!, ...patch };
+    const cv = await renderAboutPost(aa);
+    patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+  };
+  const aboutPhoto = async (it: Item, bmp: ImageBitmap) => {
+    let cutout: ImageBitmap | null = null;
+    if (it.aboutArgs!.layout === "peach") {
+      try {
+        setStatus("Removing the photo background...");
+        const blob = await new Promise<Blob | null>((res) => { const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; c.getContext("2d")!.drawImage(bmp, 0, 0); c.toBlob(res, "image/jpeg", 0.92); });
+        if (blob) {
+          const fd = new FormData();
+          fd.append("image", blob, "photo.jpg");
+          const rr = await fetch(`${API}/ten-free/cutout`, { method: "POST", headers: { ...authHeaders(), "Content-Type": undefined as unknown as string }, body: fd });
+          if (rr.ok) cutout = await createImageBitmap(await rr.blob());
+        }
+      } catch { /* plain photo */ }
+      setStatus("");
+    }
+    await aboutApply(it, { photo: bmp, cutout });
+  };
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>, then: (b: ImageBitmap) => void) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    try { then(await createImageBitmap(f)); } catch { toast.error("That file would not open as a picture"); }
   };
   const onDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number) => {
     if (!it.post || it.post.kind === "tweet") return;
@@ -593,7 +641,7 @@ function Builder({ id }: { id: string }) {
           <span className="text-sm font-semibold">Text colour on the carousels:</span>
           <input type="color" value={textHex || "#ffffff"} onChange={(e) => applyTextColour(e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
           {[["White", "#ffffff"], ["Black", "#111111"], ["Their main", req.mainHex], ["Their accent", req.accentHex]].map(([label, hex]) => (
-            <button key={label} onClick={() => applyTextColour(hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-full border" style={{ background: hex }} />{label}</button>
+            <button key={label} onClick={() => applyTextColour(hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1"><span className="keep-colour inline-block w-4 h-4 rounded-full border" style={{ background: hex }} />{label}</button>
           ))}
           <button onClick={() => applyTextColour("")} className={`px-2 py-1 rounded border text-xs ${textHex ? "" : "bg-pink-500 text-white border-pink-500"}`}>Auto</button>
         </div>
@@ -656,10 +704,22 @@ function Builder({ id }: { id: string }) {
                 const cvs = renderUniversalPost(a2, assetsRef.current!);
                 patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
               };
-              const row = "flex items-center gap-3 text-xs text-muted-foreground";
+              const row = "flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground";
               return (
                 <div className="space-y-1">
                   <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
+                  <div className={row}><span className="w-44 shrink-0">Bottom of the page</span>
+                    <button onClick={() => upd({}, ["block"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "" : "bg-pink-500 text-white border-pink-500"}`}>Gradient</button>
+                    <button onClick={() => upd({ block: it.uniArgs?.block || req.mainHex })} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "bg-pink-500 text-white border-pink-500" : ""}`}>Colour block</button>
+                  </div>
+                  {it.uniArgs.block && (
+                    <div className={row}><span className="w-44 shrink-0">Block colour</span>
+                      <input type="color" value={it.uniArgs.block} onChange={(e) => upd({ block: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
+                      {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
+                        <button key={label} onClick={() => upd({ block: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                      ))}
+                    </div>
+                  )}
                   <label className={row}><span className="w-44 shrink-0">Headline and writing position</span>
                     <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-44 shrink-0">Cover text position</span>
@@ -671,21 +731,21 @@ function Builder({ id }: { id: string }) {
                   <div className={row}><span className="w-44 shrink-0">Gradient colour</span>
                     <input type="color" value={it.uniArgs.gradColour || "#111111"} onChange={(e) => upd({ gradColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["Black", "#111111"], ["White", "#ffffff"]].map(([label, hex]) => (
-                      <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                      <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
                     <button onClick={() => upd({}, ["gradColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
                   <div className={row}><span className="w-44 shrink-0">Text colour (this post)</span>
                     <input type="color" value={it.uniArgs.textColour || "#ffffff"} onChange={(e) => upd({ textColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
-                      <button key={label} onClick={() => upd({ textColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                      <button key={label} onClick={() => upd({ textColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
                     <button onClick={() => upd({}, ["textColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
                   <div className={row}><span className="w-44 shrink-0">Background colour (instead of the photo)</span>
                     <input type="color" value={it.uniArgs.bgColour || "#ffffff"} onChange={(e) => upd({ bgColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
-                      <button key={label} onClick={() => upd({ bgColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                      <button key={label} onClick={() => upd({ bgColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
                     <button onClick={() => upd({}, ["bgColour"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.bgColour ? "" : "bg-pink-500 text-white border-pink-500"}`}>Photo</button>
                   </div>
@@ -702,7 +762,7 @@ function Builder({ id }: { id: string }) {
                 patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
               };
               const sw = (k: "bg" | "head" | "text") => [["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
-                <button key={label} onClick={() => void set({ [k]: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                <button key={label} onClick={() => void set({ [k]: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
               ));
               return (
                 <div className="space-y-1 text-xs text-muted-foreground">
@@ -713,17 +773,42 @@ function Builder({ id }: { id: string }) {
                   <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Text colour</span>
                     <input type="color" value={cur.text} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ text: e.target.value })} />{sw("text")}</div>
                   <button className="px-2 py-0.5 rounded border" onClick={() => void set({}, true)}>Back to their brand colours</button>
+                  <div className="font-semibold pt-1">Photo</div>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {ownRef.current.map((o) => <img key={o.url} src={o.url} onClick={() => void aboutPhoto(it, o.bmp)} className="h-16 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                  </div>
+                  <label className="underline cursor-pointer block">Upload my own photo<input type="file" accept="image/*" className="hidden" onChange={(e) => void onFile(e, (b) => void aboutPhoto(it, b))} /></label>
+                  {([["Zoom", "z", 1, 2.5, 1], ["Left and right", "x", -1, 1, 0], ["Up and down", "y", -1, 1, 0]] as const).map(([label, key, mn, mx, def]) => (
+                    <label key={key} className="flex items-center gap-3"><span className="w-28 shrink-0">{label}</span>
+                      <input type="range" min={mn} max={mx} step={0.05} className="flex-1" value={aa0.view?.[key] ?? def} onChange={(e) => void aboutApply(it, { view: { ...(aa0.view ?? {}), [key]: Number(e.target.value) } })} /></label>
+                  ))}
                 </div>
               );
             })()}
-            {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (
-              <div className="space-y-1">
-                <div className="text-xs font-semibold">Pick the photo for slide {sel.i + 1} (all the Universal photos for this treatment)</div>
-                <div className="flex gap-2 overflow-x-auto">
-                  {(it.libUrls ?? []).map((u, k) => <img key={u} src={u} onClick={() => pickPhoto(it, sel.i, k)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+            {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (() => {
+              const i = sel.i;
+              const slider = (label: string, key: "zoom" | "panX" | "panY", min: number, max: number, step: number, def: number) => (
+                <label className="flex items-center gap-3 text-xs text-muted-foreground"><span className="w-28 shrink-0">{label}</span>
+                  <input type="range" min={min} max={max} step={step} className="flex-1" value={it.uniArgs![key]?.[i] ?? def} onChange={(e) => setAdj(it, i, key, Number(e.target.value))} /></label>
+              );
+              return (
+                <div className="space-y-2 border rounded p-2">
+                  <div className="text-xs font-semibold">Photo for slide {i + 1}</div>
+                  <div className="text-xs text-muted-foreground">Their photos</div>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {ownRef.current.map((o) => <img key={o.url} src={o.url} onClick={() => setCustom(it, i, o.bmp)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Library photos</div>
+                  <div className="flex gap-2 overflow-x-auto">
+                    {(it.libUrls ?? []).map((u, k) => <img key={u} src={u} onClick={() => { setCustom(it, i, null); pickPhoto({ ...it, uniArgs: { ...it.uniArgs!, custom: undefined } }, i, k); }} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                  </div>
+                  <label className="text-xs underline cursor-pointer">Upload my own photo<input type="file" accept="image/*" className="hidden" onChange={(e) => void onFile(e, (b) => setCustom(it, i, b))} /></label>
+                  {slider("Zoom", "zoom", 1, 2.5, 0.05, 1)}
+                  {slider("Left and right", "panX", -1, 1, 0.05, 0)}
+                  {slider("Up and down", "panY", -1, 1, 0.05, 0)}
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {it.post?.kind === "empower" && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <label className="flex items-center gap-2">Zoom the photo
