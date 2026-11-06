@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Ryder Clinic Website Images</title>
+<style>
+:root{--pink:#ff2d95;--ink:#111;--soft:#f6f1ee;--line:#e6dcd6}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+header{padding:28px 16px 12px;max-width:1280px;margin:0 auto}
+h1{margin:0 0 6px;font-size:clamp(26px,5vw,44px)}
+h1 span{color:var(--pink)}
+header p{margin:0 0 14px;color:#444;max-width:720px}
+.bar{position:sticky;top:0;background:#fff;border-bottom:2px solid var(--ink);z-index:5;padding:10px 16px}
+.in{max-width:1280px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.bar input{flex:1 1 220px;padding:10px 12px;border:2px solid var(--ink);border-radius:8px;font-size:16px}
+.bar a{color:var(--ink);text-decoration:none;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:99px}
+.bar a:hover{background:var(--pink);color:#fff;border-color:var(--pink)}
+main{max-width:1280px;margin:0 auto;padding:0 16px 60px}
+h2{margin:36px 0 12px;padding-bottom:6px;border-bottom:3px solid var(--pink);font-size:22px;text-transform:uppercase;letter-spacing:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.card{margin:0;border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.ph{aspect-ratio:1/1;background:var(--soft);position:relative}
+.badge{position:absolute;top:8px;left:8px;background:var(--pink);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
+.btns{flex-wrap:wrap}
+button.chg{flex:1 1 100%;border-color:var(--pink);color:var(--pink)}
+button.orig{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+figcaption b{font-size:14px}
+.slug{font-size:12px;color:#777;word-break:break-all}
+.btns{display:flex;gap:8px;margin-top:auto;padding-top:8px}
+button{flex:1;padding:9px 6px;border-radius:8px;font-weight:700;font-size:14px;cursor:pointer;border:2px solid var(--ink);background:#fff;color:var(--ink)}
+button.dl{background:var(--pink);border-color:var(--pink);color:#fff}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;opacity:0;transition:.2s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+.hide{display:none!important}
+.tabs{max-width:1280px;margin:0 auto;padding:0 16px;display:flex;gap:8px;flex-wrap:wrap}
+button.tab{flex:0 1 auto;padding:10px 16px;border-radius:99px;font-size:15px}
+button.tab.on{background:var(--ink);color:#fff}
+.up{max-width:1280px;margin:18px auto;padding:22px 16px;border:3px dashed var(--pink);border-radius:14px;text-align:center;background:var(--soft)}
+.up p{margin:0 0 12px;color:#444}
+.up button{flex:none;background:var(--pink);border-color:var(--pink);color:#fff;font-size:16px;padding:12px 22px}
+.up.over{background:#ffe3f0}
+button.crem{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
+#cd main{padding-top:6px}
+.empty{color:#777;padding:18px 0}
+</style></head><body>
+<header><h1>The Ryder Clinic <span>website images</span></h1>
+<p>71 images, named from the brief. Copy link gives the direct image address for the website. Download saves the file with the name shown under each image. Change image lets you swap in your own picture, which stays on this computer and can be downloaded.</p></header>
+<div class="tabs"><button class="tab on" data-tab="web">Website images</button><button class="tab" data-tab="cd">Content Day images 15th October</button></div>
+<div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
+<main id="m"></main></div>
+<div id="cd" class="hide">
+<div class="up" id="drop"><p><b>Content Day, 15th October.</b> Drop your pictures here or choose them from your computer. You can add as many as you like, in one go.</p><button id="cdadd">Upload images</button><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
+<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Nothing here yet. Upload your first pictures above.</p></main></div>
+<input type="file" id="f" accept="image/*" hidden>
+<div class="toast" id="t"></div>
+<script>
+var B="https://www.thecybersuite.com/api/media/ai-portraits/original/",E="/portrait-text-only-original.png";
+var D=[["homepage-hero-texture","Hero banner, texture / overlay","Homepage","da1b018d-ab98-4abd-87c6-ad866e1c0359"],["homepage-card-wrinkle","Treatment category card, Wrinkle","Homepage","01c91179-b3f7-4d00-b3e1-b652fff74530"],["homepage-card-laser","Treatment category card, Laser","Homepage","49fbf5f6-0e7b-4101-8872-158375f1d6e5"],["homepage-card-skin","Treatment category card, Skin","Homepage","100fce16-f038-4fbe-bae9-24d0a1104d68"],["homepage-card-hair-restoration","Treatment category card, Hair Restoration","Homepage","0fcf6c2a-bf1f-4fe6-a4ce-257e1893d8c5"],["homepage-card-body","Treatment category card, Body","Homepage","40530964-309c-41c8-8437-9fff28934ea6"],["homepage-card-iv-vitamin-therapy","Additional service card, IV Vitamin Therapy","Homepage","4ecc1332-ca3b-455a-be17-0458ff5bc970"],["homepage-card-gp-services","Additional service card, GP Services","Homepage","74a6f5ac-95de-43e6-8853-08d6c6e62db7"],["homepage-card-trt","Additional service card, TRT","Homepage","038b8190-2377-4357-ae46-aadc17ff0a42"],["homepage-packages-highlight","Packages highlight image","Homepage","a5e0e507-d508-401d-bf61-08ed1764e29f"],["homepage-testimonials-background","Testimonials background","Homepage","d493860b-de4a-4dce-946a-c0b112f4aa61"],["packages-header-general-anti-ageing","Package category header, General Anti-Ageing","Packages","4dd8490c-31ec-497f-981c-4e43665b461f"],["packages-header-mens","Package category header, Men's","Packages","e1784cad-2308-4ed5-887a-a42ca75f3618"],["packages-header-hair","Package category header, Hair","Packages","eb1414eb-8134-4a5d-ad29-ed962ff37604"],["wrinkle-hero","Page hero, wrinkle treatment","Wrinkle Treatments","963c4dae-cb91-4d82-8fcc-a37f3b63fcff"],["wrinkle-anti-wrinkle-section","Anti-wrinkle section image","Wrinkle Treatments","c0985741-946a-48f9-bf53-8e0365552536"],["wrinkle-dermal-fillers-section","Dermal fillers section image","Wrinkle Treatments","3dd6aff7-6580-4744-b9bd-947b4fc0623c"],["wrinkle-polynucleotides-skin-boosters","Polynucleotides / Skin Boosters image","Wrinkle Treatments","289682e3-db08-4f1c-aa1f-23855e7b88d1"],["laser-hero","Page hero, laser treatment","Laser Treatments","e8b96b87-b967-4207-b0a2-3e1a9594a921"],["laser-thumbnail-laser-genesis","Treatment thumbnail, Laser Genesis","Laser Treatments","decd96e4-7381-4333-9c9d-bd32b199d393"],["laser-thumbnail-limelight-ipl","Treatment thumbnail, Limelight IPL","Laser Treatments","37538652-fd3a-4786-9387-d47b164e3c7e"],["laser-thumbnail-titan","Treatment thumbnail, Titan","Laser Treatments","187a5977-110b-49b1-9c5c-98bcf14624cb"],["laser-thumbnail-coolglide","Treatment thumbnail, CoolGlide","Laser Treatments","fa41c404-23f5-46ec-b9a8-063c9011202b"],["laser-thumbnail-ndyag","Treatment thumbnail, ND:YAG","Laser Treatments","9a68b39d-1f47-4f61-b00b-5549ba4f6e7f"],["skin-hero","Page hero, skin treatment","Skin Treatments","48e8e22f-9423-45be-ae6f-139a35e12203"],["skin-hydrafacial","HydraFacial image","Skin Treatments","1b6c7655-42f0-4f55-a7e7-ed4c385aac61"],["skin-microneedling","Microneedling image","Skin Treatments","1f433c72-e4e2-4e50-bd01-24d34bf9088f"],["skin-dermalux-led","Dermalux LED image","Skin Treatments","260e20d5-9655-4195-9420-a199197bcc7d"],["skin-lymphatic-drainage","Lymphatic drainage image","Skin Treatments","f0d55f1a-e7fb-45d8-af2a-f593d7ca5d4c"],["hair-restoration-hero","Page hero, hair restoration","Hair Restoration","b1b9fa2a-ffc7-4294-9bff-9c291e81c399"],["hair-thumbnail-microneedling-exosomes","Treatment thumbnail, Microneedling + Exosomes","Hair Restoration","33ce1ad3-88bb-4bc4-998c-85aef591ffb3"],["hair-thumbnail-allskin-med","Treatment thumbnail, AllSkin MED","Hair Restoration","db3bc903-c03b-486b-a540-8f82322cb823"],["hair-thumbnail-dermalux-led-scalp","Treatment thumbnail, Dermalux LED Scalp","Hair Restoration","b3947d0b-1261-41c5-a799-77635fc4b8fc"],["hair-thumbnail-keravive","Treatment thumbnail, Keravive","Hair Restoration","7fd53e3f-8561-45e1-88be-7c40a240adb2"],["body-hero","Page hero, body treatment","Body Treatments","97c94163-990a-49ef-a5af-c5a560fc0b8d"],["body-thumbnail-hair-removal","Treatment thumbnail, Hair Removal","Body Treatments","c9d9afdb-23ad-4773-b8f5-7619e7f80c2d"],["body-thumbnail-skin-tightening","Treatment thumbnail, Skin Tightening","Body Treatments","0d614c56-6c44-40c6-bfa1-d447ee344f62"],["body-thumbnail-stretch-marks","Treatment thumbnail, Stretch Marks","Body Treatments","21cebccb-39d5-4b5b-93a1-07bcd15d630a"],["body-thumbnail-scars","Treatment thumbnail, Scars","Body Treatments","34e64be5-bffb-4df0-9bc7-62683ae80d36"],["body-thumbnail-hydrafacial-body","Treatment thumbnail, HydraFacial Body","Body Treatments","b3b6a0f8-53ec-4bd4-b760-3e6a1c89eef9"],["body-thumbnail-leg-veins","Treatment thumbnail, Leg Veins","Body Treatments","dc26c965-2ad8-4424-80b3-ae8ceaf2237c"],["iv-therapy-hero","Page hero, IV drip in progress","IV Therapy","8bd32508-74df-417a-a795-bbaefec17b76"],["iv-drip-close-up","IV drip close-up","IV Therapy","c6d5a2ba-27d3-4477-bc26-bda032f89c6d"],["iv-wellness-lifestyle","Wellness lifestyle image","IV Therapy","df6c1b3d-2681-4d12-a7cd-e51741945e78"],["gp-hero","Page hero, GP consultation","GP Services","612e826b-fb91-409d-b0fd-cbaa4a322e55"],["trt-hero","Page hero, men's health / TRT","TRT","9be1084e-83a8-4c2c-9e62-a17b2c37d6e4"],["condition-acne-acne-scarring","Acne & Acne Scarring, page header","Condition Pages","c6fdbe4d-09cb-4681-b9ef-bd88448e9053"],["condition-pigmentation-melasma","Pigmentation & Melasma, page header","Condition Pages","bf754810-2939-444d-ba74-4e14f4f721be"],["condition-rosacea","Rosacea, page header","Condition Pages","44209bb5-7b3c-43db-bdad-4ced40a6c9a5"],["condition-anti-ageing-rejuvenation","Anti-Ageing & Rejuvenation, page header","Condition Pages","bd992f46-fa51-4e5d-acb8-cefdef6871b9"],["condition-thread-spider-veins","Thread & Spider Veins, page header","Condition Pages","eadf5f64-5e75-4c6b-b863-86aedc11d1be"],["condition-scar-treatment","Scar Treatment, page header","Condition Pages","e499b2a2-32fc-40ec-9983-4697d57c80dd"],["condition-venous-lakes","Venous Lakes, page header","Condition Pages","fe1e63f3-902b-4c7a-924d-05cf0125c2a7"],["condition-hair-loss-thinning","Hair Loss & Thinning, page header","Condition Pages","5a3ac181-713c-4a8c-b08f-88a33ab09f6d"],["blog-skincare-routine-flatlay","Blog featured image, skincare routine","Blog","38b35659-e250-48ce-82a4-94e6d43a6008"],["blog-winter-skin-care","Blog featured image, winter skin care","Blog","fca8b588-6a43-4959-b3ce-95812b7bd594"],["blog-first-time-filler","Blog featured image, first time filler","Blog","ed937169-6238-4a0c-8229-ab9dfa4be549"],["blog-microneedling-results","Blog featured image, microneedling results","Blog","dfd992cd-6db1-4394-ac98-2dd408172b24"],["blog-healthy-skin-diet","Blog featured image, healthy skin diet","Blog","e575e083-c811-4477-9ac3-4f50bf4fa408"],["blog-sun-protection-spf","Blog featured image, sun protection SPF","Blog","9d327d29-999a-43e1-9045-574de120f063"],["blog-iv-drip-wellness","Blog featured image, IV drip wellness","Blog","f55b2fb2-410f-4803-8d64-7201b48a03c8"],["blog-anti-ageing-skincare","Blog featured image, anti-ageing skincare","Blog","23af1f29-0745-4f2b-b0cc-13e764e5618b"],["blog-rosacea-care","Blog featured image, rosacea care","Blog","af819b01-06a9-44fb-a458-6522cdbef955"],["blog-hair-loss","Blog featured image, hair loss","Blog","181e801a-ba2f-47fe-b455-edca0ed2c6c4"],["blog-mens-grooming","Blog featured image, men's grooming","Blog","c6bec429-f3f1-45de-8a34-2d0af7c308b8"],["blog-chemical-peel","Blog featured image, chemical peel","Blog","e58cd22e-2849-4ad9-9b38-e2ce6bdecfe4"],["blog-lip-filler-guide","Blog featured image, lip filler guide","Blog","17e8d205-9e22-4250-bd3a-ee1c187698aa"],["blog-profhilo-skin-boosters","Blog featured image, Profhilo / skin boosters","Blog","a4e86af9-dae8-4a35-94e0-e96d0a5038c7"],["blog-laser-hair-removal","Blog featured image, laser hair removal","Blog","3a7700b3-3036-4e0c-add3-ba34720e92c8"],["blog-menopause-skin","Blog featured image, menopause skin","Blog","73981c62-8166-4475-b3e7-2ae498dd7fff"],["blog-thread-veins","Blog featured image, thread veins","Blog","4b9fb72d-64fd-459d-a041-24efd18e4304"]];
+var m=document.getElementById("m"),nav=document.getElementById("nav"),t=document.getElementById("t");
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;")}
+function id(s){return s.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
+var secs=[];D.forEach(function(r){if(secs.indexOf(r[2])<0)secs.push(r[2])});
+nav.innerHTML=secs.map(function(s){return '<a href="#'+id(s)+'">'+esc(s)+'</a>'}).join("");
+m.innerHTML=secs.map(function(s){
+  return '<h2 id="'+id(s)+'">'+esc(s)+'</h2><div class="grid">'+D.filter(function(r){return r[2]===s}).map(function(r){
+    var u=B+r[3]+E;
+    return '<figure class="card" data-slug="'+r[0]+'" data-name="'+esc((r[1]+" "+r[0]).toLowerCase())+'"><div class="ph"><img loading="lazy" src="'+u+'" data-orig="'+u+'" alt="'+esc(r[1])+'"><span class="badge hide">Replaced</span></div><figcaption><b>'+esc(r[1])+'</b><span class="slug">'+r[0]+'</span><div class="btns"><button class="copy" data-url="'+u+'">Copy link</button><button class="dl" data-url="'+u+'" data-slug="'+r[0]+'">Download</button><button class="chg">Change image</button><button class="orig hide">Use the original again</button></div></figcaption></figure>';
+  }).join("")+'</div>';
+}).join("");
+function say(x){t.textContent=x;t.classList.add("on");clearTimeout(say.x);say.x=setTimeout(function(){t.classList.remove("on")},1800)}
+var R={},cur=null,fi=document.getElementById("f");
+function db(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-images",1);q.onupgradeneeded=function(){q.result.createObjectStore("f")};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
+function dbRun(mode,fn){return db().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("f",mode),s=tx.objectStore("f"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
+function card(slug){return document.querySelector('.card[data-slug="'+slug+'"]')}
+function show(slug,blob){
+  if(R[slug])URL.revokeObjectURL(R[slug].url);
+  R[slug]={blob:blob,url:URL.createObjectURL(blob)};
+  var c=card(slug);c.querySelector("img").src=R[slug].url;
+  c.querySelector(".badge").classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+}
+function reset(slug){
+  if(R[slug])URL.revokeObjectURL(R[slug].url);delete R[slug];
+  var c=card(slug),i=c.querySelector("img");i.src=i.dataset.orig;
+  c.querySelector(".badge").classList.add("hide");c.querySelector(".orig").classList.add("hide");
+  dbRun("readwrite",function(s){return s.delete(slug)});
+}
+function ext(b){return b.type.indexOf("png")>-1?".png":(b.type.indexOf("webp")>-1?".webp":".jpg")}
+function save(blob,name){var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();say("Downloading")}
+D.forEach(function(r){dbRun("readonly",function(s){return s.get(r[0])}).then(function(b){if(b)show(r[0],b)})});
+fi.addEventListener("change",function(){
+  var f=fi.files[0];if(!f||!cur)return;var slug=cur;fi.value="";
+  show(slug,f);dbRun("readwrite",function(s){return s.put(f,slug)});
+  say("Image changed. Download it to keep a copy.");
+});
+document.addEventListener("click",function(e){
+  var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
+  var slug=(e.target.closest(".card")||{dataset:{}}).dataset.slug;
+  if(g){cur=slug;fi.click();return}
+  if(o){reset(slug);say("Original restored");return}
+  if(c){
+    if(R[slug]){say("This is your own picture. Upload it to your site to get a link");return}
+    if(navigator.clipboard){navigator.clipboard.writeText(c.dataset.url).then(function(){say("Link copied")},function(){say("Copy failed")})}
+    else{var i=document.createElement("input");i.value=c.dataset.url;document.body.appendChild(i);i.select();document.execCommand("copy");i.remove();say("Link copied")}
+  }
+  if(d){
+    if(R[slug]){save(R[slug].blob,slug+ext(R[slug].blob));return}
+    fetch(d.dataset.url).then(function(r){return r.blob()}).then(function(b){save(b,slug+ext(b))})
+    .catch(function(){window.open(d.dataset.url,"_blank");say("Opened in a new tab, right click to save")});
+  }
+});
+document.getElementById("q").addEventListener("input",function(e){
+  var v=e.target.value.toLowerCase().trim();
+  document.querySelectorAll(".card").forEach(function(c){c.classList.toggle("hide",!!v&&c.dataset.name.indexOf(v)<0)});
+  document.querySelectorAll("h2").forEach(function(h){h.classList.toggle("hide",!!v&&!h.nextElementSibling.querySelector(".card:not(.hide)"))});
+});
+
+document.querySelectorAll("button.tab").forEach(function(b){b.addEventListener("click",function(){
+  document.querySelectorAll("button.tab").forEach(function(x){x.classList.toggle("on",x===b)});
+  document.getElementById("web").classList.toggle("hide",b.dataset.tab!=="web");
+  document.getElementById("cd").classList.toggle("hide",b.dataset.tab!=="cd");
+  window.scrollTo(0,0);
+})});
+var CU={},cchg=null;
+function cdb(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-content-day",1);q.onupgradeneeded=function(){q.result.createObjectStore("c",{autoIncrement:true})};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
+function cRun(mode,fn){return cdb().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("c",mode),s=tx.objectStore("c"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
+function cdRender(){
+  Promise.all([cRun("readonly",function(s){return s.getAllKeys()}),cRun("readonly",function(s){return s.getAll()})]).then(function(a){
+    var keys=a[0]||[],vals=a[1]||[],g=document.getElementById("cdgrid");
+    Object.keys(CU).forEach(function(k){URL.revokeObjectURL(CU[k])});CU={};
+    g.innerHTML="";
+    document.getElementById("cdempty").classList.toggle("hide",keys.length>0);
+    keys.forEach(function(k,i){
+      var v=vals[i],u=URL.createObjectURL(v.blob);CU[k]=u;
+      var f=document.createElement("figure");f.className="card";f.dataset.key=k;
+      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><button class="cdl">Download</button><button class="cchg">Change image</button><button class="crem">Remove</button></div></figcaption>';
+      f.querySelector("img").src=u;f.querySelector("b").textContent=v.name;
+      f.querySelector(".cdl").style.cssText="background:var(--pink);border-color:var(--pink);color:#fff";
+      f.querySelector(".cchg").style.cssText="flex:1 1 100%;border-color:var(--pink);color:var(--pink)";
+      g.appendChild(f);
+    });
+  });
+}
+function cdAdd(files){
+  var list=Array.prototype.slice.call(files).filter(function(f){return f.type.indexOf("image/")===0});
+  if(!list.length){say("Those were not pictures");return}
+  var p=Promise.resolve();
+  list.forEach(function(f){p=p.then(function(){return cRun("readwrite",function(s){return s.add({name:f.name,blob:f})})})});
+  p.then(function(){cdRender();say(list.length+" added. They stay on this computer.")});
+}
+document.getElementById("cdadd").addEventListener("click",function(){document.getElementById("cdf").click()});
+document.getElementById("cdf").addEventListener("change",function(e){cdAdd(e.target.files);e.target.value=""});
+var dz=document.getElementById("drop");
+["dragenter","dragover"].forEach(function(n){dz.addEventListener(n,function(e){e.preventDefault();dz.classList.add("over")})});
+["dragleave","drop"].forEach(function(n){dz.addEventListener(n,function(e){e.preventDefault();dz.classList.remove("over")})});
+dz.addEventListener("drop",function(e){cdAdd(e.dataTransfer.files)});
+document.getElementById("cdc").addEventListener("change",function(e){
+  var f=e.target.files[0];e.target.value="";if(!f||cchg===null)return;var k=cchg;
+  cRun("readonly",function(s){return s.get(k)}).then(function(v){
+    var name=v?v.name:f.name;
+    return cRun("readwrite",function(s){return s.put({name:name,blob:f},k)});
+  }).then(function(){cdRender();say("Image changed")});
+});
+document.getElementById("cdgrid").addEventListener("click",function(e){
+  var c=e.target.closest(".card");if(!c)return;var k=isNaN(c.dataset.key)?c.dataset.key:Number(c.dataset.key);
+  if(e.target.closest(".cchg")){cchg=k;document.getElementById("cdc").click()}
+  else if(e.target.closest(".crem")){cRun("readwrite",function(s){return s.delete(k)}).then(function(){cdRender();say("Removed")})}
+  else if(e.target.closest(".cdl")){cRun("readonly",function(s){return s.get(k)}).then(function(v){if(v)save(v.blob,v.name)})}
+});
+cdRender();
+</script></body></html>
