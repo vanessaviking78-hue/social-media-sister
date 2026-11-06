@@ -15,6 +15,7 @@ import { aiSourcePhotosTable, clientPresetsTable } from "@workspace/db/schema";
 import { readKey } from "../lib/freeSampleWorker";
 import { signedTransformUrl } from "../lib/objectStorage";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
+import { BAILEY_FEMALE_IDS } from "../lib/aiPortraitScenarios";
 
 // 10 FREE POSTS. A public form at /10freeposts where a clinic asks for nine free posts (3 treatment carousels, an empowering post,
 // 2 about the injector, one about ignoring other people's opinions on ageing, one for men, one seasonal), with stories, poll ideas,
@@ -108,12 +109,14 @@ function tooMany(ip: string): boolean {
 // Three Studio portraits of the clinician, made in the background after the form is sent. Only three, and only when she sent a photo.
 // ---------------------------------------------------------------------------
 
-const STUDIO_SLOTS = [{ id: "mx-01" }, { id: "mx-02" }, { id: "mx-16" }];
+// The last portrait is always a random pick from the David Bailey black and white set, so no two freebies look the same.
+const randomBailey = () => ({ id: BAILEY_FEMALE_IDS[Math.floor(Math.random() * BAILEY_FEMALE_IDS.length)] });
+const studioSlots = () => [{ id: "mx-01" }, { id: "mx-02" }, randomBailey()];
 // The premium version makes two, because the clinic sends three of her own photos and all five are used.
-const PREMIUM_STUDIO_SLOTS = [{ id: "mx-01" }, { id: "mx-02" }];
+const premiumStudioSlots = () => [{ id: "mx-01" }, randomBailey()];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function runStudio(id: string, photoKey: string, clinicName: string, slots = STUDIO_SLOTS): Promise<void> {
+async function runStudio(id: string, photoKey: string, clinicName: string, slots = studioSlots()): Promise<void> {
   try {
     await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'working' WHERE id = ${id}`);
     const buf = await readKey(photoKey);
@@ -269,7 +272,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       }
       throw err;
     }
-    if (photoKey) void runStudio(id, photoKey, clinicName, premium ? PREMIUM_STUDIO_SLOTS : STUDIO_SLOTS);
+    if (photoKey) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
     void notifyTenFreeRequest({ clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
@@ -394,7 +397,7 @@ router.post("/ten-free/requests/:id/studio", requireAuth, async (req: Request, r
       res.status(400).json({ error: "She did not send a photo" });
       return;
     }
-    void runStudio(String(req.params.id), key, row.clinic_name ?? "", row.kind === "premium" ? PREMIUM_STUDIO_SLOTS : STUDIO_SLOTS);
+    void runStudio(String(req.params.id), key, row.clinic_name ?? "", row.kind === "premium" ? premiumStudioSlots() : studioSlots());
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not start" });

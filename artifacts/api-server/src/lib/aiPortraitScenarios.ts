@@ -2907,6 +2907,20 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// Female wording of the David Bailey black and white set, so the freebies can use them for women. Same shots, same prompts, pronouns swapped.
+const BAILEY_FEMALE: PhotoStudioPreset[] = MEN_STUDIO_PRESETS.filter((p) => p.id.startsWith("db-")).map((p) => ({
+  ...p,
+  id: p.id.replace("db-", "dbf-"),
+  promptTemplate: p.promptTemplate
+    .replace(/distinguished male/g, "distinguished female")
+    .replace(/\bmale (medical professional|doctor)/g, "female $1")
+    .replace(/\bHe wears\b/g, "She wears")
+    .replace(/\bHe\b/g, "She")
+    .replace(/effortless masculinity/g, "effortless femininity"),
+}));
+MEN_STUDIO_PRESETS.push(...BAILEY_FEMALE);
+export const BAILEY_FEMALE_IDS = BAILEY_FEMALE.map((p) => p.id);
+
 // ─── Injector Collection — 100 presets across 10 categories ────────────────
 
 export interface InjectorCollectionCategory {
