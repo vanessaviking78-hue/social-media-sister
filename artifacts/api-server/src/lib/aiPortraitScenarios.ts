@@ -2535,7 +2535,55 @@ export const BAILEY_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "bl-08", name: "The Shadow Portrait", hasColour: false,
-    promptTemplate: `Hyper-realistic black-and-white editorial studio photography. STRICT FACELOCK, exact facial identity and proportions must remain unchanged. Subject in black medical scrubs with no logos or text. Waist-up composition, body facing camera, head turned slightly to one side, eyes looking directly into the lens. Dramatic split-light arrangement with one side of the face softly illuminated and the other falling into controlled shadow. Both eyes remain naturally visible. Deep black background, beautiful flattering light, rich monochrome contrast, authentic 35mm film grain, natural skin texture, exceptional detail. Dramatic, intimate and unmistakably British editorial photography.`,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio photography. STRICT FACELOCK, exact facial identity and proportions must remain unchanged. Subject in black medical scrubs with no logos or text. Waist-up composition, body facing camera, head turned slightly to one side, eyes looking directly into the lens. Dramatic split-light arrangement with one side of the face softly illuminated and the other falling into controlled shadow. Both eyes remain naturally visible. Deep black background, beautiful flattering light, rich monochrome tones, authentic vintage film texture and extraordinary realism.`,
+  },
+  {
+    id: "bl-09", name: "The Unguarded Moment", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio photograph. STRICT FACELOCK using the original uploaded photograph. Do not change the face, age, expression-defining features or skin texture. Subject wearing black medical scrubs, no logos or writing. Waist-up candid-style portrait, captured in a natural moment of genuine laughter, head slightly tilted, eyes alive and expressive. Soft flattering studio lighting, beautifully illuminated face, gentle shadowing, dark seamless backdrop. Classic analogue film aesthetic, subtle grain, exceptional detail, sophisticated but human, timeless editorial quality.`,
+  },
+  {
+    id: "bl-10", name: "The Wind And Light", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white luxury editorial studio portrait. ABSOLUTE FACELOCK: preserve the uploaded subject's exact facial identity, features, proportions and age. Subject wearing plain black medical scrubs with no logos or text. Waist-up, body turned slightly away while face returns towards the camera. A studio fan creates dramatic sideways hair movement, with individual strands catching the light. Beautiful soft frontal fill combined with directional side lighting, flattering facial illumination, deep black background. Cinematic vintage 35mm film, natural skin detail, strong emotional presence and sophisticated photographic realism.`,
+  },
+  {
+    id: "bl-11", name: "The Editorial Seated Portrait", hasColour: false,
+    promptTemplate: `Hyper-realistic monochrome studio editorial portrait. STRICT FACELOCK, absolutely no modification of the uploaded face. Black medical scrubs, no branding. Subject seated sideways on a minimal black studio chair, waist-up, one arm resting naturally on the chair, face turned towards the camera. Calm, confident expression. Large soft studio light positioned at 45 degrees, delicate facial highlights, beautifully sculpted shadows. Deep charcoal backdrop, vintage silver gelatin aesthetic, fine film grain, luxury magazine photography and highly detailed fabric.`,
+  },
+  {
+    id: "bl-12", name: "The Direct Gaze", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white studio fashion portrait inspired by David Bailey's direct, unpretentious portraiture. STRICT FACELOCK: maintain exact facial identity from the reference photograph. No facial alteration whatsoever. Subject wearing black medical scrubs, no logos or text. Waist-up, perfectly straight-on composition, shoulders level, eyes looking directly into the lens. Strong but flattering frontal studio illumination with subtle side shadowing. Deep black background, striking eye detail, natural skin pores, rich black tonal depth, authentic vintage film texture and commanding editorial presence.`,
+  },
+  {
+    id: "bl-13", name: "The Over-The-Shoulder", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio portrait. ABSOLUTE FACELOCK, preserve the original face exactly, including bone structure, eyes, nose, lips, jawline and natural skin texture. Subject wearing plain black medical scrubs, no logos or text. Waist-up composition, back and one shoulder slightly towards the camera, head turned over the shoulder to meet the lens. Elegant, confident expression. Soft side lighting across the face, dark studio backdrop, vintage film grain, beautiful tonal contrast and high-end British fashion editorial photography.`,
+  },
+  {
+    id: "bl-14", name: "The Cinematic Pause", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white fine-art studio portrait. STRICT FACELOCK: do not alter or reinterpret the uploaded face. Black medical scrubs, no branding or text. Waist-up, subject standing with hands loosely clasped in front, gaze lowered slightly, thoughtful expression. Single large diffused studio light creating gentle highlights across the face and subtle shadows around the jaw. Deep black background, cinematic monochrome, authentic analogue film grain, exceptional natural detail, quiet strength and sophisticated magazine photography.`,
+  },
+  {
+    id: "bl-15", name: "The Storm", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white David Bailey-inspired editorial studio portrait. STRICT FACELOCK: retain the exact face from the uploaded reference. No face reshaping, smoothing, beautification or identity changes. Subject in black medical scrubs without logos or text. Waist-up, head slightly angled, direct confident eye contact. Powerful studio fan creates pronounced movement in the hair, sweeping it backwards and sideways. Hair movement must look physically natural. Flattering key light illuminates the entire face, with subtle fill to retain eye detail. Black studio background, dramatic silver gelatin tonal range, authentic vintage film grain, exceptional realism.`,
+  },
+  {
+    id: "bl-16", name: "The Soft Focus Moment", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio photograph. STRICT FACELOCK: exact facial identity must be preserved from the uploaded reference image. Subject wearing black medical scrubs, no logos or text. Waist-up portrait, subject positioned slightly off-centre, looking softly towards the camera with a relaxed, self-assured expression. Face and eyes in perfect sharp focus, very subtle optical depth in the background only. Beautiful diffused studio lighting, flattering highlights, rich charcoal shadows, vintage 35mm film grain, natural skin texture and sophisticated editorial atmosphere.`,
+  },
+  {
+    id: "bl-17", name: "The Strong Silhouette", hasColour: false,
+    promptTemplate: `Hyper-realistic monochrome fashion editorial studio portrait. ABSOLUTE FACELOCK, preserve the exact original face and facial proportions. Black medical scrubs, no logos or writing. Waist-up, standing with arms crossed loosely, body slightly angled, head held naturally high, confident expression. Strong directional studio lighting from above and one side, with a gentle frontal fill to ensure the face remains flattering and fully recognisable. Deep black background, sculptural shadows, rich blacks, vintage film aesthetic, detailed fabric texture and powerful magazine-quality photography.`,
+  },
+  {
+    id: "bl-18", name: "The Intimate Portrait", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio portrait. STRICT FACELOCK, exact identity preservation from the uploaded photograph. Subject wearing black medical scrubs without branding. Waist-up, leaning gently against a dark studio wall, head turned towards the camera, relaxed shoulders and thoughtful direct gaze. Soft side lighting creates beautiful dimension across the face without harsh shadows. Natural skin texture, subtle analogue grain, deep charcoal backdrop, classic British editorial photography, intimate, understated and exceptionally realistic.`,
+  },
+  {
+    id: "bl-19", name: "The Light Catcher", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white studio fashion portrait. STRICT FACELOCK: preserve the exact uploaded facial identity, no changes to facial features, age or proportions. Subject in black medical scrubs, no logos or text. Waist-up, face turned slightly towards a large studio light source, eyes looking just beyond the camera. Beautiful luminous highlights in the eyes, soft flattering illumination across the face, gentle shadows around the cheekbones. Rich black backdrop, authentic 35mm film grain, elegant monochrome tonal range, exceptional natural detail and timeless editorial sophistication.`,
+  },
+  {
+    id: "bl-20", name: "The Final Wind Portrait", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white luxury editorial studio portrait, inspired by iconic 1960s British fashion photography and David Bailey's unmistakable portrait aesthetic. ABSOLUTE FACELOCK: use the uploaded reference as the sole facial identity source. Preserve the exact face, bone structure, eyes, nose, lips, jawline, natural expression, age and skin texture. No beautification, no artificial smoothing, no facial modification. Subject wearing fitted black medical scrubs, no logos or text. Waist-up, standing with shoulders slightly angled, head turned towards the lens, intense confident gaze. Powerful studio fan creating beautiful flowing movement through the hair, strands lifting and sweeping across the dark background while keeping the entire face visible. Exceptionally flattering directional facial lighting, soft fill, sculptural cheekbone highlights, deep black seamless studio background. Authentic vintage 35mm film, rich silver gelatin tones, subtle organic grain, extraordinary clothing and skin detail. A striking final image for a luxury editorial campaign. Pure photographic realism.`,
   },
 ];
 
