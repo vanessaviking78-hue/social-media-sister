@@ -75,14 +75,14 @@ function pickCta(kind: string, area: string, avoid: string[]): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function systemPrompt(clinic: { name: string; dentist: string }, brief: string, label: string, area: string): string {
+function systemPrompt(clinic: { name: string; dentist: string }, brief: string, label: string, area: string, aesthetic = false): string {
   return `${RYDER_TONE}
 
 ${HOUSE_RULES}
 
 The professional voice above overrides any instruction to be funny or jokey. There is no humour. Where the brief is a fun fact or a myth, be curious, light and warm, never jokey.
 
-You write as ${clinic.name}${area ? ` in ${area}` : ""}, a dental practice, as ${clinic.dentist}, in the first person ("I", "my", "you"), never as a social media manager. The voice is composed, courteous and precise, warm and quietly emotional. ${/keeping fit/i.test(label) ? "This post is about keeping fit at 40, a general wellbeing topic, so do not mention dentistry or treatments in it." : "This page is about dentistry only: never mention aesthetics, skin, injectables or facial treatments."}
+You write as ${clinic.name}${area ? ` in ${area}` : ""}, a dental practice, as ${clinic.dentist}, in the first person ("I", "my", "you"), never as a social media manager. The voice is composed, courteous and precise, warm and quietly emotional. ${aesthetic ? "This post is about an aesthetic treatment that I also offer alongside dentistry, so write about that treatment in the same calm, professional voice and do not mention teeth or dentistry in it. Consultation first, no promises, no prices, no medicine names." : /keeping fit/i.test(label) ? "This post is about keeping fit at 40, a general wellbeing topic, so do not mention dentistry or treatments in it." : "This page is about dentistry only: never mention aesthetics, skin, injectables or facial treatments."}
 
 THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}
@@ -132,7 +132,7 @@ router.post("/dental/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(clinic, brief, label, area) + (await clientProfileContext(profileName)) },
+        { role: "system", content: systemPrompt(clinic, brief, label, area, b.aesthetic === true) + (await clientProfileContext(profileName)) },
         { role: "user", content: `Write the carousel "${label}" for ${clinic.name}.${note ? ` Extra from her: ${note}` : ""}` },
       ],
       temperature: 0.8,

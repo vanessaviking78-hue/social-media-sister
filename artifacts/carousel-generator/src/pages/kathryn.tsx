@@ -13,7 +13,18 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { DENTAL_CLINICS, DENTAL_GROUPS, DENTAL_POST_TYPES, type DentalPostType } from "@/lib/dental-posts";
+import { DENTAL_CLINICS, DENTAL_GROUPS as DENTAL_BASE_GROUPS, DENTAL_POST_TYPES as DENTAL_BASE_TYPES, type DentalPostType, type DentalGroup } from "@/lib/dental-posts";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS } from "@/lib/clare-sections";
+
+// Dr Kathryn also does aesthetics, so her page carries Clare's aesthetic sections (skin boosters, polynucleotides, peels, fillers, GLP1 consultations) after the dental ones.
+// "Keeping fit at 40" is already in the dental list.
+const AESTHETIC_GROUPS = CLARE_SECTIONS.filter((g) => g.id !== "fit");
+const AESTHETIC_IDS = new Set<string>(AESTHETIC_GROUPS.map((g) => g.id));
+const DENTAL_GROUPS = [...DENTAL_BASE_GROUPS, ...AESTHETIC_GROUPS.map((g) => ({ id: g.id as unknown as DentalGroup, label: g.label }))];
+const DENTAL_POST_TYPES: DentalPostType[] = [
+  ...DENTAL_BASE_TYPES,
+  ...CLARE_SECTION_POSTS.filter((t) => AESTHETIC_IDS.has(t.group)).map((t) => ({ id: `k-${t.id}`, group: t.group as unknown as DentalGroup, label: t.label, brief: t.brief, kind: "treatment" as const })),
+];
 
 // DR KATHRYN BELL, her own dental page, a copy of the Ryder Clinic page. Photo first, a soft wash over the bottom third.
 // Hatcher on the cover with a curly first letter only. 16 sections of 6 posts each.
@@ -671,7 +682,7 @@ function KathrynPage() {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/dental/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, clinic: CLINIC_KEY, clientName: preset?.name, kind: t.kind, avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" "), area }) });
+      const r = await fetch(`${BASE}/api/dental/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, clinic: CLINIC_KEY, clientName: preset?.name, kind: t.kind, aesthetic: AESTHETIC_IDS.has(t.group), avoid: posts.filter((x) => x.id !== post.id).map((x) => x.cta).filter(Boolean), note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" "), area }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
