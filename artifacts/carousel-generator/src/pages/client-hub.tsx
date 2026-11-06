@@ -11,6 +11,7 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "hooks", label: "My first hooks", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.ClientFirstHooks }))) },
   { id: "posts", label: "Make 40 posts", Comp: lazyTab(() => import("./clare").then((m) => ({ default: m.ClareOwn }))) },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
+  { id: "fillers", label: "Fillers", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.FillersTab }))) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
   { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },
   { id: "unique", label: "Unique", Comp: lazyTab(() => import("./unique")) },

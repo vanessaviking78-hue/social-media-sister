@@ -1081,6 +1081,7 @@ const lazyTab = (load: () => Promise<{ default: React.ComponentType }>) => lazy(
 const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null }[] = [
   { id: "own", label: "Clare's treatments", Comp: null },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
+  { id: "fillers", label: "Fillers", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.FillersTab }))) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
   { id: "hooks", label: "My first hooks", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.ClientFirstHooks }))) },
   { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },

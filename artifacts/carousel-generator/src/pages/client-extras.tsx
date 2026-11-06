@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { HOOKS, fillArea, fillTreatment } from "@/lib/hook-bank";
 import { getUsedHooks, syncUsedHooks, markHooksUsed } from "@/lib/hook-used";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { usePresets } from "@/lib/use-presets";
-import { useForcedClient } from "@/lib/forced-client";
+import { ForcedClientContext, useForcedClient } from "@/lib/forced-client";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -135,4 +135,16 @@ export function ClientInfoByPattern({ pattern }: { pattern: RegExp }) {
   }, [pattern]);
   if (!preset) return null;
   return <ClientInfoPanel clientName={preset.name} treatmentIds={ids} />;
+}
+
+// FILLERS: every filler treatment as its own tab (lip, cheek, jawline, chin, tear trough, nose, temple, hand and the rest), using the Universal posts.
+const UniversalPage = lazy(() => import("./universal"));
+export function FillersTab() {
+  const forced = useForcedClient();
+  const ids = U_TREATMENTS.filter((t) => t.group === "fillers").map((t) => t.id);
+  return (
+    <ForcedClientContext.Provider value={{ pattern: forced?.pattern ?? /$^/, treatmentIds: ids }}>
+      <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}><UniversalPage /></Suspense>
+    </ForcedClientContext.Provider>
+  );
 }

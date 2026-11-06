@@ -12,7 +12,6 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "boosters", label: "Skin boosters", word: "BOOSTERS" },
   { id: "poly", label: "Polynucleotides", word: "POLY" },
   { id: "peels", label: "Skin peels", word: "PEELS" },
-  { id: "filler", label: "Dermal fillers", word: "FILLER" },
   { id: "fit", label: "Keeping fit at 40", word: "" },
   { id: "glp1", label: "GLP1 volume loss", word: "CONSULTATION" },
   { id: "about", label: "About me", word: "" },
@@ -28,7 +27,8 @@ const NOTE = " Honest, realistic and friendly, in plain words, with a dry, warm 
 
 const CONSULT = " ALL ABOUT BOOKING A CONSULTATION WITH ME. Never say what the consultation is for, never say what I would suggest or what it could do, never mention benefits, treatments, results, weight loss, volume loss, medicines or GLP-1. Only invite her to book a consultation. Warm, funny and friendly, in plain words. No promises, no prices.";
 
-export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
+// "Dermal fillers" is no longer a section here: every filler has its own Fillers tab on the client page.
+const ALL_SECTION_POSTS: ClareSectionPost[] = [
   // SKIN BOOSTERS
   p("sb1", "boosters", "What skin boosters actually are", "A clear, friendly explanation of skin boosters as a treatment for skin quality and hydration, so skin looks and feels fresher and more nourished. Do not describe the method, and do not claim any result." + NOTE),
   p("sb2", "boosters", "Skin that looks tired but you are not", "A relatable post for the woman in her 40s whose skin looks tired even though she has had a decent night, and a kind invitation to talk about skin quality." + NOTE),
@@ -83,5 +83,7 @@ export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
   p("sf2", "safety", "Why I always say no sometimes", "A warm, honest post on why a good practitioner will sometimes say not today or not this, and why that is a sign you are in safe hands. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
   p("sf3", "safety", "Aftercare and what to do if you are worried", "A reassuring post on why aftercare matters and why you should always feel able to contact your practitioner if something does not feel right. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
 ];
+
+export const CLARE_SECTION_POSTS: ClareSectionPost[] = ALL_SECTION_POSTS.filter((t) => t.group !== "filler");
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
