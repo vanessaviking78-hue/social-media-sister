@@ -2907,32 +2907,17 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-// The four portraits made for every freebie: two David Bailey black and white shots picked at random from the Studio's own Bailey list (one on white, one on black, different poses),
+// The four portraits made for every freebie: two different shots picked at random from her David Bailey range (the bl presets),
 // scrubs with arms folded on white, and a pensive coffee shop shot. Always a closed mouth, never any teeth.
 const CLOSED_MOUTH = " Mouth gently closed with lips together, no teeth showing at all, calm composed expression. Natural unretouched skin texture with real pores, no airbrushing, same facial features and likeness as the reference photo.";
-const toHer = (t: string) => t
-  .replace(/distinguished male/g, "distinguished female")
-  .replace(/\bmale (medical professional|doctor|physician)/g, "female $1")
-  .replace(/\bHe wears\b/g, "She wears")
-  .replace(/\bHe\b/g, "She")
-  .replace(/\bHis\b/g, "Her")
-  .replace(/\bhis\b/g, "her")
-  .replace(/effortless masculinity/g, "effortless femininity");
-const baileyBase = (id: string) => MEN_STUDIO_PRESETS.find((p) => p.id === id)!;
-const WHITE_BASES = ["db-01", "db-06"];
-const BLACK_BASES = ["db-01", "db-06", "db-03", "db-04", "db-08", "db-10"];
-const toBlack = (t: string) => t
-  .replace(/seamless white infinity backdrop/g, "seamless pure black studio backdrop")
-  .replace(/plain studio wall/g, "seamless pure black studio backdrop")
-  .replace(/minimalist studio/g, "minimalist studio with a pure black backdrop")
-  .replace(/classic high-key Bailey lighting/g, "classic Bailey lighting")
-  .replace(/High-key monochrome/g, "Dramatic low-key monochrome")
-  .replace(/Clean studio lighting with minimal shadows\./g, "Soft studio lighting that lets the black backdrop fall away.");
-const baileyWhite: PhotoStudioPreset[] = WHITE_BASES.map((id) => ({ ...baileyBase(id), id: `fbw-${id}`, name: `Freebie Bailey on white (${baileyBase(id).name})`, promptTemplate: toHer(baileyBase(id).promptTemplate) + " Shot against a seamless white studio backdrop." + CLOSED_MOUTH }));
-const baileyBlack: PhotoStudioPreset[] = BLACK_BASES.map((id) => ({ ...baileyBase(id), id: `fbk-${id}`, name: `Freebie Bailey on black (${baileyBase(id).name})`, promptTemplate: toBlack(toHer(baileyBase(id).promptTemplate)) + " The whole background is a seamless pure black studio backdrop, deep black behind her." + CLOSED_MOUTH }));
+const BAILEY_IDS = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-05", "bl-06", "bl-07", "bl-08"];
+// Vanessa's own women's David Bailey range, exactly as it is in the Studio, with only the closed mouth line added.
+const baileyMix: PhotoStudioPreset[] = BAILEY_IDS.map((id) => {
+  const base = BAILEY_PRESETS.find((p) => p.id === id)!;
+  return { ...base, id: `fbb-${id}`, name: `Freebie ${base.name}`, promptTemplate: base.promptTemplate + " Mouth closed with lips together, no teeth showing." };
+});
 const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
-  ...baileyWhite,
-  ...baileyBlack,
+  ...baileyMix,
   {
     id: "fb-03",
     name: "Freebie: black scrubs, arms folded, white studio",
@@ -2947,12 +2932,11 @@ const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
   },
 ];
 MEN_STUDIO_PRESETS.push(...FREEBIE_PORTRAITS);
-/** The four portraits for one freebie: a random white backdrop Bailey, a random black backdrop Bailey in a different pose, black scrubs and the coffee shop. */
+/** The four portraits for one freebie: two different random shots from her David Bailey range, black scrubs with arms folded, and the coffee shop. */
 export function freebiePortraitIds(): string[] {
-  const w = WHITE_BASES[Math.floor(Math.random() * WHITE_BASES.length)];
-  const blacks = BLACK_BASES.filter((b) => b !== w);
-  const k = blacks[Math.floor(Math.random() * blacks.length)];
-  return [`fbw-${w}`, `fbk-${k}`, "fb-03", "fb-04"];
+  const pool = [...BAILEY_IDS];
+  const pick = () => pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+  return [`fbb-${pick()}`, `fbb-${pick()}`, "fb-03", "fb-04"];
 }
 
 // ─── Injector Collection — 100 presets across 10 categories ────────────────
