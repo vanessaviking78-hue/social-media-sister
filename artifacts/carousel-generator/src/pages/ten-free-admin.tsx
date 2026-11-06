@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
@@ -751,6 +751,7 @@ function Builder({ id }: { id: string }) {
 }
 
 export default function TenFreeAdmin() {
-  const id = new URLSearchParams(window.location.search).get("id");
-  return id ? <Builder id={id} /> : <List />;
+  // useSearch re-renders when the link changes only the ?id=, which a plain read of window.location did not.
+  const id = new URLSearchParams(useSearch()).get("id");
+  return id ? <Builder key={id} id={id} /> : <List />;
 }
