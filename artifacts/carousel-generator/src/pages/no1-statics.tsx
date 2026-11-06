@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { loadBitmap } from "@/pages/universal";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
 import { STATIC_CLINIC, STATIC_GROUPS, STATIC_POST_TYPES, type StaticPostType } from "@/lib/no1-statics";
@@ -49,6 +50,18 @@ const LAYOUT0 = { px: 0, py: 0, pz: 1, tx: 0, ty: 0, ts: 1 };
 type Box = { x: number; y: number; w: number; h: number };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
+// Photos already in the Universal tool that belong to a No 1 treatment section. Anything else is uploaded
+// straight to its own section below (saved in the same library as "no1-<section>").
+const FROM_UNIVERSAL: Record<string, string[]> = {
+  "t-rf": ["radiofrequency"],
+  "t-poly": ["polynucleotides"],
+  "t-needle": ["microneedling"],
+  "t-derma": ["dermaplaning"],
+  "t-peel": ["chemical-peels"],
+  "t-led": ["led"],
+};
+type LibImage = { id: number; treatmentId: string; name: string; url: string };
+
 const TYPE_BY_ID = new Map(STATIC_POST_TYPES.map((t) => [t.id, t]));
 const isTweet = (t: StaticPostType) => t.group === "tweets";
 
@@ -297,6 +310,84 @@ export default function No1StaticsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [feedBusy, setFeedBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const sectionRef = useRef<HTMLInputElement>(null);
+  const [lib, setLib] = useState<LibImage[]>([]);
+  const [secBmps, setSecBmps] = useState<Record<string, Photo>>({});
+  const [secBusy, setSecBusy] = useState("");
+
+  const loadLib = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/universal/images`);
+      const d = await r.json();
+      setLib((d.images ?? []) as LibImage[]);
+    } catch {
+      /* the page still works with her own photos */
+    }
+  }, []);
+  useEffect(() => {
+    loadLib();
+  }, [loadLib]);
+
+  const libFor = useCallback(
+    (g: string) => lib.filter((i) => i.treatmentId === `no1-${g}` || (FROM_UNIVERSAL[g] ?? []).includes(i.treatmentId)),
+    [lib],
+  );
+
+  useEffect(() => {
+    let live = true;
+    const wanted = STATIC_GROUPS.flatMap((g) => libFor(g.id)).filter((i) => !secBmps[i.url]);
+    if (!wanted.length) return;
+    (async () => {
+      const got: Record<string, Photo> = {};
+      for (const i of wanted) {
+        try {
+          const bmp = await loadBitmap(i.url);
+          got[i.url] = { id: i.url, bmp, url: i.url };
+        } catch {
+          /* a missing picture is skipped */
+        }
+      }
+      if (live && Object.keys(got).length) setSecBmps((m) => ({ ...m, ...got }));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [libFor, secBmps]);
+
+  const sectionPhotos = (g: string): Photo[] => libFor(g).map((i) => secBmps[i.url]).filter(Boolean);
+
+  const uploadSection = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    setSecBusy(`0 of ${list.length}`);
+    let done = 0;
+    for (let i = 0; i < list.length; i += 3) {
+      const batch = list.slice(i, i + 3);
+      try {
+        const urlsIn: string[] = [];
+        for (const f of batch) {
+          const raw = await createImageBitmap(f);
+          const sc = Math.min(1, 1600 / Math.max(raw.width, raw.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(raw.width * sc);
+          c.height = Math.round(raw.height * sc);
+          c.getContext("2d")!.drawImage(raw, 0, 0, c.width, c.height);
+          raw.close();
+          urlsIn.push(c.toDataURL("image/jpeg", 0.85));
+        }
+        const urls = await uploadPngs(urlsIn, batch.map((f) => f.name.replace(/\.[a-z0-9]+$/i, "") + ".jpg"));
+        const items = batch.map((f, k) => ({ treatmentId: `no1-${group}`, name: f.name, url: urls[k] })).filter((x) => x.url);
+        await fetch(`${BASE}/api/universal/images`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+        done += items.length;
+      } catch {
+        toast.error("Some photos would not upload, try again");
+      }
+      setSecBusy(`${Math.min(i + 3, list.length)} of ${list.length}`);
+    }
+    await loadLib();
+    setSecBusy("");
+    if (done) toast.success(`${done} photo${done === 1 ? "" : "s"} saved to this section`);
+  };
 
   useEffect(() => {
     ensureFonts();
@@ -382,7 +473,14 @@ export default function No1StaticsPage() {
     if (added.length) setPool((p) => [...p, ...added]);
   };
 
-  const photoFor = (post: Post): Photo | null => (pool.length ? pool[post.photo % pool.length] ?? null : null);
+  const photosFor = (post: Post): Photo[] => {
+    const own = sectionPhotos(TYPE_BY_ID.get(post.typeId)?.group ?? "");
+    return own.length ? own : pool;
+  };
+  const photoFor = (post: Post): Photo | null => {
+    const l = photosFor(post);
+    return l.length ? l[post.photo % l.length] ?? null : null;
+  };
 
   const addPost = (t: StaticPostType) => {
     setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: l.length, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, ...LAYOUT0 }, ...l]);
@@ -620,6 +718,29 @@ export default function No1StaticsPage() {
               </button>
             ))}
           </div>
+          <div className="rounded-lg border border-white/15 p-3 text-sm space-y-2">
+            {(() => {
+              const n = sectionPhotos(group).length;
+              const fromU = (FROM_UNIVERSAL[group] ?? []).join(", ");
+              return (
+                <>
+                  <p>
+                    <strong>Photos for this section: {n}</strong>
+                    {n > 0 ? (fromU ? ` (from Universal: ${fromU}, plus any you add here)` : " (uploaded here)") : pool.length ? ". None of its own yet, so your general photos are used." : ". None yet. Upload some for this section."}
+                  </p>
+                  <input ref={sectionRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { uploadSection(e.target.files); e.currentTarget.value = ""; }} />
+                  <Button size="sm" variant="secondary" disabled={!!secBusy} onClick={() => sectionRef.current?.click()}>
+                    {secBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImagePlus className="w-4 h-4 mr-2" />}
+                    {secBusy ? `Uploading ${secBusy}` : "Upload photos for this section"}
+                  </Button>
+                  {(() => {
+                    const need = STATIC_GROUPS.filter((g) => sectionPhotos(g.id).length === 0).map((g) => g.label);
+                    return need.length ? <p className="text-white/60">Still needs photos: {need.join(", ")}.</p> : <p className="text-white/60">Every section has photos.</p>;
+                  })()}
+                </>
+              );
+            })()}
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {typesInGroup.map((t) => {
               const when = scheduled[t.id];
@@ -677,7 +798,7 @@ export default function No1StaticsPage() {
                       <input type="range" min={0.5} max={1.6} step={0.01} value={post.ts} onChange={(e) => patch(post.id, { ts: Number(e.target.value) })} className="w-full" />
                     </label>
                     <div className="flex gap-2 flex-wrap">
-                      {pool.length > 1 && <Button size="sm" variant="secondary" onClick={() => patch(post.id, { photo: post.photo + 1, px: 0, py: 0, pz: 1 })}>Swap photo</Button>}
+                      {photosFor(post).length > 1 && <Button size="sm" variant="secondary" onClick={() => patch(post.id, { photo: post.photo + 1, px: 0, py: 0, pz: 1 })}>Swap photo</Button>}
                       <Button size="sm" variant="ghost" onClick={() => patch(post.id, { ...LAYOUT0 })}>Reset</Button>
                     </div>
                   </div>
