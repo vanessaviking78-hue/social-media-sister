@@ -241,13 +241,15 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     // Premium has its own list, so everyone who had a free turn before gets a fresh one and the old requests stay untouched.
     const kind = premium ? "premium" : "free";
     const base = premium ? `premium:${emailKey(email)}` : emailKey(email);
-    const key = isTest ? `${base}#test${Date.now()}` : base;
-    const existing = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE email_key = ${key} LIMIT 1`);
-    const sameClinic = isTest ? { rows: [] as unknown[] } : await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} AND kind = ${kind} LIMIT 1`);
-    if (existing.rows.length || sameClinic.rows.length) {
+    const MAX_TURNS = 3;
+    // Each email and each clinic can have up to three turns. The first keeps the plain key, later ones get a suffix because the column is unique.
+    const used = isTest ? 0 : Number((await db.execute(sql`SELECT count(*)::int AS n FROM tenfree_requests WHERE email_key = ${base} OR left(email_key, ${base.length + 1}) = ${base + "#"}`)).rows[0]?.n ?? 0);
+    const usedClinic = isTest ? 0 : Number((await db.execute(sql`SELECT count(*)::int AS n FROM tenfree_requests WHERE lower(handle) = ${handle.toLowerCase()} AND kind = ${kind}`)).rows[0]?.n ?? 0);
+    if (used >= MAX_TURNS || usedClinic >= MAX_TURNS) {
       res.status(409).json({ error: REPEAT_MSG, code: REPEAT_CODE });
       return;
     }
+    const key = isTest || used > 0 ? `${base}#${isTest ? "test" : "t"}${Date.now()}` : base;
 
     const logoKey = logo ? await saveSampleFile(logo.buffer, logo.mimetype, "logo") : "";
     const photoUrls: string[] = [];
