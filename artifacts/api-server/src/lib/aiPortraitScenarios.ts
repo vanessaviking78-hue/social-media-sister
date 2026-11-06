@@ -2502,6 +2502,43 @@ export const SAME_ROOM_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// ─── DAVID BAILEY folder ───────────────────────────────────────────────────
+// Black and white editorial studio portraits, black medical scrubs, strict face lock.
+export const BAILEY_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "bl-01", name: "The Iconic Bailey", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio portrait inspired by David Bailey's classic fashion photography. STRICT FACELOCK: use the uploaded reference image and preserve the exact face, facial proportions, bone structure, eyes, nose, lips, jawline, age and natural skin texture. Absolutely no face alteration. Subject wearing tailored black medical scrubs, no logos or text. Waist-up, looking directly into the camera with a quietly commanding expression. One shoulder slightly forward. Dramatic directional side lighting, beautifully illuminated face, deep black studio backdrop, rich tonal contrast, authentic 35mm film grain, exceptionally detailed fabric texture. Timeless, confident, sophisticated British editorial photography. Hyper-realistic, not AI-looking.`,
+  },
+  {
+    id: "bl-02", name: "The Quiet Authority", hasColour: false,
+    promptTemplate: `Hyper-realistic monochrome editorial studio photograph. STRICT FACELOCK, preserve the exact identity and every facial feature from the uploaded reference. Subject in black medical scrubs, no branding or text. Waist-up portrait, seated on a simple black studio stool, hands resting naturally together, looking slightly past the camera. Soft Rembrandt lighting, beautifully flattering facial illumination, gentle shadow beneath the cheekbone, dark charcoal backdrop. Vintage silver gelatin film appearance, subtle grain, natural skin texture, luxury magazine portrait, understated authority and intelligence.`,
+  },
+  {
+    id: "bl-03", name: "The Close Confession", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white studio editorial photograph. ABSOLUTE FACELOCK: do not modify, beautify, reshape or reinterpret the uploaded face. Preserve exact facial identity, proportions, skin texture and age. Black medical scrubs without logos or text. Waist-up portrait, subject leaning very slightly towards the camera, direct eye contact, thoughtful and intense expression. Large softbox positioned to one side, beautiful catchlights in the eyes, flattering facial shadows, black seamless studio background. Classic David Bailey-inspired portraiture, vintage 35mm grain, exceptional detail and authentic photographic realism.`,
+  },
+  {
+    id: "bl-04", name: "The Profile", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white fine-art editorial studio portrait. STRICT FACIAL IDENTITY PRESERVATION using the uploaded reference photograph. No changes to facial structure or features. Subject wearing plain black medical scrubs, no logos or text. Waist-up three-quarter profile, face turned approximately 45 degrees towards the light, eyes looking into the distance. Beautiful sculptural side lighting, soft highlights across the forehead, nose and cheek, dark studio backdrop. Elegant contrast, authentic analogue film texture, timeless British fashion photography, natural skin detail and sophisticated emotional presence.`,
+  },
+  {
+    id: "bl-05", name: "The Wind Machine", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white David Bailey-inspired fashion editorial studio photograph. ABSOLUTE FACELOCK: retain the exact face and identity from the uploaded photograph. Subject wearing fitted black medical scrubs, no logos or writing. Waist-up portrait, looking directly into the lens with confidence. Professional studio fan creating visible, natural movement through the hair, strands lifting and sweeping sideways, face remaining completely visible. Flattering soft directional light on the face, deep black background, cinematic contrast, authentic vintage 35mm film grain, extraordinary skin and clothing detail. Powerful, spontaneous, unmistakably photographic.`,
+  },
+  {
+    id: "bl-06", name: "The Low Angle", hasColour: false,
+    promptTemplate: `Hyper-realistic monochrome editorial studio portrait. STRICT FACELOCK, preserve the exact uploaded facial identity without any alterations. Black medical scrubs, no logos or text. Waist-up composition photographed from a slightly lower camera angle, subject standing confidently with arms loosely crossed, chin naturally positioned, eyes looking directly at the lens. Sculptural studio lighting, soft flattering illumination across the face, deep shadows behind the subject, black background. Luxury editorial photography, vintage analogue film, rich blacks, fine grain, realistic skin pores and detailed fabric.`,
+  },
+  {
+    id: "bl-07", name: "The Thinker", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white studio portrait inspired by 1960s British editorial photography. ABSOLUTE FACELOCK: preserve every facial characteristic of the uploaded reference. No retouching that changes identity. Subject wearing plain black medical scrubs. Waist-up, one hand gently resting near the chin, eyes looking slightly upwards and away from the camera. Soft directional window-style studio lighting, flattering facial highlights, subtle shadows, textured charcoal backdrop. Intimate, intelligent, contemplative expression. Authentic 35mm film, exceptional detail, understated luxury.`,
+  },
+  {
+    id: "bl-08", name: "The Shadow Portrait", hasColour: false,
+    promptTemplate: `Hyper-realistic black-and-white editorial studio photography. STRICT FACELOCK, exact facial identity and proportions must remain unchanged. Subject in black medical scrubs with no logos or text. Waist-up composition, body facing camera, head turned slightly to one side, eyes looking directly into the lens. Dramatic split-light arrangement with one side of the face softly illuminated and the other falling into controlled shadow. Both eyes remain naturally visible. Deep black background, beautiful flattering light, rich monochrome contrast, authentic 35mm film grain, natural skin texture, exceptional detail. Dramatic, intimate and unmistakably British editorial photography.`,
+  },
+];
+
 export const MIX_PRESETS: PhotoStudioPreset[] = [
   // Set 1: clinical, always black scrubs
   {
