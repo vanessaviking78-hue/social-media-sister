@@ -53,7 +53,7 @@ export default function No1Feed() {
         </header>
 
         <p style={{ margin: "0 0 24px", padding: "12px 16px", border: `1.5px solid ${PINK}`, borderRadius: 12, color: "#111", fontSize: 15 }}>
-          This is a preview of how your grid could look. Nothing has been posted. Tap a picture to read its caption.
+          Hey Lizzie, my spirit animal. This is your feed preview, so you can see what is going out and when. To read a caption, just tap the image. This is a preview of how your grid could look. Nothing has been posted.
         </p>
 
         {error && <p style={{ color: "#b00020" }}>{error}</p>}
