@@ -256,7 +256,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const LEFT = 100;
   const top = look.dir === "top";
   // A solid block along the bottom of the page instead of the gradient (at least a quarter of the page, taller if the writing needs it).
-  const blk = look.block && isHex(look.block) ? look.block : null;
+  const blk = look.block && (isHex(look.block) || metalOf(look.block)) ? look.block : null;
   ctx.clearRect(0, 0, W, H);
   ctx.textBaseline = "top";
 
@@ -285,7 +285,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
 
   if (n === 4) {
     if (blk) {
-      ctx.fillStyle = blk;
+      ctx.fillStyle = solidFill(ctx, blk);
     } else if (look.grad && isHex(look.grad) && isHex(look.wash)) {
       const g = ctx.createLinearGradient(0, 0, W, H);
       g.addColorStop(0, look.wash);
@@ -397,7 +397,8 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const hH = hl ? titleHeight(hl) + 26 : 0;
     const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), hH + total + 100));
     const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
-    ctx.fillStyle = blk;
+    const bm = metalOf(blk);
+    ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;
     ctx.fillRect(0, bt, W, bh);
     const t0 = bt + Math.round((bh - (hH + total)) / 2);
     if (hl) {
@@ -436,7 +437,7 @@ function SlideCanvas({ post, n, photo, tf, look, logo, onClick }: { post: Post; 
       live = false;
     };
   }, [post, n, photo, tf, look, logo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={onClick ? "Click to swap the photo" : undefined} />;
+  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={onClick ? "Click to swap the photo" : undefined} />;
 }
 
 // A colour picker: quick swatches plus any colour she likes.

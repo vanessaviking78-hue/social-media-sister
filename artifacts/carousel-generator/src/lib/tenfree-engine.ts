@@ -289,8 +289,12 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     look = { ...look, wash, grad, text: lum(wash) > 0.3 ? a.brand.deep : "#ffffff", noShade: true };
   }
   if (o.block && /^#[0-9a-f]{6}$/i.test(o.block)) look = { ...look, block: o.block, noShade: true, text: lum(o.block) > 0.45 ? a.brand.deep : "#ffffff" };
+  // Metallic gold or silver block: the writing goes dark so it reads on the shine.
+  if (o.block && /^metal:(gold|silver)$/.test(o.block)) look = { ...look, block: o.block, noShade: true, text: a.brand.deep };
   if (o.textColour && /^#[0-9a-f]{6}$/i.test(o.textColour)) look = { ...look, text: o.textColour };
   if (o.gradColour && /^#[0-9a-f]{6}$/i.test(o.gradColour)) look = { ...look, wash: o.gradColour, grad: mixHex(o.gradColour, "#000000", 0.35) };
+  // Metallic gold or silver gradient over the photo.
+  if (o.gradColour && /^metal:(gold|silver)$/.test(o.gradColour)) look = { ...look, wash: o.gradColour, grad: undefined, noShade: true, text: o.textColour ? look.text : a.brand.deep };
   if (typeof o.gradOpacity === "number") look = { ...look, opacity: o.gradOpacity };
   if (o.bgColour && /^#[0-9a-f]{6}$/i.test(o.bgColour)) {
     // A plain colour page instead of the photo. The writing flips to dark or white to suit unless she chose a text colour.
