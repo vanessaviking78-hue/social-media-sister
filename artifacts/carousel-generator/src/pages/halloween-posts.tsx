@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
+import { useForcedClient } from "@/lib/forced-client";
+
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import { type Fill } from "@/lib/basic-covers";
@@ -351,6 +353,13 @@ export default function HalloweenPosts() {
     void syncSharedFonts();
     return () => window.removeEventListener(FONTS_CHANGED_EVENT, bump);
   }, []);
+
+  const forcedClient = useForcedClient();
+  useEffect(() => {
+    if (!forcedClient || presetId || !presets.length) return;
+    const p = presets.find((x) => forcedClient.pattern.test(x.name) && !/academy/i.test(x.name));
+    if (p) chooseClient(p.id);
+  }, [forcedClient, presets, presetId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chooseClient = (id: number) => {
     setPresetId(id);

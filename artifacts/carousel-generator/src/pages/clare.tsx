@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { Link } from "wouter";
 import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -432,7 +433,7 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-export default function ClarePage() {
+function ClareOwn() {
   const { presets } = usePresets();
   const preset = useMemo(() => presets.find((p) => /clare/i.test(p.name)) ?? null, [presets]);
 
@@ -998,6 +999,53 @@ export default function ClarePage() {
           })}
         </section>
       </div>
+    </div>
+  );
+}
+
+// CLARE'S PAGE: her own treatment sections first, then every other tool with ready made posts, each opened on Clare.
+// Universal is limited to the treatments she offers (fillers, skin boosters, polynucleotides and peels).
+const CLARE_UNIVERSAL = ["lip-filler", "cheek-filler", "jawline-filler", "chin-filler", "tear-trough-filler", "nose-filler", "temple-filler", "hand-filler", "skin-boosters", "polynucleotides", "chemical-peels"];
+const CLARE_FORCED: ForcedClient = { pattern: /clare/i, treatmentIds: CLARE_UNIVERSAL };
+
+const lazyTab = (load: () => Promise<{ default: React.ComponentType }>) => lazy(load);
+const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null }[] = [
+  { id: "own", label: "Clare's treatments", Comp: null },
+  { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
+  { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
+  { id: "unique", label: "Unique", Comp: lazyTab(() => import("./unique")) },
+  { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
+  { id: "mens", label: "Men", Comp: lazyTab(() => import("./mens")) },
+  { id: "november", label: "November", Comp: lazyTab(() => import("./november-posts")) },
+  { id: "xmas", label: "December", Comp: lazyTab(() => import("./xmas-posts")) },
+  { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
+  { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
+  { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },
+];
+
+export default function ClarePage() {
+  const [tab, setTab] = useState("own");
+  const current = CLARE_TABS.find((t) => t.id === tab) ?? CLARE_TABS[0];
+  return (
+    <div className="min-h-screen bg-[#161616] text-white">
+      <div className="sticky top-0 z-30 bg-[#161616]/95 backdrop-blur border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 py-2 flex gap-2 overflow-x-auto">
+          {CLARE_TABS.map((t) => (
+            <button key={t.id} onClick={() => setTab(t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-sm border ${tab === t.id ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{t.label}</button>
+          ))}
+        </div>
+      </div>
+      {current.Comp ? (
+        <ForcedClientContext.Provider value={CLARE_FORCED}>
+          <div className="[&_a[href='/hub']]:hidden">
+            <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>
+              <current.Comp key={current.id} />
+            </Suspense>
+          </div>
+        </ForcedClientContext.Provider>
+      ) : (
+        <ClareOwn />
+      )}
     </div>
   );
 }
