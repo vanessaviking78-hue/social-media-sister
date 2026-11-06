@@ -22,7 +22,6 @@ const H = 1350;
 const HEAD = "Hatcher";
 const BODY = "Merriweather";
 const SCHED_KEY = "no1-statics-scheduled-v1";
-const PERDAY_KEY = "no1-statics-perday-v1";
 const LOGO_SRC = `${BASE}/no1-logo.png`;
 
 const FONT_CSS = `
@@ -311,16 +310,13 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-// Spread N posts a day evenly between 08:00 and 21:00, starting tomorrow.
-function slotFor(index: number, perDay: number): string {
-  const day = Math.floor(index / perDay);
-  const k = index % perDay;
-  const startMin = 8 * 60;
-  const endMin = 21 * 60;
-  const mins = perDay === 1 ? 12 * 60 : Math.round(startMin + (k * (endMin - startMin)) / (perDay - 1));
-  const d = new Date();
-  d.setDate(d.getDate() + 1 + day);
-  d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+// One post a night at 7pm, starting tomorrow.
+function slotFor(index: number, hhmm: string, startDate: string): string {
+  const [h, m] = (/^\d{1,2}:\d{2}$/.test(hhmm) ? hhmm : "19:00").split(":").map(Number);
+  const d = startDate ? new Date(`${startDate}T12:00:00`) : new Date();
+  if (!startDate) d.setDate(d.getDate() + 1);
+  d.setDate(d.getDate() + index);
+  d.setHours(h, m, 0, 0);
   return localStamp(d);
 }
 
@@ -330,11 +326,17 @@ export default function No1StaticsPage() {
   const no1Presets = useMemo(() => presets.filter((p) => /no\s*1|no1/i.test(p.name)), [presets]);
   const preset = useMemo(() => no1Presets.find((p) => norm(p.name).startsWith("no1bodysculpt")) ?? no1Presets[0] ?? null, [no1Presets]);
 
+  const [slotTime, setSlotTime] = useState(() => {
+    try { return localStorage.getItem("no1-statics-time") || "19:00"; } catch { return "19:00"; }
+  });
+  const [slotStart, setSlotStart] = useState(""); // blank means tomorrow
+  useEffect(() => {
+    try { localStorage.setItem("no1-statics-time", slotTime); } catch { /* fine */ }
+  }, [slotTime]);
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(STATIC_GROUPS[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({});
-  const [perDay, setPerDay] = useState(7);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [feedBusy, setFeedBusy] = useState(false);
@@ -424,8 +426,6 @@ export default function No1StaticsPage() {
     try {
       const s = localStorage.getItem(SCHED_KEY);
       if (s) setScheduled(JSON.parse(s));
-      const n = Number(localStorage.getItem(PERDAY_KEY));
-      if (n >= 1 && n <= 10) setPerDay(n);
     } catch {
       /* ignore */
     }
@@ -437,13 +437,6 @@ export default function No1StaticsPage() {
       /* ignore */
     }
   }, [scheduled]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(PERDAY_KEY, String(perDay));
-    } catch {
-      /* ignore */
-    }
-  }, [perDay]);
 
   // Anything already in the scheduler for her is crossed out too, on any device.
   const loadScheduled = useCallback(async () => {
@@ -662,7 +655,7 @@ export default function No1StaticsPage() {
     }
   };
 
-  // Every written post that is not yet scheduled, oldest first, spread perDay a day from tomorrow.
+  // Every written post that is not yet scheduled, oldest first, one a night at 7pm from tomorrow.
   const ready = useMemo(() => [...posts].reverse().filter((p) => p.caption && !scheduled[p.typeId]), [posts, scheduled]);
   const scheduleAll = async () => {
     if (ready.some(lacksPhoto)) {
@@ -677,13 +670,13 @@ export default function No1StaticsPage() {
     let done = 0;
     try {
       for (let i = 0; i < ready.length; i++) {
-        const when = slotFor(i, perDay);
+        const when = slotFor(i, slotTime, slotStart);
         patch(ready[i].id, { scheduling: true, when });
         await send(ready[i], when);
         patch(ready[i].id, { scheduling: false });
         done++;
       }
-      toast.success(`${done} posts scheduled, ${perDay} a day from tomorrow`);
+      toast.success(`${done} posts scheduled, one a night at ${slotTime}, from ${slotStart || "tomorrow"}`);
     } catch (e) {
       toast.error(`${done} scheduled, then it stopped: ${e instanceof Error ? e.message : "could not schedule"}`);
       setPosts((l) => l.map((p) => ({ ...p, scheduling: false })));
@@ -731,10 +724,14 @@ export default function No1StaticsPage() {
           <h2 className="font-semibold">1. Set up</h2>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <label className="space-y-1 block">
-              <span className="text-white/60">Posts a day when you press Schedule all</span>
-              <input type="number" min={1} max={10} className="w-full bg-white/5 rounded p-2" value={perDay} onChange={(e) => setPerDay(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} />
+              <span className="text-white/60">Post time each night</span>
+              <input type="time" className="w-full bg-white/5 rounded p-2" value={slotTime} onChange={(e) => setSlotTime(e.target.value || "19:00")} />
             </label>
-            <p className="text-white/50 self-end">They start tomorrow and are spread evenly between 8am and 9pm. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}.</p>
+            <label className="space-y-1 block">
+              <span className="text-white/60">First night (blank is tomorrow)</span>
+              <input type="date" className="w-full bg-white/5 rounded p-2" value={slotStart} onChange={(e) => setSlotStart(e.target.value)} />
+            </label>
+            <p className="text-white/50 self-end">Schedule all puts one post out each night at the time you pick. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}.</p>
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>
@@ -807,7 +804,7 @@ export default function No1StaticsPage() {
             <Button size="sm" variant="ghost" onClick={clearFeed}>Clear feed</Button>
             <Button size="sm" variant="secondary" onClick={writeAllInSection}><Sparkles className="w-4 h-4 mr-2" />Open and write all 6 in this section</Button>
             <Button size="sm" onClick={scheduleAll} disabled={bulkBusy || ready.length === 0}>
-              {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}Schedule all written ({ready.length}), {perDay} a day
+              {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}Schedule all written ({ready.length}), one a night at {slotTime}
             </Button>
           </div>
         </section>
