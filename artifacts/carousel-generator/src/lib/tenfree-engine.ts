@@ -296,7 +296,7 @@ export function renderUniversalPost(o: { treatmentId: string; headline: string; 
     // A plain colour page instead of the photo. The writing flips to dark or white to suit unless she chose a text colour.
     look = { ...look, bgColour: o.bgColour, noShade: true, text: o.textColour ? look.text : lum(o.bgColour) > 0.4 ? a.brand.deep : "#ffffff" };
   }
-  look = { ...look, coverY: o.coverY || 0, coverScale: o.coverScale || 1, noHead: !!o.noHead };
+  look = { ...look, coverY: o.coverY || 0, coverScale: o.coverScale || 1, noHead: o.noHead ?? true };
   const out: HTMLCanvasElement[] = [];
   for (let n = 0; n < 5; n++) {
     const c = document.createElement("canvas");

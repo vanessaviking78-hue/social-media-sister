@@ -709,8 +709,8 @@ function Builder({ id }: { id: string }) {
                 <div className="space-y-1">
                   <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
                   <div className={row}><span className="w-44 shrink-0">Headline on every slide</span>
-                    <button onClick={() => upd({}, ["noHead"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead ? "" : "bg-pink-500 text-white border-pink-500"}`}>On</button>
-                    <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead ? "bg-pink-500 text-white border-pink-500" : ""}`}>Cover only</button>
+                    <button onClick={() => upd({ noHead: false })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "bg-pink-500 text-white border-pink-500" : ""}`}>On</button>
+                    <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "" : "bg-pink-500 text-white border-pink-500"}`}>Cover only</button>
                   </div>
                   <div className={row}><span className="w-44 shrink-0">Bottom of the page</span>
                     <button onClick={() => upd({}, ["block"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "" : "bg-pink-500 text-white border-pink-500"}`}>Gradient</button>
