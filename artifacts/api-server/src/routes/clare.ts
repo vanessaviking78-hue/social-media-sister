@@ -27,8 +27,8 @@ function clean(text: unknown, max: number): string {
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // Exactly five hashtags, all Wakefield joined to a beauty, skin or midlife theme.
-function fiveTags(raw: unknown): string[] {
-  const town = slug(AREA);
+function fiveTags(raw: unknown, area: string = AREA): string[] {
+  const town = slug(area) || slug(AREA);
   const themed = (t: string) => /(beauty|mum|mam|mummy|mummies|mother|skin|glow|aesthetic|facial|selfcare|wellness|fit|menopause|over40)/.test(t);
   const fromModel = Array.isArray(raw) ? raw.map((t) => slug(String(t ?? ""))).filter(Boolean) : [];
   const related = fromModel.filter((t) => t.includes(town) && themed(t));
@@ -45,14 +45,14 @@ function fiveTags(raw: unknown): string[] {
   return out.map((t) => `#${t}`);
 }
 
-function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean): string {
+function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
 
 The house voice above is the voice for everything you write, with the client's own answers further down setting the personality.
 
-You write as Clare Connolly, an aesthetic nurse who runs ${CLINIC} in ${AREA}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.
+${own ? `You write as Clare Connolly, an aesthetic nurse who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.` : `You write as the clinician who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". Her own personality and how she talks come from the client's own answers further down, so follow those, and where there are none keep it warm, honest, realistic and a little funny. Her clients are women over 35 who want to look like themselves. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.`}
 
 THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}
@@ -62,7 +62,7 @@ THE SLIDES
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
 - "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be a closing engagement line, which is added for you, so do not write it."}
-- "hashtags": exactly 5, lower case, no spaces, each one joins ${AREA} to a beauty, skin or midlife theme. Every tag contains ${slug(AREA)}.
+- "hashtags": exactly 5, lower case, no spaces, each one joins ${area} to a beauty, skin or midlife theme. Every tag contains ${slug(area)}.
 
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Use a comma, a full stop or a plain hyphen in compound words only.
@@ -87,6 +87,10 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const label = str(b.label, 120);
     const word = str(b.word, 40);
     const note = str(b.note, 300);
+    const who = str(b.clientName, 120);
+    const area = str(b.area, 60) || AREA;
+    const own = !who || /clare/i.test(who);
+    const clinic = own ? CLINIC : who;
     const glp1 = /glp/i.test(label) || /glp-?1/i.test(brief);
     if (!brief || !label) {
       res.status(400).json({ error: "Pick a post type first" });
@@ -95,8 +99,8 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(brief, label, !!word, glp1) + (await clientProfileContext(PROFILE_NAME)) },
-        { role: "user", content: `Write the carousel "${label}" for ${CLINIC}.${note ? ` Extra from her: ${note}` : ""}` },
+        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own) + (await clientProfileContext(own ? PROFILE_NAME : who)) },
+        { role: "user", content: `Write the carousel "${label}" for ${clinic}.${note ? ` Extra from her: ${note}` : ""}` },
       ],
       temperature: 0.9,
       max_tokens: 1400,
@@ -117,7 +121,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
       caption: `${body}\n\n${cta}.`,
-      hashtags: fiveTags(j.hashtags),
+      hashtags: fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "The words would not write, try again";

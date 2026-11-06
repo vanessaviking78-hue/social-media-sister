@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
+import { ForcedClientContext, useForcedClient, type ForcedClient } from "@/lib/forced-client";
 import { Link } from "wouter";
 import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,9 +23,9 @@ const W = 1080;
 const H = 1350;
 const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
-const CLINIC_KEY = "clare";
-const CLINIC_NAME = CLARE_SECTION_CLINIC.name;
-const LOOK_KEY = "clare-look-v1";
+let CLINIC_KEY = "clare";
+let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
+let LOOK_KEY = "clare-look-v1";
 
 type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean };
 const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "metal:gold" };
@@ -174,9 +174,9 @@ function ColourPicker({ label, value, onChange, extra = [], small = false }: { l
   );
 }
 
-const FONT_KEY = "clare-fonts-v1";
-const AREA_KEY = "clare-area-v1";
-const SCHED_KEY = "clare-scheduled-v1";
+let FONT_KEY = "clare-fonts-v1";
+let AREA_KEY = "clare-area-v1";
+let SCHED_KEY = "clare-scheduled-v1";
 
 type Photo = { id: string; bmp: ImageBitmap; url: string };
 type Fonts = { head: string; body: string };
@@ -445,9 +445,24 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-function ClareOwn() {
+// Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
+export function ClareOwn() {
   const { presets } = usePresets();
-  const preset = useMemo(() => presets.find((p) => /clare/i.test(p.name)) ?? null, [presets]);
+  const forced = useForcedClient();
+  const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
+  if (forced && !preset) return <div className="p-10 text-center text-white/60">Loading...</div>;
+  const isClare = !forced || /clare/i.test(preset?.name ?? "");
+  const sfx = isClare ? "" : `-${preset!.id}`;
+  CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
+  CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
+  LOOK_KEY = `clare-look-v1${sfx}`;
+  FONT_KEY = `clare-fonts-v1${sfx}`;
+  AREA_KEY = `clare-area-v1${sfx}`;
+  SCHED_KEY = `clare-scheduled-v1${sfx}`;
+  return <ClareOwnInner key={preset?.id ?? "clare"} preset={preset} />;
+}
+
+function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["presets"][number] | null }) {
 
   const [pool, setPool] = useState<Photo[]>([]);
   // The saved photos for each section. Uploaded once, kept for every post in that section.
@@ -496,7 +511,7 @@ function ClareOwn() {
     loadTitleFont().then((t) => live && setTf(t));
     return () => { live = false; };
   }, []);
-  const [area, setArea] = useState("Wakefield");
+  const [area, setArea] = useState(CLINIC_KEY === "clare" ? "Wakefield" : "");
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -669,7 +684,7 @@ function ClareOwn() {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
+      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
@@ -819,7 +834,7 @@ function ClareOwn() {
               </select>
             </label>
             <label className="space-y-1 block"><span className="text-white/60">Body font</span><input className="w-full bg-white/5 rounded p-2" value={fonts.body} onChange={(e) => setFonts((f) => ({ ...f, body: e.target.value }))} /></label>
-            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Wakefield" /></label>
+            <label className="space-y-1 block"><span className="text-white/60">Her area (for the hashtags)</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Type the area, for example Leeds" /></label>
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="space-y-4 text-sm">
@@ -906,7 +921,7 @@ function ClareOwn() {
                 {libBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Uploading {libBusy}</span>}
                 <input ref={libFileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { uploadToSection(e.target.files); e.currentTarget.value = ""; }} />
                 <input ref={libFolderRef} type="file" multiple className="hidden" {...({ webkitdirectory: "", directory: "" } as Record<string, string>)} onChange={(e) => { uploadFolder(e.target.files); e.currentTarget.value = ""; }} />
-                <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => libFolderRef.current?.click()}><FolderUp className="w-4 h-4 mr-2" />Upload my Clare folder</Button>
+                <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => libFolderRef.current?.click()}><FolderUp className="w-4 h-4 mr-2" />Upload the photo folder</Button>
                 <Button size="sm" variant="secondary" disabled={!!libBusy} onClick={() => libFileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-2" />Upload photos for this section</Button>
               </div>
             </div>

@@ -1136,6 +1136,7 @@ export default function PresetsPage() {
                     </div>
                     <div className="flex items-center gap-1">
                       <PortalButton preset={preset} />
+                      <a href={`${import.meta.env.BASE_URL}client/${preset.id}`} className="text-xs text-pink-400 hover:text-pink-300 border border-pink-400/40 rounded px-2 py-1 mr-1 whitespace-nowrap">Open tools</a>
                       <Button variant="ghost" size="sm" onClick={() => startEdit(preset)} className="text-gray-400 hover:text-white h-8 px-2">
                         <Pencil className="w-4 h-4" />
                       </Button>

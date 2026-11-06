@@ -185,7 +185,7 @@ function ensureImagesTable(): Promise<void> {
 router.get("/dental/images", async (req: Request, res: Response) => {
   try {
     const clinic = String(req.query.clinic ?? "");
-    if (!CLINICS[clinic]) { res.status(400).json({ error: "Unknown clinic" }); return; }
+    if (!CLINICS[clinic] && !/^client-\d{1,8}$/.test(clinic)) { res.status(400).json({ error: "Unknown clinic" }); return; }
     await ensureImagesTable();
     const r = await db.execute(sql`SELECT id, group_id AS "groupId", name, url FROM dental_images WHERE clinic = ${clinic} ORDER BY id`);
     res.json({ images: r.rows });
@@ -198,7 +198,7 @@ router.post("/dental/images", async (req: Request, res: Response) => {
   try {
     const body = req.body as { clinic?: unknown; items?: unknown };
     const clinic = String(body.clinic ?? "");
-    if (!CLINICS[clinic]) { res.status(400).json({ error: "Unknown clinic" }); return; }
+    if (!CLINICS[clinic] && !/^client-\d{1,8}$/.test(clinic)) { res.status(400).json({ error: "Unknown clinic" }); return; }
     await ensureImagesTable();
     const items = Array.isArray(body.items) ? (body.items as Record<string, unknown>[]) : [];
     const rows = items

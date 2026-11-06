@@ -7,6 +7,7 @@ import { usePresets } from "@/lib/use-presets";
 // Universal is limited to the treatments the client ticked on the treatments form.
 const lazyTab = (load: () => Promise<{ default: React.ComponentType }>) => lazy(load);
 const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "posts", label: "Make 40 posts", Comp: lazyTab(() => import("./clare").then((m) => ({ default: m.ClareOwn }))) },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
   { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },
@@ -23,7 +24,7 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }) {
-  const [tab, setTab] = useState("universal");
+  const [tab, setTab] = useState("posts");
   const [ids, setIds] = useState<string[] | undefined>(undefined);
   useEffect(() => {
     let live = true;
