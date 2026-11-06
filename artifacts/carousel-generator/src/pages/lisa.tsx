@@ -24,13 +24,14 @@ const GREY = "#6a6a6a";
 const LOOK_KEY = "lisa-look-v1";
 
 // How the wash and the writing look. Wash is white, black or metallic gold with an opacity slider; writing is auto, black or metallic gold.
-type WashColour = "white" | "black" | "gold";
+type WashColour = "white" | "black" | "gold" | "silver";
 const WASHES: Record<WashColour, { rgb: string; bg: string; light: boolean }> = {
   white: { rgb: "255,255,255", bg: "#ffffff", light: false },
   black: { rgb: "13,13,13", bg: "#0d0d0d", light: true },
   gold: { rgb: "201,162,74", bg: "#c9a24a", light: false },
+  silver: { rgb: "201,204,209", bg: "#c9ccd1", light: false },
 };
-type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "gold"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "gold" };
+type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "gold"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "gold"; block?: boolean };
 const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -115,7 +116,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block">>; // this post only; empty means the page setting
 };
 
 const TEMPLATES = [{ id: "t1", name: "1. Photo with gradient wash" }];
@@ -168,6 +169,25 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
   (ctx as unknown as { letterSpacing: string }).letterSpacing = `${px}px`;
 }
 
+// Metallic sheens for the gradient and the block: a soft diagonal shine from shadow to highlight.
+const SHEEN: Record<string, string[]> = {
+  gold: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"],
+  silver: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"],
+};
+const isSheen = (v: string) => v === "gold" || v === "silver";
+const sheenFill = (ctx: CanvasRenderingContext2D, v: string, y0: number, y1: number): CanvasGradient => {
+  const g = ctx.createLinearGradient(0, y0, W, Math.max(y1, y0 + 80));
+  const st = SHEEN[v] || SHEEN.gold;
+  st.forEach((c, i) => g.addColorStop(i / (st.length - 1), c));
+  return g;
+};
+// A solid block along the bottom of the page instead of the gradient. It takes the wash colour, so metallic gold and silver work too.
+function blockAt(ctx: CanvasRenderingContext2D, top: number, look: Look) {
+  const y = Math.max(0, Math.min(Math.round(H * 0.75), Math.round(top)));
+  ctx.fillStyle = isSheen(look.wash) ? sheenFill(ctx, look.wash, y, H) : (WASHES[look.wash] || WASHES.white).bg;
+  ctx.fillRect(0, y, W, H - y);
+}
+
 // The white wash: clear at the top, solid white by the bottom third.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
   const o = Math.max(0, Math.min(100, look.opacity)) / 100;
@@ -177,12 +197,12 @@ function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
   g.addColorStop(0.45, `rgba(${c},${0.88 * o})`);
   g.addColorStop(0.7, `rgba(${c},${0.98 * o})`);
   g.addColorStop(1, `rgba(${c},${o})`);
-  if (look.wash === "gold") {
+  if (isSheen(look.wash)) {
     // metallic: paint the gold sheen on a spare canvas, then fade it in with the same gradient
     const t = document.createElement("canvas");
     t.width = W; t.height = H;
     const tc = t.getContext("2d")!;
-    tc.fillStyle = gold(tc, H * from, H);
+    tc.fillStyle = look.wash === "gold" ? gold(tc, H * from, H) : sheenFill(tc, look.wash, H * from, H);
     tc.fillRect(0, 0, W, H);
     tc.globalCompositeOperation = "destination-in";
     const m = tc.createLinearGradient(0, H * from, 0, H);
@@ -227,7 +247,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
 
   const LEFT = 100;
   if (n === 4) {
-    ctx.fillStyle = look.wash === "gold" ? gold(ctx, 0, H) : BGC;
+    ctx.fillStyle = look.wash === "gold" ? gold(ctx, 0, H) : look.wash === "silver" ? sheenFill(ctx, "silver", 0, H) : BGC;
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = INKC;
     ctx.textAlign = "left";
@@ -247,7 +267,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
-    wash(ctx, 0.52, look);
+    if (!look.block) wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
       let size = Math.round(120 * ts);
@@ -257,6 +277,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
       const ty = H - 175 - titleHeight(layout);
+      if (look.block) blockAt(ctx, ty - 90, look);
       drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, HL ? gold(ctx, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
@@ -264,6 +285,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
       let y = H - 175 - total;
+      if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; }
       if (HL) ctx.fillStyle = gold(ctx, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
@@ -272,13 +294,14 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     return;
   }
 
-  wash(ctx, 0.3, look);
+  if (!look.block) wash(ctx, 0.3, look);
   const text = post.slides[n - 1] || "";
   ctx.fillStyle = INKC;
   ctx.textAlign = "left";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = H - 170 - total;
+  if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; ctx.textAlign = "left"; }
   if (GOLDON) ctx.fillStyle = gold(ctx, y, y + total);
   ctx.font = body(fit.px);
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
@@ -410,6 +433,26 @@ export default function LisaPage() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
+  // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
+  const [making, setMaking] = useState("");
+  const make40 = async () => {
+    if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    const allTypes = [...TYPE_BY_ID.values()];
+    const byGroup = new Map<string, typeof allTypes>();
+    for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
+    const order: typeof allTypes = [];
+    for (let r = 0; order.length < 40 && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= 40) break; order.push(g[r % g.length]); }
+    const base = posts.length * 5;
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    setPosts((l) => [...made, ...l]);
+    for (let i = 0; i < made.length; i++) {
+      setMaking(`Writing post ${i + 1} of ${made.length}`);
+      await write(made[i]);
+    }
+    setMaking("");
+    toast.success("40 posts made: 20 with a block, 20 with the gradient");
+  };
+
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
 
   // Her preset's caption footnote goes at the very end of every post, under the hashtags.
@@ -533,10 +576,18 @@ export default function LisaPage() {
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
+              <span className="text-white/60">Bottom of the page (the default for every post)</span>
+              <div className="flex gap-2">
+                {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v }))} className={`flex-1 rounded-md border px-2 py-2 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1">
               <span className="text-white/60">Gradient colour (the default for every post)</span>
               <div className="flex gap-2">
-                {(["white", "black", "gold"] as const).map((c) => (
-                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
+                {(["white", "black", "gold", "silver"] as const).map((c) => (
+                  <button key={c} onClick={() => setLook((l) => ({ ...l, wash: c }))} className={`flex-1 rounded-md border px-2 py-2 capitalize ${look.wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c === "gold" || c === "silver" ? `Metallic ${c}` : c}</button>
                 ))}
               </div>
             </div>
@@ -610,7 +661,10 @@ export default function LisaPage() {
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
-          <h2 className="font-semibold">2. Pick a post</h2>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-semibold">2. Pick a post</h2>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+          </div>
           <div className="flex gap-2 flex-wrap">
             {LISA_GROUPS.map((g) => (
               <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
@@ -689,10 +743,18 @@ export default function LisaPage() {
                 )}
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-4 gap-3 text-xs items-end">
                   <div className="space-y-1">
+                    <span className="text-white/60">This post: bottom of the page</span>
+                    <div className="flex gap-1">
+                      {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
                     <span className="text-white/60">This post: gradient</span>
                     <div className="flex gap-1">
-                      {(["white", "black", "gold"] as const).map((c) => (
-                        <button key={c} onClick={() => patch(post.id, { look: { ...post.look, wash: c } })} className={`flex-1 rounded border px-1 py-1 capitalize ${lookFor(post).wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c}</button>
+                      {(["white", "black", "gold", "silver"] as const).map((c) => (
+                        <button key={c} onClick={() => patch(post.id, { look: { ...post.look, wash: c } })} className={`flex-1 rounded border px-1 py-1 capitalize ${lookFor(post).wash === c ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{c === "gold" || c === "silver" ? `Metallic ${c}` : c}</button>
                       ))}
                     </div>
                   </div>
