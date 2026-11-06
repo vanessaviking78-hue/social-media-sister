@@ -645,8 +645,9 @@ export default function No1StaticsPage() {
     setScheduled((s) => ({ ...s, [t.id]: new Date(when).toISOString() }));
   };
 
+  const lacksPhoto = (post: Post) => (post.uni ? !!uniOf(post.typeId)?.photo : true) && photosFor(post).length === 0;
   const schedule = async (post: Post) => {
-    if (!pool.length) {
+    if (lacksPhoto(post)) {
       toast.error("Add her photos first");
       return;
     }
@@ -664,7 +665,7 @@ export default function No1StaticsPage() {
   // Every written post that is not yet scheduled, oldest first, spread perDay a day from tomorrow.
   const ready = useMemo(() => [...posts].reverse().filter((p) => p.caption && !scheduled[p.typeId]), [posts, scheduled]);
   const scheduleAll = async () => {
-    if (!pool.length) {
+    if (ready.some(lacksPhoto)) {
       toast.error("Add her photos first");
       return;
     }
