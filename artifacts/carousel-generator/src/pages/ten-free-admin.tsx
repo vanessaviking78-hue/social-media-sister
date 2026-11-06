@@ -686,7 +686,7 @@ function Builder({ id }: { id: string }) {
           <div key={it.n} className="border rounded-xl p-3 space-y-2">
             <div className="flex justify-between items-center">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
-              <button className="px-2 py-1 rounded border border-red-500 text-red-600 text-xs font-semibold" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
+              <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
