@@ -136,7 +136,7 @@ async function runStudio(id: string, photoKey: string, clinicName: string, slots
 }
 
 const REPEAT_CODE = "NEXTBUNDLE";
-const REPEAT_MSG = `Don't push your luck lassy Jim, you've had your freebie, but here's a discount for the next bundle. Use the code ${REPEAT_CODE} for money off a monthly membership.`;
+const REPEAT_MSG = "Right then, you have had your three goes. See Vanessa for more images.";
 
 type Files = { [field: string]: Express.Multer.File[] };
 
