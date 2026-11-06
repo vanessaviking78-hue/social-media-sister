@@ -692,7 +692,7 @@ function Builder({ id }: { id: string }) {
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
                   onClick={() => (req?.kind === "premium" && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (req?.kind === "premium" ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-80 rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                  className={`h-[30rem] rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {req.kind === "premium" && it.uniArgs && assetsRef.current && (() => {
@@ -718,9 +718,12 @@ function Builder({ id }: { id: string }) {
                   </div>
                   {it.uniArgs.block && (
                     <div className={row}><span className="w-44 shrink-0">Block colour</span>
-                      <input type="color" value={it.uniArgs.block} onChange={(e) => upd({ block: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
+                      <input type="color" value={/^#[0-9a-f]{6}$/i.test(it.uniArgs.block) ? it.uniArgs.block : "#d4a93c"} onChange={(e) => upd({ block: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                       {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
                         <button key={label} onClick={() => upd({ block: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                      ))}
+                      {[["Gold", "metal:gold", "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)"], ["Silver", "metal:silver", "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)"]].map(([label, val, css]) => (
+                        <button key={label} onClick={() => upd({ block: val })} className={`px-2 py-0.5 rounded border flex items-center gap-1 ${it.uniArgs?.block === val ? "bg-pink-500 text-white border-pink-500" : ""}`}><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: css }} />Metallic {label.toLowerCase()}</button>
                       ))}
                     </div>
                   )}
@@ -733,9 +736,12 @@ function Builder({ id }: { id: string }) {
                   <label className={row}><span className="w-44 shrink-0">Gradient strength</span>
                     <input type="range" min={0} max={100} step={5} className="flex-1" value={it.uniArgs.gradOpacity ?? 60} onChange={(e) => upd({ gradOpacity: Number(e.target.value) })} /></label>
                   <div className={row}><span className="w-44 shrink-0">Gradient colour</span>
-                    <input type="color" value={it.uniArgs.gradColour || "#111111"} onChange={(e) => upd({ gradColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
+                    <input type="color" value={/^#[0-9a-f]{6}$/i.test(it.uniArgs.gradColour || "") ? it.uniArgs.gradColour! : "#111111"} onChange={(e) => upd({ gradColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["Black", "#111111"], ["White", "#ffffff"]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
+                    ))}
+                    {[["Gold", "metal:gold", "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)"], ["Silver", "metal:silver", "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)"]].map(([label, val, css]) => (
+                      <button key={label} onClick={() => upd({ gradColour: val })} className={`px-2 py-0.5 rounded border flex items-center gap-1 ${it.uniArgs?.gradColour === val ? "bg-pink-500 text-white border-pink-500" : ""}`}><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: css }} />Metallic {label.toLowerCase()}</button>
                     ))}
                     <button onClick={() => upd({}, ["gradColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>

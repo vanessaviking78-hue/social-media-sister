@@ -26,7 +26,7 @@ const CLINIC_KEY = "kathryn";
 const CLINIC_NAME = DENTAL_CLINICS[CLINIC_KEY].name;
 const LOOK_KEY = "kathryn-look-v1";
 
-type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string };
+type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean };
 const DEFAULT_LOOK: Look = { wash: "#ffffff", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -200,7 +200,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block">>; // this post only; empty means the page setting
 };
 
 type LibImage = { id: number; groupId: string; name: string; url: string };
@@ -324,6 +324,15 @@ function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
   ctx.drawImage(tmp, 0, 0);
 }
 
+// A solid block along the bottom of the page instead of the gradient. The block takes the wash colour, so metallic gold and silver work here too.
+function blockAt(ctx: CanvasRenderingContext2D, top: number, look: Look) {
+  const l = normLook(look);
+  const y = Math.max(0, Math.min(Math.round(H * 0.75), Math.round(top)));
+  const m = metalOf(l.wash);
+  ctx.fillStyle = m ? metalFill(ctx, m, 0, y, W, H) : isHex(l.wash) ? l.wash : "#ffffff";
+  ctx.fillRect(0, y, W, H - y);
+}
+
 function clinicName(ctx: CanvasRenderingContext2D, f: Fonts, y: number, align: "left" | "center" = "center", color: string | CanvasGradient = GREY) {
   ctx.save();
   ctx.fillStyle = color;
@@ -375,7 +384,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
-    wash(ctx, 0.52, look);
+    if (!look.block) wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
       let size = Math.round(120 * ts);
@@ -385,6 +394,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
       const ty = H - 175 - titleHeight(layout);
+      if (look.block) blockAt(ctx, ty - 90, look);
       drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline !== "auto" ? paintOf(ctx, look.headline, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
@@ -392,6 +402,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
       let y = H - 175 - total;
+      if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; }
       if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
@@ -400,13 +411,14 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     return;
   }
 
-  wash(ctx, 0.3, look);
+  if (!look.block) wash(ctx, 0.3, look);
   const text = post.slides[n - 1] || "";
   ctx.fillStyle = INKC;
   ctx.textAlign = "left";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
   let y = H - 170 - total;
+  if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; ctx.textAlign = "left"; }
   ctx.font = body(fit.px);
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
 }
@@ -424,7 +436,7 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
     })();
     return () => { live = false; };
   }, [post, n, photo, fonts, tf, look, logo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
 const nextDay = (hhmm: string) => {
@@ -626,6 +638,26 @@ export default function KathrynPage() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
+  // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
+  const [making, setMaking] = useState("");
+  const make40 = async () => {
+    if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    const allTypes = [...TYPE_BY_ID.values()];
+    const byGroup = new Map<string, typeof allTypes>();
+    for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
+    const order: typeof allTypes = [];
+    for (let r = 0; order.length < 40 && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= 40) break; order.push(g[r % g.length]); }
+    const base = posts.length * 5;
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    setPosts((l) => [...made, ...l]);
+    for (let i = 0; i < made.length; i++) {
+      setMaking(`Writing post ${i + 1} of ${made.length}`);
+      await write(made[i]);
+    }
+    setMaking("");
+    toast.success("40 posts made: 20 with a block, 20 with the gradient");
+  };
+
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
 
   // Her preset's caption footnote goes at the very end of every post, under the hashtags.
@@ -793,6 +825,14 @@ export default function KathrynPage() {
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="space-y-4 text-sm">
             <ColourPicker label="Gradient colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
+            <div className="space-y-1">
+              <span className="text-white/60">Bottom of the page (the default for every post)</span>
+              <div className="flex gap-1">
+                {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v }))} className={`flex-1 rounded border px-1 py-1 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
             <label className="space-y-1 block max-w-sm">
               <span className="text-white/60">Gradient strength: {look.opacity}%</span>
               <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
@@ -849,7 +889,10 @@ export default function KathrynPage() {
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
-          <h2 className="font-semibold">2. Pick a post</h2>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-semibold">2. Pick a post</h2>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+          </div>
           <div className="flex gap-2 flex-wrap">
             {DENTAL_GROUPS.map((g) => (
               <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
@@ -959,6 +1002,14 @@ export default function KathrynPage() {
                 )}
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-2 gap-3 text-xs items-start">
                   <ColourPicker small label="This post: gradient" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
+                  <div className="space-y-1">
+                    <span className="text-white/60">This post: bottom of the page</span>
+                    <div className="flex gap-1">
+                      {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
+                      ))}
+                    </div>
+                  </div>
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
                     <input type="range" min={0} max={100} step={5} value={lookFor(post).opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />

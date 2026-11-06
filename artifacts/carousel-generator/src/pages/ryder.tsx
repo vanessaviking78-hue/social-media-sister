@@ -278,7 +278,7 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
     })();
     return () => { live = false; };
   }, [post, n, photo, fonts, tf, look, logo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[150px] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
 const nextDay = (hhmm: string) => {
