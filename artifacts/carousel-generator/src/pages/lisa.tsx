@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
 import { ArrowLeft, CalendarCheck, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -330,7 +331,7 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-export default function LisaPage() {
+function LisaPage() {
   const { presets } = usePresets();
   const preset = useMemo(() => presets.find((p) => /lisa.*academy|academy.*lisa/i.test(p.name)) ?? null, [presets]);
 
@@ -814,3 +815,5 @@ export default function LisaPage() {
     </div>
   );
 }
+
+export default withAboutTab(LisaPage, /lisa.*academy|academy.*lisa/i, "Dr Lisa Academy");

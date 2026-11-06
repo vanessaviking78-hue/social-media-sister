@@ -1064,6 +1064,7 @@ const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null 
   { id: "own", label: "Clare's treatments", Comp: null },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
+  { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },
   { id: "unique", label: "Unique", Comp: lazyTab(() => import("./unique")) },
   { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
   { id: "mens", label: "Men", Comp: lazyTab(() => import("./mens")) },

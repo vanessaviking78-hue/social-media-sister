@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
 import { ArrowLeft, CalendarCheck, Check, Copy, Download, ImagePlus, Loader2, Plus, Send, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -323,7 +324,7 @@ function LogoEditor({ post, photoFor, onChange }: { post: Post; photoFor: (n: nu
   );
 }
 
-export default function No1Page() {
+function No1Page() {
   const { presets } = usePresets();
   const preset = useMemo(() => presets.find((p) => /no\s*1|no1/i.test(p.name)) ?? null, [presets]);
   const [scheduling, setScheduling] = useState<string | null>(null);
@@ -697,3 +698,5 @@ export default function No1Page() {
     </div>
   );
 }
+
+export default withAboutTab(No1Page, /no ?1|no1/i, "NO 1 carousels");

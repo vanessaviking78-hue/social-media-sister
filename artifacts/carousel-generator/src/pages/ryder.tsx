@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
 import { ArrowLeft, CalendarCheck, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -330,7 +331,7 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-export default function RyderPage() {
+function RyderPage() {
   const { presets } = usePresets();
   const preset = useMemo(() => presets.find((p) => /ryder/i.test(p.name)) ?? null, [presets]);
 
@@ -814,3 +815,5 @@ export default function RyderPage() {
     </div>
   );
 }
+
+export default withAboutTab(RyderPage, /ryder/i, "The Ryder Clinic");

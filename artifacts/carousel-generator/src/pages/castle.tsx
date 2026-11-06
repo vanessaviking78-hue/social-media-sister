@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
 import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -446,7 +447,7 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-export default function CastlePage() {
+function CastlePage() {
   const { presets } = usePresets();
   const preset = useMemo(() => presets.find((p) => /castle/i.test(p.name) && !/academy/i.test(p.name)) ?? null, [presets]);
 
@@ -1054,3 +1055,5 @@ export default function CastlePage() {
     </div>
   );
 }
+
+export default withAboutTab(CastlePage, /castle/i, "Castle Clinic");
