@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { usePresets } from "@/lib/use-presets";
 import { useEffect, useState } from "react";
 import { Users, Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
 import { Crown, Gem, LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } from "lucide-react";
@@ -1114,7 +1115,7 @@ const [reelCaptionCount, setReelCaptionCount] = useState(0);
 const [cqCount, setCqCount] = useState(0);
 const [freeWaiting, setFreeWaiting] = useState(0);
 const [creditLow, setCreditLow] = useState(false);
-const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
+const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
 if (!pw) return;
@@ -1238,12 +1239,13 @@ Your Google AI Studio credits look empty, so Studio portraits are failing. Top u
 <p className="mb-10" style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "clamp(2rem,5vw,3.6rem)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.02em", color: "#000" }}>Pick a tool. <span className="" style={{ color: "#ff1f8e", display: "inline-block", transform: "rotate(-2deg)" }}>Make it loud.</span></p>
 
 {/* Group tabs */}
-<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+<div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
 {[
 { key: "today", label: "Today & Clients" },
 { key: "admin", label: "Admin" },
 { key: "content", label: "Content Creation", icon: Wand2 },
 { key: "carousel", label: "Carousel" },
+{ key: "clients", label: "Clients", icon: Users },
 ].map((tab, ti) => {
 const on = activeGroup === tab.key;
 return (
@@ -1264,9 +1266,9 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
 </div>
 
 {/* Filtered grid */}
-<div className="grid grid-cols-4 gap-4">
+{activeGroup === "clients" ? <ClientsGrid /> : <div className="grid grid-cols-4 gap-4">
 {TOOLS.filter((tool) => tool.group === activeGroup).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
-</div>
+</div>}
 </main>
 
 <footer className="mt-8 px-8 py-5 flex justify-center gap-6 text-xs" style={{ color: "#000", borderTop: "4px solid #ff1f8e" }}>
@@ -1312,4 +1314,20 @@ return (
 {cardBody}
 </Link>
 );
+}
+
+// CLIENTS: one icon per client in alphabetical order, each opening that client's own page.
+const OWN_PAGES: [RegExp, string][] = [[/ryder/i, "/ryder"], [/lisa.*academy|academy.*lisa/i, "/lisa"], [/clare/i, "/clare"], [/castle/i, "/castle"], [/kathryn/i, "/kathryn"]];
+function ClientsGrid() {
+  const { presets, loading } = usePresets();
+  const list = [...presets].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  if (loading) return <p style={{ fontWeight: 800 }}>Loading...</p>;
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {list.map((p, i) => {
+        const href = OWN_PAGES.find(([re]) => re.test(p.name))?.[1] ?? `/client/${p.id}`;
+        return <ToolCard key={p.id} idx={i} tool={{ href, group: "clients", icon: Users, name: p.name, description: p.seoArea || "Open their tools", color: "", border: "", iconColor: "" }} />;
+      })}
+    </div>
+  );
 }

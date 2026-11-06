@@ -2,11 +2,13 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { usePresets } from "@/lib/use-presets";
+import { ClientInfoPanel } from "./client-extras";
 
 // A CLIENT'S OWN PAGE, the same set of tools as Clare's page, every one opened on that client.
 // Universal is limited to the treatments the client ticked on the treatments form.
 const lazyTab = (load: () => Promise<{ default: React.ComponentType }>) => lazy(load);
 const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "hooks", label: "My first hooks", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.ClientFirstHooks }))) },
   { id: "posts", label: "Make 40 posts", Comp: lazyTab(() => import("./clare").then((m) => ({ default: m.ClareOwn }))) },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
@@ -52,6 +54,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
           ))}
         </div>
       </div>
+      <ClientInfoPanel clientName={label} treatmentIds={ids} />
       <ForcedClientContext.Provider value={forced}>
         <div className="[&_a[href='/hub']]:hidden">
           <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>

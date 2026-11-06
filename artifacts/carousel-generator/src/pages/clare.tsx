@@ -505,6 +505,8 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const url = URL.createObjectURL(f);
     loadLogoImg(url).then(setLogo).catch(() => toast.error("That logo could not be read. Try a PNG."));
   };
+  // anything they filled in on their profile: the area comes straight from it
+  useEffect(() => { if (preset?.seoArea && CLINIC_KEY !== "clare") setArea((cur) => cur || preset.seoArea!); }, [preset?.id, preset?.seoArea]);
   // the cover title is always Hatcher with a curly first letter
   useEffect(() => {
     let live = true;
