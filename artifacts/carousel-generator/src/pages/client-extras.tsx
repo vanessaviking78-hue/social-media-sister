@@ -71,12 +71,16 @@ export function ClientFirstHooks() {
     void syncUsedHooks(client).then((l) => { if (live) setUsed(l); });
     return () => { live = false; };
   }, [client]);
-  const hooks = HOOKS.filter((h) => !h.theme || h.theme === "Original");
+  // every section of the hook bank: Treatment, Emotional, Personal, Nostalgia, Engagement, Audience, Seasonal and My first hooks
+  const ORDER = ["Original", "Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal"];
+  const LABEL: Record<string, string> = { Original: "My first hooks" };
+  const [section, setSection] = useState("Original");
+  const hooks = HOOKS.filter((h) => (h.theme || "Original") === section);
   const groups = useMemo(() => {
     const m = new Map<string, typeof hooks>();
-    for (const h of hooks) m.set(h.group || "Hooks", [...(m.get(h.group || "Hooks") ?? []), h]);
+    for (const h of hooks) m.set(h.group || LABEL[section] || section, [...(m.get(h.group || LABEL[section] || section) ?? []), h]);
     return [...m.entries()];
-  }, [hooks.length]);
+  }, [section]);
   const copy = async (code: string, text: string) => {
     try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
     markHooksUsed(client, [code]);
@@ -85,12 +89,17 @@ export function ClientFirstHooks() {
   };
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
-      <h2 className="text-2xl font-semibold">My first hooks</h2>
+      <h2 className="text-2xl font-semibold">Hooks</h2>
       <div className="grid sm:grid-cols-2 gap-3 text-sm">
         <label className="space-y-1 block"><span className="text-white/60">Area</span><input className="w-full bg-white/5 rounded p-2" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Type the area" /></label>
         <label className="space-y-1 block"><span className="text-white/60">Treatment</span>
           <select className="w-full bg-white/5 rounded p-2" value={treatment} onChange={(e) => setTreatment(e.target.value)}>{options.map((t) => <option key={t.id} value={t.name} className="text-black">{t.name}</option>)}</select>
         </label>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {ORDER.map((k) => (
+          <button key={k} onClick={() => setSection(k)} className={`px-3 py-1.5 rounded-full text-sm border ${section === k ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{LABEL[k] ?? k} ({HOOKS.filter((h) => (h.theme || "Original") === k).length})</button>
+        ))}
       </div>
       {groups.map(([g, list]) => (
         <section key={g} className="space-y-2">

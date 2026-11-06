@@ -18,7 +18,7 @@ import { CLARE_SECTIONS, CLARE_SECTION_POSTS } from "@/lib/clare-sections";
 
 // Dr Kathryn also does aesthetics, so her page carries Clare's aesthetic sections (skin boosters, polynucleotides, peels, fillers, GLP1 consultations) after the dental ones.
 // "Keeping fit at 40" is already in the dental list.
-const AESTHETIC_GROUPS = CLARE_SECTIONS.filter((g) => g.id !== "fit");
+const AESTHETIC_GROUPS = CLARE_SECTIONS.filter((g) => g.id !== "fit" && g.id !== "about" && g.id !== "safety");
 const AESTHETIC_IDS = new Set<string>(AESTHETIC_GROUPS.map((g) => g.id));
 const DENTAL_GROUPS = [...DENTAL_BASE_GROUPS, ...AESTHETIC_GROUPS.map((g) => ({ id: g.id as unknown as DentalGroup, label: g.label }))];
 const DENTAL_POST_TYPES: DentalPostType[] = [

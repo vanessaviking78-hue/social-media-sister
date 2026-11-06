@@ -128,6 +128,12 @@ const uniqueTypes: StaticPostType[] = UNIQUE.map((d) => ({
 }));
 export const uniDesignId = (typeId: string): string | null => (typeId.startsWith("st-uni-") ? typeId.slice(7) : null);
 
+const safetyTypes: StaticPostType[] = [
+  { id: "st-safety-sf1", group: "safety", label: "Safety first, what to check before you book anything", brief: "A calm, clear post on what to check before booking any treatment anywhere: who is treating you, their training and insurance, a proper consultation first and no pressure on the day. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
+  { id: "st-safety-sf2", group: "safety", label: "Why I always say no sometimes", brief: "A warm, honest post on why a good practitioner will sometimes say not today or not this, and why that is a sign you are in safe hands. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
+  { id: "st-safety-sf3", group: "safety", label: "Aftercare and what to do if you are worried", brief: "A reassuring post on why aftercare matters and why you should always feel able to contact your practitioner if something does not feel right. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
+];
+
 export const STATIC_GROUPS: StaticGroup[] = [
   ...treatmentGroups,
   { id: "volume", label: "Volume loss and why it happens" },
@@ -136,9 +142,10 @@ export const STATIC_GROUPS: StaticGroup[] = [
   { id: "tweets", label: "Weight loss tweets" },
   { id: "about", label: "About Lizzie" },
   { id: "fit", label: "Keeping fit at 40" },
+  { id: "safety", label: "Safety" },
   { id: "unique", label: "Unique" },
 ];
 
-export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...uniqueTypes];
+export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...safetyTypes, ...uniqueTypes];
 
 export const STATIC_CLINIC = "NO 1 BODY SCULPTING";

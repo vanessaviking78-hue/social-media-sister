@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1";
+export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -15,6 +15,8 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "filler", label: "Dermal fillers", word: "FILLER" },
   { id: "fit", label: "Keeping fit at 40", word: "" },
   { id: "glp1", label: "GLP1 volume loss", word: "CONSULTATION" },
+  { id: "about", label: "About me", word: "" },
+  { id: "safety", label: "Safety", word: "" },
 ];
 
 export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string };
@@ -74,6 +76,12 @@ export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
   p("gl4", "glp1", "A chat with someone who listens", "A friendly post about what a consultation with me feels like as a conversation: unhurried, honest and judgement free. Do not say what it is about." + CONSULT),
   p("gl5", "glp1", "Nobody has to do this alone", "A kind, supportive post for a woman who has been going it alone, inviting her to book a consultation with me." + CONSULT),
   p("gl6", "glp1", "Book the consultation", "A warm, straightforward and funny nudge for the woman who keeps meaning to get in touch, inviting her to book a consultation with me." + CONSULT),
+  p("ab1", "about", "Hello, I am here and this is me", "A warm, friendly introduction to me: who I am, what I do and what a new patient can expect from me, in plain words and with a light touch of humour. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
+  p("ab2", "about", "Why I do this work", "Why I do this work, said honestly and warmly: what I enjoy, what matters to me and how I like patients to feel when they leave. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
+  p("ab3", "about", "Things you might not know about me", "A light, funny post of general, harmless things about me and how I work, so people feel they know me before they ever walk in. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
+  p("sf1", "safety", "Safety first, what to check before you book anything", "A calm, clear post on what to check before booking any treatment anywhere: who is treating you, their training and insurance, a proper consultation first and no pressure on the day. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
+  p("sf2", "safety", "Why I always say no sometimes", "A warm, honest post on why a good practitioner will sometimes say not today or not this, and why that is a sign you are in safe hands. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
+  p("sf3", "safety", "Aftercare and what to do if you are worried", "A reassuring post on why aftercare matters and why you should always feel able to contact your practitioner if something does not feel right. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website."),
 ];
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
