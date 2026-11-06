@@ -196,6 +196,18 @@ const BAILEY_PRESETS: PhotoStudioPreset[] = [
   { id: "bl-06", name: "The Low Angle", hasColour: false },
   { id: "bl-07", name: "The Thinker", hasColour: false },
   { id: "bl-08", name: "The Shadow Portrait", hasColour: false },
+  { id: "bl-09", name: "The Unguarded Moment", hasColour: false },
+  { id: "bl-10", name: "The Wind And Light", hasColour: false },
+  { id: "bl-11", name: "The Editorial Seated Portrait", hasColour: false },
+  { id: "bl-12", name: "The Direct Gaze", hasColour: false },
+  { id: "bl-13", name: "The Over-The-Shoulder", hasColour: false },
+  { id: "bl-14", name: "The Cinematic Pause", hasColour: false },
+  { id: "bl-15", name: "The Storm", hasColour: false },
+  { id: "bl-16", name: "The Soft Focus Moment", hasColour: false },
+  { id: "bl-17", name: "The Strong Silhouette", hasColour: false },
+  { id: "bl-18", name: "The Intimate Portrait", hasColour: false },
+  { id: "bl-19", name: "The Light Catcher", hasColour: false },
+  { id: "bl-20", name: "The Final Wind Portrait", hasColour: false },
 ];
 
 const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
