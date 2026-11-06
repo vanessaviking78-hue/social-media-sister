@@ -12,6 +12,54 @@ import VoiceStyleSelector from "@/components/voice-style-selector";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
+function StaticsPanel({ preset }: { preset: import("@/lib/use-presets").ClientPreset }) {
+  const [rows, setRows] = useState<{ title: string; at: string; status: string }[] | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const r = await fetch(`${BASE.replace(/\/$/, "")}/api/scheduler/posts?presetId=${preset.id}`);
+        if (!r.ok) return;
+        const data = await r.json();
+        const list = ((data.posts ?? []) as { content?: { title?: string; sourceTool?: string }; scheduledAt?: string; status?: string }[])
+          .filter((sp) => sp.content?.sourceTool === "no1-statics" || (sp.content?.title ?? "").includes("· static"))
+          .map((sp) => ({ title: (sp.content?.title ?? "").replace(/ · static$/, ""), at: sp.scheduledAt ?? "", status: sp.status ?? "" }))
+          .sort((a, b) => a.at.localeCompare(b.at));
+        if (live) setRows(list);
+      } catch { /* ignore */ }
+    })();
+    return () => { live = false; };
+  }, [preset.id]);
+  const waiting = (rows ?? []).filter((x) => x.status !== "published" && x.status !== "failed");
+  return (
+    <div className="mt-3 rounded-lg border border-pink-500/30 bg-pink-950/10 p-3 text-xs">
+      <div className="flex flex-wrap items-center gap-2 justify-between">
+        <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-pink-300 font-semibold">
+          <CalendarDays className="w-3.5 h-3.5" />
+          No 1 statics: {rows === null ? "loading" : `${waiting.length} scheduled`}
+          {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </button>
+        <div className="flex gap-3">
+          <Link href="/no1statics" className="text-pink-400 hover:text-pink-300 underline">Open No 1 statics</Link>
+          <Link href="/scheduler" className="text-pink-400 hover:text-pink-300 underline">Open Scheduler</Link>
+        </div>
+      </div>
+      {open && (
+        <ul className="mt-2 space-y-1 max-h-64 overflow-auto">
+          {waiting.length === 0 && <li className="text-gray-500">Nothing scheduled yet.</li>}
+          {waiting.map((x, i) => (
+            <li key={i} className="flex justify-between gap-3 text-gray-300">
+              <span className="truncate">{x.title}</span>
+              <span className="text-gray-500 shrink-0">{x.at ? new Date(x.at).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function PortalButton({ preset }: { preset: import("@/lib/use-presets").ClientPreset }) {
   const [open, setOpen] = useState(false);
   const [token, setToken] = useState<string | null>(preset.clientPortalToken ?? null);
@@ -1128,6 +1176,7 @@ export default function PresetsPage() {
                       {preset.captionFootnote && (
                         <p className="text-xs text-gray-500 mt-1 italic">Footnote: {preset.captionFootnote}</p>
                       )}
+                      {/no\s*1|no1/i.test(preset.name) && <StaticsPanel preset={preset} />}
                       {(preset.targetAudience || preset.contentPillars || preset.brandNotes) && (
                         <p className="text-xs text-pink-400 mt-1 flex items-center gap-1">
                           <Brain className="w-3 h-3" /> Brand profile set
