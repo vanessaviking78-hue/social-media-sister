@@ -236,7 +236,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     const testers = ["dermaluxe", "lhd", ...(process.env.TEN_FREE_TESTERS || "").split(",").map((t) => t.trim().toLowerCase().replace(/[^a-z0-9]/g, "")).filter(Boolean)];
     const who = `${clinicName} ${handle} ${email}`.toLowerCase().replace(/[^a-z0-9]/g, "");
     const isTester = testers.some((t) => who.includes(t));
-    const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email);
+    // freebies@cybersuite.com is the shared address Vanessa hands out, so it never trips the one turn rule (she checks repeats herself).
+    const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email) || /^freebies@(cybersuite|thecybersuite)\.com$/i.test(email);
     // Premium has its own list, so everyone who had a free turn before gets a fresh one and the old requests stay untouched.
     const kind = premium ? "premium" : "free";
     const base = premium ? `premium:${emailKey(email)}` : emailKey(email);
