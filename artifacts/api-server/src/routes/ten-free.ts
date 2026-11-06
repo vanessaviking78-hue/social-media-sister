@@ -15,7 +15,7 @@ import { aiSourcePhotosTable, clientPresetsTable } from "@workspace/db/schema";
 import { readKey } from "../lib/freeSampleWorker";
 import { signedTransformUrl } from "../lib/objectStorage";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
-import { FREEBIE_PORTRAIT_IDS } from "../lib/aiPortraitScenarios";
+import { freebiePortraitIds } from "../lib/aiPortraitScenarios";
 
 // 10 FREE POSTS. A public form at /10freeposts where a clinic asks for nine free posts (3 treatment carousels, an empowering post,
 // 2 about the injector, one about ignoring other people's opinions on ageing, one for men, one seasonal), with stories, poll ideas,
@@ -109,8 +109,8 @@ function tooMany(ip: string): boolean {
 // Four Studio portraits of the clinician, made in the background after the form is sent, and only when she sent a photo.
 // ---------------------------------------------------------------------------
 
-// Every freebie gets the same four portraits: two David Bailey black and white (black background, white background), scrubs with arms folded, and a pensive coffee shop shot.
-const studioSlots = () => FREEBIE_PORTRAIT_IDS.map((id) => ({ id }));
+// Every freebie gets four portraits: two David Bailey black and white picked at random (white backdrop, then black backdrop in another pose), black scrubs with arms folded, and a pensive coffee shop shot.
+const studioSlots = () => freebiePortraitIds().map((id) => ({ id }));
 const premiumStudioSlots = studioSlots;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

@@ -2907,26 +2907,37 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-// The four portraits made for every freebie: two David Bailey black and white shots, scrubs with arms folded, and a pensive coffee shop shot. Always closed mouth, never any teeth.
+// The four portraits made for every freebie: two David Bailey black and white shots picked at random from the Studio's own Bailey list (one on white, one on black, different poses),
+// scrubs with arms folded on white, and a pensive coffee shop shot. Always a closed mouth, never any teeth.
 const CLOSED_MOUTH = " Mouth gently closed with lips together, no teeth showing at all, calm composed expression. Natural unretouched skin texture with real pores, no airbrushing, same facial features and likeness as the reference photo.";
+const toHer = (t: string) => t
+  .replace(/distinguished male/g, "distinguished female")
+  .replace(/\bmale (medical professional|doctor|physician)/g, "female $1")
+  .replace(/\bHe wears\b/g, "She wears")
+  .replace(/\bHe\b/g, "She")
+  .replace(/\bHis\b/g, "Her")
+  .replace(/\bhis\b/g, "her")
+  .replace(/effortless masculinity/g, "effortless femininity");
+const baileyBase = (id: string) => MEN_STUDIO_PRESETS.find((p) => p.id === id)!;
+const WHITE_BASES = ["db-01", "db-06"];
+const BLACK_BASES = ["db-01", "db-06", "db-03", "db-04", "db-08", "db-10"];
+const toBlack = (t: string) => t
+  .replace(/seamless white infinity backdrop/g, "seamless pure black studio backdrop")
+  .replace(/plain studio wall/g, "seamless pure black studio backdrop")
+  .replace(/minimalist studio/g, "minimalist studio with a pure black backdrop")
+  .replace(/classic high-key Bailey lighting/g, "classic Bailey lighting")
+  .replace(/High-key monochrome/g, "Dramatic low-key monochrome")
+  .replace(/Clean studio lighting with minimal shadows\./g, "Soft studio lighting that lets the black backdrop fall away.");
+const baileyWhite: PhotoStudioPreset[] = WHITE_BASES.map((id) => ({ ...baileyBase(id), id: `fbw-${id}`, name: `Freebie Bailey on white (${baileyBase(id).name})`, promptTemplate: toHer(baileyBase(id).promptTemplate) + " Shot against a seamless white studio backdrop." + CLOSED_MOUTH }));
+const baileyBlack: PhotoStudioPreset[] = BLACK_BASES.map((id) => ({ ...baileyBase(id), id: `fbk-${id}`, name: `Freebie Bailey on black (${baileyBase(id).name})`, promptTemplate: toBlack(toHer(baileyBase(id).promptTemplate)) + " The whole background is a seamless pure black studio backdrop, deep black behind her." + CLOSED_MOUTH }));
 const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
-  {
-    id: "fb-01",
-    name: "Freebie: Bailey, black background",
-    hasColour: false,
-    promptTemplate: `Black and white Hasselblad medium-format studio portrait of a woman who is a medical professional, same facial features and likeness as the reference photo. She wears a crisp white shirt with the sleeves casually rolled and dark jeans, standing against a seamless pure black studio backdrop. Waist-up centred composition, direct eye contact, iconic 1960s British fashion editorial framing in the style of David Bailey. One large soft source with a frontal fill, clean shadows, luminous skin separation against the deep black. 80mm lens, f/8, ultra-sharp focus, subtle Ilford HP5 film grain, rich monochrome tonal range, deep blacks and luminous whites. Hands relaxed, understated confidence.${CLOSED_MOUTH}`,
-  },
-  {
-    id: "fb-02",
-    name: "Freebie: Bailey, white background",
-    hasColour: false,
-    promptTemplate: `Black and white Hasselblad medium-format studio portrait of a woman who is a medical professional, same facial features and likeness as the reference photo. She wears a crisp white shirt with the sleeves casually rolled and dark jeans, standing against a seamless white infinity backdrop. Waist-up centred composition, direct eye contact, iconic 1960s British fashion editorial framing in the style of David Bailey. Large overhead soft source combined with frontal fill, classic high-key Bailey lighting, clean shadows. 80mm lens, f/8, ultra-sharp focus, subtle film grain, deep tonal range. Hands casually in pockets, understated confidence.${CLOSED_MOUTH}`,
-  },
+  ...baileyWhite,
+  ...baileyBlack,
   {
     id: "fb-03",
-    name: "Freebie: scrubs, arms folded, white studio",
+    name: "Freebie: black scrubs, arms folded, white studio",
     hasColour: false,
-    promptTemplate: `A woman who is a clinician, same facial features and likeness as the reference photo, wearing smart navy blue medical scrubs, standing with her arms folded across her chest against a clean white studio background. Waist-up, relaxed confident posture, looking straight into the camera. Bright even soft studio lighting, crisp and clean, high-end healthcare brand portrait, shot in colour, shallow depth of field.${CLOSED_MOUTH}`,
+    promptTemplate: `A woman who is a clinician, same facial features and likeness as the reference photo, wearing smart black medical scrubs, standing with her arms folded across her chest against a clean white studio background. Waist-up, relaxed confident posture, looking straight into the camera. Bright even soft studio lighting, crisp and clean, high-end healthcare brand portrait, shot in colour, shallow depth of field.${CLOSED_MOUTH}`,
   },
   {
     id: "fb-04",
@@ -2936,7 +2947,13 @@ const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
   },
 ];
 MEN_STUDIO_PRESETS.push(...FREEBIE_PORTRAITS);
-export const FREEBIE_PORTRAIT_IDS = FREEBIE_PORTRAITS.map((p) => p.id);
+/** The four portraits for one freebie: a random white backdrop Bailey, a random black backdrop Bailey in a different pose, black scrubs and the coffee shop. */
+export function freebiePortraitIds(): string[] {
+  const w = WHITE_BASES[Math.floor(Math.random() * WHITE_BASES.length)];
+  const blacks = BLACK_BASES.filter((b) => b !== w);
+  const k = blacks[Math.floor(Math.random() * blacks.length)];
+  return [`fbw-${w}`, `fbk-${k}`, "fb-03", "fb-04"];
+}
 
 // ─── Injector Collection — 100 presets across 10 categories ────────────────
 
