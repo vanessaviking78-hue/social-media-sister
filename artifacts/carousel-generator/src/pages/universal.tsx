@@ -36,7 +36,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string; noHead?: boolean };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
@@ -263,7 +263,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   // Premium freebies carry the hook headline on every slide after the cover, in the lower third with the writing under it.
   // look.blockY slides that whole block up (negative) or down (positive) so she can place it.
   const headLayout = () => {
-    if (!look.left || !tf || !post.headline) return null;
+    if (!look.left || !tf || !post.headline || look.noHead) return null;
     let size = Math.round(64 * ts);
     let lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1);
     while (size > 36 && titleHeight(lay) > 230) { size -= 4; lay = layoutTitle(tf.lf, post.headline, tf.style, size, W - 200, 1.1); }

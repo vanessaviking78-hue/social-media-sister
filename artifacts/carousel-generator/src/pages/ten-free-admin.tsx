@@ -82,7 +82,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
   aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string; bg?: string; head?: string; text?: string }; view?: { z?: number; x?: number; y?: number } };
 };
@@ -686,7 +686,7 @@ function Builder({ id }: { id: string }) {
           <div key={it.n} className="border rounded-xl p-3 space-y-2">
             <div className="flex justify-between items-center">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
-              <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
+              <button className="px-2 py-1 rounded border border-red-500 text-red-600 text-xs font-semibold" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
@@ -708,6 +708,10 @@ function Builder({ id }: { id: string }) {
               return (
                 <div className="space-y-1">
                   <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
+                  <div className={row}><span className="w-44 shrink-0">Headline on every slide</span>
+                    <button onClick={() => upd({}, ["noHead"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead ? "" : "bg-pink-500 text-white border-pink-500"}`}>On</button>
+                    <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead ? "bg-pink-500 text-white border-pink-500" : ""}`}>Cover only</button>
+                  </div>
                   <div className={row}><span className="w-44 shrink-0">Bottom of the page</span>
                     <button onClick={() => upd({}, ["block"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "" : "bg-pink-500 text-white border-pink-500"}`}>Gradient</button>
                     <button onClick={() => upd({ block: it.uniArgs?.block || req.mainHex })} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "bg-pink-500 text-white border-pink-500" : ""}`}>Colour block</button>
