@@ -2,7 +2,7 @@
 // post is about training with her. No promises of earnings, no qualification claims, no invented delegates.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type LisaGroup = "train" | "career" | "choose" | "support" | "season";
+export type LisaGroup = "train" | "career" | "choose" | "support" | "season" | "fit";
 
 export const LISA_GROUPS: { id: LisaGroup; label: string }[] = [
   { id: "train", label: "Training with me" },
@@ -10,6 +10,7 @@ export const LISA_GROUPS: { id: LisaGroup; label: string }[] = [
   { id: "choose", label: "Choosing a course" },
   { id: "support", label: "Support and community" },
   { id: "season", label: "Seasonal" },
+  { id: "fit", label: "Keeping fit at 40" },
 ];
 
 export type LisaPostType = {
@@ -54,6 +55,9 @@ export const LISA_POST_TYPES: LisaPostType[] = [
   p("x3", "season", "Thinking about training in the new year", "An honest, relaxed invitation to start the conversation now so the new year starts with a plan. No offers, no urgency."),
   p("x4", "season", "A gift for the woman who wants a new career", "A gentle, thoughtful post about the gift of a new skill, and how to start a conversation with me. No prices."),
   p("x5", "season", "What I am grateful for this year", "A sincere, warm reflection on the women I have trained and what teaching has given me. No invented names, stories or numbers."),
+  p("fit1", "fit", "Keeping fit at 40, the honest version", "A real, friendly post about keeping fit at 40: finding something you will actually keep doing rather than a punishing plan. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit2", "fit", "Keeping fit at 40, strength and energy", "A warm post about why so many women at 40 enjoy strength work and moving daily, said generally and kindly, nothing medical. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit3", "fit", "Keeping fit at 40, showing up on tired days", "A relatable post for the busy woman at 40 who wants to look after herself, with a dry sense of humour about the tired days. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
 ];
 
 export const LISA_ACADEMY = "Dr Lisa Academy";

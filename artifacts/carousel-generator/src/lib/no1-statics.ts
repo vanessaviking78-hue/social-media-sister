@@ -105,16 +105,16 @@ const aboutTypes: StaticPostType[] = [
   ab(6, "About Lizzie: glamorous, warm and loyal", `A playful post about what it is like to be looked after by me: glamorous, warm and loyal, with my very dry humour. ${LIZZIE}`),
 ];
 
-// Keeping fit over 40: friendly, honest, never medical, never a promise. No diets, no numbers, no medicines.
+// Keeping fit at 40: friendly, honest, never medical, never a promise. No diets, no numbers, no medicines.
 const fit = (n: number, label: string, brief: string): StaticPostType => ({ id: `st-fit-${n}`, group: "fit", label, brief, word: "" });
 const FITNOTE = "Keep it kind, warm and funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert.";
 const fitTypes: StaticPostType[] = [
-  fit(1, "Keeping fit over 40: starting again", `A post about starting again after a long gap, and why a small first step beats a grand plan. ${FITNOTE}`),
-  fit(2, "Keeping fit over 40: muscle matters", `A post about why looking after muscle matters more as the years go on, said simply and without claims. ${FITNOTE}`),
-  fit(3, "Keeping fit over 40: recovery is part of it", `A post about rest days, sleep and being patient with a body that recovers more slowly than it used to. ${FITNOTE}`),
-  fit(4, "Keeping fit over 40: the gym nerves", `A reassuring post about the nerves of walking into a gym or class, and how nearly everyone feels it. ${FITNOTE}`),
-  fit(5, "Keeping fit over 40: finding what you enjoy", `A post about finding movement you actually enjoy, whether that is a walk, a class or a dance in the kitchen. ${FITNOTE}`),
-  fit(6, "Keeping fit over 40: the light one", `A light, funny post about knees that now announce themselves, stretching that feels like negotiation and the pride of showing up anyway. ${FITNOTE}`),
+  fit(1, "Keeping fit at 40: starting again", `A post about starting again after a long gap, and why a small first step beats a grand plan. ${FITNOTE}`),
+  fit(2, "Keeping fit at 40: muscle matters", `A post about why looking after muscle matters more as the years go on, said simply and without claims. ${FITNOTE}`),
+  fit(3, "Keeping fit at 40: recovery is part of it", `A post about rest days, sleep and being patient with a body that recovers more slowly than it used to. ${FITNOTE}`),
+  fit(4, "Keeping fit at 40: the gym nerves", `A reassuring post about the nerves of walking into a gym or class, and how nearly everyone feels it. ${FITNOTE}`),
+  fit(5, "Keeping fit at 40: finding what you enjoy", `A post about finding movement you actually enjoy, whether that is a walk, a class or a dance in the kitchen. ${FITNOTE}`),
+  fit(6, "Keeping fit at 40: the light one", `A light, funny post about knees that now announce themselves, stretching that feels like negotiation and the pride of showing up anyway. ${FITNOTE}`),
 ];
 
 // Unique: every one of the Unique templates, drawn with No 1's own details. The words on the picture come from the
@@ -135,7 +135,7 @@ export const STATIC_GROUPS: StaticGroup[] = [
   { id: "menopause", label: "Menopause memes and jokes" },
   { id: "tweets", label: "Weight loss tweets" },
   { id: "about", label: "About Lizzie" },
-  { id: "fit", label: "Keeping fit over 40" },
+  { id: "fit", label: "Keeping fit at 40" },
   { id: "unique", label: "Unique" },
 ];
 

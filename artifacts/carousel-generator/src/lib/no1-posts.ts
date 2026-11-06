@@ -3,6 +3,7 @@
 
 export type No1Group =
   | "reasons"
+  | "fit"
   | "skin"
   | "volume"
   | "weightloss"
@@ -52,6 +53,7 @@ export const NO1_GROUPS: { id: No1Group; label: string; note: string }[] = [
   { id: "tweets", label: "Weight loss tweets", note: "Short, blunt and shareable" },
   { id: "about", label: "About her", note: "Ralph, the boys, the gym, why she does this" },
   { id: "trust", label: "Trust", note: "Consultation and what to ask any clinic" },
+  { id: "fit", label: "Keeping fit at 40", note: "Friendly, honest, never medical" },
 ];
 
 const reasons: No1PostType[] = NO1_TREATMENTS.map((t) => ({
@@ -111,6 +113,9 @@ export const NO1_POST_TYPES: No1PostType[] = [
 
   tr("consult", "What Happens At A Consultation", "What really happens at a consultation with me: a proper chat, time to ask questions, no pressure, no judgement about showing your body, and honesty if it is not for you."),
   tr("ask", "Questions To Ask Any Clinic Before You Book", "Questions any woman should ask any clinic before booking: training, how they handle the unexpected, how long the consultation is, what the aftercare is."),
+  { id: "fit-1", group: "fit", label: "Keeping fit at 40, the honest version", word: "", brief: "A real, friendly post about keeping fit at 40: finding something you will actually keep doing rather than a punishing plan. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert." },
+  { id: "fit-2", group: "fit", label: "Keeping fit at 40, strength and energy", word: "", brief: "A warm post about why so many women at 40 enjoy strength work and moving daily, said generally and kindly, nothing medical. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert." },
+  { id: "fit-3", group: "fit", label: "Keeping fit at 40, showing up on tired days", word: "", brief: "A relatable post for the busy woman at 40 who wants to look after herself, with a dry sense of humour about the tired days. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert." },
 ];
 
 export const NO1_CLINIC = "NO 1 BODY SCULPTING";

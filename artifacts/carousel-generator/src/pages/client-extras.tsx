@@ -109,3 +109,21 @@ export function ClientFirstHooks() {
     </div>
   );
 }
+
+// The same panel for pages that only know a name pattern (Ryder, Lisa, Clare, Castle, Kathryn, NO 1): finds the preset and their treatments itself.
+export function ClientInfoByPattern({ pattern }: { pattern: RegExp }) {
+  const { presets } = usePresets();
+  const preset = presets.find((p) => pattern.test(p.name)) ?? null;
+  const [ids, setIds] = useState<string[]>([]);
+  useEffect(() => {
+    let live = true;
+    fetch(`${BASE}/api/client-treatments`).then((r) => r.json()).then((d: { clients?: { clientName: string; typedName: string; treatments: string[] }[] }) => {
+      const row = (d.clients ?? []).find((c) => pattern.test(c.clientName) || pattern.test(c.typedName));
+      const known = new Set(U_TREATMENTS.map((x) => x.id));
+      if (live) setIds((row?.treatments ?? []).filter((t) => known.has(t)));
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [pattern]);
+  if (!preset) return null;
+  return <ClientInfoPanel clientName={preset.name} treatmentIds={ids} />;
+}

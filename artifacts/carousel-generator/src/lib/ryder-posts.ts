@@ -2,7 +2,7 @@
 // so every brief is calm, sincere and exact. No jokes, no prices, no prescription talk.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type RyderGroup = "consult" | "doctor" | "skin" | "trust" | "season";
+export type RyderGroup = "consult" | "doctor" | "skin" | "trust" | "season" | "fit";
 
 export const RYDER_GROUPS: { id: RyderGroup; label: string }[] = [
   { id: "consult", label: "Your consultation" },
@@ -10,6 +10,7 @@ export const RYDER_GROUPS: { id: RyderGroup; label: string }[] = [
   { id: "skin", label: "Skin health" },
   { id: "trust", label: "Trust and safety" },
   { id: "season", label: "Seasonal" },
+  { id: "fit", label: "Keeping fit at 40" },
 ];
 
 export type RyderPostType = {
@@ -55,6 +56,9 @@ export const RYDER_POST_TYPES: RyderPostType[] = [
   p("x3", "season", "Planning ahead for the party season", "Why planning ahead matters if there is an event in the diary, and why an early conversation leaves time for everything to be done calmly.", "CONSULTATION"),
   p("x4", "season", "Our last appointments before Christmas", "A courteous note that the diary is closing for Christmas and that a few appointments remain for those who would like to begin the new year looked after.", "CONSULTATION"),
   p("x5", "season", "A calm start to the new year", "A quiet, hopeful new year post about beginning the year with a considered plan and a conversation, rather than resolutions.", "CONSULTATION"),
+  p("fit1", "fit", "Keeping fit at 40, the honest version", "A real, friendly post about keeping fit at 40: finding something you will actually keep doing rather than a punishing plan. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit2", "fit", "Keeping fit at 40, strength and energy", "A warm post about why so many women at 40 enjoy strength work and moving daily, said generally and kindly, nothing medical. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit3", "fit", "Keeping fit at 40, showing up on tired days", "A relatable post for the busy woman at 40 who wants to look after herself, with a dry sense of humour about the tired days. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
 ];
 
 export const RYDER_CLINIC = "The Ryder Clinic";

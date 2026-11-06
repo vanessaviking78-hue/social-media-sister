@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -520,10 +520,10 @@ function LisaPage() {
     else toast.success("Rejected, with your reason saved on the post");
   };
 
-  const schedule = async (post: Post) => {
-    if (!preset) { toast.error("I cannot find her client preset. It needs a name with Lisa in it"); return; }
+  const schedule = async (post: Post, whenOverride?: string): Promise<boolean> => {
+    if (!preset) { toast.error("I cannot find her client preset. It needs a name with Lisa in it"); return false; }
     const t = TYPE_BY_ID.get(post.typeId)!;
-    if (!pool.length) { toast.error("Add her photo first"); return; }
+    if (!pool.length) { toast.error("Add her photo first"); return false; }
     patch(post.id, { scheduling: true });
     try {
       const cs = await render(post);
@@ -531,23 +531,43 @@ function LisaPage() {
       const body = {
         postType: "carousel",
         content: { caption: fullCaption(post), title: `${t.label} · ${LISA_ACADEMY}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "lisa" },
-        scheduledAt: new Date(post.when).toISOString(),
+        scheduledAt: new Date(whenOverride ?? post.when).toISOString(),
         isTrial: false,
         notes: "",
         presetId: preset.id,
       };
       const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Failed to schedule"); }
-      setScheduled((s) => ({ ...s, [t.id]: new Date(post.when).toISOString() }));
+      setScheduled((s) => ({ ...s, [t.id]: new Date(whenOverride ?? post.when).toISOString() }));
       patch(post.id, { scheduling: false });
-      toast.success("Scheduled, and crossed off her list");
+      if (!whenOverride) toast.success("Scheduled, and crossed off her list");
+      return true;
     } catch (e) {
       patch(post.id, { scheduling: false });
       toast.error(e instanceof Error ? e.message : "Could not schedule");
+      return false;
     }
   };
 
-  const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
+    // Every written post that is not scheduled yet, one every 2 days from the earliest date.
+  const [bulkBusy, setBulkBusy] = useState("");
+  const scheduleAll = async () => {
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+    if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
+    const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
+    let done = 0;
+    for (const [i, post] of list.entries()) {
+      setBulkBusy(`${done + 1} of ${list.length}`);
+      const d = new Date(first);
+      d.setDate(d.getDate() + i * 2);
+      if (!(await schedule(post, d.toISOString()))) break;
+      done++;
+    }
+    setBulkBusy("");
+    if (done) toast.success(`${done} scheduled, one every 2 days from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+  };
+
+const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
   const totalIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g).length;
   const dateLabel = (iso: string) => { try { return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }); } catch { return ""; } };
 
@@ -665,6 +685,7 @@ function LisaPage() {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
             <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+            <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</>}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {LISA_GROUPS.map((g) => (

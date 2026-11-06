@@ -1076,11 +1076,13 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
 const CLARE_UNIVERSAL = ["lip-filler", "cheek-filler", "jawline-filler", "chin-filler", "tear-trough-filler", "nose-filler", "temple-filler", "hand-filler", "skin-boosters", "polynucleotides", "chemical-peels"];
 const CLARE_FORCED: ForcedClient = { pattern: /clare/i, treatmentIds: CLARE_UNIVERSAL };
 
+const ClientInfoByPattern = lazy(() => import("./client-extras").then((m) => ({ default: m.ClientInfoByPattern })));
 const lazyTab = (load: () => Promise<{ default: React.ComponentType }>) => lazy(load);
 const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null }[] = [
   { id: "own", label: "Clare's treatments", Comp: null },
   { id: "universal", label: "Universal treatments", Comp: lazyTab(() => import("./universal")) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
+  { id: "hooks", label: "My first hooks", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.ClientFirstHooks }))) },
   { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },
   { id: "unique", label: "Unique", Comp: lazyTab(() => import("./unique")) },
   { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
@@ -1104,6 +1106,7 @@ export default function ClarePage() {
           ))}
         </div>
       </div>
+      <Suspense fallback={null}><ClientInfoByPattern pattern={/clare/i} /></Suspense>
       {current.Comp ? (
         <ForcedClientContext.Provider value={CLARE_FORCED}>
           <div className="[&_a[href='/hub']]:hidden">

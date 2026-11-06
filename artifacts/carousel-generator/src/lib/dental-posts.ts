@@ -4,7 +4,7 @@
 
 export type DentalGroup =
   | "root" | "invisalign" | "bonding" | "kids" | "importance" | "adhd" | "didyouknow" | "myths"
-  | "electric" | "brushing" | "checkup" | "sensitive" | "glp1" | "hygiene" | "whitening" | "about";
+  | "electric" | "brushing" | "checkup" | "sensitive" | "glp1" | "hygiene" | "whitening" | "about" | "fit";
 
 export const DENTAL_GROUPS: { id: DentalGroup; label: string }[] = [
   { id: "root", label: "Root canal" },
@@ -23,6 +23,7 @@ export const DENTAL_GROUPS: { id: DentalGroup; label: string }[] = [
   { id: "hygiene", label: "Hygiene appointments" },
   { id: "whitening", label: "Teeth whitening" },
   { id: "about", label: "About us / about me" },
+  { id: "fit", label: "Keeping fit at 40" },
 ];
 
 export type DentalPostType = {
@@ -166,6 +167,9 @@ export const DENTAL_POST_TYPES: DentalPostType[] = [
   p("u4", "about", "What it feels like to walk through our door", "A gentle description of a welcoming visit: being greeted kindly, never rushed, and having time to ask questions. General and truthful."),
   p("u5", "about", "How I look after nervous patients", "How the team and I make nervous patients feel safe: listening first, explaining everything, going at your pace and agreeing a pause signal. Warm and reassuring."),
   p("u6", "about", "Things I will always be honest about", "A promise of honest, unpressured dentistry: what you need, what can wait and what is simply not right for you. Calm and plain spoken."),
+  p("fit1", "fit", "Keeping fit at 40, the honest version", "A real, friendly post about keeping fit at 40: finding something you will actually keep doing rather than a punishing plan. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit2", "fit", "Keeping fit at 40, strength and energy", "A warm post about why so many women at 40 enjoy strength work and moving daily, said generally and kindly, nothing medical. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit3", "fit", "Keeping fit at 40, showing up on tired days", "A relatable post for the busy woman at 40 who wants to look after herself, with a dry sense of humour about the tired days. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
 ];
 
 export const DENTAL_CLINICS = {

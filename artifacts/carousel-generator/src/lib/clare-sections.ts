@@ -1,6 +1,6 @@
 // CLARE CONNOLLY AESTHETICS, Wakefield: 6 sections of 6 posts each, the same layout as the Castle Clinic and NO 1 pages.
 // One section per treatment she lists on her Instagram and in her Getting to know you answers (skin boosters, polynucleotides,
-// skin peels, dermal fillers), plus "Keeping fit over 40" and "GLP1 volume loss" (consultation promotion only, nothing about what it is for).
+// skin peels, dermal fillers), plus "Keeping fit at 40" and "GLP1 volume loss" (consultation promotion only, nothing about what it is for).
 // Her voice: honest, realistic, friendly and hard working. Natural, lifting and regenerative. She manages expectations and never
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
@@ -13,7 +13,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "poly", label: "Polynucleotides", word: "POLY" },
   { id: "peels", label: "Skin peels", word: "PEELS" },
   { id: "filler", label: "Dermal fillers", word: "FILLER" },
-  { id: "fit", label: "Keeping fit over 40", word: "" },
+  { id: "fit", label: "Keeping fit at 40", word: "" },
   { id: "glp1", label: "GLP1 volume loss", word: "CONSULTATION" },
 ];
 
@@ -60,7 +60,7 @@ export const CLARE_SECTION_POSTS: ClareSectionPost[] = [
   p("df6", "filler", "Questions I get asked about fillers", "A relaxed question and answer: how natural it can look, whether anyone will notice, how I decide what to suggest. Only general, truthful answers." + NOTE),
 
   // KEEPING FIT OVER 40
-  p("ft1", "fit", "Keeping fit over 40, the honest version", "A real, friendly post about staying active in your 40s: finding something you will actually keep doing, rather than a punishing plan. Never give medical advice or numbers." + NOTE),
+  p("ft1", "fit", "Keeping fit at 40, the honest version", "A real, friendly post about staying active in your 40s: finding something you will actually keep doing, rather than a punishing plan. Never give medical advice or numbers." + NOTE),
   p("ft2", "fit", "Strength matters more now", "A friendly post on why many women in perimenopause look to lift weights and keep muscle, said kindly and generally, nothing medical, no claims." + NOTE),
   p("ft3", "fit", "Gym, yoga, football or a walk", "A warm, funny post saying that the best way to move is the one you will actually turn up for. Use gym, yoga and football as examples that suit my life." + NOTE),
   p("ft4", "fit", "Fit, tired and still showing up", "A relatable post for the busy woman juggling work, kids and life who wants to look after herself, with a dry sense of humour about the tired days." + NOTE),

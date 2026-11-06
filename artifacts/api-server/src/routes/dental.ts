@@ -82,7 +82,7 @@ ${HOUSE_RULES}
 
 The professional voice above overrides any instruction to be funny or jokey. There is no humour. Where the brief is a fun fact or a myth, be curious, light and warm, never jokey.
 
-You write as ${clinic.name}${area ? ` in ${area}` : ""}, a dental practice, as ${clinic.dentist}, in the first person ("I", "my", "you"), never as a social media manager. The voice is composed, courteous and precise, warm and quietly emotional. This page is about dentistry only: never mention aesthetics, skin, injectables or facial treatments.
+You write as ${clinic.name}${area ? ` in ${area}` : ""}, a dental practice, as ${clinic.dentist}, in the first person ("I", "my", "you"), never as a social media manager. The voice is composed, courteous and precise, warm and quietly emotional. ${/keeping fit/i.test(label) ? "This post is about keeping fit at 40, a general wellbeing topic, so do not mention dentistry or treatments in it." : "This page is about dentistry only: never mention aesthetics, skin, injectables or facial treatments."}
 
 THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}

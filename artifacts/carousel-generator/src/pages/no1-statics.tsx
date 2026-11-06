@@ -354,12 +354,12 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${hhmm || "09:00"}`;
 };
 
-// One post a night at 7pm, starting tomorrow.
+// One post every 2 days, starting tomorrow.
 function slotFor(index: number, hhmm: string, startDate: string): string {
   const [h, m] = (/^\d{1,2}:\d{2}$/.test(hhmm) ? hhmm : "19:00").split(":").map(Number);
   const d = startDate ? new Date(`${startDate}T12:00:00`) : new Date();
   if (!startDate) d.setDate(d.getDate() + 1);
-  d.setDate(d.getDate() + index);
+  d.setDate(d.getDate() + index * 2);
   d.setHours(h, m, 0, 0);
   return localStamp(d);
 }
@@ -720,7 +720,7 @@ function No1StaticsPage() {
         patch(ready[i].id, { scheduling: false });
         done++;
       }
-      toast.success(`${done} posts scheduled, one a night at ${slotTime}, from ${slotStart || "tomorrow"}`);
+      toast.success(`${done} posts scheduled, one every 2 days at ${slotTime}, from ${slotStart || "tomorrow"}`);
     } catch (e) {
       toast.error(`${done} scheduled, then it stopped: ${e instanceof Error ? e.message : "could not schedule"}`);
       setPosts((l) => l.map((p) => ({ ...p, scheduling: false })));
@@ -794,7 +794,7 @@ function No1StaticsPage() {
               <span className="text-white/60">First night (blank is tomorrow)</span>
               <input type="date" className="w-full bg-white/5 rounded p-2" value={slotStart} onChange={(e) => setSlotStart(e.target.value)} />
             </label>
-            <p className="text-white/50 self-end">Schedule all puts one post out each night at the time you pick. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}.</p>
+            <p className="text-white/50 self-end">Schedule all puts one post out every 2 days at the time you pick. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}.</p>
           </div>
           <div className="flex items-center justify-between gap-3 flex-wrap pt-2">
             <h3 className="font-medium">Her photos</h3>

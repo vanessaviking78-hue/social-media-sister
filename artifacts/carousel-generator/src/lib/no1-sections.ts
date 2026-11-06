@@ -5,7 +5,7 @@
 
 export type No1SectionId =
   | "ems" | "pad4" | "rf" | "cav" | "intimate" | "lymph" | "poly" | "lymphface" | "needle" | "derma" | "peel" | "lips" | "led"
-  | "volume" | "weightloss" | "menopause" | "tweets" | "about";
+  | "volume" | "weightloss" | "menopause" | "tweets" | "about" | "fit";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly area line.
 export const NO1_SECTIONS: { id: No1SectionId; label: string; word: string }[] = [
@@ -27,6 +27,7 @@ export const NO1_SECTIONS: { id: No1SectionId; label: string; word: string }[] =
   { id: "menopause", label: "Menopause memes and jokes", word: "" },
   { id: "tweets", label: "Weight loss tweets", word: "" },
   { id: "about", label: "About her", word: "" },
+  { id: "fit", label: "Keeping fit at 40", word: "" },
 ];
 
 export type No1SectionPost = { id: string; group: No1SectionId; label: string; brief: string; word: string };
@@ -180,6 +181,9 @@ export const NO1_SECTION_POSTS: No1SectionPost[] = [
   p("ab4", "about", "How I look after nervous clients", "How I make nervous clients feel safe: listening first, explaining everything and going at your pace." + TREAT_NOTE),
   p("ab5", "about", "Things I will always be honest about", "A promise of honest, unpressured care in my own straight talking voice: what you need, what can wait and what is not right for you." + TREAT_NOTE),
   p("ab6", "about", "Birmingham, this is for you", "A friendly local post saying hello to Birmingham and the women who come to see me, warm and funny. Never invent a fact about the city." + TREAT_NOTE),
+  p("fit1", "fit", "Keeping fit at 40, the honest version", "A real, friendly post about keeping fit at 40: finding something you will actually keep doing rather than a punishing plan. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit2", "fit", "Keeping fit at 40, strength and energy", "A warm post about why so many women at 40 enjoy strength work and moving daily, said generally and kindly, nothing medical. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
+  p("fit3", "fit", "Keeping fit at 40, showing up on tired days", "A relatable post for the busy woman at 40 who wants to look after herself, with a dry sense of humour about the tired days. Kind, warm and a little funny. No exercise prescriptions, no diets, no calorie or weight numbers, no medical claims, no promises. Never assume the reader is a beginner or an expert."),
 ];
 
 export const NO1_SECTION_CLINIC = { name: "NO 1 BODY SCULPTING", area: "Birmingham" } as const;
