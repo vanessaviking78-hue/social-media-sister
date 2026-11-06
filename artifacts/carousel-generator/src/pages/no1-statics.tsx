@@ -326,7 +326,9 @@ function slotFor(index: number, perDay: number): string {
 
 export default function No1StaticsPage() {
   const { presets } = usePresets();
-  const preset = useMemo(() => presets.find((p) => /no\s*1|no1/i.test(p.name)) ?? null, [presets]);
+  const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const no1Presets = useMemo(() => presets.filter((p) => /no\s*1|no1/i.test(p.name)), [presets]);
+  const preset = useMemo(() => no1Presets.find((p) => norm(p.name).startsWith("no1bodysculpt")) ?? no1Presets[0] ?? null, [no1Presets]);
 
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -447,9 +449,13 @@ export default function No1StaticsPage() {
   const loadScheduled = useCallback(async () => {
     if (!preset) return;
     try {
-      const r = await fetch(`${BASE}/api/scheduler/posts?presetId=${preset.id}`);
-      if (!r.ok) return;
-      const data = await r.json();
+      const lists = await Promise.all(
+        (no1Presets.length ? no1Presets : [preset]).map(async (pr) => {
+          const r = await fetch(`${BASE}/api/scheduler/posts?presetId=${pr.id}`);
+          return r.ok ? ((await r.json()).posts ?? []) : [];
+        }),
+      );
+      const data = { posts: lists.flat() };
       const found: Record<string, string> = {};
       const detail: Record<string, { image: string; caption: string }> = {};
       for (const sp of (data.posts ?? []) as { content?: { title?: string; caption?: string; imageUrls?: string[] }; scheduledAt?: string; status?: string }[]) {
@@ -466,7 +472,7 @@ export default function No1StaticsPage() {
     } catch {
       /* ignore */
     }
-  }, [preset]);
+  }, [preset, no1Presets]);
   useEffect(() => {
     loadScheduled();
   }, [loadScheduled]);
