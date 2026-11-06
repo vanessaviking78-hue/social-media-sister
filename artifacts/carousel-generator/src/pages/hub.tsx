@@ -299,7 +299,7 @@ iconColor: "text-amber-400",
 },
 {
 href: "/client-treatments",
-group: "content",
+group: "admin",
 icon: Gem,
 name: "Client treatments",
 description: "One link for every client. They type their business name, tick every treatment they offer, and it is kept so every tool knows what that client does. Copy the link and see who has filled it in.",
