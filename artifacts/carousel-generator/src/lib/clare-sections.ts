@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety";
+export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string } };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -87,3 +87,15 @@ const ALL_SECTION_POSTS: ClareSectionPost[] = [
 export const CLARE_SECTION_POSTS: ClareSectionPost[] = ALL_SECTION_POSTS.filter((t) => t.group !== "filler");
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
+
+// XMAS: one carousel for each of the 32 hooks (8 weeks of 4). The cover hook is fixed to the version she picks, colloquial or professional.
+import { XMAS_WEEKS } from "./xmas-weeks";
+export const XMAS_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "xmas", label: "Xmas", word: "" }];
+export const XMAS_POSTS: ClareSectionPost[] = XMAS_WEEKS.flatMap((w) => w.hooks.map((h, i) => ({
+  id: `xm-${h.id}`,
+  group: "xmas" as const,
+  label: `Week ${w.week}, ${i + 1}: ${w.title}`,
+  word: "",
+  xmas: { c: h.colloquial, p: h.professional },
+  brief: `A Christmas carousel for week ${w.week} of my Christmas plan, "${w.title}". Theme: ${w.theme} The cover hook is already written and must stay exactly as given, so slides 2 to 4 carry on from it and keep to the theme. Warm, caring and funny where it suits, always from me to her, never selling hard, a consultation always comes first. No promises, no results, no prices, no offers, no medicine names, no website.`,
+})));

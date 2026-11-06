@@ -45,7 +45,7 @@ function fiveTags(raw: unknown, area: string = AREA): string[] {
   return out.map((t) => `#${t}`);
 }
 
-function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true): string {
+function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = ""): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
@@ -58,7 +58,7 @@ THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}
 
 THE SLIDES
-- "hook": slide 1, the cover line. Maximum 12 words. It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic.
+- "hook": slide 1, the cover line. ${fixedHook ? `It is already written, return it EXACTLY as given: ${fixedHook}` : "Maximum 12 words."} It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic.
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
 - "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be a closing engagement line, which is added for you, so do not write it."}
@@ -87,6 +87,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const label = str(b.label, 120);
     const word = str(b.word, 40);
     const note = str(b.note, 300);
+    const fixedHook = str(b.fixedHook, 300);
     const who = str(b.clientName, 120);
     const area = str(b.area, 60) || AREA;
     const own = !who || /clare/i.test(who);
@@ -99,7 +100,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own) + (await clientProfileContext(own ? PROFILE_NAME : who)) },
+        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own, fixedHook) + (await clientProfileContext(own ? PROFILE_NAME : who)) },
         { role: "user", content: `Write the carousel "${label}" for ${clinic}.${note ? ` Extra from her: ${note}` : ""}` },
       ],
       temperature: 0.9,
@@ -117,7 +118,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
       .filter((l) => l && !isFinalCta(l))
       .join("\n");
     res.json({
-      hook: clean(j.hook, 140),
+      hook: fixedHook || clean(j.hook, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
       caption: `${body}\n\n${cta}.`,

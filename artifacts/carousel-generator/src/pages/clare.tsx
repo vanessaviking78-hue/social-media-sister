@@ -13,7 +13,7 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -242,7 +242,9 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map(CLARE_SECTION_POSTS.map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS].map((t) => [t.id, t]));
+let SECS = CLARE_SECTIONS;
+let POSTS = CLARE_SECTION_POSTS;
 
 async function ensureFonts(f: Fonts) {
   loadGoogleFonts();
@@ -446,7 +448,7 @@ const nextDay = (hhmm: string) => {
 };
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn() {
+export function ClareOwn({ mode }: { mode?: "xmas" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -455,11 +457,13 @@ export function ClareOwn() {
   const sfx = isClare ? "" : `-${preset!.id}`;
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
+  SECS = mode === "xmas" ? XMAS_SECTIONS : CLARE_SECTIONS;
+  POSTS = mode === "xmas" ? XMAS_POSTS : CLARE_SECTION_POSTS;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
   SCHED_KEY = `clare-scheduled-v1${sfx}`;
-  return <ClareOwnInner key={preset?.id ?? "clare"} preset={preset} />;
+  return <ClareOwnInner key={`${preset?.id ?? "clare"}-${mode ?? ""}`} preset={preset} />;
 }
 
 function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["presets"][number] | null }) {
@@ -486,8 +490,8 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     return m;
   }, [lib]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [group, setGroup] = useState(CLARE_SECTIONS[0].id);
-  const [typeId, setTypeId] = useState(CLARE_SECTION_POSTS[0].id);
+  const [group, setGroup] = useState(SECS[0].id);
+  const [typeId, setTypeId] = useState(POSTS[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "Hatcher", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
@@ -539,7 +543,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
       const found: Record<string, string> = {};
       for (const sp of (data.posts ?? []) as { content?: { title?: string }; scheduledAt?: string; status?: string }[]) {
         const title = sp.content?.title ?? "";
-        const t = CLARE_SECTION_POSTS.find((x) => title.startsWith(`${x.label} · `));
+        const t = POSTS.find((x) => title.startsWith(`${x.label} · `));
         if (t && sp.status !== "failed") found[t.id] = sp.scheduledAt ?? "";
       }
       setScheduled((cur) => ({ ...cur, ...found }));
@@ -548,7 +552,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   useEffect(() => { loadScheduled(); }, [loadScheduled]);
   useEffect(() => { try { localStorage.setItem(SCHED_KEY, JSON.stringify(scheduled)); } catch { /* ignore */ } }, [scheduled]);
 
-  const typesInGroup = useMemo(() => CLARE_SECTION_POSTS.filter((t) => t.group === group), [group]);
+  const typesInGroup = useMemo(() => POSTS.filter((t) => t.group === group), [group]);
 
   const addPhotos = async (files: FileList | File[] | null) => {
     if (!files?.length) return;
@@ -647,9 +651,10 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     } catch { toast.error("Could not remove it"); }
   };
 
+  const initHook = (t: ClareSectionPost) => (t.xmas ? t.xmas.c.replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   const addPost = (t: ClareSectionPost) => {
     const start = posts.length * 5;
-    setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false }, ...l]);
+    setPosts((l) => [{ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false }, ...l]);
     setTypeId(t.id);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
@@ -658,20 +663,21 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const [making, setMaking] = useState("");
   const make40 = async () => {
     if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
-    const allTypes = [...TYPE_BY_ID.values()];
+    const allTypes = [...POSTS];
+    const N = POSTS === XMAS_POSTS ? allTypes.length : 40;
     const byGroup = new Map<string, typeof allTypes>();
     for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
     const order: typeof allTypes = [];
-    for (let r = 0; order.length < 40 && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= 40) break; order.push(g[r % g.length]); }
+    for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
       setMaking(`Writing post ${i + 1} of ${made.length}`);
       await write(made[i]);
     }
     setMaking("");
-    toast.success("40 posts made: 20 with a block, 20 with the gradient");
+    toast.success(`${made.length} posts made, half with a block and half with the gradient`);
   };
 
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
@@ -686,10 +692,10 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
+      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
+      patch(post.id, { busy: false, hook: t.xmas ? post.hook : data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -810,8 +816,8 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     if (failed) toast.error(`Stopped after ${done}: ${failed}`);
   };
 
-  const doneIn = (g: string) => CLARE_SECTION_POSTS.filter((t) => t.group === g && scheduled[t.id]).length;
-  const totalIn = (g: string) => CLARE_SECTION_POSTS.filter((t) => t.group === g).length;
+  const doneIn = (g: string) => POSTS.filter((t) => t.group === g && scheduled[t.id]).length;
+  const totalIn = (g: string) => POSTS.filter((t) => t.group === g).length;
   const dateLabel = (iso: string) => { try { return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }); } catch { return ""; } };
 
   return (
@@ -907,10 +913,10 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
-            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS === XMAS_POSTS ? POSTS.length : 40} posts (half block, half gradient)</>}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {CLARE_SECTIONS.map((g) => (
+            {SECS.map((g) => (
               <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
                 {g.label} <span className="opacity-60">{doneIn(g.id)}/{totalIn(g.id)} · {(libBy.get(g.id) ?? []).length} photo{(libBy.get(g.id) ?? []).length === 1 ? "" : "s"}</span>
               </button>
@@ -918,7 +924,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
           </div>
           <div className="rounded-lg border border-white/10 p-3 space-y-3">
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <h3 className="font-medium">{CLARE_SECTIONS.find((g) => g.id === group)?.label}: saved photos</h3>
+              <h3 className="font-medium">{SECS.find((g) => g.id === group)?.label}: saved photos</h3>
               <div className="flex items-center gap-2">
                 {libBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Uploading {libBusy}</span>}
                 <input ref={libFileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { uploadToSection(e.target.files); e.currentTarget.value = ""; }} />
@@ -1043,7 +1049,9 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} /></span>
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && (["c", "p"] as const).map((v) => (
+                      <button key={v} type="button" onClick={() => patch(post.id, { hook: (v === "c" ? t.xmas!.c : t.xmas!.p).replace(/\[TOWN\]/g, area.trim() || "your town") })} className="text-xs rounded-full border border-white/20 px-3 py-1 text-white/80 hover:bg-white/10">{v === "c" ? "Colloquial" : "Professional"}</button>
+                    ))}</span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
                   </label>
                   {[0, 1, 2].map((i) => (
@@ -1089,7 +1097,7 @@ const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null 
   { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
   { id: "mens", label: "Men", Comp: lazyTab(() => import("./mens")) },
   { id: "november", label: "November", Comp: lazyTab(() => import("./november-posts")) },
-  { id: "xmas", label: "December", Comp: lazyTab(() => import("./xmas-posts")) },
+  { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./xmas-tab")) },
   { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
   { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
   { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },

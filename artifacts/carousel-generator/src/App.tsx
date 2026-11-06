@@ -36,8 +36,6 @@ import UniquePosts from "@/pages/unique";
 import MonthPlanner from "@/pages/month-planner";
 import Mens from "@/pages/mens";
 import NinetyDays from "@/pages/ninety-days";
-import XmasMonth from "@/pages/xmas-month";
-import XmasPosts from "@/pages/xmas-posts";
 import NovemberPosts from "@/pages/november-posts";
 import Empower from "@/pages/empower";
 import Lux from "@/pages/lux";
@@ -234,8 +232,6 @@ function ProtectedRouter() {
       <Route path="/month-planner" component={MonthPlanner} />
       <Route path="/mens" component={Mens} />
       <Route path="/ninety-days" component={NinetyDays} />
-      <Route path="/xmas-month" component={XmasMonth} />
-      <Route path="/xmas-posts" component={XmasPosts} />
       <Route path="/november-posts" component={NovemberPosts} />
       <Route path="/empower" component={Empower} />
       <Route path="/lux" component={Lux} />
