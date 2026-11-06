@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
 import { ArrowLeft, CalendarCheck, CalendarClock, Download, Eye, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,6 +49,8 @@ type Post = {
   ty: number;
   ts: number; // text size multiplier
   uni?: Record<string, string>; // Unique posts: the words on each part of the template
+  block?: boolean; // a solid block along the bottom instead of the gradient
+  finish?: "" | "gold" | "silver"; // metallic finish for the block or the gradient
 };
 const UNI_FILL: Fill = { owner: "Lizzie", clinic: STATIC_CLINIC, area: "Birmingham", role: "Owner" };
 const UNI_HEAD = "'Anton', sans-serif";
@@ -188,13 +191,54 @@ function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, pho
     ctx.fillStyle = "#2a2a2a";
     ctx.fillRect(0, 0, W, H);
   }
-  const g = ctx.createLinearGradient(0, H * (tweet ? 0.1 : 0.3), 0, H);
-  g.addColorStop(0, "rgba(30,30,30,0)");
-  g.addColorStop(1, `rgba(30,30,30,${tweet ? 0.9 : 0.85})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  const fin = post.finish === "gold" || post.finish === "silver" ? post.finish : "";
+  const INK = fin ? "#1b1b1b" : "#ffffff";
+  const SHEEN = { gold: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"], silver: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"] };
+  const sheen = (c: CanvasRenderingContext2D, y0: number) => {
+    const sg = c.createLinearGradient(0, y0, W, H);
+    SHEEN[fin || "gold"].forEach((col, i, a) => sg.addColorStop(i / (a.length - 1), col));
+    return sg;
+  };
+  if (post.block) {
+    // how tall the words are, so the block is always big enough to hold them
+    let need = 110 + 70;
+    const lt = (post.line || "").trim();
+    if (lt && !tweet) {
+      const lf0 = fitText(ctx, lt, (px) => `400 ${px}px "${BODY}", serif`, W - 160, 200, 34, 24, 1.5);
+      need += lf0.lines.length * lf0.px * 1.5 + 36;
+    }
+    const hf0 = tweet
+      ? fitText(ctx, post.hook || "", (px) => `700 ${px}px "${BODY}", serif`, W - 160, 760, 64, 36, 1.3)
+      : fitText(ctx, post.hook || "", (px) => `400 ${px}px "${HEAD}", serif`, W - 160, 560, 124, 52, 1.08);
+    need += hf0.lines.length * hf0.px * (tweet ? 1.3 : 1.08);
+    need *= Math.max(0.4, post.ts || 1);
+    const top = Math.max(Math.round(H * 0.3), Math.min(Math.round(H * 0.75), Math.round(H - Math.max(H * 0.25, need) + Math.min(0, post.ty || 0))));
+    ctx.fillStyle = fin ? sheen(ctx, top) : "#1e1e1e";
+    ctx.fillRect(0, top, W, H - top);
+  } else if (fin) {
+    // metallic gradient: paint the shine on a spare canvas, fade it in with the same ramp, then lay it over the photo
+    const tmp = document.createElement("canvas");
+    tmp.width = W; tmp.height = H;
+    const t = tmp.getContext("2d")!;
+    t.fillStyle = sheen(t, 0);
+    t.fillRect(0, 0, W, H);
+    t.globalCompositeOperation = "destination-in";
+    const m = t.createLinearGradient(0, H * (tweet ? 0.1 : 0.3), 0, H);
+    m.addColorStop(0, "rgba(0,0,0,0)");
+    m.addColorStop(0.55, "rgba(0,0,0,0.9)");
+    m.addColorStop(1, "rgba(0,0,0,1)");
+    t.fillStyle = m;
+    t.fillRect(0, 0, W, H);
+    ctx.drawImage(tmp, 0, 0);
+  } else {
+    const g = ctx.createLinearGradient(0, H * (tweet ? 0.1 : 0.3), 0, H);
+    g.addColorStop(0, "rgba(30,30,30,0)");
+    g.addColorStop(1, `rgba(30,30,30,${tweet ? 0.9 : 0.85})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
 
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = INK;
   ctx.textAlign = "left";
   const ANCHOR_Y = H - 110;
   const ts = Math.max(0.4, post.ts || 1);
@@ -209,7 +253,7 @@ function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, pho
     const lf = fitText(ctx, lineText, (px) => `400 ${px}px "${BODY}", serif`, W - 160, 200, 34, 24, 1.5);
     const total = lf.lines.length * lf.px * 1.5;
     ctx.font = `400 ${lf.px}px "${BODY}", serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillStyle = fin ? "rgba(27,27,27,0.92)" : "rgba(255,255,255,0.92)";
     let y = bottom - total;
     for (const l of lf.lines) {
       ctx.fillText(l, 80, y);
@@ -223,7 +267,7 @@ function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, pho
     : fitText(ctx, post.hook || "", (px) => `400 ${px}px "${HEAD}", serif`, W - 160, 560, 124, 52, 1.08);
   const lh = tweet ? 1.3 : 1.08;
   ctx.font = tweet ? `700 ${hf.px}px "${BODY}", serif` : `400 ${hf.px}px "${HEAD}", serif`;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = INK;
   let y = bottom - hf.lines.length * hf.px * lh;
   for (const l of hf.lines) {
     ctx.fillText(l, 80, y);
@@ -320,7 +364,7 @@ function slotFor(index: number, hhmm: string, startDate: string): string {
   return localStamp(d);
 }
 
-export default function No1StaticsPage() {
+function No1StaticsPage() {
   const { presets } = usePresets();
   const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, "");
   const no1Presets = useMemo(() => presets.filter((p) => /no\s*1|no1/i.test(p.name)), [presets]);
@@ -516,7 +560,7 @@ export default function No1StaticsPage() {
   };
 
   const addPost = (t: StaticPostType) => {
-    setPosts((l) => [mkPost(t, l.length, nextDay(preset?.defaultPostTime ?? "09:00"), false), ...l]);
+    setPosts((l) => [{ ...mkPost(t, l.length, nextDay(preset?.defaultPostTime ?? "09:00"), false), block: dflt.block, finish: dflt.finish }, ...l]);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
@@ -685,13 +729,32 @@ export default function No1StaticsPage() {
     }
   };
 
+  // The page default for new posts, then Make 40: half with a block along the bottom, half with the gradient.
+  const [dflt, setDflt] = useState<{ block: boolean; finish: "" | "gold" | "silver" }>({ block: false, finish: "" });
+  const [making, setMaking] = useState("");
+  const make40 = async () => {
+    const usable = STATIC_POST_TYPES.filter((t) => !uniOf(t.id));
+    const byGroup = new Map<string, StaticPostType[]>();
+    for (const t of usable) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
+    const order: StaticPostType[] = [];
+    for (let r = 0; order.length < 40 && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= 40) break; order.push(g[r % g.length]); }
+    const fresh: Post[] = order.map((t, i) => ({ ...mkPost(t, posts.length + i, nextDay(preset?.defaultPostTime ?? "09:00"), true), block: i % 2 === 1, finish: dflt.finish }));
+    setPosts((l) => [...fresh.slice().reverse(), ...l]);
+    for (let i = 0; i < fresh.length; i++) {
+      setMaking(`Writing post ${i + 1} of ${fresh.length}`);
+      await write(fresh[i]);
+    }
+    setMaking("");
+    toast.success("40 posts made: 20 with a block, 20 with the gradient");
+  };
+
   const writeAllInSection = async () => {
     const wanted = typesInGroup.filter((t) => !scheduled[t.id] && !posts.some((p) => p.typeId === t.id));
     if (!wanted.length) {
       toast.error("Every post in this section is already open or scheduled");
       return;
     }
-    const fresh: Post[] = wanted.map((t, i) => mkPost(t, posts.length + i, nextDay(preset?.defaultPostTime ?? "09:00"), true));
+    const fresh: Post[] = wanted.map((t, i) => ({ ...mkPost(t, posts.length + i, nextDay(preset?.defaultPostTime ?? "09:00"), true), block: dflt.block, finish: dflt.finish }));
     setPosts((l) => [...fresh.slice().reverse(), ...l]);
     for (const post of fresh) {
       const t = TYPE_BY_ID.get(post.typeId)!;
@@ -753,7 +816,22 @@ export default function No1StaticsPage() {
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
-          <h2 className="font-semibold">2. Pick a post</h2>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h2 className="font-semibold">2. Pick a post</h2>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            <div className="flex items-center gap-2"><span className="text-white/60">New posts get</span>
+              {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                <button key={label} onClick={() => setDflt((d) => ({ ...d, block: v }))} className={`rounded border px-2 py-1 ${dflt.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20"}`}>{label}</button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2"><span className="text-white/60">Finish</span>
+              {([["", "Dark"], ["gold", "Metallic gold"], ["silver", "Metallic silver"]] as const).map(([v, label]) => (
+                <button key={label} onClick={() => setDflt((d) => ({ ...d, finish: v }))} className={`rounded border px-2 py-1 ${dflt.finish === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20"}`}>{label}</button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2 flex-wrap">
             {STATIC_GROUPS.map((g) => (
               <button key={g.id} onClick={() => setGroup(g.id)} className={`px-3 py-1.5 rounded-full text-sm border ${group === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>
@@ -853,6 +931,22 @@ export default function No1StaticsPage() {
                         <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.uni?.[f.key] ?? ""} onChange={(e) => patch(post.id, { uni: { ...post.uni, [f.key]: e.target.value } })} />
                       </label>
                     ))}
+                    {!post.uni && (
+                      <div className="space-y-2 md:col-span-2">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                          <div className="flex items-center gap-2"><span className="text-white/60">Bottom of the page</span>
+                            {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
+                              <button key={label} onClick={() => patch(post.id, { block: v })} className={`rounded border px-2 py-1 ${!!post.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20"}`}>{label}</button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2"><span className="text-white/60">Finish</span>
+                            {([["", "Dark"], ["gold", "Metallic gold"], ["silver", "Metallic silver"]] as const).map(([v, label]) => (
+                              <button key={label} onClick={() => patch(post.id, { finish: v })} className={`rounded border px-2 py-1 ${(post.finish || "") === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20"}`}>{label}</button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     {!post.uni && <label className="space-y-1 block">
                       <span className="text-white/60">{tweet ? "The tweet on the picture" : "Words on the picture"}</span>
                       <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
@@ -882,3 +976,5 @@ export default function No1StaticsPage() {
     </div>
   );
 }
+
+export default withAboutTab(No1StaticsPage, /no ?1|no1/i, "NO 1 static posts");

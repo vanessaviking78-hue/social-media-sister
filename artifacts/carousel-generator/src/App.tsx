@@ -25,7 +25,7 @@ import No1Page from "@/pages/no1";
 import No1StaticsPage from "@/pages/no1-statics";
 import RyderPage from "@/pages/ryder";
 import ClarePage from "@/pages/clare";
-import { DrVPage, PuraPage, AnnorlundaPage, TeviotPage } from "@/pages/client-hub";
+import { DrVPage, PuraPage, AnnorlundaPage, TeviotPage, ClientByIdPage, ClientsIndexPage } from "@/pages/client-hub";
 import UniversalPage from "@/pages/universal";
 import LisaPage from "@/pages/lisa";
 import CastlePage from "@/pages/castle";
@@ -217,6 +217,8 @@ function ProtectedRouter() {
       <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
       <Route path="/clare" component={ClarePage} />
+      <Route path="/clients" component={ClientsIndexPage} />
+      <Route path="/client/:id" component={ClientByIdPage} />
       <Route path="/drv" component={DrVPage} />
       <Route path="/pura" component={PuraPage} />
       <Route path="/annorlunda" component={AnnorlundaPage} />

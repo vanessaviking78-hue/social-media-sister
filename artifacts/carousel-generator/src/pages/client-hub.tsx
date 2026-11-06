@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
+import { usePresets } from "@/lib/use-presets";
 
 // A CLIENT'S OWN PAGE, the same set of tools as Clare's page, every one opened on that client.
 // Universal is limited to the treatments the client ticked on the treatments form.
@@ -65,3 +66,34 @@ export const DrVPage = () => <ClientHub label="Dr V, Fresher Faces" pattern={/dr
 export const PuraPage = () => <ClientHub label="Pura Aesthetics" pattern={/pura/i} />;
 export const AnnorlundaPage = () => <ClientHub label="Annorlunda" pattern={/annorlunda/i} />;
 export const TeviotPage = () => <ClientHub label="Teviot" pattern={/teviot/i} />;
+
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// /client/<id>: the full tool set for ANY client, picked by their preset id.
+export function ClientByIdPage({ params }: { params: { id: string } }) {
+  const { presets, loading } = usePresets();
+  const p = presets.find((x) => String(x.id) === params.id);
+  if (!p) return <div className="min-h-screen bg-[#161616] text-white p-10 text-center">{loading ? "Loading..." : "I cannot find that client."}</div>;
+  return <ClientHub key={p.id} label={p.name} pattern={new RegExp(`^${esc(p.name)}$`, "i")} />;
+}
+
+// /clients: one button per client, each opening their own page.
+export function ClientsIndexPage() {
+  const { presets } = usePresets();
+  const [q, setQ] = useState("");
+  const list = presets.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <div className="min-h-screen bg-[#161616] text-white">
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-4">
+        <h1 className="text-2xl font-semibold">Client pages</h1>
+        <p className="text-white/60 text-sm">Every client has their own page with the full set of tools, opened on them.</p>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a client" className="w-full rounded border border-white/20 bg-transparent px-3 py-2" />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {list.map((p) => (
+            <a key={p.id} href={`${BASE}/client/${p.id}`} className="rounded-lg border border-white/15 hover:bg-white/10 px-3 py-3 text-sm">{p.name}</a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
