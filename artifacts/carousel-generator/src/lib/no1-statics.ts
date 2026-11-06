@@ -1,8 +1,9 @@
 // NO 1 BODY SCULPTING: static single image posts for her second page.
-// 18 sections, 6 posts each, 108 in all. No prices, no promises, no medicines named.
+// 18 sections of 6 and a Unique section with all 23 Unique templates. No prices, no promises, no medicines named.
 // Treatment sections close on the comment word line. The last four close on a friendly question.
 
 import { NO1_TREATMENTS } from "./no1-posts";
+import { UNIQUE } from "./unique-designs";
 
 export type StaticGroup = { id: string; label: string; treatmentId?: string };
 
@@ -116,6 +117,17 @@ const fitTypes: StaticPostType[] = [
   fit(6, "Keeping fit over 40: the light one", `A light, funny post about knees that now announce themselves, stretching that feels like negotiation and the pride of showing up anyway. ${FITNOTE}`),
 ];
 
+// Unique: every one of the Unique templates, drawn with No 1's own details. The words on the picture come from the
+// template and can be edited on the page; the caption is written separately.
+const uniqueTypes: StaticPostType[] = UNIQUE.map((d) => ({
+  id: `st-uni-${d.id}`,
+  group: "unique",
+  label: `Unique: ${d.name}`,
+  brief: d.idea,
+  word: "",
+}));
+export const uniDesignId = (typeId: string): string | null => (typeId.startsWith("st-uni-") ? typeId.slice(7) : null);
+
 export const STATIC_GROUPS: StaticGroup[] = [
   ...treatmentGroups,
   { id: "volume", label: "Volume loss and why it happens" },
@@ -124,8 +136,9 @@ export const STATIC_GROUPS: StaticGroup[] = [
   { id: "tweets", label: "Weight loss tweets" },
   { id: "about", label: "About Lizzie" },
   { id: "fit", label: "Keeping fit over 40" },
+  { id: "unique", label: "Unique" },
 ];
 
-export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes];
+export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...uniqueTypes];
 
 export const STATIC_CLINIC = "NO 1 BODY SCULPTING";

@@ -8,7 +8,10 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { loadBitmap } from "@/pages/universal";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
-import { STATIC_CLINIC, STATIC_GROUPS, STATIC_POST_TYPES, type StaticPostType } from "@/lib/no1-statics";
+import { STATIC_CLINIC, STATIC_GROUPS, STATIC_POST_TYPES, uniDesignId, type StaticPostType } from "@/lib/no1-statics";
+import { UNIQUE_BY_ID, drawUnique, resolveUniText, type UniId } from "@/lib/unique-designs";
+import { DEFAULT_FOCUS, type Fill } from "@/lib/basic-covers";
+import { loadGoogleFonts } from "@/lib/slide-utils";
 
 // NO 1 BODY SCULPTING, her static page. One image per post, 18 sections of 6.
 // Hatcher on the headline, Merriweather for the supporting line, her logo top right.
@@ -45,6 +48,23 @@ type Post = {
   tx: number; // text offset, canvas pixels
   ty: number;
   ts: number; // text size multiplier
+  uni?: Record<string, string>; // Unique posts: the words on each part of the template
+};
+const UNI_FILL: Fill = { owner: "Lizzie", clinic: STATIC_CLINIC, area: "Birmingham", role: "Owner" };
+const UNI_HEAD = "'Anton', sans-serif";
+const UNI_BODY = "'Poppins', sans-serif";
+const uniOf = (typeId: string) => {
+  const id = uniDesignId(typeId);
+  return id && UNIQUE_BY_ID[id as UniId] ? UNIQUE_BY_ID[id as UniId] : null;
+};
+const mkPost = (t: StaticPostType, photo: number, when: string, busy: boolean): Post => {
+  const d = uniOf(t.id);
+  return { id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo, note: "", when, busy, scheduling: false, ...LAYOUT0, ...(d ? { uni: resolveUniText(d, {}, UNI_FILL) } : {}) };
+};
+const briefFor = (post: Post, t: StaticPostType): string => {
+  const d = uniOf(t.id);
+  if (!d || !post.uni) return t.brief;
+  return `${t.brief}. The picture already carries these words, so the caption must carry on from them without repeating them: ${d.fields.map((f) => post.uni?.[f.key] ?? "").filter(Boolean).join(" / ")}`;
 };
 const LAYOUT0 = { px: 0, py: 0, pz: 1, tx: 0, ty: 0, ts: 1 };
 type Box = { x: number; y: number; w: number; h: number };
@@ -82,8 +102,9 @@ function ensureFonts(): Promise<void> {
         l.href = "https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap";
         document.head.appendChild(l);
       }
+      loadGoogleFonts();
       try {
-        await Promise.all([document.fonts.load(`400 60px "${HEAD}"`), document.fonts.load(`400 30px "${BODY}"`), document.fonts.load(`700 30px "${BODY}"`)]);
+        await Promise.all([document.fonts.load("400 60px Anton"), document.fonts.load("400 30px Poppins"), document.fonts.load("700 30px Poppins"), document.fonts.load(`400 60px "${HEAD}"`), document.fonts.load(`400 30px "${BODY}"`), document.fonts.load(`700 30px "${BODY}"`)]);
       } catch {
         /* falls back to a serif */
       }
@@ -157,6 +178,11 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) 
 
 function drawPost(ctx: CanvasRenderingContext2D, post: Post, tweet: boolean, photo: Photo | null, logo: HTMLImageElement | null): Box {
   ctx.clearRect(0, 0, W, H);
+  const ud = post.uni ? uniOf(post.typeId) : null;
+  if (ud && post.uni) {
+    drawUnique(ctx, { design: ud.id, text: post.uni, palette: ud.palette, headFont: UNI_HEAD, bodyFont: UNI_BODY, upper: true, photo: photo?.bmp ?? null, focus: DEFAULT_FOCUS });
+    return { x: 0, y: 0, w: 0, h: 0 };
+  }
   ctx.textBaseline = "top";
   if (photo) coverFit(ctx, photo.bmp, post.px, post.py, post.pz);
   else {
@@ -244,6 +270,7 @@ function PostCanvas({ post, tweet, photo, logo, onChange }: { post: Post; tweet:
     return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H, k: W / r.width };
   };
   const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (post.uni) return;
     const pt = toCanvas(e);
     const b = box.current;
     const inText = pt.x >= b.x - 20 && pt.x <= b.x + b.w + 20 && pt.y >= b.y - 20 && pt.y <= b.y + b.h + 20;
@@ -299,7 +326,9 @@ function slotFor(index: number, perDay: number): string {
 
 export default function No1StaticsPage() {
   const { presets } = usePresets();
-  const preset = useMemo(() => presets.find((p) => /no\s*1|no1/i.test(p.name)) ?? null, [presets]);
+  const norm = (n: string) => n.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const no1Presets = useMemo(() => presets.filter((p) => /no\s*1|no1/i.test(p.name)), [presets]);
+  const preset = useMemo(() => no1Presets.find((p) => norm(p.name).startsWith("no1bodysculpt")) ?? no1Presets[0] ?? null, [no1Presets]);
 
   const [pool, setPool] = useState<Photo[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -420,24 +449,35 @@ export default function No1StaticsPage() {
   const loadScheduled = useCallback(async () => {
     if (!preset) return;
     try {
-      const r = await fetch(`${BASE}/api/scheduler/posts?presetId=${preset.id}`);
-      if (!r.ok) return;
-      const data = await r.json();
+      const lists = await Promise.all(
+        (no1Presets.length ? no1Presets : [preset]).map(async (pr) => {
+          const r = await fetch(`${BASE}/api/scheduler/posts?presetId=${pr.id}`);
+          return r.ok ? ((await r.json()).posts ?? []) : [];
+        }),
+      );
+      const data = { posts: lists.flat() };
       const found: Record<string, string> = {};
-      for (const sp of (data.posts ?? []) as { content?: { title?: string }; scheduledAt?: string; status?: string }[]) {
+      const detail: Record<string, { image: string; caption: string }> = {};
+      for (const sp of (data.posts ?? []) as { content?: { title?: string; caption?: string; imageUrls?: string[] }; scheduledAt?: string; status?: string }[]) {
         const title = sp.content?.title ?? "";
         const t = STATIC_POST_TYPES.find((x) => title.startsWith(`${x.label} · static`));
-        if (t && sp.status !== "failed") found[t.id] = sp.scheduledAt ?? "";
+        if (t && sp.status !== "failed") {
+          found[t.id] = sp.scheduledAt ?? "";
+          const image = sp.content?.imageUrls?.[0];
+          if (image) detail[t.id] = { image, caption: sp.content?.caption ?? "" };
+        }
       }
       setScheduled((cur) => ({ ...cur, ...found }));
+      setSchedDetail(detail);
     } catch {
       /* ignore */
     }
-  }, [preset]);
+  }, [preset, no1Presets]);
   useEffect(() => {
     loadScheduled();
   }, [loadScheduled]);
 
+  const [schedDetail, setSchedDetail] = useState<Record<string, { image: string; caption: string }>>({});
   const typesInGroup = useMemo(() => STATIC_POST_TYPES.filter((t) => t.group === group), [group]);
   const doneIn = (g: string) => STATIC_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
   const totalIn = (g: string) => STATIC_POST_TYPES.filter((t) => t.group === g).length;
@@ -483,7 +523,7 @@ export default function No1StaticsPage() {
   };
 
   const addPost = (t: StaticPostType) => {
-    setPosts((l) => [{ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: l.length, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, ...LAYOUT0 }, ...l]);
+    setPosts((l) => [mkPost(t, l.length, nextDay(preset?.defaultPostTime ?? "09:00"), false), ...l]);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
@@ -497,10 +537,10 @@ export default function No1StaticsPage() {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, tweet: isTweet(t), note: post.note }) });
+      const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: post.note }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+      patch(post.id, post.uni ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -529,7 +569,9 @@ export default function No1StaticsPage() {
 
   const previewFeed = async () => {
     const written = posts.filter((p) => p.caption);
-    if (written.length === 0) {
+    const openIds = new Set(written.map((p) => p.typeId));
+    const already = Object.entries(schedDetail).filter(([id]) => !openIds.has(id));
+    if (written.length === 0 && already.length === 0) {
       toast.error("Write at least one post first, then press Preview feed");
       return;
     }
@@ -537,12 +579,15 @@ export default function No1StaticsPage() {
     try {
       const canvases: HTMLCanvasElement[] = [];
       for (const p of written) canvases.push(await render(p));
-      const urls = await uploadPngs(
+      const urls = written.length === 0 ? [] : await uploadPngs(
         canvases.map((c) => c.toDataURL("image/png")),
         written.map((p) => `no1-feed-${p.typeId}-${Date.now()}.png`),
       );
       const body = {
-        posts: written.map((p, i) => ({ id: p.typeId, label: TYPE_BY_ID.get(p.typeId)?.label ?? "", image: urls[i], caption: noFoot(p.caption), tags: p.hashtags.join(" ") })),
+        posts: [
+          ...written.map((p, i) => ({ id: p.typeId, label: TYPE_BY_ID.get(p.typeId)?.label ?? "", image: urls[i], caption: noFoot(p.caption), tags: p.hashtags.join(" ") })),
+          ...already.map(([id, d]) => ({ id, label: TYPE_BY_ID.get(id)?.label ?? "", image: d.image, caption: d.caption, tags: "" })),
+        ],
       };
       const r = await fetch(`${BASE}/api/no1/feed`, { method: "POST", headers: feedHeaders(), body: JSON.stringify(body) });
       const data = await r.json().catch(() => ({}));
@@ -652,15 +697,15 @@ export default function No1StaticsPage() {
       toast.error("Every post in this section is already open or scheduled");
       return;
     }
-    const fresh: Post[] = wanted.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo: posts.length + i, note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: true, scheduling: false, ...LAYOUT0 }));
+    const fresh: Post[] = wanted.map((t, i) => mkPost(t, posts.length + i, nextDay(preset?.defaultPostTime ?? "09:00"), true));
     setPosts((l) => [...fresh.slice().reverse(), ...l]);
     for (const post of fresh) {
       const t = TYPE_BY_ID.get(post.typeId)!;
       try {
-        const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: t.brief, word: t.word, tweet: isTweet(t), note: "" }) });
+        const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: "" }) });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data?.error || "failed");
-        patch(post.id, { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+        patch(post.id, post.uni ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
       } catch {
         patch(post.id, { busy: false });
         toast.error(`"${t.label}" would not write, press Write it on it`);
@@ -790,24 +835,31 @@ export default function No1StaticsPage() {
                 <div className="grid md:grid-cols-[260px_1fr] gap-4">
                   <div className="space-y-3">
                     <PostCanvas post={post} tweet={tweet} photo={photoFor(post)} logo={logo} onChange={(c) => patch(post.id, c)} />
-                    <p className="text-xs text-white/50 w-[260px] max-w-full">Drag the words to move them. Drag anywhere else to move the photo.</p>
-                    <label className="block text-xs text-white/60 w-[260px] max-w-full">Photo zoom
+                    {!post.uni && <p className="text-xs text-white/50 w-[260px] max-w-full">Drag the words to move them. Drag anywhere else to move the photo.</p>}
+                    {post.uni && <p className="text-xs text-white/50 w-[260px] max-w-full">Change the words on the right and the picture redraws.</p>}
+                    {!post.uni && <label className="block text-xs text-white/60 w-[260px] max-w-full">Photo zoom
                       <input type="range" min={1} max={3} step={0.01} value={post.pz} onChange={(e) => patch(post.id, { pz: Number(e.target.value) })} className="w-full" />
-                    </label>
-                    <label className="block text-xs text-white/60 w-[260px] max-w-full">Text size
+                    </label>}
+                    {!post.uni && <label className="block text-xs text-white/60 w-[260px] max-w-full">Text size
                       <input type="range" min={0.5} max={1.6} step={0.01} value={post.ts} onChange={(e) => patch(post.id, { ts: Number(e.target.value) })} className="w-full" />
-                    </label>
+                    </label>}
                     <div className="flex gap-2 flex-wrap">
                       {photosFor(post).length > 1 && <Button size="sm" variant="secondary" onClick={() => patch(post.id, { photo: post.photo + 1, px: 0, py: 0, pz: 1 })}>Swap photo</Button>}
                       <Button size="sm" variant="ghost" onClick={() => patch(post.id, { ...LAYOUT0 })}>Reset</Button>
                     </div>
                   </div>
                   <div className="grid gap-3 text-sm content-start">
-                    <label className="space-y-1 block">
+                    {post.uni && uniOf(post.typeId)?.fields.map((f) => (
+                      <label key={f.key} className="space-y-1 block">
+                        <span className="text-white/60">{f.label}</span>
+                        <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.uni?.[f.key] ?? ""} onChange={(e) => patch(post.id, { uni: { ...post.uni, [f.key]: e.target.value } })} />
+                      </label>
+                    ))}
+                    {!post.uni && <label className="space-y-1 block">
                       <span className="text-white/60">{tweet ? "The tweet on the picture" : "Words on the picture"}</span>
                       <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
-                    </label>
-                    {!tweet && (
+                    </label>}
+                    {!tweet && !post.uni && (
                       <label className="space-y-1 block">
                         <span className="text-white/60">Supporting line</span>
                         <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.line} onChange={(e) => patch(post.id, { line: e.target.value })} />
