@@ -6,6 +6,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { uploadPngs } from "@/lib/month-engine";
@@ -724,7 +725,7 @@ export default function LisaPage() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60">Front slide</span>
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Dr Lisa Academy"} treatment={TYPE_BY_ID.get(post.typeId)?.label ?? ""} area={area} onPick={(h) => patch(post.id, { hook: h })} /></span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
                   </label>
                   {[0, 1, 2].map((i) => (
