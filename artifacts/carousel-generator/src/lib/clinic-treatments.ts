@@ -53,18 +53,6 @@ export const CLINIC_TREATMENT_GROUPS: ClinicTreatmentGroup[] = [
     ],
   },
   {
-    id: "hair", label: "Hair, brows and lashes", items: [
-      tt("hair", "scalp-treatments", "Scalp treatments"),
-      tt("hair", "hair-loss", "Hair loss treatment"),
-      tt("hair", "brow-lamination", "Brow lamination"),
-      tt("hair", "brow-tint", "Brow tint and shape"),
-      tt("hair", "microblading", "Microblading"),
-      tt("hair", "powder-brows", "Powder brows"),
-      tt("hair", "lash-lift", "Lash lift and tint"),
-      tt("hair", "lash-extensions", "Lash extensions"),
-    ],
-  },
-  {
     id: "dental", label: "Dental", items: [
       tt("dental", "check-ups", "Check ups"),
       tt("dental", "hygiene", "Hygiene appointments"),
