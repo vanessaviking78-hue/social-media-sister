@@ -541,6 +541,33 @@ function Builder({ id }: { id: string }) {
     }
   };
 
+  // Change all: one colour applied to every post at once (block, gradient, text, background, about me).
+  type UA = NonNullable<Item["uniArgs"]>;
+  const applyAll = (key: "block" | "gradColour" | "textColour" | "bgColour", val: string) => {
+    if (key === "textColour") { applyTextColour(val); return; }
+    const assets = assetsRef.current;
+    if (!assets) return;
+    for (const it of itemsRef.current) {
+      if (!it.uniArgs) continue;
+      if (key === "block" && !it.uniArgs.block) continue;
+      if (key === "gradColour" && it.uniArgs.block) continue;
+      const args: Record<string, unknown> = { ...it.uniArgs, [key]: val || undefined };
+      for (const k of Object.keys(args)) if (args[k] === undefined) delete args[k];
+      const a2 = args as unknown as UA;
+      const cvs = renderUniversalPost(a2, assets);
+      patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+    }
+  };
+  const applyAllAbout = async (k: "bg" | "head" | "text" | "reset", val = "") => {
+    if (!req) return;
+    for (const it of itemsRef.current) {
+      if (!it.aboutArgs) continue;
+      const aa = { ...it.aboutArgs, colours: k === "reset" ? { main: req.mainHex, accent: req.accentHex } : { ...it.aboutArgs.colours, [k]: val } };
+      const cv = await renderAboutPost(aa);
+      patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+    }
+  };
+
   const publish = async () => {
     const client = clientRef.current;
     const assets = assetsRef.current;
@@ -652,16 +679,52 @@ function Builder({ id }: { id: string }) {
           )}
         </div>
       )}
-      {req?.kind === "premium" && items.length > 0 && (
-        <div className="flex gap-2 items-center flex-wrap">
-          <span className="text-sm font-semibold">Text colour on the carousels:</span>
-          <input type="color" value={textHex || "#ffffff"} onChange={(e) => applyTextColour(e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
-          {[["White", "#ffffff"], ["Black", "#111111"], ["Their main", req.mainHex], ["Their accent", req.accentHex]].map(([label, hex]) => (
-            <button key={label} onClick={() => applyTextColour(hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1"><span className="keep-colour inline-block w-4 h-4 rounded-full border" style={{ background: hex }} />{label}</button>
-          ))}
-          <button onClick={() => applyTextColour("")} className={`px-2 py-1 rounded border text-xs ${textHex ? "" : "bg-pink-500 text-white border-pink-500"}`}>Auto</button>
-        </div>
-      )}
+      {req?.kind === "premium" && items.length > 0 && (() => {
+        const base: [string, string][] = [["Their main", req.mainHex], ["Their accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]];
+        const metals: [string, string, string][] = [["Gold", "metal:gold", "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)"], ["Silver", "metal:silver", "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)"]];
+        const line = "flex gap-2 items-center flex-wrap";
+        const dot = (bg: string) => <span className="keep-colour inline-block w-4 h-4 rounded-full border" style={{ background: bg }} />;
+        const grp = (title: string, key: "block" | "gradColour" | "textColour" | "bgColour", withMetal: boolean, autoLabel: string) => (
+          <div className={line}>
+            <span className="text-sm font-semibold w-52 shrink-0">{title}</span>
+            <input type="color" defaultValue="#d4a93c" onChange={(e) => applyAll(key, e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
+            {base.map(([label, hex]) => (
+              <button key={label} onClick={() => applyAll(key, hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(hex)}{label}</button>
+            ))}
+            {withMetal && metals.map(([label, val, css]) => (
+              <button key={label} onClick={() => applyAll(key, val)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(css)}Metallic {label.toLowerCase()}</button>
+            ))}
+            {key !== "block" && <button onClick={() => applyAll(key, "")} className="px-2 py-1 rounded border text-xs">{autoLabel}</button>}
+          </div>
+        );
+        const aboutGrp = (title: string, k: "bg" | "head" | "text") => (
+          <div className={line}>
+            <span className="text-sm font-semibold w-52 shrink-0">{title}</span>
+            <input type="color" defaultValue="#ffffff" onChange={(e) => void applyAllAbout(k, e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
+            {base.map(([label, hex]) => (
+              <button key={label} onClick={() => void applyAllAbout(k, hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(hex)}{label}</button>
+            ))}
+          </div>
+        );
+        return (
+          <div className="border rounded-xl p-3 space-y-2">
+            <div className="text-sm font-bold">Change all colours at once</div>
+            <div className="text-xs text-muted-foreground">Pick a colour here and every post changes together. You can still fine tune any single post below.</div>
+            {grp("Colour block (all block posts)", "block", true, "Reset")}
+            {grp("Gradient colour (all gradient posts)", "gradColour", true, "Auto")}
+            {grp("Text colour (all carousels)", "textColour", false, "Auto")}
+            {grp("Background colour (all carousels)", "bgColour", false, "Photo")}
+            {items.some((x) => x.aboutArgs) && (
+              <>
+                {aboutGrp("About me background", "bg")}
+                {aboutGrp("About me headline", "head")}
+                {aboutGrp("About me text", "text")}
+                <button onClick={() => void applyAllAbout("reset")} className="px-2 py-1 rounded border text-xs">About me back to their brand colours</button>
+              </>
+            )}
+          </div>
+        );
+      })()}
       {req?.kind !== "premium" && <div className="flex gap-2 items-center flex-wrap">
         <span className="text-sm font-semibold">Headline font for every post:</span>
         {HEAD_FONTS.map((f) => (
