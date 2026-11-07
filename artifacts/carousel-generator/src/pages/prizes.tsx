@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
-type Prize = { name: string; price: string; worth?: string };
+type Prize = { name: string; price: string; worth?: string; until?: string };
 
 // Change a price here and it changes on the wheel.
-const PRIZES: Prize[] = [
+// A prize with an "until" date drops off the wheel once that date has passed.
+const ALL_PRIZES: Prize[] = [
   { name: "1 Month Socials: You Post Yourself", price: "£187" },
   { name: "1 Month Socials: I Post For You", price: "£387", worth: "£650" },
   { name: "Free Strategy Call", price: "FREE" },
@@ -13,15 +14,14 @@ const PRIZES: Prize[] = [
   { name: "Bundle of Business Tools", price: "£97", worth: "£997" },
   { name: "10 Free Posts", price: "FREE" },
   { name: "Half Price Podcast Episode", price: "£397", worth: "£999" },
-  { name: "Whole Year of Socials", price: "£3,800", worth: "£7,800" },
-  { name: "Whole Year of Social Media: One Off Payment", price: "£2,400", worth: "£7,800" },
+  { name: "Whole Year of Social Media: One Off Payment", price: "£2,400", worth: "£7,800", until: "2026-12-01T00:00:00Z" },
   { name: "10 Free Carousel Posts", price: "FREE", worth: "£399" },
   { name: "Masterclass", price: "£199", worth: "£399" },
   { name: "6 Months Content Calendar", price: "£99" },
   { name: "1 Month Socials", price: "£250", worth: "£650" },
   { name: "Free 30 Minute Call", price: "FREE" },
   { name: "Quarter Socials", price: "£750", worth: "£1,950" },
-  { name: "Free Rebrand", price: "FREE", worth: "£400" },
+  { name: "Rebrand", price: "£99", worth: "£400" },
   { name: "Half Price Content Day", price: "£750", worth: "£1,500" },
   { name: "Free AI Photo Shoot", price: "FREE", worth: "£275" },
   { name: "Free Coaching Session", price: "FREE", worth: "£250" },
@@ -54,6 +54,7 @@ export default function Prizes() {
     document.title = "Prizes · The CyberSuite";
   }, []);
 
+  const PRIZES = useMemo(() => ALL_PRIZES.filter((p) => !p.until || Date.now() < new Date(p.until).getTime()), []);
   const n = PRIZES.length;
   const slice = 360 / n;
 
@@ -62,7 +63,7 @@ export default function Prizes() {
       "conic-gradient(" +
       PRIZES.map((_, i) => `${i % 2 ? INK : PINK} ${i * slice}deg ${(i + 1) * slice}deg`).join(", ") +
       ")",
-    [slice],
+    [slice, PRIZES],
   );
 
   function spin() {
