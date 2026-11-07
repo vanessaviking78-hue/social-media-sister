@@ -24,7 +24,7 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },
 ];
 
-// Social Media Sister (Vanessa herself) has one tab only: Feral.
+// Social Media Sister (Vanessa herself) has two tabs only: Feral and Black Friday. No other client gets them.
 const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
   { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },
@@ -63,7 +63,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
           ))}
         </div>
       </div>
-      <ClientInfoPanel clientName={label} treatmentIds={ids} />
+      {!isSms && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
       <ForcedClientContext.Provider value={forced}>
         <div className="[&_a[href='/hub']]:hidden">
           <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>
