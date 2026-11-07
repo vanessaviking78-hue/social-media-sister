@@ -22,7 +22,7 @@ const ALL_PRIZES: Prize[] = [
   { name: "Free 30 Minute Call", price: "FREE" },
   { name: "Quarter Socials", price: "£750", worth: "£1,950" },
   { name: "Rebrand", price: "£99", worth: "£400" },
-  { name: "Half Price Content Day", price: "£750", worth: "£1,500" },
+  { name: "Half Price Content Day (Within 40 Miles of BD13)", price: "£750", worth: "£1,500" },
   { name: "Free AI Photo Shoot", price: "FREE", worth: "£275" },
   { name: "Free Coaching Session", price: "FREE", worth: "£250" },
 ];
@@ -230,6 +230,8 @@ export default function Prizes() {
         1. Prize winner must not be in conflict with an existing Cybersuite client.
         <br />
         2. Must not be an arsehole to work for.
+        <br />
+        3. The Half Price Content Day is only available to winners within 40 miles of BD13.
       </p>
       <p style={{ fontSize: 12, opacity: 0.6, marginTop: 24 }}>The Cybersuite™ • vanessa@thecybersuite.com • Launch 2026</p>
     </div>
