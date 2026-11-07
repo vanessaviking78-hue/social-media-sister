@@ -6,7 +6,8 @@ type Prize = { name: string; price: string; worth?: string };
 
 // Change a price here and it changes on the wheel.
 const PRIZES: Prize[] = [
-  { name: "1 Month Full Socials", price: "£199", worth: "£650" },
+  { name: "1 Month Socials: You Post Yourself", price: "£187" },
+  { name: "1 Month Socials: I Post For You", price: "£387", worth: "£650" },
   { name: "Free Strategy Call", price: "FREE" },
   { name: "Quarter Full Socials", price: "£950", worth: "£1,950" },
   { name: "Bundle of Business Tools", price: "£97", worth: "£997" },
@@ -17,7 +18,7 @@ const PRIZES: Prize[] = [
   { name: "Masterclass", price: "£199", worth: "£399" },
   { name: "6 Months Content Calendar", price: "£99" },
   { name: "1 Month Socials", price: "£250", worth: "£650" },
-  { name: "Free Strategy Call", price: "FREE" },
+  { name: "Free 30 Minute Call", price: "FREE" },
   { name: "Quarter Socials", price: "£99", worth: "£1,950" },
   { name: "Free Rebrand", price: "FREE", worth: "£400" },
   { name: "Half Price Content Day", price: "£750", worth: "£1,500" },
