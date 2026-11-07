@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
@@ -110,6 +110,9 @@ function Builder({ id }: { id: string }) {
   const [hooks, setHooks] = useState<{ hook: string; script: string; onScreen: string }[]>([]);
   const [fact, setFact] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  // Which logo the build uses: theirs (the default), one uploaded here, or none, which gives the clinic name as text.
+  const [logoPick, setLogoPick] = useState<File | "none" | null>(null);
+  const logoPreview = useMemo(() => (logoPick instanceof File ? URL.createObjectURL(logoPick) : ""), [logoPick]);
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
   const [pickedHooks, setPickedHooks] = useState<string[]>([]);
@@ -228,7 +231,7 @@ function Builder({ id }: { id: string }) {
       if (distinct < 3) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
 
       setStatus("Preparing the logo, fonts and photos...");
-      const logoBlob = req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
+      const logoBlob = logoPick === "none" ? null : logoPick instanceof File ? logoPick : req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
       const photoBlob = req.photoUrl ? await fetch(req.photoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
       const assets = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob, titleFont: uniFont, premium: isPremium });
       assetsRef.current = assets;
@@ -653,6 +656,16 @@ function Builder({ id }: { id: string }) {
         ))}
         <span className="text-xs text-muted-foreground">Subtitles and later pages are Playfair Display. The three treatment carousels are in Hatcher.</span>
       </div>}
+      <div className="flex gap-3 items-center flex-wrap text-sm">
+        <span className="font-semibold">Logo:</span>
+        {logoPick === "none" ? <span className="text-muted-foreground">None, the clinic name will be used as text</span>
+          : <img src={logoPreview || req.logoUrl || ""} alt="" className="h-12 max-w-40 object-contain rounded border bg-neutral-200 p-1" style={{ display: logoPreview || req.logoUrl ? undefined : "none" }} />}
+        {!logoPreview && !req.logoUrl && logoPick !== "none" && <span className="text-muted-foreground">They did not send one</span>}
+        <label className="px-2 py-1 rounded border cursor-pointer">Upload a logo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setLogoPick(f); }} /></label>
+        <button className="px-2 py-1 rounded border" onClick={() => setLogoPick("none")}>Remove their logo</button>
+        {logoPick && <button className="px-2 py-1 rounded border" onClick={() => setLogoPick(null)}>Use theirs again</button>}
+        <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
+      </div>
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
         {req.kind === "premium" && !items.length && (chosenT.length !== 3 || pickedHooks.length !== 5) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of 3 treatments and {pickedHooks.length} of 5 hooks chosen.</span>}
