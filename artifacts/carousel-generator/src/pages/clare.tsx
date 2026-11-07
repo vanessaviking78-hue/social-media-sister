@@ -193,8 +193,10 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
   return loadHatcherTitle();
 }
 
+type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number };
 type Post = {
   id: string;
+  adj?: Adj; // photo zoom and pan per slide, headline size and position, block position: this post only
   typeId: string;
   hook: string;
   slides: string[];
@@ -293,11 +295,13 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, font: (px: number)
   return { px: min, lines: wrap(ctx, text, maxW) };
 }
 
-function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap) {
-  const s = Math.max(W / bmp.width, H / bmp.height);
+function coverFit(ctx: CanvasRenderingContext2D, bmp: ImageBitmap, zoom = 1, px = 0, py = 0) {
+  const s = Math.max(W / bmp.width, H / bmp.height) * Math.max(1, zoom);
   const w = bmp.width * s;
   const h = bmp.height * s;
-  ctx.drawImage(bmp, (W - w) / 2, (H - h) * 0.2, w, h);
+  const x = Math.min(0, Math.max(W - w, (W - w) / 2 + px * (w - W) / 2));
+  const y = Math.min(0, Math.max(H - h, (H - h) * 0.2 + py * (h - H) / 2));
+  ctx.drawImage(bmp, x, y, w, h);
 }
 
 function spaced(ctx: CanvasRenderingContext2D, px: number) {
@@ -358,7 +362,9 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
-  const ts = (look.titleSize || 100) / 100;
+  const ts = ((look.titleSize || 100) / 100) * (n === 0 ? (post.adj?.coverScale ?? 1) : 1);
+  const cy = n === 0 ? (post.adj?.coverY ?? 0) : 0;
+  const by = n === 0 ? (post.adj?.blockY ?? 0) : 0;
   const bs = (look.bodySize || 100) / 100;
   look = normLook(look);
   const { ink, grey, bg } = inks(look);
@@ -388,7 +394,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     return;
   }
 
-  if (photo) coverFit(ctx, photo.bmp);
+  if (photo) coverFit(ctx, photo.bmp, post.adj?.zoom?.[n], post.adj?.px?.[n], post.adj?.py?.[n]);
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
@@ -401,16 +407,16 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
-      const ty = H - 175 - titleHeight(layout);
-      if (look.block) blockAt(ctx, ty - 90, look);
+      const ty = H - 175 - titleHeight(layout) + cy;
+      if (look.block) blockAt(ctx, ty - 90 + by, look);
       drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline !== "auto" ? paintOf(ctx, look.headline, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
       const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
-      let y = H - 175 - total;
-      if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; }
+      let y = H - 175 - total + cy;
+      if (look.block) { blockAt(ctx, y - 90 + by, look); ctx.fillStyle = INKC; }
       if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
@@ -715,6 +721,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     toast.success(`${made.length} posts made, half with a block and half with the gradient`);
   };
 
+  const [adjSlide, setAdjSlide] = useState<Record<string, number>>({});
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
 
   // Her preset's caption footnote goes at the very end of every post, under the hashtags.
@@ -1109,6 +1116,32 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                     <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < 4 && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
+                {(() => {
+                  const sl = adjSlide[post.id] ?? 0;
+                  const a: Adj = post.adj ?? {};
+                  const arr = (k: "zoom" | "px" | "py", def: number) => [0, 1, 2, 3].map((i) => a[k]?.[i] ?? def);
+                  const setA = (ch: Partial<Adj>) => patch(post.id, { adj: { ...a, ...ch } });
+                  const setSl = (k: "zoom" | "px" | "py", def: number, v: number) => { const c = arr(k, def); c[sl] = v; setA({ [k]: c }); };
+                  const row = (label: string, min: number, max: number, step: number, val: number, on: (v: number) => void) => (
+                    <label className="flex items-center gap-2"><span className="w-32 shrink-0 text-white/60">{label}</span><input type="range" min={min} max={max} step={step} value={val} onChange={(e) => on(Number(e.target.value))} className="flex-1" /></label>
+                  );
+                  return (
+                    <details className="rounded border border-white/15 p-3 text-sm space-y-2">
+                      <summary className="cursor-pointer text-white/80">Photo, headline and block controls</summary>
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                        <span className="text-white/60">Photo on slide</span>
+                        {[0, 1, 2, 3].map((i) => <button key={i} type="button" onClick={() => setAdjSlide((m) => ({ ...m, [post.id]: i }))} className={`px-2 py-0.5 rounded border ${sl === i ? "bg-white text-black border-white" : "border-white/20"}`}>{i + 1}</button>)}
+                        <button type="button" onClick={() => patch(post.id, { adj: undefined })} className="ml-auto px-2 py-0.5 rounded border border-white/20">Reset</button>
+                      </div>
+                      {row("Zoom", 1, 2.5, 0.05, arr("zoom", 1)[sl], (v) => setSl("zoom", 1, v))}
+                      {row("Move left or right", -1, 1, 0.05, arr("px", 0)[sl], (v) => setSl("px", 0, v))}
+                      {row("Move up or down", -1, 1, 0.05, arr("py", 0)[sl], (v) => setSl("py", 0, v))}
+                      {row("Headline size", 0.5, 1.6, 0.05, a.coverScale ?? 1, (v) => setA({ coverScale: v }))}
+                      {row("Headline up or down", -600, 200, 10, a.coverY ?? 0, (v) => setA({ coverY: v }))}
+                      {lookFor(post).block && row("Block up or down", -600, 120, 10, a.blockY ?? 0, (v) => setA({ blockY: v }))}
+                    </details>
+                  );
+                })()}
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
                     <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && (!t.feral || t.smx) && (["c", "p"] as const).map((v) => (
