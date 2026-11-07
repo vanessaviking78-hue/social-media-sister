@@ -23,7 +23,7 @@ const ALL_PRIZES: Prize[] = [
   { name: "Quarter Socials", price: "£750", worth: "£1,950" },
   { name: "Rebrand", price: "£99", worth: "£400" },
   { name: "Half Price Content Day (Within 40 Miles of BD13)", price: "£750", worth: "£1,500" },
-  { name: "Free AI Photo Shoot", price: "FREE", worth: "£275" },
+  { name: "AI Photo Shoot", price: "£99", worth: "£399" },
   { name: "Free Coaching Session", price: "FREE", worth: "£250" },
 ];
 
