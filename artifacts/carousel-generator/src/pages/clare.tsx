@@ -663,7 +663,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
   const [making, setMaking] = useState("");
   const make40 = async () => {
-    if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (!(POSTS === FERAL_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const allTypes = [...POSTS];
     const N = POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
     const byGroup = new Map<string, typeof allTypes>();
@@ -689,7 +689,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const fullCaption = (post: Post) => [noFoot(post.caption), post.hashtags.join(" "), foot].filter(Boolean).join("\n\n");
 
   const write = async (post: Post, fix?: string) => {
-    if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (!(POSTS === FERAL_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {

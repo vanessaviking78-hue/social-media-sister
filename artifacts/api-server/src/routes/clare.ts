@@ -45,6 +45,15 @@ function fiveTags(raw: unknown, area: string = AREA): string[] {
   return out.map((t) => `#${t}`);
 }
 
+// Social Media Sister's own posts use industry tags, not area tags: aesthetic marketing and aesthetic nurse tags, exactly five.
+const INDUSTRY_TAGS = ["aestheticmarketing", "aestheticnurse", "aestheticsocialmedia", "aestheticclinicmarketing", "aestheticbusiness", "aestheticnursesuk", "aestheticsuk", "aestheticinjector", "aestheticpractitioner", "aestheticsmarketing", "socialmediaforclinics", "aestheticsbusiness", "aestheticclinicowner", "aestheticnurses"];
+function industryTags(raw: unknown): string[] {
+  const fromModel = Array.isArray(raw) ? raw.map((t) => slug(String(t ?? ""))).filter((t) => INDUSTRY_TAGS.includes(t)) : [];
+  const core = ["aestheticmarketing", "aestheticnurse"];
+  const rest = INDUSTRY_TAGS.filter((t) => !core.includes(t)).sort(() => Math.random() - 0.5);
+  return [...new Set([...core.filter((t) => fromModel.includes(t) || true), ...fromModel, ...rest])].slice(0, 5).map((t) => `#${t}`);
+}
+
 function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = "", feral = false, offers = false): string {
   return `${HOUSE_VOICE}
 
@@ -62,7 +71,7 @@ THE SLIDES
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
 - "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be a closing engagement line, which is added for you, so do not write it."}
-- "hashtags": exactly 5, lower case, no spaces, each one joins ${area} to a beauty, skin or midlife theme. Every tag contains ${slug(area)}.
+- "hashtags": exactly 5, lower case, no spaces. ${feral ? "Each is an aesthetic marketing or aesthetic nurse tag, for example aestheticmarketing, aestheticnurse, aestheticsocialmedia, aestheticclinicmarketing, aestheticnursesuk. No area tags." : `Each one joins ${area} to a beauty, skin or midlife theme. Every tag contains ${slug(area)}.`}
 
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Use a comma, a full stop or a plain hyphen in compound words only.
@@ -124,7 +133,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
       caption: `${body}\n\n${cta}.`,
-      hashtags: fiveTags(j.hashtags, area),
+      hashtags: feral ? industryTags(j.hashtags) : fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "The words would not write, try again";
