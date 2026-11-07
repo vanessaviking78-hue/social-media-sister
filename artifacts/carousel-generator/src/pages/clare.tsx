@@ -11,7 +11,7 @@ import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
-import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
+import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
@@ -182,7 +182,14 @@ type Photo = { id: string; bmp: ImageBitmap; url: string };
 type Fonts = { head: string; body: string };
 type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
 
-async function loadTitleFont(): Promise<TitleFont> {
+async function loadTitleFont(client?: string): Promise<TitleFont> {
+  // a client who chose their own font on the Font Lab form (or in Font Lab) gets it, everyone else keeps Hatcher
+  if (client && hasClientStyle(clientSlug(client))) {
+    try {
+      const style = readTitleStyle(clientSlug(client));
+      if (style.fontId !== "hatcher") return { lf: await loadSuiteFont(style.fontId), style };
+    } catch { /* fall back to Hatcher */ }
+  }
   return loadHatcherTitle();
 }
 
@@ -539,8 +546,10 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   // the cover title is always Hatcher with a curly first letter
   useEffect(() => {
     let live = true;
-    loadTitleFont().then((t) => live && setTf(t));
-    return () => { live = false; };
+    const load = () => loadTitleFont(CLINIC_KEY === "clare" ? undefined : CLINIC_NAME).then((t) => live && setTf(t));
+    void load();
+    window.addEventListener("suite-client-font", load);
+    return () => { live = false; window.removeEventListener("suite-client-font", load); };
   }, []);
   const [area, setArea] = useState(CLINIC_KEY === "clare" ? "Wakefield" : "");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -730,7 +739,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
 
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
-    const tfNow = await loadTitleFont();
+    const tfNow = await loadTitleFont(CLINIC_KEY === "clare" ? undefined : CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < 5; n++) {
       const c = document.createElement("canvas");

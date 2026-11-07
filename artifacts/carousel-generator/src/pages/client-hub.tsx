@@ -3,6 +3,7 @@ import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { usePresets } from "@/lib/use-presets";
 import { ClientInfoPanel } from "./client-extras";
+import { clientSlug, readTitleStyle, saveTitleStyle } from "@/lib/suite-fonts";
 
 // A CLIENT'S OWN PAGE, the same set of tools as Clare's page, every one opened on that client.
 // Universal is limited to the treatments the client ticked on the treatments form.
@@ -50,6 +51,24 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
       .catch(() => undefined);
     return () => { live = false; };
   }, [pattern]);
+  // The font they chose on the Font Lab form becomes their look on this device, unless I have already applied that choice.
+  useEffect(() => {
+    let live = true;
+    fetch(`${BASE}/api/client-fonts`).then((r) => r.json()).then((d: { clients?: { clientName: string; typedName: string; fontId: string; upper: boolean; updatedAt: string }[] }) => {
+      if (!live) return;
+      const row = (d.clients ?? []).find((c) => pattern.test(c.clientName) || pattern.test(c.typedName));
+      if (!row) return;
+      const slug = clientSlug(label);
+      const mark = `suite-client-font-applied-${slug}`;
+      try {
+        if (localStorage.getItem(mark) === row.updatedAt) return;
+        saveTitleStyle({ ...readTitleStyle(slug), fontId: row.fontId, upper: row.upper, swaps: {}, rate: "first", ligatures: true }, slug);
+        localStorage.setItem(mark, row.updatedAt);
+        window.dispatchEvent(new Event("suite-client-font"));
+      } catch { /* ignore */ }
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [pattern, label]);
   const forced: ForcedClient = { pattern, treatmentIds: ids };
   const isSms = /social\s*media\s*sis|very\s*vanessa|vanessa|^sms$/i.test(label);
   const tabs = isSms ? SMS_TABS : TABS;

@@ -123,6 +123,7 @@ import ClientStylish from "@/pages/client-stylish";
 import GettingToKnowYou from "@/pages/getting-to-know-you";
 import KnowMePublic from "@/pages/know-me-public";
 import TreatmentsForm from "@/pages/treatments-form";
+import FontLabForm from "@/pages/fontlab-form";
 import ClientTreatments from "@/pages/client-treatments";
 import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
@@ -331,6 +332,7 @@ function AppContent() {
   const [isKnowMe, knowMeParams] = useRoute("/know-me/:token");
   const [isKnowMeShared] = useRoute("/know-me");
   const [isTreatmentsForm] = useRoute("/treatments-form");
+  const [isFontForm] = useRoute("/fontlab-form");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
   const [isClientQuestion] = useRoute("/clientquestion");
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
@@ -395,6 +397,9 @@ function AppContent() {
   }
   if (isTreatmentsForm) {
     return <TreatmentsForm />;
+  }
+  if (isFontForm) {
+    return <FontLabForm />;
   }
   if (isKnowMe && knowMeParams?.token) {
     return <KnowMePublic token={knowMeParams.token} />;

@@ -10,7 +10,7 @@ import { usePresets } from "@/lib/use-presets";
 import { useForcedClient } from "@/lib/forced-client";
 
 import { uploadPngs } from "@/lib/month-engine";
-import { drawTitle, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
+import { drawTitle, clientSlug, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
 // UNIVERSAL: any client, every non prescription treatment, six posts each.
@@ -555,7 +555,7 @@ export default function UniversalPage() {
     }
   }, [rate]);
   // A look saved for this client in Font Lab replaces Blue Mirage for them.
-  const clientStyle = useMemo(() => (preset && hasClientStyle(preset.name) ? readTitleStyle(preset.name) : null), [preset]);
+  const clientStyle = useMemo(() => (preset && hasClientStyle(clientSlug(preset.name)) ? readTitleStyle(clientSlug(preset.name)) : null), [preset]);
   const fontId = clientStyle?.fontId ?? BASE_TITLE.fontId;
   useEffect(() => {
     let live = true;
