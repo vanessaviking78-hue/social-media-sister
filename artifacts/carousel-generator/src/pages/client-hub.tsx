@@ -24,8 +24,9 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },
 ];
 
-// Social Media Sister (Vanessa herself) has two tabs only: Feral and Black Friday. No other client gets them.
+// Social Media Sister (Vanessa herself) has three tabs only: Xmas, Feral and Black Friday. No other client gets them.
 const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./smxmas-tab")) },
   { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
   { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },
 ];

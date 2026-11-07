@@ -13,7 +13,7 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, BF_SECTIONS, BF_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, BF_SECTIONS, BF_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -242,7 +242,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...BF_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -462,7 +462,7 @@ function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?:
 }
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "feral" | "blackfriday" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "feral" | "blackfriday" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -471,8 +471,8 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "feral" | "blackfriday" } =
   const sfx = isClare ? "" : `-${preset!.id}`;
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
-  SECS = mode === "xmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : CLARE_SECTIONS;
-  POSTS = mode === "xmas" ? XMAS_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : CLARE_SECTION_POSTS;
+  SECS = mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : CLARE_SECTIONS;
+  POSTS = mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : CLARE_SECTION_POSTS;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -687,7 +687,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
   const [making, setMaking] = useState("");
   const make40 = async () => {
-    if (!(POSTS === FERAL_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (!(POSTS === FERAL_POSTS || POSTS === SMX_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const allTypes = [...POSTS];
     const N = POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
     const byGroup = new Map<string, typeof allTypes>();
@@ -713,7 +713,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const fullCaption = (post: Post) => [noFoot(post.caption), post.hashtags.join(" "), foot].filter(Boolean).join("\n\n");
 
   const write = async (post: Post, fix?: string) => {
-    if (!(POSTS === FERAL_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (!(POSTS === FERAL_POSTS || POSTS === SMX_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
@@ -1101,7 +1101,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && !t.feral && (["c", "p"] as const).map((v) => (
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && (!t.feral || t.smx) && (["c", "p"] as const).map((v) => (
                       <button key={v} type="button" onClick={() => patch(post.id, { hook: (v === "c" ? t.xmas!.c : t.xmas!.p).replace(/\[TOWN\]/g, area.trim() || "your town") })} className="text-xs rounded-full border border-white/20 px-3 py-1 text-white/80 hover:bg-white/10">{v === "c" ? "Colloquial" : "Professional"}</button>
                     ))}</span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />
