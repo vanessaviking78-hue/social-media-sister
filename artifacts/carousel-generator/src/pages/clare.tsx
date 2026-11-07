@@ -929,6 +929,11 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
             </label>
             <ColourPicker label="Writing colour" value={normLook(look).text} onChange={(v) => setLook((l) => ({ ...l, text: v }))} extra={[{ name: "Match gradient", hex: "auto" }]} />
             <ColourPicker label="Headline colour" value={normLook(look).headline} onChange={(v) => setLook((l) => ({ ...l, headline: v }))} extra={[{ name: "Same as writing", hex: "auto" }]} />
+            <div className="rounded border border-white/15 p-3 space-y-2">
+              <div className="text-sm font-semibold">Change all colours at once</div>
+              <p className="text-xs text-white/60">The colours above already apply to every post. If you changed colours on single posts, this puts every post back on them.</p>
+              <button type="button" onClick={() => { setPosts((l) => l.map((p) => (p.look ? { ...p, look: undefined } : p))); toast.success("Every post is back on the page colours"); }} className="px-3 py-1.5 rounded border border-white/30 text-sm hover:bg-white/10">Apply to every post</button>
+            </div>
           </div>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <label className="space-y-1 block">
