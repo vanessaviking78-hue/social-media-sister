@@ -45,14 +45,14 @@ function fiveTags(raw: unknown, area: string = AREA): string[] {
   return out.map((t) => `#${t}`);
 }
 
-function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = ""): string {
+function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = "", feral = false): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
 
 The house voice above is the voice for everything you write, with the client's own answers further down setting the personality.
 
-${own ? `You write as Clare Connolly, an aesthetic nurse who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.` : `You write as the clinician who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". Her own personality and how she talks come from the client's own answers further down, so follow those, and where there are none keep it warm, honest, realistic and a little funny. Her clients are women over 35 who want to look like themselves. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.`}
+${feral ? `You write as Vanessa Wormald of Social Media Sister, a UK social media strategist for the aesthetics industry with 7 years in aesthetics and 20 in social media, in the first person ("I", "my", "you"), never as a clinician. You are talking to aesthetic clinic owners and injectors. The voice is FERAL: blunt, savage, sarcastic and properly funny, but always affable and on their side, like a sister telling them what nobody else will. Real, honest and a bit unhinged in the best way, never cruel to the reader and never about a patient. Strong, confident opinions about what works on social media for clinics. The final slide and the caption carry a strong, stealth-sales friendly call to action that makes a clinic owner want to work with me.` : own ? `You write as Clare Connolly, an aesthetic nurse who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.` : `You write as the clinician who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". Her own personality and how she talks come from the client's own answers further down, so follow those, and where there are none keep it warm, honest, realistic and a little funny. Her clients are women over 35 who want to look like themselves. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.`}
 
 THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}
@@ -88,6 +88,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const word = str(b.word, 40);
     const note = str(b.note, 300);
     const fixedHook = str(b.fixedHook, 300);
+    const feral = b.feral === true;
     const who = str(b.clientName, 120);
     const area = str(b.area, 60) || AREA;
     const own = !who || /clare/i.test(who);
@@ -100,7 +101,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own, fixedHook) + (await clientProfileContext(own ? PROFILE_NAME : who)) },
+        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own, fixedHook, feral) + (feral ? "" : await clientProfileContext(own ? PROFILE_NAME : who)) },
         { role: "user", content: `Write the carousel "${label}" for ${clinic}.${note ? ` Extra from her: ${note}` : ""}` },
       ],
       temperature: 0.9,
@@ -111,7 +112,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(word);
+    const cta = feral ? "Comment SISTER and I will show you how I would run your socials" : finalCta(word);
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())

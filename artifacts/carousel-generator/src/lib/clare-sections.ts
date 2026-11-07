@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas";
+export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string } };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -98,4 +98,16 @@ export const XMAS_POSTS: ClareSectionPost[] = XMAS_WEEKS.flatMap((w) => w.hooks.
   word: "",
   xmas: { c: h.colloquial, p: h.professional },
   brief: `A Christmas carousel for week ${w.week} of my Christmas plan, "${w.title}". Theme: ${w.theme} The cover hook is already written and must stay exactly as given, so slides 2 to 4 carry on from it and keep to the theme. Warm, caring and funny where it suits, always from me to her, never selling hard, a consultation always comes first. No promises, no results, no prices, no offers, no medicine names, no website.`,
+})));
+
+// FERAL: Social Media Sister's own tab. The same 32 hooks as a 5 slide carousel each, written as a social media strategist for the aesthetics industry, to clinic owners.
+export const FERAL_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "feral", label: "Feral", word: "SISTER" }];
+export const FERAL_POSTS: ClareSectionPost[] = XMAS_WEEKS.flatMap((w) => w.hooks.map((h, i) => ({
+  id: `fe-${h.id}`,
+  group: "feral" as const,
+  label: `Feral ${w.week}.${i + 1}: ${w.title}`,
+  word: "SISTER",
+  feral: true,
+  xmas: { c: h.colloquial, p: h.colloquial },
+  brief: `A feral carousel for aesthetic clinic owners, week ${w.week} "${w.title}" of the Christmas plan. Theme: ${w.theme} The cover hook is already written and must stay exactly as given. Slides 2 to 4 take the idea in the hook and turn it into a sharp, honest point about how a clinic should run its social media, content, engagement or booking enquiries this season. Written by me, a social media strategist for the aesthetics industry, to a clinic owner.`,
 })));

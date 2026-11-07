@@ -13,7 +13,7 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -242,7 +242,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS, ...FERAL_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -448,7 +448,7 @@ const nextDay = (hhmm: string) => {
 };
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "feral" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -457,8 +457,8 @@ export function ClareOwn({ mode }: { mode?: "xmas" } = {}) {
   const sfx = isClare ? "" : `-${preset!.id}`;
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
-  SECS = mode === "xmas" ? XMAS_SECTIONS : CLARE_SECTIONS;
-  POSTS = mode === "xmas" ? XMAS_POSTS : CLARE_SECTION_POSTS;
+  SECS = mode === "xmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : CLARE_SECTIONS;
+  POSTS = mode === "xmas" ? XMAS_POSTS : mode === "feral" ? FERAL_POSTS : CLARE_SECTION_POSTS;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -664,7 +664,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const make40 = async () => {
     if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const allTypes = [...POSTS];
-    const N = POSTS === XMAS_POSTS ? allTypes.length : 40;
+    const N = POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
     const byGroup = new Map<string, typeof allTypes>();
     for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
     const order: typeof allTypes = [];
@@ -692,7 +692,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
+      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, feral: t.feral ? true : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       patch(post.id, { busy: false, hook: t.xmas ? post.hook : data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
@@ -913,7 +913,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
-            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS === XMAS_POSTS ? POSTS.length : 40} posts (half block, half gradient)</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS !== CLARE_SECTION_POSTS ? POSTS.length : 40} posts (half block, half gradient)</>}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {SECS.map((g) => (
@@ -1049,7 +1049,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
                   <label className="space-y-1 block">
-                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && (["c", "p"] as const).map((v) => (
+                    <span className="text-white/60 flex items-center justify-between gap-2">Front slide <ClinicHookPicker client={preset?.name ?? "Clare Connolly Aesthetics"} treatment={t.label} area={area} onPick={(h) => patch(post.id, { hook: h })} />{t.xmas && !t.feral && (["c", "p"] as const).map((v) => (
                       <button key={v} type="button" onClick={() => patch(post.id, { hook: (v === "c" ? t.xmas!.c : t.xmas!.p).replace(/\[TOWN\]/g, area.trim() || "your town") })} className="text-xs rounded-full border border-white/20 px-3 py-1 text-white/80 hover:bg-white/10">{v === "c" ? "Colloquial" : "Professional"}</button>
                     ))}</span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.hook} onChange={(e) => patch(post.id, { hook: e.target.value })} />

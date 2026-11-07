@@ -24,6 +24,11 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },
 ];
 
+// Social Media Sister (Vanessa herself) has one tab only: Feral.
+const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
+];
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }) {
@@ -44,13 +49,15 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
     return () => { live = false; };
   }, [pattern]);
   const forced: ForcedClient = { pattern, treatmentIds: ids };
-  const current = TABS.find((t) => t.id === tab) ?? TABS[0];
+  const isSms = /social\s*media\s*sister/i.test(label);
+  const tabs = isSms ? SMS_TABS : TABS;
+  const current = tabs.find((t) => t.id === (isSms ? "feral" : tab)) ?? tabs[0];
   return (
     <div className="min-h-screen bg-[#161616] text-white">
       <div className="sticky top-0 z-30 bg-[#161616]/95 backdrop-blur border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 pt-2 text-xs text-white/50">{label}</div>
         <div className="max-w-6xl mx-auto px-4 py-2 flex gap-2 overflow-x-auto">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-sm border ${tab === t.id ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{t.label}</button>
           ))}
         </div>
