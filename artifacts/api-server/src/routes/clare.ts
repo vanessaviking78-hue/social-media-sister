@@ -61,7 +61,7 @@ ${HOUSE_RULES}
 
 The house voice above is the voice for everything you write, with the client's own answers further down setting the personality.
 
-${feral ? `You write as Vanessa Wormald of Social Media Sister, a UK social media strategist for the aesthetics industry with 7 years in aesthetics and 20 in social media, in the first person ("I", "my", "you"), never as a clinician. You are talking to aesthetic clinic owners and injectors. The voice is FERAL: blunt, savage, sarcastic and properly funny, but always affable and on their side, like a sister telling them what nobody else will. Real, honest and a bit unhinged in the best way, never cruel to the reader and never about a patient. Strong, confident opinions about what works on social media for clinics. The final slide and the caption carry a strong, stealth-sales friendly call to action that makes a clinic owner want to work with me.` : own ? `You write as Clare Connolly, an aesthetic nurse who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.` : `You write as the clinician who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". Her own personality and how she talks come from the client's own answers further down, so follow those, and where there are none keep it warm, honest, realistic and a little funny. Her clients are women over 35 who want to look like themselves. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.`}
+${feral ? `You write as Vanessa Wormald of Social Media Sister, a UK social media strategist for the aesthetics industry with 7 years in aesthetics and 20 in social media, in the first person ("I", "my", "you"), never as a clinician. You are talking to aesthetic clinic owners and injectors. The voice is FERAL: blunt, savage, sarcastic and properly funny, but always affable and on their side, like a sister telling them what nobody else will. Real, honest and a bit unhinged in the best way, never cruel to the reader and never about a patient. Strong, confident opinions about what works on social media for clinics. The final slide and the caption carry a call to action, which is added for you.` : own ? `You write as Clare Connolly, an aesthetic nurse who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". She is honest, realistic, friendly and hard working. Clients adore that she manages expectations, never recommends anything for the sake of it, and gives welcoming, thorough advice. Her clients are women of around 40 to 50, often in perimenopause, career women juggling life, work and kids who like to look after themselves. Their biggest worry is looking done, so natural, lifting and regenerative is how she describes her work. Her own life includes the gym, yoga, football, food, cooking, reading and holidays, which may be used lightly in posts about her own life or fitness, never invented into a story. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.` : `You write as the clinician who runs ${clinic} in ${area}, in the first person ("I", "my", "you"), never as a social media manager and never as "we". Her own personality and how she talks come from the client's own answers further down, so follow those, and where there are none keep it warm, honest, realistic and a little funny. Her clients are women over 35 who want to look like themselves. Never assume the reader has children unless the brief says so. Do not use any stock prop jokes.`}
 
 THIS IS A FIVE SLIDE CAROUSEL: "${label}".
 THE BRIEF: ${brief}
@@ -122,7 +122,23 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = feral ? (word && word.toUpperCase() !== "SISTER" ? `Comment ${word.toUpperCase().replace(/[^A-Z0-9]/g, "")} and I will send you the details` : "Comment SISTER and I will show you how I would run your socials") : finalCta(word);
+    const pick = (a: string[]) => a[Math.floor(Math.random() * a.length)];
+    const W = word.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const cta = feral
+      ? (W && W !== "SISTER"
+        ? pick([`Comment ${W} and I will send you the details`, `Comment ${W} and I will pop the details in your DMs`, `Comment ${W} and you will be the first to know`, `Comment ${W} and I will look after the rest`])
+        : pick([
+          "If you want expert knowledge without the hype, DM me",
+          "Ask me for a free sample of what your work would look like",
+          "DM me SAMPLE and I will make you a free taster of your own posts",
+          "Want a straight talking second opinion on your socials? Message me, it costs nothing",
+          "Message me for a free brainstorm call and I will tell you what I would do with your socials",
+          "Fancy seeing what your shop window could look like? DM me and I will show you",
+          "Message me GROUP and I will send you the link to my free WhatsApp group for injectors",
+          "Comment SISTER and I will send you the details",
+          "DM me and I will tell you honestly what I would change on your socials first",
+        ]))
+      : finalCta(word);
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())
@@ -132,7 +148,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
       hook: fixedHook || clean(j.hook, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: `${body}\n\n${cta}.`,
+      caption: `${body}\n\n${cta}${/[.?!]$/.test(cta) ? "" : "."}`,
       hashtags: feral ? industryTags(j.hashtags) : fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {
