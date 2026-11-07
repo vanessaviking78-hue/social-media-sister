@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
-type Prize = { name: string; price: string; worth?: string; until?: string };
+type Prize = { name: string; price: string; worth?: string; until?: string; localOnly?: boolean };
 
 // Change a price here and it changes on the wheel.
 // A prize with an "until" date drops off the wheel once that date has passed.
@@ -22,20 +22,51 @@ const ALL_PRIZES: Prize[] = [
   { name: "Free 30 Minute Call", price: "FREE" },
   { name: "Quarter Socials", price: "£750", worth: "£1,950" },
   { name: "Rebrand", price: "£99", worth: "£400" },
-  { name: "Half Price Content Day (Within 40 Miles of BD13)", price: "£750", worth: "£1,500" },
+  { name: "Half Price Content Day (Within 40 Miles of BD13)", price: "£750", worth: "£1,500", localOnly: true },
   { name: "AI Photo Shoot", price: "£99", worth: "£399" },
-  { name: "Free Coaching Session", price: "FREE", worth: "£250" },
+  { name: "Free Coaching Session", price: "FREE", worth: "£400" },
 ];
 
 const PINK = "#ff1493";
 const INK = "#111";
 
-async function sendToVanessa(email: string, prize: Prize, claimed: boolean) {
+// Content Day is only offered within this many miles of BD13.
+const HOME_OUTCODE = "BD13";
+const HOME_FALLBACK = { lat: 53.7625, lon: -1.8467 };
+const MAX_MILES = 40;
+
+function miles(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const R = 3958.8;
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+// Returns true only when we can confirm the postcode is within range.
+async function isNearHome(postcode: string): Promise<boolean> {
+  try {
+    const pc = encodeURIComponent(postcode.replace(/\s+/g, "").toUpperCase());
+    const [mine, home] = await Promise.all([
+      fetch(`https://api.postcodes.io/postcodes/${pc}`).then((r) => r.json()),
+      fetch(`https://api.postcodes.io/outcodes/${HOME_OUTCODE}`).then((r) => r.json()).catch(() => null),
+    ]);
+    if (!mine?.result) return false;
+    const from = { lat: mine.result.latitude, lon: mine.result.longitude };
+    const to = home?.result ? { lat: home.result.latitude, lon: home.result.longitude } : HOME_FALLBACK;
+    return miles(from, to) <= MAX_MILES;
+  } catch {
+    return false;
+  }
+}
+
+async function sendToVanessa(email: string, prize: Prize, claimed: boolean, postcode?: string) {
   try {
     await fetch(`${BASE}api/prize-spins`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, prize: prize.name, price: prize.price, claimed }),
+      body: JSON.stringify({ email, postcode, prize: prize.name, price: prize.price, claimed }),
     });
   } catch {
     /* never block the wheel */
@@ -44,6 +75,9 @@ async function sendToVanessa(email: string, prize: Prize, claimed: boolean) {
 
 export default function Prizes() {
   const [email, setEmail] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [nearby, setNearby] = useState(true);
+  const [checking, setChecking] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -54,7 +88,10 @@ export default function Prizes() {
     document.title = "Prizes · The CyberSuite";
   }, []);
 
-  const PRIZES = useMemo(() => ALL_PRIZES.filter((p) => !p.until || Date.now() < new Date(p.until).getTime()), []);
+  const PRIZES = useMemo(
+    () => ALL_PRIZES.filter((p) => (!p.until || Date.now() < new Date(p.until).getTime()) && (nearby || !p.localOnly)),
+    [nearby],
+  );
   const n = PRIZES.length;
   const slice = 360 / n;
 
@@ -78,17 +115,25 @@ export default function Prizes() {
     window.setTimeout(() => {
       setSpinning(false);
       setWon(PRIZES[index]);
-      void sendToVanessa(email, PRIZES[index], false);
+      void sendToVanessa(email, PRIZES[index], false, postcode);
     }, 5200);
   }
 
   function claim() {
     if (!won || claimed) return;
     setClaimed(true);
-    void sendToVanessa(email, won, true);
+    void sendToVanessa(email, won, true, postcode);
   }
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim());
+  const validPostcode = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/.test(postcode.trim());
+
+  async function unlock() {
+    setChecking(true);
+    setNearby(await isNearHome(postcode));
+    setChecking(false);
+    setUnlocked(true);
+  }
 
   return (
     <div
@@ -109,7 +154,7 @@ export default function Prizes() {
 
       {!unlocked ? (
         <div style={{ maxWidth: 360, margin: "0 auto" }}>
-          <p>Enter your email to unlock the wheel.</p>
+          <p>Enter your email and postcode to unlock the wheel.</p>
           <input
             type="email"
             value={email}
@@ -117,12 +162,19 @@ export default function Prizes() {
             placeholder="you@yourclinic.com"
             style={{ width: "100%", padding: 12, fontSize: 16, border: `2px solid ${INK}`, borderRadius: 8, boxSizing: "border-box" }}
           />
+          <input
+            type="text"
+            value={postcode}
+            onChange={(e) => setPostcode(e.target.value)}
+            placeholder="Postcode"
+            style={{ width: "100%", padding: 12, fontSize: 16, border: `2px solid ${INK}`, borderRadius: 8, boxSizing: "border-box", marginTop: 10 }}
+          />
           <button
-            disabled={!validEmail}
-            onClick={() => setUnlocked(true)}
-            style={{ marginTop: 12, width: "100%", padding: 14, fontSize: 16, fontWeight: 700, background: validEmail ? PINK : "#ccc", color: "#fff", border: "none", borderRadius: 8, cursor: validEmail ? "pointer" : "default" }}
+            disabled={!validEmail || !validPostcode || checking}
+            onClick={unlock}
+            style={{ marginTop: 12, width: "100%", padding: 14, fontSize: 16, fontWeight: 700, background: validEmail && validPostcode ? PINK : "#ccc", color: "#fff", border: "none", borderRadius: 8, cursor: validEmail && validPostcode ? "pointer" : "default" }}
           >
-            Unlock the Wheel
+            {checking ? "Checking..." : "Unlock the Wheel"}
           </button>
           <p style={{ fontSize: 13, opacity: 0.7 }}>No spam. Just prizes.</p>
         </div>

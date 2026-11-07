@@ -17,8 +17,9 @@ function getTransporter() {
 }
 
 router.post("/prize-spins", async (req: Request, res: Response) => {
-  const { email, prize, price, claimed } = req.body as {
+  const { email, postcode, prize, price, claimed } = req.body as {
     email?: string;
+    postcode?: string;
     prize?: string;
     price?: string;
     claimed?: boolean;
@@ -41,6 +42,7 @@ router.post("/prize-spins", async (req: Request, res: Response) => {
         claimed ? "Someone has claimed their prize." : "Someone has spun the wheel.",
         "",
         `Email: ${email.trim()}`,
+        `Postcode: ${postcode?.trim() || "-"}`,
         `Prize: ${prize.trim()}`,
         `Price: ${price?.trim() || "-"}`,
       ].join("\n"),
