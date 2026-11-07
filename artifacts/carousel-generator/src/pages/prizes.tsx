@@ -16,7 +16,7 @@ const PRIZES: Prize[] = [
   { name: "10 Free Carousel Posts", price: "FREE", worth: "£399" },
   { name: "Masterclass", price: "£199", worth: "£399" },
   { name: "6 Months Content Calendar", price: "£99" },
-  { name: "1 Month Socials", price: "£75" },
+  { name: "1 Month Socials", price: "£250", worth: "£650" },
   { name: "Free Strategy Call", price: "FREE" },
   { name: "Quarter Socials", price: "£99", worth: "£1,950" },
   { name: "Free Rebrand", price: "FREE", worth: "£400" },
