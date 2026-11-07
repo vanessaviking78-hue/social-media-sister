@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
@@ -112,7 +112,20 @@ function Builder({ id }: { id: string }) {
   const [logoUrl, setLogoUrl] = useState("");
   // Which logo the build uses: theirs (the default), one uploaded here, or none, which gives the clinic name as text.
   const [logoPick, setLogoPick] = useState<File | "none" | null>(null);
-  const logoPreview = useMemo(() => (logoPick instanceof File ? URL.createObjectURL(logoPick) : ""), [logoPick]);
+  // The preview is the logo after its background has been taken off, shown on a chequerboard so the see-through part is obvious.
+  const [logoPreview, setLogoPreview] = useState("");
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      if (logoPick === "none") { setLogoPreview(""); return; }
+      try {
+        const blob = logoPick instanceof File ? logoPick : req?.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)) : null;
+        const c = blob ? await makeClearLogo(blob) : null;
+        if (live) setLogoPreview(c ? c.toDataURL("image/png") : "");
+      } catch { if (live) setLogoPreview(""); }
+    })();
+    return () => { live = false; };
+  }, [logoPick, req?.logoUrl]);
   const [link, setLink] = useState("");
   const [code, setCode] = useState("");
   const [pickedHooks, setPickedHooks] = useState<string[]>([]);
@@ -659,8 +672,8 @@ function Builder({ id }: { id: string }) {
       <div className="flex gap-3 items-center flex-wrap text-sm">
         <span className="font-semibold">Logo:</span>
         {logoPick === "none" ? <span className="text-muted-foreground">None, the clinic name will be used as text</span>
-          : <img src={logoPreview || req.logoUrl || ""} alt="" className="h-12 max-w-40 object-contain rounded border bg-neutral-200 p-1" style={{ display: logoPreview || req.logoUrl ? undefined : "none" }} />}
-        {!logoPreview && !req.logoUrl && logoPick !== "none" && <span className="text-muted-foreground">They did not send one</span>}
+          : <img src={logoPreview} alt="" className="h-12 max-w-40 object-contain rounded border p-1" style={{ display: logoPreview ? undefined : "none", backgroundImage: "repeating-conic-gradient(#d4d4d4 0% 25%, #ffffff 0% 50%)", backgroundSize: "12px 12px" }} />}
+        {!logoPreview && logoPick !== "none" && <span className="text-muted-foreground">They did not send one</span>}
         <label className="px-2 py-1 rounded border cursor-pointer">Upload a logo<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setLogoPick(f); }} /></label>
         <button className="px-2 py-1 rounded border" onClick={() => setLogoPick("none")}>Remove their logo</button>
         {logoPick && <button className="px-2 py-1 rounded border" onClick={() => setLogoPick(null)}>Use theirs again</button>}
