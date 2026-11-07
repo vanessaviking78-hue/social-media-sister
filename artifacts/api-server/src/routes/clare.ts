@@ -45,7 +45,7 @@ function fiveTags(raw: unknown, area: string = AREA): string[] {
   return out.map((t) => `#${t}`);
 }
 
-function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = "", feral = false): string {
+function systemPrompt(brief: string, label: string, hasWord: boolean, glp1: boolean, clinic: string = CLINIC, area: string = AREA, own = true, fixedHook = "", feral = false, offers = false): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
@@ -69,7 +69,7 @@ WRITING RULES (non-negotiable)
 - British English throughout: colour, favourite, programme, organise. No Americanisms.
 - NEVER use negative parallelism ("It's not about X, it's about Y", "not just X but Y", "less X, more Y", "no X, no Y, just Z").
 - No AI patter. Banned: elevate, transform, unlock, journey, empower, game-changer, dive into, delve, navigate, seamless, effortless, next level, bespoke, holistic, fluff, faff, "fuss", "we've all been there". If it sounds like a chatbot or a LinkedIn post, write what a real person would say.
-- Compliance: no promises, no guarantees, no results, no before and after claims, no statistics, NO PRICES, no offers, no urgency. Never say a treatment is safe, painless or risk free. Never say it will fix or cure anything. Keep consultation and suitability first.
+- Compliance: ${offers ? "no guarantees, no income or results promises and no medical claims. The offers, facts and numbers given in the brief may be used, nothing else: never invent a price, discount, client, statistic or date. Urgency is allowed because this is a real one day sale." : "no promises, no guarantees, no results, no before and after claims, no statistics, NO PRICES, no offers, no urgency."} Never say a treatment is safe, painless or risk free. Never say it will fix or cure anything. Keep consultation and suitability first.
 - Never mention Botox, anti-wrinkle, wrinkles, lines, injectables, injections or jabs, and never mention a website or a link.${glp1 ? `
 - THIS POST ONLY PROMOTES A CONSULTATION WITH ME. Never say what the consultation is for, never say what I would suggest or what could be done, never mention benefits, results, treatments, weight loss, volume loss, face changes, medicines, drugs or GLP-1. Do not describe any treatment. Only invite her warmly, and with humour, to book a consultation. The reader should finish knowing only that I would love to see her.` : `
 - Never name any medication or drug of any kind.`}- No swearing. No exclamation marks. No emojis.
@@ -89,6 +89,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const note = str(b.note, 300);
     const fixedHook = str(b.fixedHook, 300);
     const feral = b.feral === true;
+    const offers = feral && b.offers === true;
     const who = str(b.clientName, 120);
     const area = str(b.area, 60) || AREA;
     const own = !who || /clare/i.test(who);
@@ -101,7 +102,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own, fixedHook, feral) + (feral ? "" : await clientProfileContext(own ? PROFILE_NAME : who)) },
+        { role: "system", content: systemPrompt(brief, label, !!word, glp1, clinic, area, own, fixedHook, feral, offers) + (feral ? "" : await clientProfileContext(own ? PROFILE_NAME : who)) },
         { role: "user", content: `Write the carousel "${label}" for ${clinic}.${note ? ` Extra from her: ${note}` : ""}` },
       ],
       temperature: 0.9,
@@ -112,7 +113,7 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = feral ? "Comment SISTER and I will show you how I would run your socials" : finalCta(word);
+    const cta = feral ? (word && word.toUpperCase() !== "SISTER" ? `Comment ${word.toUpperCase().replace(/[^A-Z0-9]/g, "")} and I will send you the details` : "Comment SISTER and I will show you how I would run your socials") : finalCta(word);
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())

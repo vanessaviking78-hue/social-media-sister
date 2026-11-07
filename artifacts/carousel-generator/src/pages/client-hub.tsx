@@ -27,6 +27,7 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
 // Social Media Sister (Vanessa herself) has one tab only: Feral.
 const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
+  { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -51,7 +52,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
   const forced: ForcedClient = { pattern, treatmentIds: ids };
   const isSms = /social\s*media\s*sister/i.test(label);
   const tabs = isSms ? SMS_TABS : TABS;
-  const current = tabs.find((t) => t.id === (isSms ? "feral" : tab)) ?? tabs[0];
+  const current = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div className="min-h-screen bg-[#161616] text-white">
       <div className="sticky top-0 z-30 bg-[#161616]/95 backdrop-blur border-b border-white/10">

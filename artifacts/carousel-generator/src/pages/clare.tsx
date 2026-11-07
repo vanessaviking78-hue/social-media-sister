@@ -13,7 +13,7 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, BF_SECTIONS, BF_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -242,7 +242,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS, ...FERAL_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...BF_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -448,7 +448,7 @@ const nextDay = (hhmm: string) => {
 };
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "feral" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "feral" | "blackfriday" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -457,8 +457,8 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "feral" } = {}) {
   const sfx = isClare ? "" : `-${preset!.id}`;
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
-  SECS = mode === "xmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : CLARE_SECTIONS;
-  POSTS = mode === "xmas" ? XMAS_POSTS : mode === "feral" ? FERAL_POSTS : CLARE_SECTION_POSTS;
+  SECS = mode === "xmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : CLARE_SECTIONS;
+  POSTS = mode === "xmas" ? XMAS_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : CLARE_SECTION_POSTS;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -651,10 +651,11 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     } catch { toast.error("Could not remove it"); }
   };
 
+  const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
   const initHook = (t: ClareSectionPost) => (t.xmas ? t.xmas.c.replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   const addPost = (t: ClareSectionPost) => {
     const start = posts.length * 5;
-    setPosts((l) => [{ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false }, ...l]);
+    setPosts((l) => [{ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: initWhen(t), busy: false, scheduling: false }, ...l]);
     setTypeId(t.id);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
@@ -670,7 +671,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const order: typeof allTypes = [];
     for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
       setMaking(`Writing post ${i + 1} of ${made.length}`);
@@ -692,7 +693,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, feral: t.feral ? true : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
+      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, feral: t.feral ? true : undefined, offers: t.bf ? true : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
       patch(post.id, { busy: false, hook: t.xmas ? post.hook : data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
@@ -801,6 +802,8 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
       try {
         const d = new Date(first);
         d.setDate(d.getDate() + i * 2);
+        const fixedDate = TYPE_BY_ID.get(post.typeId)?.date ? new Date(post.when) : null;
+        if (fixedDate) d.setTime(fixedDate.getTime());
         await send(post, mode, d.toISOString());
         if (mode === "bank") patch(post.id, { banked: true });
         done++;
