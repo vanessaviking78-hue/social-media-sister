@@ -17,7 +17,7 @@ import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import type { Fill, Focus, Slot } from "@/lib/basic-covers";
 import {
-  DEFAULT_FOCUS, FIELDS, H, T_PALETTE, T_PALETTE_LABELS, TREATMENTS, TREAT_BY_ID, W, drawCover, drawPhotoSlide, fillTreat,
+  DEFAULT_FOCUS, FIELDS, H, T_PALETTE, T_PALETTE_LABELS, TREATMENTS as ALL_TREATMENTS, TREAT_BY_ID, W, drawCover, drawPhotoSlide, fillTreat,
   type TPalette, type TextKey, type TreatId,
 } from "@/lib/treatment-designs";
 
@@ -359,6 +359,16 @@ export default function Treatments() {
   }, []);
 
   const forcedClient = useForcedClient();
+  // Only the designs for what this client ticked on the treatments form (all of them if they have not filled it in, or ticked no fillers).
+  const TREATMENTS = useMemo(() => {
+    const ticked = forcedClient?.treatmentIds;
+    if (!ticked?.length) return ALL_TREATMENTS;
+    const fillers = ticked.filter((i) => i.endsWith("-filler"));
+    if (!fillers.length) return ALL_TREATMENTS;
+    const own = new Set(fillers.map((i) => ({ "lip-filler": "lip", "cheek-filler": "cheek", "chin-filler": "chin", "jawline-filler": "jaw", "tear-trough-filler": "tear", "temple-filler": "temple", "nose-filler": "nose" } as Record<string, string>)[i]).filter(Boolean));
+    const some = ALL_TREATMENTS.filter((t) => own.has(t.id) || (["lower", "lines", "profile"].includes(t.id) && fillers.length > 0));
+    return some.length ? some : ALL_TREATMENTS;
+  }, [forcedClient]);
   useEffect(() => {
     if (!forcedClient || presetId || !presets.length) return;
     const p = presets.find((x) => forcedClient.pattern.test(x.name) && !/academy/i.test(x.name));

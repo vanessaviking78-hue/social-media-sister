@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral" | "blackfriday";
+export type ClareSectionId = `t-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral" | "blackfriday";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -85,6 +85,48 @@ const ALL_SECTION_POSTS: ClareSectionPost[] = [
 ];
 
 export const CLARE_SECTION_POSTS: ClareSectionPost[] = ALL_SECTION_POSTS.filter((t) => t.group !== "filler");
+
+// EVERY OTHER CLIENT: Make 40 follows the treatments they ticked on the treatments form. Skin boosters, polynucleotides and peels keep their hand written
+// posts when ticked, every other ticked treatment gets six posts of its own, and Keeping fit, GLP1, About me and Safety stay for everyone.
+import { U_TREATMENTS } from "./universal-treatments";
+const CUSTOM_IDS: Record<string, string[]> = { boosters: ["skin-boosters", "profhilo"], poly: ["polynucleotides"], peels: ["chemical-peels"] };
+const COVERED = new Set(Object.values(CUSTOM_IDS).flat());
+const TREAT_ANGLES: { n: string; label: (t: string) => string; brief: (t: string, about: string) => string }[] = [
+  { n: "1", label: (t) => `What ${t} actually is`, brief: (t, a) => `A clear, friendly explanation of ${t} in plain words. Background for the writer, never copied word for word: ${a}` },
+  { n: "2", label: (t) => `Who ${t} may suit`, brief: (t) => `A warm, honest post on who ${t} may suit and who it may not, and why a consultation comes first.` },
+  { n: "3", label: (t) => `What a ${t} consultation is like`, brief: (t) => `What a consultation about ${t} with me feels like: unhurried, honest, no pressure and a plan made around her. Never invent a story or client.` },
+  { n: "4", label: (t) => `Questions I get asked about ${t}`, brief: (t) => `A friendly, funny post answering the sort of questions women ask me about ${t}, said honestly. No promises and no results.` },
+  { n: "5", label: (t) => `Looking after your skin around ${t}`, brief: (t) => `General, friendly habits that help any skin around ${t}: water, sun care, sleep, gentle products. Nothing medical, no product names.` },
+  { n: "6", label: (t) => `Is ${t} right for you`, brief: (t) => `Why a consultation comes first for ${t}, who it may suit and who it may not, said honestly and without pressure.` },
+];
+const TREAT_NOTE = " Honest, realistic and friendly, in plain words, with a dry, warm touch of humour. Natural looking is the whole point. No promises, no results, no prices. A consultation always comes first. Never invent a name, qualification, year, number, client or story.";
+const TREAT_SECTIONS_ALL: { id: ClareSectionId; label: string; word: string; tid: string }[] = U_TREATMENTS.filter((u) => !COVERED.has(u.id)).map((u) => ({ id: `t-${u.id}` as ClareSectionId, label: u.name, word: u.name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20), tid: u.id }));
+const TREAT_POSTS_ALL: ClareSectionPost[] = TREAT_SECTIONS_ALL.flatMap((sec) => {
+  const u = U_TREATMENTS.find((x) => x.id === sec.tid)!;
+  const nm = (u.mid ?? u.name.toLowerCase());
+  return TREAT_ANGLES.map((a) => ({ id: `tx-${sec.tid}-${a.n}`, group: sec.id, label: a.label(nm), word: sec.word, brief: a.brief(nm, u.about) + TREAT_NOTE }));
+});
+export const ALL_TREAT_POSTS = TREAT_POSTS_ALL;
+const FOLLOW_CACHE = new Map<string, { sections: typeof CLARE_SECTIONS; posts: ClareSectionPost[] }>();
+export function sectionsForTreatments(ids?: string[]): { sections: typeof CLARE_SECTIONS; posts: ClareSectionPost[] } {
+  if (!ids?.length) return { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS };
+  const key = [...ids].sort().join(",");
+  const hit = FOLLOW_CACHE.get(key);
+  if (hit) return hit;
+  const has = (g: string) => (CUSTOM_IDS[g] ?? []).some((i) => ids.includes(i));
+  const gen = TREAT_SECTIONS_ALL.filter((x) => ids.includes(x.tid));
+  const sections: typeof CLARE_SECTIONS = [];
+  for (const sec of CLARE_SECTIONS) {
+    if (CUSTOM_IDS[sec.id] && !has(sec.id)) continue;
+    if (sec.id === "fit") sections.push(...gen.map(({ id, label, word }) => ({ id, label, word })));
+    sections.push(sec);
+  }
+  const order = new Map(sections.map((x, i) => [x.id, i]));
+  const posts = [...CLARE_SECTION_POSTS, ...TREAT_POSTS_ALL].filter((x) => order.has(x.group)).sort((a, b) => (order.get(a.group)! - order.get(b.group)!));
+  const out = { sections, posts };
+  FOLLOW_CACHE.set(key, out);
+  return out;
+}
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
 

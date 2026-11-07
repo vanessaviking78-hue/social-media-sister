@@ -141,7 +141,9 @@ export function ClientInfoByPattern({ pattern }: { pattern: RegExp }) {
 const UniversalPage = lazy(() => import("./universal"));
 export function FillersTab() {
   const forced = useForcedClient();
-  const ids = U_TREATMENTS.filter((t) => t.group === "fillers").map((t) => t.id);
+  const all = U_TREATMENTS.filter((t) => t.group === "fillers").map((t) => t.id);
+  const mine = all.filter((i) => forced?.treatmentIds?.includes(i));
+  const ids = mine.length ? mine : all; // their ticked fillers, or every filler if they have not ticked any
   return (
     <ForcedClientContext.Provider value={{ pattern: forced?.pattern ?? /$^/, treatmentIds: ids }}>
       <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}><UniversalPage /></Suspense>
