@@ -447,6 +447,20 @@ const nextDay = (hhmm: string) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${hhmm || "09:00"}`;
 };
 
+// A client's own branding colours, taken straight from their preset: their page colour for the wash, their accent colour for the headline,
+// and a text colour that reads on it. Their logo comes from the same preset.
+const isHexColour = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
+const lightness = (hex: string) => { const n = parseInt(hex.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?: string } | null): Look {
+  const wash = isHexColour(p?.pageColor) ? p!.pageColor! : isHexColour(p?.overlayColor) ? p!.overlayColor! : DEFAULT_LOOK.wash;
+  const dark = lightness(wash) < 0.55;
+  const text = dark ? "#ffffff" : "#1a1a1a";
+  const accent = isHexColour(p?.accentColor) ? p!.accentColor! : "";
+  // only use the accent for the headline when it stands apart from the wash
+  const headline = accent && Math.abs(lightness(accent) - lightness(wash)) > 0.25 ? accent : text;
+  return { ...DEFAULT_LOOK, wash, text, headline };
+}
+
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
 export function ClareOwn({ mode }: { mode?: "xmas" | "feral" | "blackfriday" } = {}) {
   const { presets } = usePresets();
@@ -495,7 +509,17 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
   const [fonts, setFonts] = useState<Fonts>({ head: "Hatcher", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
-  const [look, setLook] = useState<Look>(() => { try { const r = localStorage.getItem(LOOK_KEY); if (r) return normLook({ ...DEFAULT_LOOK, ...JSON.parse(r) }); } catch { /* ignore */ } return DEFAULT_LOOK; });
+  const [look, setLook] = useState<Look>(() => {
+    try {
+      const r = localStorage.getItem(LOOK_KEY);
+      if (r) {
+        const saved = { ...DEFAULT_LOOK, ...JSON.parse(r) } as Look;
+        // an untouched default look still takes the client's own colours
+        if (JSON.stringify(saved) !== JSON.stringify(DEFAULT_LOOK) || CLINIC_KEY === "clare") return normLook(saved);
+      }
+    } catch { /* ignore */ }
+    return CLINIC_KEY === "clare" ? DEFAULT_LOOK : brandLook(preset);
+  });
   useEffect(() => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* ignore */ } }, [look]);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);

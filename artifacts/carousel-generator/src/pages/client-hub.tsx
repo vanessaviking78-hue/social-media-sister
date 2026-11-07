@@ -50,7 +50,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
     return () => { live = false; };
   }, [pattern]);
   const forced: ForcedClient = { pattern, treatmentIds: ids };
-  const isSms = /social\s*media\s*sister/i.test(label);
+  const isSms = /social\s*media\s*sis|very\s*vanessa|vanessa|^sms$/i.test(label);
   const tabs = isSms ? SMS_TABS : TABS;
   const current = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
