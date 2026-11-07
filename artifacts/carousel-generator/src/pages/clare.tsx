@@ -716,6 +716,30 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     return out;
   };
 
+  // The same slides as stories, 1080 x 1920: the slide sits full width in the middle over a softly blurred copy of itself.
+  const storyOf = (src: HTMLCanvasElement): HTMLCanvasElement => {
+    const c = document.createElement("canvas");
+    c.width = 1080; c.height = 1920;
+    const x = c.getContext("2d")!;
+    const sc = 1920 / src.height;
+    x.filter = "blur(36px)";
+    x.drawImage(src, (1080 - src.width * sc) / 2, 0, src.width * sc, 1920);
+    x.filter = "none";
+    x.fillStyle = "rgba(0,0,0,0.25)";
+    x.fillRect(0, 0, 1080, 1920);
+    x.drawImage(src, 0, Math.round((1920 - src.height * (1080 / src.width)) / 2), 1080, Math.round(src.height * (1080 / src.width)));
+    return c;
+  };
+  const downloadStories = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    const zip = new JSZip();
+    const cs = await render(post);
+    for (let i = 0; i < cs.length; i++) {
+      const blob: Blob | null = await new Promise((res) => storyOf(cs[i]).toBlob(res, "image/png"));
+      if (blob) zip.file(`story-${i + 1}.png`, blob);
+    }
+    saveAs(await zip.generateAsync({ type: "blob" }), `story-${t.id}.zip`);
+  };
   const download = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
     const zip = new JSZip();
@@ -988,6 +1012,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                     </Button>
                     <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    {t.feral && <Button size="sm" variant="secondary" onClick={() => downloadStories(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Stories 1080 x 1920</Button>}
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
                 </div>

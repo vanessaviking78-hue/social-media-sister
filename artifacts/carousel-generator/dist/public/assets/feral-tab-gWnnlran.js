@@ -1,0 +1,1 @@
+import{j as r,C as a}from"./index-tl0KK-LB.js";function t(){return r.jsx(a,{mode:"feral"})}export{t as default};
