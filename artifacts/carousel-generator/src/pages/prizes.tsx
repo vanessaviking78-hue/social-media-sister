@@ -8,7 +8,7 @@ type Prize = { name: string; price: string; worth?: string };
 const PRIZES: Prize[] = [
   { name: "1 Month Full Socials", price: "£199", worth: "£650" },
   { name: "Free Strategy Call", price: "FREE" },
-  { name: "Quarter Full Socials", price: "£500", worth: "£1,950" },
+  { name: "Quarter Full Socials", price: "£950", worth: "£1,950" },
   { name: "Bundle of Business Tools", price: "£17", worth: "£997" },
   { name: "Free Week Trial Full Socials", price: "FREE" },
   { name: "Half Price Podcast Episode", price: "£250", worth: "£500" },
