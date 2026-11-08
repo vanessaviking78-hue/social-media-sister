@@ -92,6 +92,7 @@ import DmAutomations from "@/pages/dm-automations";
 import Intake from "@/pages/intake";
 import Privacy from "@/pages/privacy";
 import Prizes from "@/pages/prizes";
+import JoinGroup from "@/pages/joingroup";
 import Terms from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import Splash from "@/pages/splash";
@@ -344,6 +345,7 @@ function AppContent() {
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
   const [isPrivacy] = useRoute("/privacy");
   const [isPrizes] = useRoute("/prizes");
+  const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
   const [isBulkTemplates] = useRoute("/bulk-import-templates");
@@ -448,6 +450,9 @@ function AppContent() {
   }
   if (isPrizes) {
     return <Prizes />;
+  }
+  if (isJoinGroup) {
+    return <JoinGroup />;
   }
   if (isTerms) {
     return <Terms />;
