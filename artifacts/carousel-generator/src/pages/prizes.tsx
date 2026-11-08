@@ -25,6 +25,10 @@ const ALL_PRIZES: Prize[] = [
   { name: "Free Coaching Session", price: "FREE", worth: "£400" },
 ];
 
+// The wheel closes at 10pm UK time on Sunday 8 November 2026 (UK is on GMT, so 22:00 UTC).
+const CLOSES_AT = new Date("2026-11-08T22:00:00Z").getTime();
+const CLOSED_MESSAGE = "Next week's prizes will be loaded on Monday";
+
 const PINK = "#ff1493";
 const INK = "#111";
 
@@ -76,6 +80,13 @@ export default function Prizes() {
   const [postcode, setPostcode] = useState("");
   const [nearby, setNearby] = useState(true);
   const [checking, setChecking] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  const closed = now >= CLOSES_AT;
+
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(t);
+  }, []);
   const [unlocked, setUnlocked] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -102,7 +113,10 @@ export default function Prizes() {
   );
 
   function spin() {
-    if (spinning) return;
+    if (spinning || Date.now() >= CLOSES_AT) {
+      setNow(Date.now());
+      return;
+    }
     setWon(null);
     setClaimed(false);
     setSpinning(true);
@@ -237,9 +251,12 @@ export default function Prizes() {
             </div>
           </div>
 
+          {closed && (
+            <p style={{ margin: "24px auto 0", maxWidth: 380, fontSize: 20, fontWeight: 800, color: PINK }}>{CLOSED_MESSAGE}</p>
+          )}
           <button
             onClick={spin}
-            disabled={spinning}
+            disabled={spinning || closed}
             style={{ marginTop: 28, padding: "14px 36px", fontSize: 18, fontWeight: 800, background: INK, color: "#fff", border: `3px solid ${PINK}`, borderRadius: 999, cursor: spinning ? "default" : "pointer" }}
           >
             {spinning ? "Spinning..." : won ? "Spin Again" : "SPIN THE WHEEL"}
