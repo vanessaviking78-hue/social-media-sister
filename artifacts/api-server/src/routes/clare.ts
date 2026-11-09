@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta, isFinalCta } from "../lib/hookBank";
+import { matchedCta, withCta, REPLY_WORD_RULE } from "../lib/hookBank";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, one carousel at a time.
 const router: IRouter = Router();
@@ -70,7 +70,8 @@ THE SLIDES
 - "hook": slide 1, the cover line. ${fixedHook ? `It is already written, return it EXACTLY as given: ${fixedHook}` : "Maximum 12 words."} It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic.
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
-- "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be a closing engagement line, which is added for you, so do not write it."}
+- "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be a closing engagement line, which is added for you, so do not write it."} The caption must never end on a question.
+- ${REPLY_WORD_RULE}
 - "hashtags": exactly 5, lower case, no spaces. ${feral ? "Each is an aesthetic marketing or aesthetic nurse tag, for example aestheticmarketing, aestheticnurse, aestheticsocialmedia, aestheticclinicmarketing, aestheticnursesuk. No area tags." : `Each one joins ${area} to a beauty, skin or midlife theme. Every tag contains ${slug(area)}.`}
 
 WRITING RULES (non-negotiable)
@@ -85,7 +86,7 @@ WRITING RULES (non-negotiable)
 - Never invent a client, a story, a quote, a name, a qualification, a year or a number. Talk about how I work in general terms I could truthfully say.
 
 Return JSON only, in exactly this shape:
-{ "hook": "...", "slide2": "...", "slide3": "...", "slide4": "...", "cta": "", "caption": "...", "hashtags": ["5 tags"] }`;
+{ "hook": "...", "slide2": "...", "slide3": "...", "slide4": "...", "cta": "", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"] }`;
 }
 
 router.post("/clare/copy", async (req: Request, res: Response) => {
@@ -138,17 +139,13 @@ router.post("/clare/copy", async (req: Request, res: Response) => {
           "Comment SISTER and I will send you the details",
           "DM me and I will tell you honestly what I would change on your socials first",
         ]))
-      : finalCta(word);
-    const body = clean(j.caption, 900)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l && !isFinalCta(l))
-      .join("\n");
+      : matchedCta(word, j.replyWord, label);
+    const body = feral ? clean(j.caption, 900).split("\n").map((l) => l.trim()).filter(Boolean).join("\n") : withCta(clean(j.caption, 900), cta);
     res.json({
       hook: fixedHook || clean(j.hook, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: `${body}\n\n${cta}${/[.?!]$/.test(cta) ? "" : "."}`,
+      caption: feral ? `${body}\n\n${cta}${/[.?!]$/.test(cta) ? "" : "."}` : body,
       hashtags: feral ? industryTags(j.hashtags) : fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {

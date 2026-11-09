@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta } from "../lib/hookBank";
+import { matchedCta, withCta, CAPTION_END_RULE, REPLY_WORD_RULE } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -84,7 +84,8 @@ THE SLIDES (each carries on from the one before, same playful voice as the cover
 - "slide4": what to ask any practitioner before booking (training, how they handle the unexpected, how long the consultation is), framed as questions she is allowed to ask me. EXACTLY three sentences, friendly but informative.
 - "slide5": the landing. Warm, a touch funny, invites a conversation with no pressure. EXACTLY three sentences, friendly but informative.
 - "cta": leave this as an empty string. The last slide is set for you.
-- "caption": the Instagram caption, max 110 words. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not say. It MUST end with this exact final line on its own: Drop me a DM to see if you're a good fit for this
+- ${REPLY_WORD_RULE}
+- "caption": the Instagram caption, max 110 words. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not say. ${CAPTION_END_RULE}
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.
 
 WRITING RULES (non-negotiable)
@@ -98,7 +99,7 @@ WRITING RULES (non-negotiable)
 - Short punchy lines, the odd one word line, plain conversational words. No exclamation marks. No emojis.
 
 Return JSON only, in exactly this shape:
-{ "slide2": "...", "slide3": "...", "slide4": "...", "slide5": "...", "cta": "...", "caption": "...", "hashtags": ["5 tags"] }`;
+{ "slide2": "...", "slide3": "...", "slide4": "...", "slide5": "...", "cta": "...", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"] }`;
 }
 
 const CLOSE = "Drop me a DM to see if you're a good fit for this";
@@ -144,19 +145,14 @@ router.post("/treatments/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    let caption = clean(j.caption, 900);
-    const lines = caption.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (!lines.length || lines[lines.length - 1].replace(/\.$/, "").toLowerCase() !== CLOSE.toLowerCase()) {
-      caption = `${lines.filter((l) => l.replace(/\.$/, "").toLowerCase() !== CLOSE.toLowerCase()).join("\n")}\n\n${CLOSE}`;
-    } else {
-      caption = `${lines.slice(0, -1).join("\n")}\n\n${CLOSE}`;
-    }
+    const ctaLine = matchedCta("ctaTreatment" in b ? b.ctaTreatment : b.treatment, j.replyWord, "s");
+    const caption = withCta(clean(j.caption, 900), ctaLine);
     res.json({
       slide2: clean(j.slide2, 320),
       slide3: clean(j.slide3, 280),
       slide4: clean(j.slide4, 280),
       slide5: clean(j.slide5, 200),
-      cta: finalCta("ctaTreatment" in b ? b.ctaTreatment : b.treatment),
+      cta: ctaLine,
       caption,
       hashtags: fiveTags(j.hashtags, notes.area),
     });

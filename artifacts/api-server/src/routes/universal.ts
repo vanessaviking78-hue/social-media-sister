@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
-import { finalCta, isFinalCta } from "../lib/hookBank";
+import { matchedCta, withCta, CAPTION_END_RULE } from "../lib/hookBank";
 import { clientProfileContext } from "./client-profiles";
 
 // UNIVERSAL: one tool for every client, six posts per treatment. The headline is the treatment name or the
@@ -64,7 +64,7 @@ THE BRIEF: ${brief}
 THE WRITING
 - "subtitle": the line under the headline on slide 1. ${intro ? "ONE short sentence, maximum 14 words, quirky and warm, that explains what the treatment is in plain words." : "ONE short sentence, maximum 14 words, quirky and warm, that adds a wink to the headline."} It should make a woman over 35 smile and keep reading. Never a question. Never a pun on someone's looks or age.
 - "slide2", "slide3", "slide4": each is EXACTLY three short sentences, friendly but informative, each carrying on from the one before. Plain everyday words, a little humour where it fits.
-- "caption": the Instagram caption, maximum 120 words. A first line that holds attention, short lines, a little humour and personality, adding something the slides do not say. It ends on a question that relates to the post. Do not write the call to action, it is added for you.
+- "caption": the Instagram caption, maximum 120 words. A first line that holds attention, short lines, a little humour and personality, adding something the slides do not say. ${CAPTION_END_RULE}
 - "hashtags": exactly 5, lower case, no spaces${area ? `, each joining ${area} to a beauty, mums or skin theme` : ""}.
 
 WRITING RULES (non-negotiable)
@@ -111,17 +111,12 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(treatment, area, headline);
-    const body = clean(j.caption, 900)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l && !isFinalCta(l))
-      .join("\n");
+    const cta = matchedCta(treatment, undefined, headline);
     res.json({
       subtitle: clean(j.subtitle, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: `${body}\n\n${cta}`,
+      caption: withCta(clean(j.caption, 900), cta),
       hashtags: fiveTags(j.hashtags, area),
     });
   } catch (err: unknown) {

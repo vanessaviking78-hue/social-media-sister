@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta } from "../lib/hookBank";
+import { matchedCta, withCta, CAPTION_END_RULE, REPLY_WORD_RULE } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -76,10 +76,11 @@ ${n.onImage}
 ${n.fresh ? `This cover is being written fresh. Write a new cover headline (a short sentence of 4 to 12 words, one thought) and a small line under it (max 12 words) in the same quiet style and on the same idea as the cover above, but in different words.
 ` : ""}SLIDES 2 AND 3. Carry on from the cover so the three read as one thought that builds, in my voice, on the same idea. Each is EXACTLY three short sentences, friendly but informative, max 40 words, plain conversational words, written to sit over a photograph. Slide 2 deepens the cover. Slide 3 lands it with something warm and true. Never promise a result and never say a treatment is needed.
 THE CTA: leave "cta" as an empty string. The last slide is set for you.
+${REPLY_WORD_RULE}
 
 WHO SHE IS TALKING TO: ${n.audience || "women aged 35 plus who want honesty, humour and nobody pushing them"}. Use the consumer psychology of women over 35: they want to feel seen, they save what sounds like a real person, they are tired of being sold to. Stealth sales only: she quietly thinks of ${who} as the person she wants to book a conversation with. Treatments are not the point, the woman is.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}
-CAPTION: max 100 words. It must ADD to the slides, never repeat them word for word. The first line is a hook that lands inside 3 seconds, specific and human, never a rhetorical question. Then short lines. It ends with ONE closing question that is easy and fun to answer in the comments. Never Comment WORD, never DM me, never a website.
+CAPTION: max 100 words. It must ADD to the slides, never repeat them word for word. The first line is a hook that lands inside 3 seconds, specific and human, never a rhetorical question. Then short lines. ${CAPTION_END_RULE} Never a website.
 Hashtags: exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme. Every tag must contain the town or city.
 
 WRITING RULES (non-negotiable)
@@ -92,7 +93,7 @@ WRITING RULES (non-negotiable)
 - Plain conversational words. No exclamation marks. No emojis.
 
 Return JSON only, in exactly this shape:
-{ "slide2": "...", "slide3": "...", "cta": "...", "caption": "...", "hashtags": ["5 tags"]${n.fresh ? `, "cover": { "head": "...", "sub": "..." }` : ""} }`;
+{ "slide2": "...", "slide3": "...", "cta": "...", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"]${n.fresh ? `, "cover": { "head": "...", "sub": "..." }` : ""} }`;
 }
 
 router.post("/lux/copy", async (req: Request, res: Response) => {
@@ -136,13 +137,13 @@ router.post("/lux/copy", async (req: Request, res: Response) => {
     const j = JSON.parse(raw);
     const slide2 = clean(j.slide2, 220);
     const slide3 = clean(j.slide3, 220);
-    const cta = finalCta(b.ctaTreatment);
+    const cta = matchedCta(b.ctaTreatment, j.replyWord, "s");
     if (!slide2 || !slide3 || !cta) throw new Error("The slide words came back incomplete, try again");
     const cover = notes.fresh && j.cover && typeof j.cover === "object"
       ? { head: clean((j.cover as Record<string, unknown>).head, 140), sub: clean((j.cover as Record<string, unknown>).sub, 90) }
       : undefined;
     if (notes.fresh && (!cover || !cover.head)) throw new Error("The cover words came back incomplete, try again");
-    res.json({ cover, slide2, slide3, cta, caption: clean(j.caption, 900), hashtags: fiveTags(j.hashtags, notes.area) });
+    res.json({ cover, slide2, slide3, cta, caption: withCta(clean(j.caption, 900), cta), hashtags: fiveTags(j.hashtags, notes.area) });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "LUX copy failed";
     req.log?.error({ err }, "lux: copy error");

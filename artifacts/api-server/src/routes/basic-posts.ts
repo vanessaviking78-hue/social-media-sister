@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta } from "../lib/hookBank";
+import { matchedCta, withCta, CAPTION_END_RULE, REPLY_WORD_RULE } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -89,7 +89,8 @@ SLIDES 2 AND 3 sit over a full bleed photo, so they must be short enough to read
 - "slide2": continues straight on from the cover. It picks up the idea the cover started and goes one level deeper, with a small, believable, specific detail from the treatment room or consultation chair, said in plain words. EXACTLY three sentences, friendly but informative.
 - "slide3": lands the point with warmth and a little humour, so she feels she already knows ${who}. EXACTLY three sentences, friendly but informative.
 - "cta": leave this as an empty string. The last slide is set for you.
-- "caption": the Instagram caption, max 110 words. The first line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not already say. It ends with ONE closing question relating to the post (it can be the cta question or a close cousin of it).
+- ${REPLY_WORD_RULE}
+- "caption": the Instagram caption, max 110 words. The first line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not already say. ${CAPTION_END_RULE}
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.
 
 WRITING RULES (non-negotiable)
@@ -102,7 +103,7 @@ WRITING RULES (non-negotiable)
 - Short punchy lines, the odd one word line, plain conversational words. No exclamation marks. No emojis.
 
 Return JSON only, in exactly this shape:
-{ ${n.writeCover ? `"cover": { ${n.fields.map((f) => `"${f.key}": "..."`).join(", ")} }, ` : ""}"slide2": "...", "slide3": "...", "cta": "...", "caption": "...", "hashtags": ["5 tags"] }`;
+{ ${n.writeCover ? `"cover": { ${n.fields.map((f) => `"${f.key}": "..."`).join(", ")} }, ` : ""}"slide2": "...", "slide3": "...", "cta": "...", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"] }`;
 }
 
 router.post("/basic-posts/copy", async (req: Request, res: Response) => {
@@ -158,8 +159,8 @@ router.post("/basic-posts/copy", async (req: Request, res: Response) => {
     const out: Record<string, unknown> = {
       slide2: clean(j.slide2, 320),
       slide3: clean(j.slide3, 280),
-      cta: finalCta(b.ctaTreatment),
-      caption: clean(j.caption, 900),
+      cta: matchedCta(b.ctaTreatment, j.replyWord, "s"),
+      caption: withCta(clean(j.caption, 900), matchedCta(b.ctaTreatment, j.replyWord, "s")),
       hashtags: fiveTags(j.hashtags, notes.area),
     };
     if (notes.writeCover && j.cover && typeof j.cover === "object") {

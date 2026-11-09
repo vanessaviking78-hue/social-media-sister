@@ -2,7 +2,7 @@ import { Router, type IRouter, type NextFunction, type Request, type Response } 
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta, isFinalCta } from "../lib/hookBank";
+import { matchedCta, withCta, REPLY_WORD_RULE } from "../lib/hookBank";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { freeSamplesTable } from "@workspace/db/schema";
@@ -63,6 +63,7 @@ THE SLIDES
 - "hook": slide 1, the cover line. Maximum 12 words. It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic.
 - "slide2", "slide3", "slide4": each is EXACTLY three sentences, friendly but informative, each carrying on from the one before.
 - The last slide is set for you, leave "cta" as an empty string.
+- ${REPLY_WORD_RULE}
 - "caption": the Instagram caption, maximum 110 words. First line is a hook that lands inside 3 seconds. Short punchy lines. It adds something the slides do not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line must be the comment line, which is added for you, so do not write it." : "Its final line must be the line a closing engagement line, which is added for you, so do not write it."}
 - "hashtags": exactly 5, lower case, no spaces, each one joins Birmingham to a beauty, mums or skin theme. Every tag contains birmingham.
 
@@ -79,7 +80,7 @@ WRITING RULES (non-negotiable)
 - Be kind about bodies, always. The patient's biggest worry is showing her body, so every line should make her feel safe and unjudged.
 
 Return JSON only, in exactly this shape:
-{ "hook": "...", "slide2": "...", "slide3": "...", "slide4": "...", "cta": "", "caption": "...", "hashtags": ["5 tags"] }`;
+{ "hook": "...", "slide2": "...", "slide3": "...", "slide4": "...", "cta": "", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"] }`;
 }
 
 router.post("/no1/copy", async (req: Request, res: Response) => {
@@ -108,17 +109,13 @@ router.post("/no1/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(word);
-    const body = clean(j.caption, 900)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l && !isFinalCta(l))
-      .join("\n");
+    const cta = matchedCta(word, j.replyWord, "s");
+    const capt = withCta(clean(j.caption, 900), cta);
     res.json({
       hook: clean(j.hook, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: `${body}\n\n${cta}.`,
+      caption: capt,
       hashtags: fiveTags(j.hashtags),
     });
   } catch (err: unknown) {
@@ -147,6 +144,7 @@ THE IMAGE
 - "hook": the words on the picture. ${isTweet ? "It is the tweet itself, one or two short sentences, maximum 30 words, blunt and shareable." : "Maximum 14 words. It must stop a woman over 35 scrolling. Specific, relatable or funny, never generic."}
 - "line": ${isTweet ? "leave this as an empty string" : "one short supporting sentence for under the headline, maximum 22 words, friendly and plain"}.
 - "caption": the Instagram caption, maximum 110 words. First line lands inside 3 seconds. Short punchy lines. It adds something the picture does not say. At least one genuinely funny line, dry and warm. ${hasWord ? "Its final line is the comment line, which is added for you, so do not write it." : "Its final line is a closing engagement line, which is added for you, so do not write it."}
+- ${REPLY_WORD_RULE}
 - "hashtags": exactly 5, lower case, no spaces, each one joins Birmingham to a beauty, mums or skin theme. Every tag contains birmingham.
 
 WRITING RULES (non-negotiable)
@@ -162,7 +160,7 @@ WRITING RULES (non-negotiable)
 - Be kind about bodies, always. Every line should make her feel safe and unjudged.
 
 Return JSON only, in exactly this shape:
-{ "hook": "...", "line": "...", "caption": "...", "hashtags": ["5 tags"] }`;
+{ "hook": "...", "line": "...", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"] }`;
 }
 
 router.post("/no1/static-copy", async (req: Request, res: Response) => {
@@ -192,16 +190,12 @@ router.post("/no1/static-copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(word);
-    const body = clean(j.caption, 900)
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l && !isFinalCta(l))
-      .join("\n");
+    const cta = matchedCta(word, j.replyWord, "s");
+    const capt = withCta(clean(j.caption, 900), cta);
     res.json({
       hook: clean(j.hook, 200),
       line: isTweet ? "" : clean(j.line, 220),
-      caption: `${body}\n\n${cta}.`,
+      caption: capt,
       hashtags: fiveTags(j.hashtags),
     });
   } catch (err: unknown) {

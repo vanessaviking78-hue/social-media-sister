@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental, ACADEMY_RULES, isAcademy } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
-import { finalCta } from "../lib/hookBank";
+import { matchedCta, withCta, CAPTION_END_RULE, REPLY_WORD_RULE } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -75,7 +75,8 @@ Return these keys:
 - "slide2": carries on from the cover with the funny, honest point behind it, a believable specific detail, plain words. EXACTLY three sentences, friendly but informative, 30 to 48 words in all.
 - "slide3": the landing. Warm, a touch funny, a gentle invitation to a conversation with no pressure. EXACTLY three sentences, friendly but informative, 30 to 48 words in all.
 - "cta": leave this as an empty string. The last slide is set for you.
-- "caption": the Instagram caption, max 110 words, told as a short story from my point of view. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never a rhetorical question. Short punchy lines. It adds something the slides do not say. It MUST end with one engaging question on its own final line that is easy to answer in the comments.
+- ${REPLY_WORD_RULE}
+- "caption": the Instagram caption, max 110 words, told as a short story from my point of view. First line is a hook that lands inside 3 seconds, specific and relatable or funny, never a rhetorical question. Short punchy lines. It adds something the slides do not say. ${CAPTION_END_RULE}
 - "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.${freshBlock}
 
 WRITING RULES (non-negotiable)
@@ -89,7 +90,7 @@ WRITING RULES (non-negotiable)
 - Short punchy lines, plain conversational words. No exclamation marks. No emojis.
 
 Return JSON only, in exactly this shape:
-{ "slide2": "...", "slide3": "...", "cta": "...", "caption": "...", "hashtags": ["5 tags"]${n.fresh ? ', "cover": { ... }' : ""} }`;
+{ "slide2": "...", "slide3": "...", "cta": "...", "replyWord": "...", "caption": "...", "hashtags": ["5 tags"]${n.fresh ? ', "cover": { ... }' : ""} }`;
 }
 
 router.post("/unique/copy", async (req: Request, res: Response) => {
@@ -146,8 +147,8 @@ router.post("/unique/copy", async (req: Request, res: Response) => {
     res.json({
       slide2: clean(j.slide2, 300),
       slide3: clean(j.slide3, 200),
-      cta: finalCta(b.ctaTreatment),
-      caption: clean(j.caption, 900),
+      cta: matchedCta(b.ctaTreatment, j.replyWord, "s"),
+      caption: withCta(clean(j.caption, 900), matchedCta(b.ctaTreatment, j.replyWord, "s")),
       hashtags: fiveTags(j.hashtags, notes.area),
       ...(cover ? { cover } : {}),
     });

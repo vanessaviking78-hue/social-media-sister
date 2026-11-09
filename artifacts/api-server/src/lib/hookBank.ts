@@ -115,3 +115,39 @@ export function finalCta(treatment: unknown, area?: unknown, seed?: unknown): st
   if (t && TREATMENT_CTA_BANK_LIVE) return bankCta(t, String(area ?? ""), String(seed ?? ""));
   return t ? `Comment ${t.toUpperCase()} for more info` : OTHER_CTAS[Math.floor(Math.random() * OTHER_CTAS.length)];
 }
+
+
+// MATCHED CTA: the last slide and the very end of the caption carry one reply word call to action that fits the post.
+// A treatment or section word wins; otherwise the writer supplies a one word topic (replyWord). Never a question.
+const MATCHED_LINES = [
+  "Comment {W} and I will send you the details",
+  "Comment {W} and I will pop you a message with everything you need to know",
+  "Comment {W} and I will tell you honestly whether it is for you",
+  "Comment {W} and I will talk you through it",
+  "Comment {W} if you would like me to tell you more",
+  "Comment {W} and I will message you",
+  "Comment {W} below and I will come and find you",
+  "Comment {W} and I will point you in the right direction",
+];
+
+export function cleanWord(v: unknown): string {
+  return String(v ?? "").toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 24).trim();
+}
+
+export function matchedCta(word: unknown, aiWord?: unknown, seed?: unknown): string {
+  const w = cleanWord(word) || cleanWord(aiWord) || "INFO";
+  let h = 0;
+  for (const ch of `${seed ?? ""}${w}${Math.random() < 0 ? "" : ""}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const line = seed ? MATCHED_LINES[h % MATCHED_LINES.length] : MATCHED_LINES[Math.floor(Math.random() * MATCHED_LINES.length)];
+  return line.replace("{W}", w);
+}
+
+/** Caption body with any old CTA line and any closing question removed, then the matched CTA added at the very end. */
+export function withCta(caption: string, cta: string): string {
+  const lines = caption.split("\n").map((l) => l.trim()).filter((l) => l && !isFinalCta(l) && !/^comment\s/i.test(l) && !/^drop me a dm/i.test(l));
+  while (lines.length > 1 && /\?["')]*$/.test(lines[lines.length - 1])) lines.pop();
+  return `${lines.join("\n")}\n\n${cta}`;
+}
+
+export const CAPTION_END_RULE = "It must NOT end on a question and must contain no call to action of its own: the call to action is added for you.";
+export const REPLY_WORD_RULE = '"replyWord": ONE short word in capitals (3 to 12 letters, no spaces) naming what this post is about, for example SKIN, SLEEP, PEELS or CONSULT, so women can comment it.';
