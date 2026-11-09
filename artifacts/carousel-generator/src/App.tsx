@@ -169,6 +169,8 @@ import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import TenFreeAdmin from "@/pages/ten-free-admin";
+import ClubAdmin from "@/pages/club-admin";
+import ClubPortal from "@/pages/club-portal";
 import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
 import Photoshoot, { PhotosView } from "@/pages/photoshoot";
@@ -200,6 +202,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
+      <Route path="/club-admin" component={ClubAdmin} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
@@ -377,6 +380,7 @@ function AppContent() {
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
+  const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -534,6 +538,9 @@ function AppContent() {
   }
   if (isPremiumFreebies) {
     return <TenFreePosts premium />;
+  }
+  if (isClubPortal && clubParams?.token) {
+    return <ClubPortal token={clubParams.token} />;
   }
   if (isYearPass && yearPassParams?.token) {
     return <YearPass token={yearPassParams.token} />;

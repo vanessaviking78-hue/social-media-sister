@@ -105,6 +105,7 @@ import toastPhotoRouter from "./toast-photo";
 import freeSamplesRouter from "./free-samples";
 import postPacksRouter from "./post-packs";
 import tenFreeRouter from "./ten-free";
+import clubRouter from "./club";
 import yearpassRouter from "./yearpass";
 import photoshootRouter from "./photoshoot";
 
@@ -114,6 +115,7 @@ router.use(healthRouter);
 router.use(freeSamplesRouter);
 router.use(postPacksRouter);
 router.use(tenFreeRouter);
+router.use(clubRouter);
 router.use(yearpassRouter);
 router.use(photoshootRouter);
 router.use(toastPhotoRouter);

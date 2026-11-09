@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { postTypesFor } from "@/lib/universal-treatments";
-import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK, PREMIUM_TREATMENTS, PREMIUM_HOOKS } from "@/lib/tenfree-content";
+import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK, PREMIUM_TREATMENTS, PREMIUM_HOOKS, clubPlan } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
@@ -107,6 +107,11 @@ const BODY_CSS = "'Playfair Display', serif";
 function Builder({ id }: { id: string }) {
   const [headChoice, setHeadChoice] = useState<(typeof HEAD_FONTS)[number]["id"]>("instrument");
   const [req, setReq] = useState<Req | null>(null);
+  // A club month is built like a premium freebie, with its own sizes: four treatment carousels and one hook carousel for each hook the member picked.
+  const isClub = !!req?.kind?.startsWith("club");
+  const isPrem = req?.kind === "premium" || isClub;
+  const nT = isClub ? 4 : PREMIUM_TREATMENTS;
+  const nH = isClub ? Math.max(0, Number((req?.answers as any)?.clubHookSlots) || 0) : PREMIUM_HOOKS;
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
@@ -186,7 +191,8 @@ function Builder({ id }: { id: string }) {
   useEffect(() => { loadReq(); }, [loadReq]);
   useEffect(() => {
     if (!req) return;
-    setChosenT((c) => (c.length ? c : req.treatments.slice(0, 3)));
+    setChosenT((c) => (c.length ? c : req.treatments.slice(0, req.kind?.startsWith("club") ? 4 : 3)));
+    if (req.kind?.startsWith("club")) setPickedHooks((h) => (h.length ? h : (((req.answers as any).clubHooks as string[]) ?? [])));
     setAbout((a) => a ?? req.answers);
     if (req.answers.font) setUniFont(req.answers.font);
     injectSuiteFontCss();
@@ -219,12 +225,12 @@ function Builder({ id }: { id: string }) {
 
   const build = async () => {
     if (!req) return;
-    if (req.kind === "premium" && chosenT.length !== PREMIUM_TREATMENTS) {
-      toast.error(`Please pick exactly ${PREMIUM_TREATMENTS} treatments first. You have ${chosenT.length}.`);
+    if (isPrem && chosenT.length !== nT) {
+      toast.error(`Please pick exactly ${nT} treatments first. You have ${chosenT.length}.`);
       return;
     }
-    if (req.kind === "premium" && pickedHooks.length !== PREMIUM_HOOKS) {
-      toast.error(`Please tick exactly ${PREMIUM_HOOKS} hooks first. You have ${pickedHooks.length}.`);
+    if (isPrem && pickedHooks.length !== nH) {
+      toast.error(`Please tick exactly ${nH} hooks first. You have ${pickedHooks.length}.`);
       return;
     }
     setBusy(true);
@@ -233,7 +239,7 @@ function Builder({ id }: { id: string }) {
       setStatus("Reading the website...");
       let siteNotes = "";
       if (req.website) siteNotes = (await post("/ten-free/site-notes", { url: req.website }).catch(() => ({ notes: "" }))).notes || "";
-      const isPremium = req.kind === "premium";
+      const isPremium = isPrem;
       const tList = isPremium ? chosenT : req.treatments;
       const ans = isPremium && about ? about : req.answers;
       const clinic = { name: req.clinicName, owner: req.clinicianName, area: req.area, treatments: tList, siteNotes, month: monthNameUK() };
@@ -242,10 +248,10 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0, isPremium ? PREMIUM_TREATMENTS : 3, tAngles);
-      if (picks.length < (isPremium ? PREMIUM_TREATMENTS : 3)) throw new Error("None of the treatments she ticked have photos in the Universal library");
+      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0, isPremium ? nT : 3, tAngles);
+      if (picks.length < (isPremium ? nT : 3)) throw new Error("None of the treatments she ticked have photos in the Universal library");
       const distinct = new Set(picks.map((p) => p.treatment.id)).size;
-      if (distinct < (isPremium ? PREMIUM_TREATMENTS : 3)) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
+      if (distinct < (isPremium ? nT : 3)) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
 
       setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = logoPick === "none" ? null : logoPick instanceof File ? logoPick : req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
@@ -255,7 +261,7 @@ function Builder({ id }: { id: string }) {
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
       const pool: PoolPhoto[] = [];
-      const plan = isPremium ? PREMIUM_PLAN : TEN_PLAN;
+      const plan = isClub ? clubPlan(nT, nH) : isPremium ? PREMIUM_PLAN : TEN_PLAN;
       // Premium: her two AI portraits first, then the three photos the clinic sent. The free version has the AI portraits and the one photo.
       const sources = [...(req.aiUrls ?? []), ...(isPremium ? (req.photos ?? []) : req.photoUrl ? [req.photoUrl] : [])];
       for (const [i, u] of sources.entries()) {
@@ -352,7 +358,7 @@ function Builder({ id }: { id: string }) {
       }
       ownRef.current = (await Promise.all(pool.map(async (p) => { const bmp = await createImageBitmap(p.file).catch(() => null); return bmp ? { url: p.url, bmp } : null; }))).filter((x): x is { url: string; bmp: ImageBitmap } => !!x);
       // Some of the posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
-      const BLOCK_N = isPremium ? [1, 4, 6] : [1, 3, 6, 8, 10];
+      const BLOCK_N = isClub ? plan.map((x) => x.n).filter((n) => n % 3 === 1) : isPremium ? [1, 4, 6] : [1, 3, 6, 8, 10];
       const blockFor = (n: number) => (isPremium && BLOCK_N.includes(n) ? (BLOCK_N.indexOf(n) % 2 ? accent : req.mainHex) : undefined);
       const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
       let ai = 0, hi = 0, vi = 0;
@@ -600,7 +606,7 @@ function Builder({ id }: { id: string }) {
       const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
       setLink(siteLink(j.slug));
       setCode(j.code);
-      setStatus("Published. Send her the link.");
+      setStatus(isClub ? "Saved to the club approval queue. Nothing reaches the member until you approve it." : "Published. Send her the link.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Publishing failed");
     } finally {
@@ -612,7 +618,7 @@ function Builder({ id }: { id: string }) {
   const ticked = req.treatments.join(", ");
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-5">
-      <Link href="/10free-admin" className="text-sm underline">Back to requests</Link>
+      <Link href={isClub ? "/club-admin" : "/10free-admin"} className="text-sm underline">{isClub ? "Back to the clubs" : "Back to requests"}</Link>
       <h1 className="text-2xl font-bold">{req.clinicName}</h1>
       <div className="text-sm space-y-1">
         <div>{req.clinicianName} · {req.email} · {req.area} · @{req.handle}</div>
@@ -625,13 +631,13 @@ function Builder({ id }: { id: string }) {
           {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
         </div>
         {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
-        {req.kind === "premium" && (req.photos ?? []).length > 0 && (
+        {isPrem && (req.photos ?? []).length > 0 && (
           <div><div className="font-semibold">Their 3 photos</div><div className="flex gap-2">{(req.photos ?? []).map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div></div>
         )}
       </div>
-      {req.kind === "premium" && (
+      {isPrem && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
-          <h2 className="font-bold uppercase">1. The {PREMIUM_TREATMENTS} treatments <span className="text-pink-500">({chosenT.length} of {PREMIUM_TREATMENTS})</span></h2>
+          <h2 className="font-bold uppercase">1. The {nT} treatments <span className="text-pink-500">({chosenT.length} of {nT})</span></h2>
           <p className="text-xs text-muted-foreground">They ticked: {ticked || "nothing"}. Change them if you like. Every Universal treatment is here, with its photos.</p>
           {U_GROUPS.map((g) => (
             <div key={g.id}>
@@ -639,7 +645,7 @@ function Builder({ id }: { id: string }) {
               <div className="flex flex-wrap gap-2">
                 {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
                   const on = chosenT.includes(t.name);
-                  return <button key={t.id} disabled={!on && chosenT.length >= PREMIUM_TREATMENTS} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= PREMIUM_TREATMENTS ? "opacity-40" : ""}`}>{t.name}</button>;
+                  return <button key={t.id} disabled={!on && chosenT.length >= nT} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= nT ? "opacity-40" : ""}`}>{t.name}</button>;
                 })}
               </div>
             </div>
@@ -664,7 +670,7 @@ function Builder({ id }: { id: string }) {
           )}
         </div>
       )}
-      {req.kind === "premium" && about && (
+      {isPrem && about && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <h2 className="font-bold uppercase">2. About me (2 posts)</h2>
           <p className="text-xs text-muted-foreground">Their answers are below. Tidy them up and the posts are written from exactly this.</p>
@@ -677,10 +683,10 @@ function Builder({ id }: { id: string }) {
           </div>
         </div>
       )}
-      {req.kind === "premium" && (
+      {isPrem && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="font-bold uppercase">3. Pick the {PREMIUM_HOOKS} hooks <span className="text-pink-500">({pickedHooks.length} of {PREMIUM_HOOKS})</span></h2>
+            <h2 className="font-bold uppercase">3. Pick the {nH} hooks <span className="text-pink-500">({pickedHooks.length} of {nH})</span></h2>
             {pickedHooks.length > 0 && <button className="text-sm underline" onClick={() => setPickedHooks([])}>Clear</button>}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -697,7 +703,7 @@ function Builder({ id }: { id: string }) {
                   const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
                   return (
                     <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
-                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= PREMIUM_HOOKS} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
+                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= nH} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
                       <span>{shown}{h.season && <span className="ml-2 text-xs text-muted-foreground">({h.season})</span>}</span>
                     </label>
                   );
@@ -710,7 +716,7 @@ function Builder({ id }: { id: string }) {
           )}
         </div>
       )}
-      {req?.kind === "premium" && items.length > 0 && (() => {
+      {isPrem && items.length > 0 && (() => {
         const base: [string, string][] = [["Their main", req.mainHex], ["Their accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]];
         const metals: [string, string, string][] = [["Gold", "metal:gold", "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)"], ["Silver", "metal:silver", "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)"]];
         const line = "flex gap-2 items-center flex-wrap";
@@ -772,8 +778,8 @@ function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 6 posts" : "Build the 10 posts"}</button>
-        {req.kind === "premium" && !items.length && (chosenT.length !== PREMIUM_TREATMENTS || pickedHooks.length !== PREMIUM_HOOKS) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {PREMIUM_TREATMENTS} treatments and {pickedHooks.length} of {PREMIUM_HOOKS} hooks chosen.</span>}
+        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : "Build the premium 6 posts" : "Build the 10 posts"}</button>
+        {isPrem && !items.length && (chosenT.length !== nT || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
         <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
@@ -809,11 +815,11 @@ function Builder({ id }: { id: string }) {
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
-                  onClick={() => (req?.kind === "premium" && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (req?.kind === "premium" ? "Click to choose the photo" : "Click to swap the photo") : undefined}
+                  onClick={() => (isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
                   className={`h-[30rem] rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
-            {req.kind === "premium" && it.uniArgs && assetsRef.current && (() => {
+            {isPrem && it.uniArgs && assetsRef.current && (() => {
               const upd = (patch: Partial<NonNullable<Item["uniArgs"]>>, clear: string[] = []) => {
                 const args: Record<string, unknown> = { ...it.uniArgs!, ...patch };
                 for (const k of clear) delete args[k];
@@ -943,7 +949,7 @@ function Builder({ id }: { id: string }) {
                 </div>
               );
             })()}
-            {req.kind === "premium" && it.uniArgs && sel?.n === it.n && (() => {
+            {isPrem && it.uniArgs && sel?.n === it.n && (() => {
               const i = sel.i;
               const slider = (label: string, key: "zoom" | "panX" | "panY", min: number, max: number, step: number, def: number) => (
                 <label className="flex items-center gap-3 text-xs text-muted-foreground"><span className="w-28 shrink-0">{label}</span>
