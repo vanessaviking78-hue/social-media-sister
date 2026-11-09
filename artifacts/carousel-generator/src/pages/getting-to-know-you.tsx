@@ -24,6 +24,9 @@ export const QUESTIONS: { id: string; label: string; hint: string; long?: boolea
   { id: "never", label: "Off limits", hint: "No teeth, no before and afters, no prices, topics to avoid...", long: true },
   { id: "links", label: "Website and Instagram handle", hint: "" },
   { id: "extra", label: "Anything else that makes them them", hint: "Pets, hobbies, local gossip, catchphrases.", long: true },
+  { id: "facts", label: "5 facts about you, or things people might not know", hint: "One per line, short and chatty. They go on your About me posts, e.g. Two dogs called Mino and Lucy.", long: true },
+  { id: "favtreatments", label: "Your 5 favourite treatments to do", hint: "One per line.", long: true },
+  { id: "howstarted", label: "How did you get into aesthetics?", hint: "The real story, in your own words.", long: true },
 ];
 
 // Keeps the guide photo to a sensible size before it is saved.

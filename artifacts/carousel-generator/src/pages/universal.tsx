@@ -11,6 +11,7 @@ import { useForcedClient } from "@/lib/forced-client";
 
 import { uploadPngs } from "@/lib/month-engine";
 import { drawTitle, clientSlug, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
+import { nextBankCta } from "@/lib/cta-bank";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
 // UNIVERSAL: any client, every non prescription treatment, six posts each.
@@ -44,6 +45,7 @@ const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{
 export const METALS: { id: string; name: string; stops: string[] }[] = [
   { id: "gold", name: "Gold", stops: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"] },
   { id: "rosegold", name: "Rose gold", stops: ["#8a4f45", "#d9a08f", "#ffe3d6", "#c98a79", "#8a4f45"] },
+  { id: "blue", name: "Metallic blue", stops: ["#16335f", "#4f86d6", "#d6e8ff", "#3a6fc0", "#16335f"] },
   { id: "silver", name: "Silver", stops: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"] },
   { id: "champagne", name: "Champagne", stops: ["#9c8458", "#e6d2a8", "#fff8e6", "#d2bb8c", "#9c8458"] },
   { id: "bronze", name: "Bronze", stops: ["#5c3a1a", "#a8713a", "#e0ac72", "#8a5a2a", "#5c3a1a"] },
@@ -284,31 +286,46 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   };
 
   if (n === 4) {
-    if (blk) {
+    // With a photo the closing slide matches the others: her picture under the gradient (or the colour block), the call to action over it.
+    const withPhoto = !!photo && !look.bgColour;
+    if (withPhoto && photo) {
+      coverFit(ctx, photo.bmp, photo.zoom, photo.px, photo.py);
+      if (look.bw) toGrey(ctx);
+      if (!blk) wash(ctx, 0.2, look);
+    } else if (blk) {
       ctx.fillStyle = solidFill(ctx, blk);
+      ctx.fillRect(0, 0, W, H);
     } else if (look.grad && isHex(look.grad) && isHex(look.wash)) {
       const g = ctx.createLinearGradient(0, 0, W, H);
       g.addColorStop(0, look.wash);
       g.addColorStop(1, look.grad);
       ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
     } else {
       ctx.fillStyle = solidFill(ctx, look.wash);
+      ctx.fillRect(0, 0, W, H);
     }
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = inkPaint(ctx, ink, H / 2 - 200, 400);
     ctx.textAlign = "left";
-    const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
+    const maxH = withPhoto ? (blk ? 250 : 380) : 520;
+    const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, maxH * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
     const total = fit.lines.length * fit.px * 1.25;
-    const hl4 = headLayout();
+    const hl4 = withPhoto ? null : headLayout();
     const hH4 = hl4 ? titleHeight(hl4) : 0;
-    let y = (H - total) / 2 - 20;
-    if (hl4) {
+    let y = withPhoto ? (top ? 190 : H - 170 - total) : (H - total) / 2 - 20;
+    if (withPhoto && blk) {
+      const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), total + 120));
+      const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
+      const bm = metalOf(blk);
+      ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;
+      ctx.fillRect(0, bt, W, bh);
+      y = bt + Math.round((bh - total) / 2);
+    } else if (hl4) {
       const blockH = hH4 + 30 + total + 40;
       const t0 = stackTop(blockH);
       drawHead(hl4, t0);
-      ctx.fillStyle = inkPaint(ctx, ink, t0, blockH);
       y = t0 + hH4 + 30;
     }
+    ctx.fillStyle = inkPaint(ctx, ink, y, total);
     ctx.font = body(fit.px, 600);
     for (const l of fit.lines) {
       ctx.fillText(l, LEFT, y);
@@ -621,10 +638,21 @@ export default function UniversalPage() {
     };
   }, [posts, libBy, bitmaps]);
 
+  // The closing slide is the clinician's own photo under the gradient (a treatment picture stands in if she has none saved).
+  const [clinicianBmp, setClinicianBmp] = useState<{ url: string; bmp: ImageBitmap } | null>(null);
+  useEffect(() => {
+    const url = preset?.clientPhotoUrl;
+    let live = true;
+    if (!url) { setClinicianBmp(null); return; }
+    loadBitmap(url).then((b) => live && setClinicianBmp({ url, bmp: b })).catch(() => live && setClinicianBmp(null));
+    return () => { live = false; };
+  }, [preset?.clientPhotoUrl]);
+
   const photoFor = (post: Post, n: number): Photo | null => {
+    if (n === 4 && clinicianBmp) return { url: clinicianBmp.url, bmp: clinicianBmp.bmp };
     const imgs = libBy.get(post.treatmentId) ?? [];
-    if (!imgs.length || n > 3) return null;
-    const img = imgs[post.photos[n] % imgs.length];
+    if (!imgs.length || n > 4) return null;
+    const img = imgs[(post.photos[n] ?? ((post.photos[0] ?? 0) + n)) % imgs.length];
     const bmp = img ? bitmaps[img.url] : undefined;
     return img && bmp ? { url: img.url, bmp } : null;
   };
@@ -1179,7 +1207,7 @@ export default function UniversalPage() {
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {[0, 1, 2, 3, 4].map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} tf={tf} look={lk} logo={logo} onClick={n < 4 && (libBy.get(post.treatmentId) ?? []).length > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} tf={tf} look={lk} logo={logo} onClick={n < 4 && (libBy.get(post.treatmentId) ?? []).length > 1 ? () => patch(post.id, { photos: Array.from({ length: 5 }, (_, i) => (post.photos[i] ?? (post.photos[0] ?? 0) + i) + (i === n ? 1 : 0)) }) : undefined} />
                   ))}
                 </div>
                 <div className="grid md:grid-cols-2 gap-3 text-sm">
@@ -1198,7 +1226,13 @@ export default function UniversalPage() {
                     </label>
                   ))}
                   <label className="space-y-1 block">
-                    <span className="text-white/60">Last slide</span>
+                    <span className="text-white/60 flex items-center gap-2">Last slide
+                      <button type="button" className="rounded border border-white/25 px-2 py-0.5 text-xs hover:bg-white/10" onClick={() => {
+                        const x = U_BY_ID.get(post.treatmentId);
+                        const next = nextBankCta(x?.name || "", area, post.cta);
+                        patch(post.id, { cta: next, caption: post.cta && post.caption.includes(post.cta) ? post.caption.split(post.cta).join(next) : post.caption });
+                      }}>Shuffle CTA</button>
+                    </span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={3} value={post.cta} onChange={(e) => patch(post.id, { cta: e.target.value })} />
                   </label>
                   <label className="space-y-1 block md:col-span-2">

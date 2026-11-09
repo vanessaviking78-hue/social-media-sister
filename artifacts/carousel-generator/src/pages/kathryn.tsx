@@ -84,6 +84,7 @@ const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{
 const METALS: { id: string; name: string; stops: string[] }[] = [
   { id: "gold", name: "Gold", stops: ["#7a5a14", "#d4a93c", "#fff1a8", "#c9962b", "#7a5a14"] },
   { id: "rosegold", name: "Rose gold", stops: ["#8a4f45", "#d9a08f", "#ffe3d6", "#c98a79", "#8a4f45"] },
+  { id: "blue", name: "Metallic blue", stops: ["#16335f", "#4f86d6", "#d6e8ff", "#3a6fc0", "#16335f"] },
   { id: "silver", name: "Silver", stops: ["#6d6f73", "#c9ccd1", "#ffffff", "#a9adb3", "#6d6f73"] },
   { id: "champagne", name: "Champagne", stops: ["#9c8458", "#e6d2a8", "#fff8e6", "#d2bb8c", "#9c8458"] },
   { id: "bronze", name: "Bronze", stops: ["#5c3a1a", "#a8713a", "#e0ac72", "#8a5a2a", "#5c3a1a"] },
