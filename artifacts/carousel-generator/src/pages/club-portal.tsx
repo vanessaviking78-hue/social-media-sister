@@ -79,6 +79,35 @@ const monthName = (ym: string) => {
 };
 const dateName = (iso: string) => new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
 
+
+// Phone photos can be huge. Shrink each one before it leaves the browser, and send them a few at a time so nothing is too big to upload.
+async function shrink(file: File, max = 1800): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d")!;
+    const png = file.type === "image/png";
+    if (!png) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); }
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const blob: Blob | null = await new Promise((r) => c.toBlob(r, png ? "image/png" : "image/jpeg", 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, png ? ".png" : ".jpg"), { type: blob.type });
+  } catch {
+    return file;
+  }
+}
+
+async function sendDetails(token: string, fd: FormData) {
+  const r = await fetch(`${API}/club/me/${token}/details`, { method: "POST", body: fd });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || (r.status === 413 ? "Those photos were too big to send. Please try again with fewer." : `Something went wrong (${r.status}). Please try again.`));
+}
+
 async function download(url: string, name: string) {
   const r = await fetch(url);
   const b = await r.blob();
@@ -95,23 +124,42 @@ function Details({ token, onDone, existing }: { token: string; onDone: () => voi
   const [main, setMain] = useState("#d6006f");
   const [accent, setAccent] = useState("#1a1a1a");
   const [font, setFont] = useState("hatcher");
+  const [progress, setProgress] = useState("");
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    fd.set("mainHex", main);
-    fd.set("accentHex", accent);
-    fd.set("font", font);
+    const src = new FormData(e.currentTarget);
+    const photos = (src.getAll("photos") as File[]).filter((f) => f && f.size);
+    const logo = src.get("logo") as File | null;
+    const clinic = src.get("clinicPhoto") as File | null;
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`${API}/club/me/${token}/details`, { method: "POST", body: fd });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "Something went wrong");
+      setProgress("Getting your photos ready...");
+      const fd = new FormData();
+      for (const [k, v] of src.entries()) if (!(v instanceof File)) fd.append(k, v);
+      fd.set("mainHex", main);
+      fd.set("accentHex", accent);
+      fd.set("font", font);
+      if (logo && logo.size) fd.append("logo", await shrink(logo, 1200));
+      if (clinic && clinic.size) fd.append("clinicPhoto", await shrink(clinic));
+      const small = await Promise.all(photos.slice(0, 20).map((f) => shrink(f)));
+      const first = small.slice(0, 3);
+      first.forEach((f) => fd.append("photos", f));
+      setProgress("Saving your details...");
+      await sendDetails(token, fd);
+      // The rest of the photos go up three at a time.
+      for (let i = 3; i < small.length; i += 3) {
+        setProgress(`Uploading photos ${Math.min(i + 3, small.length)} of ${small.length}...`);
+        const more = new FormData();
+        small.slice(i, i + 3).forEach((f) => more.append("photos", f));
+        await sendDetails(token, more);
+      }
       onDone();
     } catch (x) {
       setErr(x instanceof Error ? x.message : "Something went wrong");
     } finally {
       setBusy(false);
+      setProgress("");
     }
   };
   const T = (name: string, label: string, ph = "", area = false) => (
@@ -147,7 +195,7 @@ function Details({ token, onDone, existing }: { token: string; onDone: () => voi
       <label className="cp-field"><span>Photos of you, up to 20 (the more the better)</span><input type="file" name="photos" accept="image/*" multiple /></label>
       <label className="cp-field"><span>A photo of your clinic (optional, I will place you in it for your colour AI photos)</span><input type="file" name="clinicPhoto" accept="image/*" /></label>
       {err && <div className="cp-err">{err}</div>}
-      <button className="cp-btn" disabled={busy} type="submit">{busy ? "Saving, please wait..." : "Save my details"}</button>
+      <button className="cp-btn" disabled={busy} type="submit">{busy ? progress || "Saving, please wait..." : "Save my details"}</button>
     </form>
   );
 }
@@ -347,13 +395,24 @@ function AddPhotos({ token, left, hasClinic, onDone }: { token: string; left: nu
   const [err, setErr] = useState("");
   const submit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    const src = new FormData(form);
+    const photos = (src.getAll("photos") as File[]).filter((f) => f && f.size);
+    const clinic = src.get("clinicPhoto") as File | null;
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`${API}/club/me/${token}/details`, { method: "POST", body: new FormData(e.currentTarget) });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || "Something went wrong");
-      (e.target as HTMLFormElement).reset();
+      const small = await Promise.all(photos.slice(0, Math.max(0, left)).map((f) => shrink(f)));
+      const first = new FormData();
+      if (clinic && clinic.size) first.append("clinicPhoto", await shrink(clinic));
+      small.slice(0, 3).forEach((f) => first.append("photos", f));
+      if ([...first.keys()].length) await sendDetails(token, first);
+      for (let i = 3; i < small.length; i += 3) {
+        const more = new FormData();
+        small.slice(i, i + 3).forEach((f) => more.append("photos", f));
+        await sendDetails(token, more);
+      }
+      form.reset();
       onDone();
     } catch (x) {
       setErr(x instanceof Error ? x.message : "Something went wrong");
