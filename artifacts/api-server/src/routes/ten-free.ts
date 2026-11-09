@@ -54,7 +54,7 @@ function emailKey(email: string): string {
 }
 
 let ready: Promise<void> | null = null;
-function ensureTable(): Promise<void> {
+export function ensureTable(): Promise<void> {
   if (ready) return ready;
   const p: Promise<void> = db
     .execute(sql`CREATE TABLE IF NOT EXISTS tenfree_requests (
@@ -824,6 +824,15 @@ router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response
       builtAt: new Date().toISOString(),
     };
     await db.execute(sql`UPDATE tenfree_requests SET status = 'published', slug = ${finalSlug}, code = ${code}, result = ${JSON.stringify(result)}::jsonb, updated_at = now() WHERE id = ${id}`);
+    // A club month's posts go to the approval queue, never straight to the member.
+    if (id.startsWith("club-")) {
+      const monthId = id.slice(5);
+      const cm = await db.execute(sql`SELECT content FROM club_months WHERE id = ${monthId}`).catch(() => null);
+      if (cm?.rows.length) {
+        const content = { ...((cm.rows[0] as { content?: Record<string, unknown> }).content ?? {}), posts: result.posts };
+        await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, status = 'pending_approval', updated_at = now() WHERE id = ${monthId}`);
+      }
+    }
     res.json({ slug: finalSlug, code });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free publish failed");

@@ -41,6 +41,13 @@ export const PREMIUM_PLAN: TenSlot[] = [
   { n: 2, label: "Treatment carousel", carousel: true, source: "universal" },
   ...[3, 4, 5, 6].map((n): TenSlot => ({ n, label: "Hook carousel", carousel: true, source: "hook" })),
 ];
+/** The plan for a club month: treatment carousels first, then one hook carousel for each hook pick. */
+export function clubPlan(treatments: number, hooks: number): TenSlot[] {
+  return [
+    ...Array.from({ length: treatments }, (_, i): TenSlot => ({ n: i + 1, label: "Treatment carousel", carousel: true, source: "universal" })),
+    ...Array.from({ length: hooks }, (_, i): TenSlot => ({ n: treatments + i + 1, label: "Hook carousel", carousel: true, source: "hook" })),
+  ];
+}
 export const PREMIUM_TREATMENTS = 2;
 export const PREMIUM_HOOKS = 4;
 
