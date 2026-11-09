@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = `t-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral" | "blackfriday";
+export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral" | "blackfriday";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -141,6 +141,32 @@ export const XMAS_POSTS: ClareSectionPost[] = XMAS_WEEKS.flatMap((w) => w.hooks.
   xmas: { c: h.colloquial, p: h.professional },
   brief: `A Christmas carousel for week ${w.week} of my Christmas plan, "${w.title}". Theme: ${w.theme} The cover hook is already written and must stay exactly as given, so slides 2 to 4 carry on from it and keep to the theme. Warm, caring and funny where it suits, always from me to her, never selling hard, a consultation always comes first. No promises, no results, no prices, no offers, no medicine names, no website.`,
 })));
+
+// MY FIRST HOOKS: every hook in the hook bank as its own carousel post, in its section (My first hooks, Treatment, Emotional, Personal, Nostalgia, Engagement, Audience, Seasonal).
+// The hook becomes slide 1 exactly as written, with [treatment] and [area] filled in when the post is made.
+import { HOOKS } from "./hook-bank";
+const HOOK_THEMES: { theme: string; label: string; word: string }[] = [
+  { theme: "Original", label: "My first hooks", word: "HELLO" },
+  { theme: "Treatment", label: "Treatment hooks", word: "INFO" },
+  { theme: "Emotional", label: "Emotional hooks", word: "ME" },
+  { theme: "Personal", label: "Personal hooks", word: "STORY" },
+  { theme: "Nostalgia", label: "Nostalgia hooks", word: "REMEMBER" },
+  { theme: "Engagement", label: "Engagement hooks", word: "YES" },
+  { theme: "Audience", label: "Audience hooks", word: "SAME" },
+  { theme: "Seasonal", label: "Seasonal hooks", word: "JOIN" },
+];
+export const HOOK_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = HOOK_THEMES.map((t) => ({ id: `h-${t.theme}` as ClareSectionId, label: t.label, word: t.word }));
+export const HOOK_POSTS: ClareSectionPost[] = HOOKS.map((h) => {
+  const t = HOOK_THEMES.find((x) => x.theme === (h.theme || "Original")) ?? HOOK_THEMES[0];
+  return {
+    id: `hk-${h.code}`,
+    group: `h-${t.theme}` as ClareSectionId,
+    label: h.text.length > 90 ? `${h.text.slice(0, 87)}...` : h.text,
+    word: t.word,
+    xmas: { c: h.text, p: h.text },
+    brief: "A carousel built on a hook I have already chosen for slide 1. The cover hook is written and must stay exactly as given. Slides 2 to 4 carry the hook through in my own voice, staying on the subject of the hook: warm, honest, funny and informative, in plain words. No promises, no results, no prices, never invent a story, name, year or number.",
+  };
+});
 
 // FERAL: Social Media Sister's own tab. 53 feral hooks, each a 5 slide carousel written as a social media strategist for the aesthetics industry, to clinic owners.
 export const FERAL_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "feral", label: "Feral", word: "SISTER" }];

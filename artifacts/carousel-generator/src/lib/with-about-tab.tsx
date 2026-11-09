@@ -3,7 +3,7 @@ import { ForcedClientContext } from "@/lib/forced-client";
 
 // Wraps a client's own page with a second tab, "About me", the two About me templates from the free tools opened on that client.
 const About = lazy(() => import("@/pages/client-about"));
-const Hooks = lazy(() => import("@/pages/client-extras").then((m) => ({ default: m.ClientFirstHooks })));
+const Hooks = lazy(() => import("@/pages/hooks-tab"));
 const Fillers = lazy(() => import("@/pages/client-extras").then((m) => ({ default: m.FillersTab })));
 const Xmas = lazy(() => import("@/pages/xmas-tab"));
 const Info = lazy(() => import("@/pages/client-extras").then((m) => ({ default: m.ClientInfoByPattern })));
