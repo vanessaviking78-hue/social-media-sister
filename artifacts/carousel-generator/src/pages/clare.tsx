@@ -195,7 +195,7 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
   return loadHatcherTitle();
 }
 
-type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number };
+type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number; tScale?: number[]; tY?: number[]; bY?: number[] };
 type Post = {
   id: string;
   adj?: Adj; // photo zoom and pan per slide, headline size and position, block position: this post only
@@ -364,10 +364,12 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
-  const ts = ((look.titleSize || 100) / 100) * (n === 0 ? (post.adj?.coverScale ?? 1) : 1);
-  const cy = n === 0 ? (post.adj?.coverY ?? 0) : 0;
-  const by = n === 0 ? (post.adj?.blockY ?? 0) : 0;
-  const bs = (look.bodySize || 100) / 100;
+  const aj = post.adj;
+  const sc = n <= 3 ? (aj?.tScale?.[n] ?? (n === 0 ? aj?.coverScale : undefined) ?? 1) : 1;
+  const ts = ((look.titleSize || 100) / 100) * (n === 0 ? sc : 1);
+  const cy = n <= 3 ? (aj?.tY?.[n] ?? (n === 0 ? aj?.coverY : undefined) ?? 0) : 0;
+  const by = n <= 3 ? (aj?.bY?.[n] ?? (n === 0 ? aj?.blockY : undefined) ?? 0) : 0;
+  const bs = ((look.bodySize || 100) / 100) * (n >= 1 ? sc : 1);
   look = normLook(look);
   const { ink, grey, bg } = inks(look);
   const INKC = paintOf(ctx, ink, H * 0.35, H);
@@ -433,8 +435,8 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   ctx.textAlign = "left";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, 520 * Math.max(1, bs), Math.round(40 * bs), Math.round(26 * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
-  let y = H - 170 - total;
-  if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; ctx.textAlign = "left"; }
+  let y = H - 170 - total + cy;
+  if (look.block) { blockAt(ctx, y - 90 + by, look); ctx.fillStyle = INKC; ctx.textAlign = "left"; }
   ctx.font = body(fit.px);
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
 }
@@ -1144,7 +1146,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                   );
                   return (
                     <details className="rounded border border-white/15 p-3 text-sm space-y-2">
-                      <summary className="cursor-pointer text-white/80">Photo, headline and block controls</summary>
+                      <summary className="cursor-pointer text-white/80">Photo, text and block controls</summary>
                       <div className="flex flex-wrap items-center gap-2 pt-2">
                         <span className="text-white/60">Photo on slide</span>
                         {[0, 1, 2, 3].map((i) => <button key={i} type="button" onClick={() => setAdjSlide((m) => ({ ...m, [post.id]: i }))} className={`px-2 py-0.5 rounded border ${sl === i ? "bg-white text-black border-white" : "border-white/20"}`}>{i + 1}</button>)}
@@ -1153,9 +1155,15 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                       {row("Zoom", 1, 2.5, 0.05, arr("zoom", 1)[sl], (v) => setSl("zoom", 1, v))}
                       {row("Move left or right", -1, 1, 0.05, arr("px", 0)[sl], (v) => setSl("px", 0, v))}
                       {row("Move up or down", -1, 1, 0.05, arr("py", 0)[sl], (v) => setSl("py", 0, v))}
-                      {row("Headline size", 0.5, 1.6, 0.05, a.coverScale ?? 1, (v) => setA({ coverScale: v }))}
-                      {row("Headline up or down", -600, 200, 10, a.coverY ?? 0, (v) => setA({ coverY: v }))}
-                      {lookFor(post).block && row("Block up or down", -600, 120, 10, a.blockY ?? 0, (v) => setA({ blockY: v }))}
+                      {(() => {
+                        const ar = (k: "tScale" | "tY" | "bY", def: number) => [0, 1, 2, 3].map((i) => a[k]?.[i] ?? (i === 0 ? (k === "tScale" ? a.coverScale : k === "tY" ? a.coverY : a.blockY) : undefined) ?? def);
+                        const st = (k: "tScale" | "tY" | "bY", def: number, v: number) => { const c = ar(k, def); c[sl] = v; setA({ [k]: c }); };
+                        return (<>
+                          {row(sl === 0 ? "Headline size" : "Text size", 0.5, 1.6, 0.05, ar("tScale", 1)[sl], (v) => st("tScale", 1, v))}
+                          {row(sl === 0 ? "Headline up or down" : "Text up or down", -600, 200, 10, ar("tY", 0)[sl], (v) => st("tY", 0, v))}
+                          {lookFor(post).block && row("Block size (left = taller)", -600, 200, 10, ar("bY", 0)[sl], (v) => st("bY", 0, v))}
+                        </>);
+                      })()}
                     </details>
                   );
                 })()}
