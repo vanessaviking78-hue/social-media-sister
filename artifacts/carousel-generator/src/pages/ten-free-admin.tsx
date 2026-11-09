@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
-import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK } from "@/lib/tenfree-content";
+import { postTypesFor } from "@/lib/universal-treatments";
+import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK, PREMIUM_TREATMENTS, PREMIUM_HOOKS } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
-import { renderAboutPost, aboutDefaults } from "@/lib/about-designs";
+import { renderAboutPost, aboutDefaults, ABOUT_LAYOUTS, ABOUT_FONTS, ABOUT_DEFAULT_FONTS, type AboutRenderOptions, type AboutLayout } from "@/lib/about-designs";
+import { ColourPicker } from "@/components/colour-picker";
 import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
@@ -84,7 +86,8 @@ type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
   post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
-  aboutArgs?: { layout: "cream" | "peach"; photo: ImageBitmap; cutout: ImageBitmap | null; bio: string; name: string; colours: { main: string; accent: string; bg?: string; head?: string; text?: string }; view?: { z?: number; x?: number; y?: number } };
+  aboutArgs?: AboutRenderOptions;
+  aboutLogo?: HTMLCanvasElement;
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
@@ -133,6 +136,7 @@ function Builder({ id }: { id: string }) {
   const [attaching, setAttaching] = useState(false);
   // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
   const [chosenT, setChosenT] = useState<string[]>([]);
+  const [tAngles, setTAngles] = useState<Record<string, number>>({});
   const [textHex, setTextHex] = useState<string>("");
   const [uniFont, setUniFont] = useState<string>("hatcher");
   const [about, setAbout] = useState<Req["answers"] | null>(null);
@@ -215,12 +219,12 @@ function Builder({ id }: { id: string }) {
 
   const build = async () => {
     if (!req) return;
-    if (req.kind === "premium" && chosenT.length !== 3) {
-      toast.error(`Please pick exactly 3 treatments first. You have ${chosenT.length}.`);
+    if (req.kind === "premium" && chosenT.length !== PREMIUM_TREATMENTS) {
+      toast.error(`Please pick exactly ${PREMIUM_TREATMENTS} treatments first. You have ${chosenT.length}.`);
       return;
     }
-    if (req.kind === "premium" && pickedHooks.length !== 5) {
-      toast.error(`Please tick exactly 5 hooks first. You have ${pickedHooks.length}.`);
+    if (req.kind === "premium" && pickedHooks.length !== PREMIUM_HOOKS) {
+      toast.error(`Please tick exactly ${PREMIUM_HOOKS} hooks first. You have ${pickedHooks.length}.`);
       return;
     }
     setBusy(true);
@@ -238,10 +242,10 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0);
-      if (picks.length < 3) throw new Error("None of the treatments she ticked have photos in the Universal library");
+      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0, isPremium ? PREMIUM_TREATMENTS : 3, tAngles);
+      if (picks.length < (isPremium ? PREMIUM_TREATMENTS : 3)) throw new Error("None of the treatments she ticked have photos in the Universal library");
       const distinct = new Set(picks.map((p) => p.treatment.id)).size;
-      if (distinct < 3) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
+      if (distinct < (isPremium ? PREMIUM_TREATMENTS : 3)) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
 
       setStatus("Preparing the logo, fonts and photos...");
       const logoBlob = logoPick === "none" ? null : logoPick instanceof File ? logoPick : req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
@@ -347,8 +351,8 @@ function Builder({ id }: { id: string }) {
         aboutBmps = (await Promise.all(pool.map((p) => createImageBitmap(p.file).catch(() => null)))).filter((x): x is ImageBitmap => !!x);
       }
       ownRef.current = (await Promise.all(pool.map(async (p) => { const bmp = await createImageBitmap(p.file).catch(() => null); return bmp ? { url: p.url, bmp } : null; }))).filter((x): x is { url: string; bmp: ImageBitmap } => !!x);
-      // Five of the ten posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
-      const BLOCK_N = [1, 3, 6, 8, 10];
+      // Some of the posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
+      const BLOCK_N = isPremium ? [1, 4, 6] : [1, 3, 6, 8, 10];
       const blockFor = (n: number) => (isPremium && BLOCK_N.includes(n) ? (BLOCK_N.indexOf(n) % 2 ? accent : req.mainHex) : undefined);
       const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
       let ai = 0, hi = 0, vi = 0;
@@ -368,10 +372,10 @@ function Builder({ id }: { id: string }) {
               if (rr.ok) cutout = await createImageBitmap(await rr.blob());
             } catch { /* plain photo */ }
           }
-          const aboutArgs = { layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName };
+          const aboutArgs = { layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName, logo: logoCanvas, logoPos: "tr" as const, facts: [] as string[] };
           const cv = await renderAboutPost(aboutArgs);
           ai++;
-          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], aboutArgs, caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
+          out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], aboutArgs, aboutLogo: logoCanvas, caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
         }
         if (slot.source === "hook") {
@@ -558,11 +562,20 @@ function Builder({ id }: { id: string }) {
       patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
     }
   };
-  const applyAllAbout = async (k: "bg" | "head" | "text" | "reset", val = "") => {
+  const applyAllAbout = async (k: "bg" | "head" | "text" | "box" | "all" | "reset", val = "") => {
     if (!req) return;
     for (const it of itemsRef.current) {
       if (!it.aboutArgs) continue;
-      const aa = { ...it.aboutArgs, colours: k === "reset" ? { main: req.mainHex, accent: req.accentHex } : { ...it.aboutArgs.colours, [k]: val } };
+      let colours = it.aboutArgs.colours;
+      if (k === "reset") colours = { main: req.mainHex, accent: req.accentHex };
+      else if (k === "all") {
+        // headline and boxes take the colour, the writing flips to dark or white so it stays readable
+        const hex = /^#[0-9a-f]{6}$/i.test(val) ? val : "#888888";
+        const n = parseInt(hex.slice(1), 16);
+        const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+        colours = { ...colours, head: val, box: val, text: lum > 0.55 ? "#1a1a1a" : "#ffffff" };
+      } else colours = { ...colours, [k]: val };
+      const aa = { ...it.aboutArgs, colours };
       const cv = await renderAboutPost(aa);
       patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
     }
@@ -618,7 +631,7 @@ function Builder({ id }: { id: string }) {
       </div>
       {req.kind === "premium" && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
-          <h2 className="font-bold uppercase">1. The 3 treatments <span className="text-pink-500">({chosenT.length} of 3)</span></h2>
+          <h2 className="font-bold uppercase">1. The {PREMIUM_TREATMENTS} treatments <span className="text-pink-500">({chosenT.length} of {PREMIUM_TREATMENTS})</span></h2>
           <p className="text-xs text-muted-foreground">They ticked: {ticked || "nothing"}. Change them if you like. Every Universal treatment is here, with its photos.</p>
           {U_GROUPS.map((g) => (
             <div key={g.id}>
@@ -626,11 +639,29 @@ function Builder({ id }: { id: string }) {
               <div className="flex flex-wrap gap-2">
                 {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
                   const on = chosenT.includes(t.name);
-                  return <button key={t.id} disabled={!on && chosenT.length >= 3} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= 3 ? "opacity-40" : ""}`}>{t.name}</button>;
+                  return <button key={t.id} disabled={!on && chosenT.length >= PREMIUM_TREATMENTS} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= PREMIUM_TREATMENTS ? "opacity-40" : ""}`}>{t.name}</button>;
                 })}
               </div>
             </div>
           ))}
+          {chosenT.length > 0 && (
+            <div className="border-t pt-3 space-y-2">
+              <div className="text-xs font-semibold uppercase text-pink-500">Choose the hook for each treatment post</div>
+              {chosenT.map((name) => {
+                const t = U_TREATMENTS.find((x) => x.name === name);
+                if (!t) return null;
+                return (
+                  <label key={name} className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="font-medium w-48">{name}</span>
+                    <select className="border rounded px-2 py-1 text-sm max-w-full" value={tAngles[name] ?? -1} onChange={(e) => { const v = Number(e.target.value); setTAngles((a) => { const n = { ...a }; if (v < 0) delete n[name]; else n[name] = v; return n; }); }}>
+                      <option value={-1}>Pick for me</option>
+                      {postTypesFor(t).map((pt, i) => <option key={pt.key} value={i}>{pt.headline}</option>)}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
       {req.kind === "premium" && about && (
@@ -649,7 +680,7 @@ function Builder({ id }: { id: string }) {
       {req.kind === "premium" && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="font-bold uppercase">3. Pick the 5 hooks <span className="text-pink-500">({pickedHooks.length} of 5)</span></h2>
+            <h2 className="font-bold uppercase">3. Pick the {PREMIUM_HOOKS} hooks <span className="text-pink-500">({pickedHooks.length} of {PREMIUM_HOOKS})</span></h2>
             {pickedHooks.length > 0 && <button className="text-sm underline" onClick={() => setPickedHooks([])}>Clear</button>}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -666,7 +697,7 @@ function Builder({ id }: { id: string }) {
                   const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
                   return (
                     <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
-                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= 5} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
+                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= PREMIUM_HOOKS} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
                       <span>{shown}{h.season && <span className="ml-2 text-xs text-muted-foreground">({h.season})</span>}</span>
                     </label>
                   );
@@ -697,13 +728,9 @@ function Builder({ id }: { id: string }) {
             {key !== "block" && <button onClick={() => applyAll(key, "")} className="px-2 py-1 rounded border text-xs">{autoLabel}</button>}
           </div>
         );
-        const aboutGrp = (title: string, k: "bg" | "head" | "text") => (
-          <div className={line}>
-            <span className="text-sm font-semibold w-52 shrink-0">{title}</span>
-            <input type="color" defaultValue="#ffffff" onChange={(e) => void applyAllAbout(k, e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
-            {base.map(([label, hex]) => (
-              <button key={label} onClick={() => void applyAllAbout(k, hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(hex)}{label}</button>
-            ))}
+        const aboutGrp = (title: string, k: "bg" | "head" | "text" | "box" | "all") => (
+          <div className="bg-white text-black rounded-lg p-2">
+            <ColourPicker label={title} value={undefined} onChange={(v) => void applyAllAbout(k, v)} brand={req ? [req.mainHex, req.accentHex] : []} />
           </div>
         );
         return (
@@ -716,9 +743,11 @@ function Builder({ id }: { id: string }) {
             {grp("Background colour (all carousels)", "bgColour", false, "Photo")}
             {items.some((x) => x.aboutArgs) && (
               <>
+                {aboutGrp("About me: change all (headline and boxes)", "all")}
                 {aboutGrp("About me background", "bg")}
                 {aboutGrp("About me headline", "head")}
                 {aboutGrp("About me text", "text")}
+                {aboutGrp("About me boxes", "box")}
                 <button onClick={() => void applyAllAbout("reset")} className="px-2 py-1 rounded border text-xs">About me back to their brand colours</button>
               </>
             )}
@@ -743,8 +772,8 @@ function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 10 posts" : "Build the 10 posts"}</button>
-        {req.kind === "premium" && !items.length && (chosenT.length !== 3 || pickedHooks.length !== 5) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of 3 treatments and {pickedHooks.length} of 5 hooks chosen.</span>}
+        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : req.kind === "premium" ? "Build the premium 6 posts" : "Build the 10 posts"}</button>
+        {req.kind === "premium" && !items.length && (chosenT.length !== PREMIUM_TREATMENTS || pickedHooks.length !== PREMIUM_HOOKS) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {PREMIUM_TREATMENTS} treatments and {pickedHooks.length} of {PREMIUM_HOOKS} hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
         <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
@@ -854,23 +883,53 @@ function Builder({ id }: { id: string }) {
             {it.aboutArgs && (() => {
               const aa0 = it.aboutArgs!;
               const d = aboutDefaults(aa0.layout, aa0.colours);
-              const cur = { bg: aa0.colours.bg || d.bg, head: aa0.colours.head || d.head, text: aa0.colours.text || d.text };
+              const dflt = ABOUT_DEFAULT_FONTS[aa0.layout];
               const set = async (patch: Partial<typeof aa0.colours>, reset = false) => {
                 const aa = { ...aa0, colours: reset ? { main: req.mainHex, accent: req.accentHex } : { ...aa0.colours, ...patch } };
                 const cv = await renderAboutPost(aa);
                 patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
               };
-              const sw = (k: "bg" | "head" | "text") => [["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
-                <button key={label} onClick={() => void set({ [k]: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
-              ));
+              const brand = [req.mainHex, req.accentHex];
+              const needsFacts = ABOUT_LAYOUTS.find((l) => l.id === aa0.layout)?.needsFacts;
               return (
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Background colour</span>
-                    <input type="color" value={cur.bg} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ bg: e.target.value })} />{sw("bg")}</div>
-                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Headline colour</span>
-                    <input type="color" value={cur.head} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ head: e.target.value })} />{sw("head")}</div>
-                  <div className="flex flex-wrap items-center gap-2"><span className="w-40 shrink-0">Text colour</span>
-                    <input type="color" value={cur.text} className="h-7 w-12 cursor-pointer rounded border" onChange={(e) => void set({ text: e.target.value })} />{sw("text")}</div>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="font-semibold">Template</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ABOUT_LAYOUTS.map((l) => (
+                      <button key={l.id} onClick={() => void aboutApply(it, { layout: l.id as AboutLayout })} className={`px-2 py-1 rounded border ${aa0.layout === l.id ? "bg-pink-500 text-white border-pink-500" : ""}`}>{l.label}</button>
+                    ))}
+                  </div>
+                  {needsFacts && (
+                    <label className="block space-y-1"><span>Facts, one per line</span>
+                      <textarea className="w-full rounded border p-2 text-foreground" rows={5} value={(aa0.facts ?? []).join("\n")} onChange={(e) => void aboutApply(it, { facts: e.target.value.split("\n") })} /></label>
+                  )}
+                  {aa0.layout === "intro" && (
+                    <label className="block space-y-1"><span>Hello line</span>
+                      <input className="w-full rounded border p-2 text-foreground" value={aa0.intro ?? ""} placeholder={`Hi! I'm ${(aa0.name || "").split(" ")[0]} and this is me...`} onChange={(e) => void aboutApply(it, { intro: e.target.value })} /></label>
+                  )}
+                  <div className="bg-white text-black rounded-lg p-2 space-y-2">
+                    <ColourPicker label="Change all (headline and boxes)" value={aa0.colours.head && aa0.colours.head === aa0.colours.box ? aa0.colours.head : undefined} onChange={(v) => void set({ head: v, box: v })} brand={brand} />
+                    <ColourPicker label="Headline" value={aa0.colours.head} placeholder={d.head} onChange={(v) => void set({ head: v })} onReset={() => void set({ head: undefined })} brand={brand} />
+                    {aa0.layout === "pills" && <ColourPicker label="Boxes" value={aa0.colours.box} placeholder={d.box} onChange={(v) => void set({ box: v })} onReset={() => void set({ box: undefined })} brand={brand} />}
+                    {(aa0.layout === "cream" || aa0.layout === "peach") && <ColourPicker label="Background" value={aa0.colours.bg} placeholder={d.bg} onChange={(v) => void set({ bg: v })} onReset={() => void set({ bg: undefined })} brand={brand} />}
+                    <ColourPicker label="Text" value={aa0.colours.text} placeholder={d.text} onChange={(v) => void set({ text: v })} onReset={() => void set({ text: undefined })} brand={brand} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="block space-y-1"><span>Headline font</span>
+                      <select className="w-full rounded border p-1.5 text-foreground bg-background" value={aa0.fonts?.head ?? dflt.head} onChange={(e) => void aboutApply(it, { fonts: { ...(aa0.fonts ?? {}), head: e.target.value } })}>
+                        {["Google fonts", "Your fonts"].map((g) => <optgroup key={g} label={g}>{ABOUT_FONTS.filter((f) => f.group === g).map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</optgroup>)}
+                      </select></label>
+                    <label className="block space-y-1"><span>Subtitle and writing font</span>
+                      <select className="w-full rounded border p-1.5 text-foreground bg-background" value={aa0.fonts?.body ?? dflt.body} onChange={(e) => void aboutApply(it, { fonts: { ...(aa0.fonts ?? {}), body: e.target.value } })}>
+                        {["Google fonts", "Your fonts"].map((g) => <optgroup key={g} label={g}>{ABOUT_FONTS.filter((f) => f.group === g).map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</optgroup>)}
+                      </select></label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-1"><input type="checkbox" checked={!!aa0.logo} onChange={(e) => void aboutApply(it, { logo: e.target.checked ? it.aboutLogo ?? aa0.logo : null })} />Logo</label>
+                    <select className="rounded border p-1 text-foreground bg-background" value={aa0.logoPos ?? "tr"} onChange={(e) => void aboutApply(it, { logoPos: e.target.value as "tr" | "tl" | "br" | "bl" })}>
+                      <option value="tr">Top right</option><option value="tl">Top left</option><option value="br">Bottom right</option><option value="bl">Bottom left</option>
+                    </select>
+                  </div>
                   <button className="px-2 py-0.5 rounded border" onClick={() => void set({}, true)}>Back to their brand colours</button>
                   <div className="font-semibold pt-1">Photo</div>
                   <div className="flex gap-2 overflow-x-auto">

@@ -111,7 +111,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = finalCta(treatment);
+    const cta = finalCta(treatment, area, headline);
     const body = clean(j.caption, 900)
       .split("\n")
       .map((l) => l.trim())

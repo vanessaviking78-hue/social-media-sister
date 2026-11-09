@@ -38,12 +38,11 @@ export const TEN_PLAN: TenSlot[] = [
 // The hook posts are photo posts with the hook as the headline. Everything is drawn from the same designs her paying clients get.
 export const PREMIUM_PLAN: TenSlot[] = [
   { n: 1, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 2, label: "About me", carousel: false, source: "about", kind: "about-me", layout: "cream" },
-  { n: 3, label: "Treatment carousel", carousel: true, source: "universal" },
-  { n: 4, label: "About me: why I love it", carousel: false, source: "about", kind: "about-love", layout: "peach" },
-  { n: 5, label: "Treatment carousel", carousel: true, source: "universal" },
-  ...[6, 7, 8, 9, 10].map((n): TenSlot => ({ n, label: "Hook carousel", carousel: true, source: "hook" })),
+  { n: 2, label: "Treatment carousel", carousel: true, source: "universal" },
+  ...[3, 4, 5, 6].map((n): TenSlot => ({ n, label: "Hook carousel", carousel: true, source: "hook" })),
 ];
+export const PREMIUM_TREATMENTS = 2;
+export const PREMIUM_HOOKS = 4;
 
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
 const INTERESTING = new Set([
@@ -77,7 +76,7 @@ export type TreatmentPick = { treatment: UTreatment; angle: number; headline: st
  * hasPhotos: whether the Universal library holds photos for that treatment, because a post with no photos would be bare.
  * Spreads the three across different groups where it can, prefers the interesting ones, and never takes only polynucleotides.
  */
-export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string, seq = 0): TreatmentPick[] {
+export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string, seq = 0, count = 3, angles: Record<string, number> = {}): TreatmentPick[] {
   const rand = rng(hashSeed(seedText));
   const byName = new Map(U_TREATMENTS.map((t) => [t.name.toLowerCase(), t]));
   // Only treatments she actually ticked. If fewer than three have photos, the same treatment is used again with a different angle.
@@ -89,16 +88,17 @@ export function pickTreatments(ticked: string[], hasPhotos: (id: string) => bool
   // First pass: a different group each time. Second pass: anything left.
   for (const pass of [0, 1]) {
     for (const t of ranked) {
-      if (chosen.length === 3) break;
+      if (chosen.length === count) break;
       if (chosen.includes(t)) continue;
       if (chosen.some((c) => SAME_FAMILY(c.id, t.id))) continue;
       if (pass === 0 && chosen.some((c) => c.group === t.group)) continue;
       chosen.push(t);
     }
   }
-  while (chosen.length < 3) chosen.push(ranked[chosen.length % ranked.length]);
+  while (chosen.length < count) chosen.push(ranked[chosen.length % ranked.length]);
   return chosen.map((treatment, i) => {
-    const angle = ANGLE_ORDER[(seq + i * 2) % ANGLE_ORDER.length];
+    const forced = angles[treatment.name];
+    const angle = typeof forced === "number" && forced >= 0 && forced < 6 ? forced : ANGLE_ORDER[(seq + i * 2) % ANGLE_ORDER.length];
     const type = postTypesFor(treatment)[angle];
     return { treatment, angle, headline: type.headline, brief: type.brief };
   });

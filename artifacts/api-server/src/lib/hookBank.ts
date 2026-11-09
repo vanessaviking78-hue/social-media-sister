@@ -70,12 +70,48 @@ export const OTHER_CTAS = [
   "Reply with your own and I will answer",
 ];
 
+// THE FRIENDLY CTA BANK for treatment posts. Each line has {WORD} (the treatment name, shouted) or {AREA} (the clinic's area) in it,
+// and every post gets a different one, so the last slide reads warm and varied instead of the same line each time.
+// It stays OFF until Vanessa has approved the lines: flip TREATMENT_CTA_BANK_LIVE to true and every tool that calls finalCta starts using it.
+export const TREATMENT_CTA_BANK_LIVE = false;
+export const TREATMENT_CTA_BANK = [
+  "Comment {WORD} and I will pop you a message with everything you need to know",
+  "If you are in {AREA} and want to see a caring practitioner, come and say hello in my DMs",
+  "Comment {WORD} below and I will tell you honestly whether it could suit you",
+  "Thinking about it? Drop {WORD} in the comments and we will have a proper chat",
+  "Curious but not sure where to start? Comment {WORD} and I will talk you through it",
+  "Near {AREA} and fancy a friendly, no judgement chat? Message me and we will find a time",
+  "Pop {WORD} in the comments and I will send you the details, nice and simple",
+  "Based in {AREA}? I would love to meet you. Send me a message and we will take it from there",
+  "Got a question you are too shy to ask? Comment {WORD} and ask me anything",
+  "Comment {WORD} if you would like a gentle, honest chat about whether this is for you",
+  "Wondering if you would be a good fit? Message me and I will tell you straight",
+  "Looking for a kind, careful practitioner in {AREA}? Say hello in my DMs",
+  "Comment {WORD} and we will talk it through together, at your pace",
+  "If this has been on your mind for a while, message me when you are ready and we will start with a chat",
+];
+
+const escapeRe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const BANK_RES = TREATMENT_CTA_BANK.map((l) => new RegExp(`^${l.split(/\{WORD\}|\{AREA\}/).map(escapeRe).join(".+")}$`, "i"));
+
 export function isFinalCta(line: string): boolean {
   const l = line.trim().replace(/[.!]+$/, "").toLowerCase();
-  return /^comment .* for more info$/.test(l) || l === "tag a friend who will get it" || OTHER_CTAS.some((c) => c.toLowerCase() === l);
+  return /^comment .* for more info$/.test(l) || l === "tag a friend who will get it" || OTHER_CTAS.some((c) => c.toLowerCase() === l) || BANK_RES.some((re) => re.test(line.trim().replace(/[.!]+$/, "")));
 }
 
-export function finalCta(treatment: unknown): string {
+/** One bank line for this treatment and area. `seed` (a post key) keeps each post's line steady; `shift` is the shuffle button. */
+export function bankCta(treatment: string, area = "", seed = "", shift = 0): string {
+  const word = treatment.replace(/\s+/g, " ").trim().slice(0, 60).toUpperCase();
+  const town = area.split(",")[0].trim();
+  const usable = TREATMENT_CTA_BANK.filter((l) => (l.includes("{AREA}") ? !!town : l.includes("{WORD}") ? !!word : true));
+  let h = 0;
+  for (const ch of `${seed}${treatment}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const line = usable[(h + shift) % usable.length];
+  return line.replace("{WORD}", word).replace("{AREA}", town);
+}
+
+export function finalCta(treatment: unknown, area?: unknown, seed?: unknown): string {
   const t = String(treatment ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+  if (t && TREATMENT_CTA_BANK_LIVE) return bankCta(t, String(area ?? ""), String(seed ?? ""));
   return t ? `Comment ${t.toUpperCase()} for more info` : OTHER_CTAS[Math.floor(Math.random() * OTHER_CTAS.length)];
 }
