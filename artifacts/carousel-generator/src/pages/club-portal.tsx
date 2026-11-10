@@ -235,8 +235,9 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       const r = await fetch(`${API}/club/me/${token}/choices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ treatments, note }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Could not save");
-      setMsg("Saved. You can change it any time until the closing date.");
+      setMsg("Sent to Vanessa. You can change it any time until the closing date.");
       fireConfetti();
+      window.scrollTo({ top: 0, behavior: "smooth" });
       reload();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not save");
@@ -254,12 +255,17 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       <p className="cp-sub">Choices close on {dateName(data.cycle.cutOff)}, a week before your next payment on {dateName(data.cycle.nextBilling)}. Your content is then built and checked by me personally.</p>
       {!open && <div className="cp-err">Choices have closed for this month. Message me if something has changed.</div>}
       {data.cycle.choices.savedAt && (
-        <div className="cp-box" style={{ borderColor: "#ff1f8e" }}>
-          <b style={{ fontSize: 22 }}>That's your socials done for the month.</b>
-          <p className="cp-sub" style={{ marginTop: 6 }}>Vanessa will send you your link with your content shortly.</p>
+        <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}>
+          <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+            <div style={{ background: "#ff1f8e", color: "#fff", width: 44, height: 44, borderRadius: 22, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, fontWeight: 900, flex: "none" }}>&#10003;</div>
+            <div>
+              <b style={{ fontSize: 24, textTransform: "uppercase" }}>Sent to Vanessa</b>
+              <p style={{ margin: "6px 0 2px", fontWeight: 700 }}>That's your socials done for the month, Vanessa will send you your link with your content shortly.</p>
+              <p className="cp-sub" style={{ margin: 0, fontSize: 14 }}>Sent on {new Date(data.cycle.choices.savedAt).toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}. You can still change your treatments below until {dateName(data.cycle.cutOff)}.</p>
+            </div>
+          </div>
         </div>
       )}
-
       <h2>What {caps.treatmentPosts} treatments would you like to promote this month? <span className="cp-count">{treatments.length} of {caps.treatmentPosts}</span></h2>
       <p className="cp-sub">If you only choose 1, 2 or 3, that is perfectly fine. You can promote the same treatment again another month, I will make it with fresh hooks so it never looks repeated.</p>
       {U_GROUPS.map((g) => (
@@ -275,7 +281,7 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       ))}
 
       <label className="cp-field"><span>Anything I should know this month? (a launch, a holiday, a new treatment)</span><textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
-      <button className="cp-btn" disabled={busy || !open || treatments.length === 0} onClick={save}>{busy ? "Saving..." : "Save my choices"}</button>
+      <button className="cp-btn" disabled={busy || !open || treatments.length === 0} onClick={save}>{busy ? "Sending..." : data.cycle.choices.savedAt ? "Send my updated choices" : "Send my choices to Vanessa"}</button>
       {msg && <p className="cp-pink" style={{ fontWeight: 700 }}>{msg}</p>}
     </div>
   );
@@ -326,6 +332,7 @@ export default function ClubPortal({ token }: { token: string }) {
   const [ended, setEnded] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState<"choose" | "content" | "me">("choose");
+  const [detailsSent, setDetailsSent] = useState(false);
   const load = useCallback(async () => {
     try {
       const r = await fetch(`${API}/club/me/${token}`, { cache: "no-store" });
@@ -352,7 +359,7 @@ export default function ClubPortal({ token }: { token: string }) {
           <>
             <h1>Welcome, <span>{data.member.name.split(" ")[0]}</span></h1>
             <p className="cp-sub">Fill in your details once and I will do the rest, every single month.</p>
-            <Details token={token} onDone={load} existing={data.member.details} />
+            <Details token={token} onDone={() => { setDetailsSent(true); window.scrollTo({ top: 0 }); load(); }} existing={data.member.details} />
           </>
         )}
         {data && data.member.detailsDone && (
@@ -364,6 +371,9 @@ export default function ClubPortal({ token }: { token: string }) {
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
+            {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
+              <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
+            )}
             {tab === "choose" && <Choose token={token} data={data} reload={load} />}
             {tab === "content" && <Content data={data} plan={data.member.plan} />}
             {tab === "me" && (
