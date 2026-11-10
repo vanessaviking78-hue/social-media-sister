@@ -414,7 +414,8 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     if (blk) {
       const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.55), headH + gap + subH + 110));
       const bt = Math.max(0, Math.min(H - bh, H - bh + (look.coverY || 0)));
-      ctx.fillStyle = blk;
+      const bmc = metalOf(blk);
+      ctx.fillStyle = bmc ? metalFill(ctx, bmc, 0, bt, W, bt + bh) : blk;
       ctx.fillRect(0, bt, W, bh);
       startY = bt + Math.round((bh - (headH + gap + subH)) / 2);
     }
