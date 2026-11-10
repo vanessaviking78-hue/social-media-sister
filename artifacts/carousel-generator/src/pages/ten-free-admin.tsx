@@ -106,6 +106,9 @@ const BODY_CSS = "'Playfair Display', serif";
 
 // Short lines for the pill notes and fact arrows templates, taken only from what the clinician told us.
 function aboutFacts(a: Record<string, any>, area: string): string[] {
+  // Their own fun facts (written on the details form, one per line) come first.
+  const own = (Array.isArray(a.facts) ? a.facts : String(a.facts ?? "").split("\n")).map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
+  if (own.length) return own.slice(0, 6);
   const clip = (t: unknown, n = 44) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, n).replace(/[\s,.;:-]+\S*$/, (m) => (String(t ?? "").trim().length > n ? "" : m));
   const out: string[] = [];
   const hob = clip(a.hobbies); if (hob) out.push(`Happiest when: ${hob}`);
@@ -508,6 +511,9 @@ export function Builder({ id }: { id: string }) {
   };
   const aboutApply = async (it: Item, patch: Partial<NonNullable<Item["aboutArgs"]>>) => {
     const aa = { ...it.aboutArgs!, ...patch };
+    // Switching to Fact arrows or Pill notes fills the notes from what the client told me, so they are never empty.
+    const needs = ABOUT_LAYOUTS.find((l) => l.id === aa.layout)?.needsFacts;
+    if (needs && !(aa.facts ?? []).some((f) => f.trim()) && req) aa.facts = aboutFacts((about ?? req.answers) as Record<string, any>, req.area);
     const cv = await renderAboutPost(aa);
     patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
   };
