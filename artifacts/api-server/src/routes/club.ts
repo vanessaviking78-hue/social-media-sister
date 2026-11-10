@@ -23,8 +23,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 export const CLUB_PLANS = {
-  "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 9, reels: 10, tailoredReels: 4 },
-  "222": { price: 222, posts: 20, treatmentPosts: 4, aboutPosts: 2, picks: 16, reels: 20, tailoredReels: 8 },
+  "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 9, reels: 10, stories: 12, tailoredReels: 4 },
+  "222": { price: 222, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
 const MAX_PHOTOS = 20;
@@ -368,13 +368,13 @@ async function writeStories(m: Member, month: MonthRow): Promise<Story[]> {
     temperature: 0.95,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write Instagram stories for a UK aesthetics clinician, in HER first person. Write exactly 12. Each has a short line for the story itself (max 25 words, warm, funny, never salesy) and a suggested poll sticker: a question under 12 words with two short answers (max 3 words each) that women over 35 will tap without thinking. Spread them: a few about her life and the clinic, a few about common beauty myths, a few light this or that questions, and at most 3 that nudge towards her treatments. Never mention a website, Botox, anti-wrinkle or prescription treatments, never promise a result, no emojis, no em dashes, no negative parallelism, no AI patter. British spelling. Return JSON: {"stories":[{"text":string,"question":string,"a":string,"b":string}]}` },
+      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write Instagram stories for a UK aesthetics clinician, in HER first person. Write exactly ${CLUB_PLANS[m.plan].stories}. Each has a short line for the story itself (max 25 words, warm, funny, never salesy) and a suggested poll sticker: a question under 12 words with two short answers (max 3 words each) that women over 35 will tap without thinking. Spread them: a few about her life and the clinic, a few about common beauty myths, a few light this or that questions, and at most 3 that nudge towards her treatments. Never mention a website, Botox, anti-wrinkle or prescription treatments, never promise a result, no emojis, no em dashes, no negative parallelism, no AI patter. British spelling. Return JSON: {"stories":[{"text":string,"question":string,"a":string,"b":string}]}` },
       { role: "user", content: profile },
     ],
   });
   let list: any[] = [];
   try { list = JSON.parse(r.choices[0]?.message?.content ?? "{}").stories ?? []; } catch { list = []; }
-  return list.slice(0, 12).map((x, i) => ({ n: i + 1, text: noDashes(x.text).slice(0, 200), poll: { question: noDashes(x.question).slice(0, 90), a: noDashes(x.a).slice(0, 24), b: noDashes(x.b).slice(0, 24) } })).filter((x) => x.text && x.poll.question);
+  return list.slice(0, CLUB_PLANS[m.plan].stories).map((x, i) => ({ n: i + 1, text: noDashes(x.text).slice(0, 200), poll: { question: noDashes(x.question).slice(0, 90), a: noDashes(x.a).slice(0, 24), b: noDashes(x.b).slice(0, 24) } })).filter((x) => x.text && x.poll.question);
 }
 
 async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
@@ -880,7 +880,7 @@ router.patch("/club/months/:id", requireAuth, async (req: Request, res: Response
       await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${id}`);
     }
     if (Array.isArray(b.stories)) {
-      const content = { ...(x.content ?? {}), stories: b.stories.slice(0, 12).map((s: any, i: number) => ({ n: i + 1, text: noDashes(s.text).slice(0, 200), poll: { question: noDashes(s.poll?.question).slice(0, 90), a: noDashes(s.poll?.a).slice(0, 24), b: noDashes(s.poll?.b).slice(0, 24) } })) };
+      const content = { ...(x.content ?? {}), stories: b.stories.slice(0, 16).map((s: any, i: number) => ({ n: i + 1, text: noDashes(s.text).slice(0, 200), poll: { question: noDashes(s.poll?.question).slice(0, 90), a: noDashes(s.poll?.a).slice(0, 24), b: noDashes(s.poll?.b).slice(0, 24) } })) };
       await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${id}`);
     }
     if (Array.isArray(b.aiUrls)) await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(b.aiUrls.map((u) => str(u, 400)).slice(0, 12))}::jsonb WHERE id = ${id}`);

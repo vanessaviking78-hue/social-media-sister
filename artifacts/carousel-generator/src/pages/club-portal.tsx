@@ -64,7 +64,7 @@ ${PREMIUM_FONTS.map((ft) => `.cp .ff-${ft.id}, .cp .ff-${ft.id} * { font-family:
 `;
 
 
-type Caps = { price: number; posts: number; treatmentPosts: number; picks: number; reels: number; tailoredReels: number };
+type Caps = { stories: number; price: number; posts: number; treatmentPosts: number; picks: number; reels: number; tailoredReels: number };
 type Pick = { kind: "hook" | "tool"; code?: string; tool?: string; useTemplate?: boolean; label?: string };
 type Reel = { n: number; kind: string; treatment?: string; hook: string; onScreen?: string; script: string };
 type Story = { n: number; text: string; poll: { question: string; a: string; b: string } };
@@ -440,7 +440,7 @@ export default function ClubPortal({ token }: { token: string }) {
               {data.member.welcomePhotoUrl && <img src={data.member.welcomePhotoUrl} alt="" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", border: `4px solid ${PINK}` }} />}
               <h1 style={{ margin: 0 }}>Welcome back, <span>{data.member.name.split(" ")[0]}</span></h1>
             </div>
-            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts, 12 stories with poll ideas and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
+            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts, {data.member.caps.stories} stories with poll ideas and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
             <div className="cp-tabs">
               <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
               <button className={`cp-tab ${tab === "choose" ? "on" : ""}`} onClick={() => setTab("choose")}>This month</button>
