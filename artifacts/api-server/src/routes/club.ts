@@ -13,7 +13,7 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { logger } from "../lib/logger";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 
-// THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £222 club (Instagram DM, 7 places).
+// THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £275 club (Instagram DM, 7 places).
 // A member is made by Vanessa, gets a private link /club/<token>, fills in their details once, then picks their treatments and posts each month.
 // Five days before their billing date the month is prepared (reel hooks and scripts, six AI photos), and an email tells Vanessa it is waiting.
 // She builds the posts, vets everything in the approval queue, and only approved months reach the member's portal. Cancelled members lose access.
@@ -24,7 +24,7 @@ const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 export const CLUB_PLANS = {
   "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 9, reels: 10, stories: 12, tailoredReels: 4 },
-  "222": { price: 222, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
+  "222": { price: 275, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
 const MAX_PHOTOS = 20;
@@ -280,7 +280,7 @@ router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: 
       await db.execute(sql`UPDATE club_members SET details = ${JSON.stringify(details)}::jsonb, details_done = true,
         logo_url = ${logoKey ? `/api/free-samples/media/${logoKey}` : m.logo_url}, clinic_photo_url = ${clinicKey ? `/api/free-samples/media/${clinicKey}` : m.clinic_photo_url},
         photo_urls = ${JSON.stringify(photoUrls)}::jsonb WHERE id = ${m.id}`);
-      void emailVanessa(`Club: ${m.name} has filled in her details`, [`${m.name} (${m.plan === "69" ? "£69" : "£222"} club) has completed the one-off details form.`, "", appLink("/club-admin")]);
+      void emailVanessa(`Club: ${m.name} has filled in her details`, [`${m.name} (${m.plan === "69" ? "£69" : "£275"} club) has completed the one-off details form.`, "", appLink("/club-admin")]);
     } else {
       // Already done: only extra photos, a new logo or a clinic photo can be added.
       await db.execute(sql`UPDATE club_members SET photo_urls = ${JSON.stringify(photoUrls)}::jsonb,
@@ -330,7 +330,7 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
     void emailVanessa(`${firstTime ? "" : "UPDATED: "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()}`, [
       `*** ${firstTime ? "" : "UPDATED "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()} ***`,
       "",
-      `${m.details?.clinicName || m.name} (${m.plan === "69" ? "£69" : "£222"} club), ${month}`,
+      `${m.details?.clinicName || m.name} (${m.plan === "69" ? "£69" : "£275"} club), ${month}`,
       `Treatments: ${treatments.join(", ") || "none chosen"}`,
       ...(str(b.note, 500) ? [`Their note: ${str(b.note, 500)}`] : []),
       "",
@@ -515,7 +515,7 @@ router.post("/club/members", requireAuth, async (req: Request, res: Response) =>
     const limit = plan === "69" ? 5 : 7;
     const n = Number((await db.execute(sql`SELECT count(*)::int AS n FROM club_members WHERE plan = ${plan} AND status = 'active'`)).rows[0]?.n ?? 0);
     if (n >= limit && !(req.body as any).overrideLimit) {
-      res.status(409).json({ error: `The ${plan === "69" ? "£69" : "£222"} club is full (${limit} places). Tick "allow a sixth place" if you want to go over.`, full: true });
+      res.status(409).json({ error: `The ${plan === "69" ? "£69" : "£275"} club is full (${limit} places). Tick "allow a sixth place" if you want to go over.`, full: true });
       return;
     }
     const id = uuid();
@@ -915,7 +915,7 @@ export async function clubDueCheck(): Promise<void> {
       const cur = await getOrMakeMonth(m.id, month);
       if (cur.due_notified_at || cur.status === "approved") continue;
       await db.execute(sql`UPDATE club_months SET due_notified_at = now() WHERE id = ${cur.id}`);
-      started.push(`${m.name} (${m.plan === "69" ? "£69" : "£222"} club, bills ${ymd(date)})`);
+      started.push(`${m.name} (${m.plan === "69" ? "£69" : "£275"} club, bills ${ymd(date)})`);
       void prepareMonth(m.id, month);
     }
     if (started.length) {

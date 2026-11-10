@@ -29,7 +29,7 @@ export default function ClubLinks() {
         if (!list.length) return null;
         return (
           <div key={p} className="space-y-2">
-            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£222 club"}</h2>
+            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£275 club"}</h2>
             {list.map((m) => (
               <div key={m.id} className="border rounded-lg p-3 flex flex-wrap items-center justify-between gap-2">
                 <div><b>{m.name}</b><div className="text-xs text-muted-foreground">{m.detailsDone ? "details done" : "details not filled in yet"} · next billing {m.nextBilling}</div></div>

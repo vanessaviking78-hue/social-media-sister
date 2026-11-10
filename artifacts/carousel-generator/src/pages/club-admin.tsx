@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { HOOKS, hookFits, type Hook } from "@/lib/hook-bank";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// Vanessa's side of the £69 club (5 places) and the £222 club (7 places): members, their private links, the monthly prep, and the approval queue.
+// Vanessa's side of the £69 club (5 places) and the £275 club (7 places): members, their private links, the monthly prep, and the approval queue.
 // Nothing reaches a member's portal until she presses Approve here.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -375,7 +375,7 @@ export default function ClubAdmin() {
         <div className="flex flex-wrap gap-2">
           <input className="border rounded px-2 py-1" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
           <input className="border rounded px-2 py-1" placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <select className="border rounded px-2 py-1" value={plan} onChange={(e) => setPlan(e.target.value as "69" | "222")}><option value="69">£69 club</option><option value="222">£222 club</option></select>
+          <select className="border rounded px-2 py-1" value={plan} onChange={(e) => setPlan(e.target.value as "69" | "222")}><option value="69">£69 club</option><option value="222">£275 club</option></select>
           <label className="text-sm flex items-center gap-1">Billing day of the month <input className="border rounded px-2 py-1 w-16" value={day} onChange={(e) => setDay(e.target.value)} /></label>
           <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={over} onChange={(e) => setOver(e.target.checked)} /> allow an extra place</label>
           <button className="px-4 py-1.5 rounded bg-pink-500 text-white" onClick={add}>Make their link</button>
@@ -389,7 +389,7 @@ export default function ClubAdmin() {
         const active = list.filter((m) => m.status === "active").length;
         return (
           <div key={p} className="space-y-3">
-            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£222 club"} <span className="text-pink-500">{active} of {LIMITS[p]} places</span></h2>
+            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£275 club"} <span className="text-pink-500">{active} of {LIMITS[p]} places</span></h2>
             {list.length === 0 && <p className="text-sm text-muted-foreground">No members yet.</p>}
             {list.map((m) => (
               <div key={m.id} className={`border rounded-lg p-4 space-y-2 ${m.status !== "active" ? "opacity-60" : ""}`}>

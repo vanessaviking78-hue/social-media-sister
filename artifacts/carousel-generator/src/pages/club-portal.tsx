@@ -3,7 +3,7 @@ import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 
-// cybersuite.com/club/<private token>: the member's own portal for the £69 and £222 clubs.
+// cybersuite.com/club/<private token>: the member's own portal for the £69 and £275 clubs.
 // First visit: the one-off details form. After that: choose this month's treatments and posts, then download what has been approved.
 
 const PINK = "#ff1f8e";
@@ -422,7 +422,7 @@ export default function ClubPortal({ token }: { token: string }) {
     <div className="cp">
       <style>{CSS}</style>
       <div className="cp-w">
-        <div className="cp-top"><span>Social Media Sister</span><span>{data ? (data.member.plan === "69" ? "The £69 club" : "The £222 club") : "The club"}</span></div>
+        <div className="cp-top"><span>Social Media Sister</span><span>{data ? (data.member.plan === "69" ? "The £69 club" : "The £275 club") : "The club"}</span></div>
         {data && /tester account/i.test(data.member.name) && <div style={{ background: "#111", color: "#fff", textAlign: "center", fontWeight: 900, letterSpacing: ".2em", textTransform: "uppercase", padding: "8px 12px", borderRadius: 8, margin: "0 0 12px" }}>Tester account</div>}
         {ended && <><h1>See you <span>soon</span></h1><p className="cp-sub">{ended}</p></>}
         {error && <p className="cp-err">{error}</p>}
@@ -441,6 +441,7 @@ export default function ClubPortal({ token }: { token: string }) {
               <h1 style={{ margin: 0 }}>Welcome back, <span>{data.member.name.split(" ")[0]}</span></h1>
             </div>
             <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts, {data.member.caps.stories} stories with poll ideas and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
+            {data.member.plan === "222" && <div className="cp-box"><b>Short on time?</b><p className="cp-sub">If you really cannot be bothered, or you simply do not have the time to post it all yourself, I am happy to do it for you. That is £475 a month. Just message me on Instagram DM and I will sort it.</p></div>}
             <div className="cp-tabs">
               <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
               <button className={`cp-tab ${tab === "choose" ? "on" : ""}`} onClick={() => setTab("choose")}>This month</button>
