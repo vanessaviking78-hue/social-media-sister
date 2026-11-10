@@ -97,6 +97,7 @@ export default function KnowMePublic({ token }: { token?: string }) {
           <p className="text-xs uppercase tracking-widest text-pink-400 flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Social Media Sister</p>
           <h1 className="text-3xl font-semibold">{token ? `Let me get to know ${clientName}` : "Let me get to know you"}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">The more of you I put into your posts, the more they sound like you. Answer in your own words, as chatty as you like. There are no wrong answers and you can come back and change anything whenever you want.</p>
+          <div style={{ border: "3px solid #fff", background: "#3a1428", borderRadius: 12, padding: "16px 18px" }}><div style={{ fontWeight: 800, fontSize: 20, textTransform: "uppercase", letterSpacing: ".03em", color: "#ff4fa8" }}>The more you tell me, the better your work gets</div><p style={{ margin: "8px 0 0", fontSize: 16, lineHeight: 1.5, color: "#fff" }}>The more information and detail you give me, the more bespoke and personal your content will be. Chatty answers, little stories and odd facts all help. You only need to do this once. You can add more whenever you like, and your next bundle will include everything you have added.</p></div>
         </div>
 
         {!token && (

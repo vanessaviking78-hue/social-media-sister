@@ -292,6 +292,10 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
               )}
             </div>
 
+            <div style={{ border: "3px solid #ff1f8e", borderRadius: 12, padding: "16px 18px", margin: "0 0 22px", background: "rgba(255,31,142,.08)" }}>
+              <div style={{ fontWeight: 800, fontSize: 20, textTransform: "uppercase", letterSpacing: ".03em", color: "#ff1f8e" }}>The more you tell me, the better your posts get</div>
+              <p style={{ margin: "8px 0 0", fontSize: 16, lineHeight: 1.5 }}>The more information and detail you give me, the more bespoke and personal your work will be. Chatty answers, little stories and odd facts all help. Take your time with the boxes below.</p>
+            </div>
             <div className="tf-sec">
               <div className="tf-num">01</div>
               <h2>The basics</h2>

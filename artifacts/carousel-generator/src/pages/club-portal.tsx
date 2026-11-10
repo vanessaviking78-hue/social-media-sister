@@ -202,6 +202,7 @@ function Details({ token, onDone, existing }: { token: string; onDone: () => voi
   );
   return (
     <form onSubmit={submit}>
+      <div style={{ border: "3px solid #111", background: "#fff0f7", borderRadius: 12, padding: "16px 18px", margin: "0 0 18px" }}><div style={{ fontWeight: 800, fontSize: 20, textTransform: "uppercase", letterSpacing: ".03em", color: "#d6006f" }}>The more you tell me, the better your work gets</div><p style={{ margin: "8px 0 0", fontSize: 16, lineHeight: 1.5, color: "#111" }}>The more information and detail you give me, the more bespoke and personal your content will be. Chatty answers, little stories and odd facts all help. You only need to do this once. You can add more whenever you like, and your next bundle will include everything you have added.</p></div>
       <h2>About you and your clinic</h2>
       <p className="cp-sub">You only fill this in once. Everything is used to make your posts sound like you, so be as chatty as you like.</p>
       {T("clinicianName", "Your name")}
