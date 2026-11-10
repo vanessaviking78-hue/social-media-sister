@@ -813,7 +813,14 @@ export function Builder({ id }: { id: string }) {
           </div>
         );
       })()}
-      {req?.kind !== "premium" && <div className="flex gap-2 items-center flex-wrap">
+      {isPrem && <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-sm font-semibold">Headline font (their choice is ticked, change it if you like):</span>
+        {PREMIUM_FONTS.map((f) => (
+          <button key={f.id} type="button" onClick={() => setUniFont(f.id)} className={`px-3 py-1.5 rounded border text-xl ${uniFont === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`} style={{ fontFamily: `"${f.family}", serif`, fontWeight: 400, textTransform: "none" }}>{f.name}</button>
+        ))}
+        <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
+      </div>}
+      {!isPrem && <div className="flex gap-2 items-center flex-wrap">
         <span className="text-sm font-semibold">Headline font for every post:</span>
         {HEAD_FONTS.map((f) => (
           <button key={f.id} onClick={() => setHeadChoice(f.id)} className={`px-3 py-1.5 rounded border text-sm ${headChoice === f.id ? "bg-pink-500 text-white border-pink-500" : ""}`} style={{ fontFamily: f.css }}>{f.label}</button>
@@ -850,7 +857,7 @@ export function Builder({ id }: { id: string }) {
           }
         }}>{req.presetId ? "Attached, open my clients" : "Attach to the Cyber Suite"}</button>}
       </div>
-      {link && (
+      {link && !isClub && (
         <div className="border rounded p-4 space-y-2">
           <div className="text-sm">Private link for {req.clinicianName}:</div>
           <div className="font-mono text-sm break-all">{link}</div>
