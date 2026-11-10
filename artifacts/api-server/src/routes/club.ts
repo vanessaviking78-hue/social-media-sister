@@ -186,10 +186,12 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     const { date, month } = nextBilling(m.billing_day);
     const cur = await getOrMakeMonth(m.id, month);
     const cutOffDate = new Date(date.getTime() - CUT_OFF_DAYS * 86400000);
-    const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
+    const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at, choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
+    const usedTreatments = Array.from(new Set((approved.rows as any[]).filter((r) => r.month !== month).flatMap((r) => (r.choices?.treatments as string[]) ?? [])));
     res.set("Cache-Control", "private, no-store");
     res.json({
       member: publicMember(m),
+      usedTreatments,
       cycle: {
         month,
         nextBilling: ymd(date),
@@ -292,15 +294,12 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
       return;
     }
     const caps = CLUB_PLANS[m.plan];
-    const b = req.body as { treatments?: unknown; picks?: unknown; note?: unknown };
-    const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter(Boolean).slice(0, caps.treatmentPosts);
-    const picks = (Array.isArray(b.picks) ? b.picks : []).slice(0, caps.picks).map((p: any) => ({
-      kind: p?.kind === "tool" ? "tool" : "hook",
-      code: str(p?.code, 40),
-      tool: str(p?.tool, 40),
-      useTemplate: !!p?.useTemplate,
-      label: str(p?.label, 120),
-    }));
+    const b = req.body as { treatments?: unknown; note?: unknown };
+    // Treatments they have already had in an approved month are not offered again.
+    const had = new Set(((await db.execute(sql`SELECT choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' AND month <> ${month}`)).rows as any[]).flatMap((r) => (r.choices?.treatments as string[]) ?? []));
+    const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter((t) => t && !had.has(t)).slice(0, caps.treatmentPosts);
+    // The other posts are chosen by Vanessa, so whatever she has set is kept.
+    const picks = Array.isArray(cur.choices?.picks) ? cur.choices.picks : [];
     await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify({ treatments, picks, note: str(b.note, 500), savedAt: new Date().toISOString() })}::jsonb, updated_at = now() WHERE id = ${cur.id}`);
     res.json({ ok: true });
   } catch (err: unknown) {

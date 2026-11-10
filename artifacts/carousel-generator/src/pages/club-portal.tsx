@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { HOOKS, type Hook } from "@/lib/hook-bank";
+import { useCallback, useEffect, useState } from "react";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 
@@ -50,18 +49,6 @@ const CSS = `
 .cp-err { color:#b3001b; font-weight:700; margin:10px 0; }
 `;
 
-// The content tools a member can ask for. Ticking "use the template" means Vanessa builds that post in that tool's own design.
-const TOOL_POSTS: { id: string; name: string }[] = [
-  { id: "empower", name: "Empower (midlife confidence)" },
-  { id: "november-posts", name: "November posts" },
-  { id: "xmas-posts", name: "Christmas and New Year posts" },
-  { id: "unique", name: "Unique (all year round designs)" },
-  { id: "halloween-posts", name: "Halloween posts" },
-  { id: "lux", name: "LUX" },
-];
-
-const SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
-const SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
 
 type Caps = { price: number; posts: number; treatmentPosts: number; picks: number; reels: number; tailoredReels: number };
 type Pick = { kind: "hook" | "tool"; code?: string; tool?: string; useTemplate?: boolean; label?: string };
@@ -70,6 +57,7 @@ type MonthContent = { posts?: { n: number; label: string; images: string[]; capt
 type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string } };
+  usedTreatments?: string[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
 };
 
@@ -203,27 +191,17 @@ function Details({ token, onDone, existing }: { token: string; onDone: () => voi
 function Choose({ token, data, reload }: { token: string; data: Portal; reload: () => void }) {
   const caps = data.member.caps;
   const [treatments, setTreatments] = useState<string[]>(data.cycle.choices.treatments ?? []);
-  const [picks, setPicks] = useState<Pick[]>(data.cycle.choices.picks ?? []);
   const [note, setNote] = useState(data.cycle.choices.note ?? "");
-  const [section, setSection] = useState("Treatment");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
-  const area = String(data.member.details.area || "").split(",")[0].trim();
   const open = data.cycle.open;
-
-  const hooks = useMemo(() => HOOKS.filter((h: Hook) => (h.theme || "Original") === section), [section]);
-  const hookOn = (code: string) => picks.some((p) => p.kind === "hook" && p.code === code);
-  const toolOn = (id: string) => picks.some((p) => p.kind === "tool" && p.tool === id);
-  const full = picks.length >= caps.picks;
-  const toggleHook = (h: Hook) => setPicks((p) => (hookOn(h.code) ? p.filter((x) => !(x.kind === "hook" && x.code === h.code)) : full ? p : [...p, { kind: "hook", code: h.code, label: h.text.slice(0, 100) }]));
-  const toggleTool = (t: { id: string; name: string }) => setPicks((p) => (toolOn(t.id) ? p.filter((x) => !(x.kind === "tool" && x.tool === t.id)) : full ? p : [...p, { kind: "tool", tool: t.id, useTemplate: true, label: t.name }]));
-  const toggleTemplate = (id: string) => setPicks((p) => p.map((x) => (x.kind === "tool" && x.tool === id ? { ...x, useTemplate: !x.useTemplate } : x)));
+  const used = new Set(data.usedTreatments ?? []);
 
   const save = async () => {
     setBusy(true);
     setMsg("");
     try {
-      const r = await fetch(`${API}/club/me/${token}/choices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ treatments, picks, note }) });
+      const r = await fetch(`${API}/club/me/${token}/choices`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ treatments, note }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Could not save");
       setMsg("Saved. You can change it any time until the closing date.");
@@ -245,43 +223,19 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       {!open && <div className="cp-err">Choices have closed for this month. Message me if something has changed.</div>}
 
       <h2>1. Your {caps.treatmentPosts} treatments <span className="cp-count">{treatments.length} of {caps.treatmentPosts}</span></h2>
-      <p className="cp-sub">Each one becomes its own treatment post, with matching reels.</p>
+      <p className="cp-sub">Each one becomes its own treatment post, with matching reels. Once you have had a treatment it is crossed out, so you always get something new.</p>
       {U_GROUPS.map((g) => (
         <div key={g.id} style={{ margin: "14px 0" }}>
           <div className="cp-pink" style={{ fontWeight: 900, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 6 }}>{g.label}</div>
           <div className="cp-chips">
             {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
               const on = treatments.includes(t.name);
-              return <button key={t.id} type="button" disabled={!open || (!on && treatments.length >= caps.treatmentPosts)} className={`cp-chip ${on ? "on" : ""}`} onClick={() => setTreatments((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))}>{t.name}</button>;
+              const done = used.has(t.name);
+              return <button key={t.id} type="button" title={done ? "You have already had this one" : undefined} style={done ? { textDecoration: "line-through", color: "#999", borderColor: "#ccc" } : undefined} disabled={done || !open || (!on && treatments.length >= caps.treatmentPosts)} className={`cp-chip ${on && !done ? "on" : ""}`} onClick={() => setTreatments((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))}>{t.name}</button>;
             })}
           </div>
         </div>
       ))}
-
-      <h2>2. Your other {caps.picks} posts <span className="cp-count">{picks.length} of {caps.picks}</span></h2>
-      <p className="cp-sub">Pick from my content tools, or from the hook lists. For a tool you can tick whether you would like that tool's own template design.</p>
-      <div className="cp-box">
-        {TOOL_POSTS.map((t) => {
-          const p = picks.find((x) => x.kind === "tool" && x.tool === t.id);
-          return (
-            <div key={t.id} className="cp-hook">
-              <input type="checkbox" checked={!!p} disabled={!open || (!p && full)} onChange={() => toggleTool(t)} />
-              <div>{t.name}{p && <label style={{ display: "block", fontSize: 14, color: "#555" }}><input type="checkbox" checked={!!p.useTemplate} onChange={() => toggleTemplate(t.id)} /> Use the {t.name.split(" (")[0]} template design</label>}</div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="cp-chips" style={{ marginTop: 14 }}>
-        {SECTIONS.map((s) => <button key={s} type="button" className={`cp-chip ${section === s ? "on" : ""}`} onClick={() => setSection(s)}>{SECTION_LABEL[s] ?? s}</button>)}
-      </div>
-      <div style={{ maxHeight: 420, overflowY: "auto", marginTop: 8 }}>
-        {hooks.map((h: Hook) => (
-          <label key={h.code} className="cp-hook">
-            <input type="checkbox" checked={hookOn(h.code)} disabled={!open || (!hookOn(h.code) && full)} onChange={() => toggleHook(h)} />
-            <span>{h.text.replace(/\[area\]/gi, area || "your area").replace(/\[treatment\]/gi, "your treatment")}</span>
-          </label>
-        ))}
-      </div>
 
       <label className="cp-field"><span>Anything I should know this month? (a launch, a holiday, a new treatment)</span><textarea value={note} onChange={(e) => setNote(e.target.value)} /></label>
       <button className="cp-btn" disabled={busy || !open || treatments.length === 0} onClick={save}>{busy ? "Saving..." : "Save my choices"}</button>

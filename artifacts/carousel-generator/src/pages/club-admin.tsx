@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { HOOKS, type Hook } from "@/lib/hook-bank";
 
 // Vanessa's side of the £69 club (5 places) and the £222 club (7 places): members, their private links, the monthly prep, and the approval queue.
 // Nothing reaches a member's portal until she presses Approve here.
@@ -23,6 +24,13 @@ type Member = {
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
 const LIMITS = { "69": 5, "222": 7 } as const;
+const PICK_CAP = { "69": 6, "222": 16 } as const;
+const TOOLS: { id: string; name: string }[] = [
+  { id: "empower", name: "Empower" }, { id: "november-posts", name: "November posts" }, { id: "xmas-posts", name: "Christmas and New Year posts" },
+  { id: "unique", name: "Unique" }, { id: "halloween-posts", name: "Halloween posts" }, { id: "lux", name: "LUX" },
+];
+const SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
+type PickT = { kind: string; code?: string; tool?: string; useTemplate?: boolean; label?: string };
 const STATUS: Record<string, string> = { choosing: "Member choosing", to_build: "Ready for you to build", pending_approval: "Waiting for your approval", approved: "Approved and live" };
 const monthName = (ym: string) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }); };
 
@@ -36,6 +44,12 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
   const [label, setLabel] = useState("");
   const [caption, setCaption] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
+  const [picks, setPicks] = useState<PickT[]>(month.choices.picks ?? []);
+  const [section, setSection] = useState("Treatment");
+  const cap = PICK_CAP[member.plan];
+  const picksFull = picks.length >= cap;
+  const hookOn = (c: string) => picks.some((p) => p.kind === "hook" && p.code === c);
+  const toolOn = (id: string) => picks.some((p) => p.kind === "tool" && p.tool === id);
 
   const loadFull = useCallback(async () => {
     const r = await fetch(`${API}/club/months/${month.id}`, { headers: authOnly() });
@@ -80,6 +94,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
   };
   const saveReels = async () => { if (await call(`/club/months/${month.id}`, { reels }, "PATCH")) { toast.success("Reels saved"); reload(); } };
   const removeAi = async (u: string) => { if (!full) return; if (await call(`/club/months/${month.id}`, { aiUrls: full.aiUrls.filter((x) => x !== u) }, "PATCH")) { loadFull(); reload(); } };
+  const savePicks = async () => { if (await call(`/club/months/${month.id}`, { choices: { ...month.choices, picks } }, "PATCH")) { toast.success("Posts saved"); reload(); } };
   const approve = async () => { if (await call(`/club/months/${month.id}/approve`, {})) { toast.success("Approved. It is now in their portal."); reload(); } };
   const sendBack = async () => { if (await call(`/club/months/${month.id}/send-back`, { note })) { toast.success("Sent back to build"); reload(); } };
 
@@ -102,10 +117,34 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
           {month.note && <div className="text-sm bg-yellow-50 rounded p-2">Your note: {month.note}</div>}
           {toolPicks.length > 0 && (
             <div className="text-sm">
-              <b>Tool posts she picked (build these in the tool, then attach below):</b>
+              <b>Tool posts you picked (build these in the tool, then attach below):</b>
               <ul className="list-disc ml-5">{toolPicks.map((p, i) => <li key={i}>{p.label || p.tool} {p.useTemplate ? "(use that tool's template)" : "(any design)"}</li>)}</ul>
             </div>
           )}
+          <div className="border rounded p-3 space-y-2">
+            <h3 className="font-bold uppercase text-sm">Your choice of other posts <span className="text-pink-500">{picks.length} of {cap}</span></h3>
+            <div className="flex flex-wrap gap-3">
+              {TOOLS.map((t) => {
+                const p = picks.find((x) => x.kind === "tool" && x.tool === t.id);
+                return (
+                  <div key={t.id} className="text-sm">
+                    <label className="flex items-center gap-1"><input type="checkbox" checked={!!p} disabled={!p && picksFull} onChange={() => setPicks((a) => (toolOn(t.id) ? a.filter((x) => !(x.kind === "tool" && x.tool === t.id)) : [...a, { kind: "tool", tool: t.id, useTemplate: true, label: t.name }]))} /> {t.name}</label>
+                    {p && <label className="ml-5 flex items-center gap-1 text-xs"><input type="checkbox" checked={!!p.useTemplate} onChange={() => setPicks((a) => a.map((x) => (x.kind === "tool" && x.tool === t.id ? { ...x, useTemplate: !x.useTemplate } : x)))} /> use that tool's template</label>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-1">{SECTIONS.map((x) => <button key={x} className={`px-2 py-0.5 rounded border text-xs ${section === x ? "bg-pink-500 text-white" : ""}`} onClick={() => setSection(x)}>{x === "Original" ? "My first hooks" : x}</button>)}</div>
+            <div className="max-h-64 overflow-y-auto">
+              {HOOKS.filter((h: Hook) => (h.theme || "Original") === section).map((h: Hook) => (
+                <label key={h.code} className="flex gap-2 items-start text-sm py-0.5">
+                  <input type="checkbox" className="mt-1" checked={hookOn(h.code)} disabled={!hookOn(h.code) && picksFull} onChange={() => setPicks((a) => (hookOn(h.code) ? a.filter((x) => !(x.kind === "hook" && x.code === h.code)) : [...a, { kind: "hook", code: h.code, label: h.text.slice(0, 100) }]))} />
+                  <span>{h.text}</span>
+                </label>
+              ))}
+            </div>
+            <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={savePicks}>Save these posts</button>
+          </div>
           <div className="flex gap-2 flex-wrap">
             <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>Build the posts</button>
             <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reels and AI photos. Refresh in a few minutes."); }}>Make reels and AI photos now</button>

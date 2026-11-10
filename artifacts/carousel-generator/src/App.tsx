@@ -381,6 +381,7 @@ function AppContent() {
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isClubPortal, clubParams] = useRoute("/club/:token");
+  const [isClubBare] = useRoute("/club");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -538,6 +539,15 @@ function AppContent() {
   }
   if (isPremiumFreebies) {
     return <TenFreePosts premium />;
+  }
+  if (isClubBare) {
+    return (
+      <div style={{ maxWidth: 560, margin: "0 auto", padding: "80px 24px", fontFamily: "'League Spartan',sans-serif" }}>
+        <div style={{ letterSpacing: ".26em", fontSize: 12, fontWeight: 900, textTransform: "uppercase" }}>Social Media Sister</div>
+        <h1 style={{ fontWeight: 900, textTransform: "uppercase", fontSize: 44, lineHeight: 0.95, margin: "18px 0" }}>Your club link is <span style={{ color: "#ff1f8e" }}>private</span></h1>
+        <p style={{ fontSize: 18, lineHeight: 1.4 }}>Each member has their own link, so this page on its own has nothing to show. Please use the link I sent you, or message me and I will send it again.</p>
+      </div>
+    );
   }
   if (isClubPortal && clubParams?.token) {
     return <ClubPortal token={clubParams.token} />;
