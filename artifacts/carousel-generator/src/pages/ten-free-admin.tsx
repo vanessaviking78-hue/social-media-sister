@@ -10,6 +10,8 @@ import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { renderAboutPost, aboutDefaults, aboutMovable, ABOUT_LAYOUTS, ABOUT_FONTS, ABOUT_DEFAULT_FONTS, type AboutRenderOptions, type AboutLayout } from "@/lib/about-designs";
 import { ColourPicker } from "@/components/colour-picker";
+import { CoverPanel } from "@/components/cover-panel";
+import { renderCoverPost, coverInfo, type CoverOptions } from "@/lib/cover-designs";
 import { HOOKS as HOOK_BANK, pickedHookPayload, hookFits, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
@@ -88,6 +90,7 @@ type Item = {
   poll: Poll & { instruction: string }; libUrls?: string[];
   aboutArgs?: AboutRenderOptions;
   aboutLogo?: HTMLCanvasElement;
+  coverArgs?: CoverOptions;
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
@@ -501,6 +504,7 @@ export function Builder({ id }: { id: string }) {
     if (!assets) return;
     const cvs = renderUniversalPost(args, assets);
     patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+    if (itemsRef.current.find((x) => x.n === it.n)?.coverArgs) void coverApply({ ...it, uniArgs: args }, itemsRef.current.find((x) => x.n === it.n)!.coverArgs!);
   };
   const withArr = (arr: (number | undefined)[] | undefined, i: number, v: number, def: number) => { const out = [0, 1, 2, 3].map((k) => arr?.[k] ?? def); out[i] = v; return out; };
   const setAdj = (it: Item, i: number, key: "zoom" | "panX" | "panY", v: number) => applyUni(it, { ...it.uniArgs!, [key]: withArr(it.uniArgs![key], i, v, key === "zoom" ? 1 : 0) });
@@ -564,6 +568,61 @@ export function Builder({ id }: { id: string }) {
       const cv = await renderAboutPost(aa);
       patchItem(d.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
     } finally { d.busy = false; }
+    return true;
+  };
+  // New slide 1 covers: drawn over slide 1 of the post, with every piece draggable and sizable.
+  const [coverSel, setCoverSel] = useState<Record<number, string>>({});
+  const [coverBusy, setCoverBusy] = useState<Record<number, boolean>>({});
+  const coverQ = useRef<Record<number, { running: boolean; next?: CoverOptions | null }>>({});
+  const doCover = async (n: number, next: CoverOptions | null) => {
+    const it = itemsRef.current.find((x) => x.n === n);
+    const assets = assetsRef.current;
+    if (!it) return;
+    const rest = it.uniArgs && assets ? renderUniversalPost(it.uniArgs, assets) : it.uni ?? [];
+    if (!next) { patchItem(n, { coverArgs: undefined, uni: rest, previews: rest.map((cv) => cv.toDataURL("image/jpeg", 0.6)) }); return; }
+    const cv = await renderCoverPost(next);
+    const cvs = coverInfo(next.layout).statik ? [cv] : [cv, ...rest.slice(1)];
+    patchItem(n, { coverArgs: next, uni: cvs, previews: cvs.map((c2) => c2.toDataURL("image/jpeg", 0.6)) });
+  };
+  const coverApply = (it: Item, next: CoverOptions | null) => {
+    const q = (coverQ.current[it.n] ??= { running: false });
+    q.next = next;
+    if (q.running) return Promise.resolve();
+    q.running = true;
+    setCoverBusy((b) => ({ ...b, [it.n]: true }));
+    return (async () => {
+      try { while (q.next !== undefined) { const nx = q.next; q.next = undefined; await doCover(it.n, nx); } }
+      catch { toast.error("That cover would not draw. Try another photo."); }
+      finally { q.running = false; setCoverBusy((b) => ({ ...b, [it.n]: false })); }
+    })();
+  };
+  const cutoutOf = async (bmp: ImageBitmap): Promise<ImageBitmap | null> => {
+    try {
+      setStatus("Cutting the clinician out of the photo...");
+      const blob = await new Promise<Blob | null>((res) => { const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; c.getContext("2d")!.drawImage(bmp, 0, 0); c.toBlob(res, "image/jpeg", 0.92); });
+      if (!blob) return null;
+      const fd = new FormData();
+      fd.append("image", blob, "photo.jpg");
+      const rr = await fetch(`${API}/ten-free/cutout`, { method: "POST", headers: { ...authHeaders(), "Content-Type": undefined as unknown as string }, body: fd });
+      return rr.ok ? await createImageBitmap(await rr.blob()) : null;
+    } catch { return null; } finally { setStatus(""); }
+  };
+  const coverDrag = useRef<{ n: number; key: string; x: number; y: number; w: number; h: number; base: [number, number] } | null>(null);
+  const coverDown = (e: React.PointerEvent<HTMLImageElement>, it: Item): boolean => {
+    const key = coverSel[it.n];
+    if (!key || !it.coverArgs) return false;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const r = e.currentTarget.getBoundingClientRect();
+    coverDrag.current = { n: it.n, key, x: e.clientX, y: e.clientY, w: r.width, h: r.height, base: it.coverArgs.move?.[key] ?? [0, 0] };
+    return true;
+  };
+  const coverMove = (e: React.PointerEvent<HTMLImageElement>): boolean => {
+    const d = coverDrag.current;
+    if (!d) return false;
+    const it = itemsRef.current.find((x) => x.n === d.n);
+    if (!it?.coverArgs) return true;
+    const mv: [number, number] = [Math.round(d.base[0] + ((e.clientX - d.x) / d.w) * 1080), Math.round(d.base[1] + ((e.clientY - d.y) / d.h) * 1350)];
+    void coverApply(it, { ...it.coverArgs, move: { ...(it.coverArgs.move ?? {}), [d.key]: mv } });
     return true;
   };
   // Text box cover: drag the box anywhere on the first slide.
@@ -896,9 +955,9 @@ export function Builder({ id }: { id: string }) {
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
-                <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; }}
+                <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
                   onClick={() => (i === 0 && it.uniArgs?.box ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[30rem] rounded shrink-0 ${it.aboutArgs && moveSel[it.n] ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                  className={`h-[30rem] rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -982,6 +1041,17 @@ export function Builder({ id }: { id: string }) {
                 </div>
               );
             })()}
+            {it.uni && !it.aboutArgs && it.source === "universal" && req && (
+              <CoverPanel
+                value={it.coverArgs}
+                onChange={(nx) => void coverApply(it, nx)}
+                busy={!!coverBusy[it.n]}
+                base={{ own: ownRef.current, headline: it.uniArgs?.headline ?? "", name: req.clinicianName, treatment: U_TREATMENTS.find((t) => t.id === it.uniArgs?.treatmentId)?.name ?? "", area: req.area, brand: [req.mainHex, req.accentHex], fontId: req.answers?.font, facts: aboutFacts((about ?? req.answers) as Record<string, any>, req.area), offset: it.n }}
+                makeCutout={cutoutOf}
+                moveSel={coverSel[it.n] ?? ""}
+                setMoveSel={(k) => setCoverSel((s0) => ({ ...s0, [it.n]: k }))}
+              />
+            )}
             {it.aboutArgs && (() => {
               const aa0 = it.aboutArgs!;
               const d = aboutDefaults(aa0.layout, aa0.colours);
