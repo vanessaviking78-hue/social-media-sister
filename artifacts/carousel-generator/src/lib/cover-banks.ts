@@ -207,5 +207,37 @@ export const COVER_XMAS: string[] = [
  "Pop a card through the door of someone who lives alone. You might be the only post they get.",
  "Let go of the perfect Christmas and keep the cosy one.",
  "Your best friend would rather have an hour of your time than a gift with a bow on it.",
- "To everyone tired, stretched thin and still doing it all with a smile: you are the magic in somebody's Christmas."
+ "To everyone tired, stretched thin and still doing it all with a smile: you are the magic in somebody's Christmas.",
+ "The Elf on the Shelf is optional. Your sanity is not.",
+ "Nobody will remember whether the sprouts were perfect. They will remember who made them laugh.",
+ "If you cried in the car park at the supermarket this week, I have been there too. It does not make you weak.",
+ "Not every family is merry. If yours is hard, you are allowed to leave the table, take a walk and breathe.",
+ "A homemade gift wrapped in newspaper beats a rushed one with a ribbon every single time.",
+ "Mums, you are not the unpaid events manager of Christmas. Hand someone the list.",
+ "Invite the neighbour who always seems to be on their own. A cup of something warm changes a whole day.",
+ "Your presence is the present. Put the phone down for one hour and watch their faces.",
+ "You are allowed to say no to the fourth party, the third relative and the second helping of guilt.",
+ "Some of us will light a candle for someone this year. I am lighting one for you too.",
+ "The wonky gingerbread house is the one that gets kept in the memory box.",
+ "If money is tight, love is not. Write them a letter and tell them why you are proud of them.",
+ "Check on the friend who says she is fine. She is probably holding the whole house up.",
+ "Christmas is not a competition. Nobody is judging your tree except the cat.",
+ "You gave your children a childhood full of cuddles. That outweighs every toy they will ever outgrow.",
+ "Be the person who texts first. Someone out there has been hoping for it.",
+ "It is perfectly fine to eat the chocolate coins before the big day.",
+ "To the woman who is doing Christmas on her own this year: you are not alone, and you are not forgotten.",
+ "Take the photo, then put the camera down and join the dancing in the kitchen.",
+ "However your Christmas turns out, you did your best, and your best is enough."
+];
+
+// Captions for the static covers (13, 14, 15, 22). Clinician voice, ends with a question, a reply word line, then 5 area hashtags.
+export const COVER_CAPTIONS: string[] = [
+ "I read this one twice before I posted it, because some of us need to hear it more than once. You are not behind. You are not failing. You are carrying a lot, and you are still showing up for everyone. When did someone last tell you that you are doing a lovely job? Save this for the days it all feels like too much, and send it to the woman who holds your world together.\n\nComment KIND and I will send you a little something.\n\n[AREA HASHTAGS]",
+ "Nobody tells you that getting older comes with a gift: you stop caring what the room thinks. I see it in my clinic every week. Women walk in tired of apologising and walk out standing a little taller. What would you do this year if you stopped asking permission?\n\nComment BRAVE and tell me.\n\n[AREA HASHTAGS]",
+ "A quiet one for today. The mum who is wrapping presents at midnight, the daughter ringing her nan, the friend who texts first. Kindness this time of year is not loud, it just turns up. Who could you send a message to this evening?\n\nComment CARD and I will remind you tomorrow.\n\n[AREA HASHTAGS]",
+ "I have sat across from so many women who are bone tired and still smiling for everyone else. If that is you this week, this post is for you. Rest is not lazy. Rest is how you keep going. What is one thing you can hand over this weekend?\n\nComment REST and I will keep you company.\n\n[AREA HASHTAGS]",
+ "Ageing is a privilege that not everyone gets, and I think about that a lot when I am with my patients. The lines on your face are every laugh, every worry and every lovely Sunday you have lived. What are you proudest of from the last twelve months?\n\nComment PROUD and I will cheer you on.\n\n[AREA HASHTAGS]",
+ "The size of the pile under the tree has never measured how good a parent you are. Your children will remember the cuddles and the daft songs in the kitchen. What is the tiny moment from your own childhood that you still carry?\n\nComment HOME and share it with me.\n\n[AREA HASHTAGS]",
+ "If this Christmas is hard for you, I want you to know it is perfectly fine to find it hard. You do not have to sparkle on demand. Who will you check in on this week, and who might be checking in on you?\n\nComment HUG and I will send you a big one.\n\n[AREA HASHTAGS]",
+ "Be gentle with yourself today. You have been brilliant for everyone else all year, and you are allowed to be on your own list too. What would a kind day for you look like?\n\nComment ME and treat yourself to the answer.\n\n[AREA HASHTAGS]"
 ];
