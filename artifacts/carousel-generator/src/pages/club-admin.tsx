@@ -16,11 +16,11 @@ const authOnly = (): Record<string, string> => ({ "x-app-password": pw(), Author
 type Reel = { n: number; kind: string; treatment?: string; hook: string; onScreen?: string; script: string };
 type Month = {
   id: string; month: string; status: string; choices: { treatments?: string[]; picks?: { kind: string; code?: string; tool?: string; useTemplate?: boolean; label?: string }[]; note?: string };
-  reelCount: number; postCount: number; aiUrls: string[]; aiStatus: string; reelsStatus: string; note: string;
+  reelCount: number; postCount: number; aiUrls: string[]; aiStatus: string; aiError?: string; reelsStatus: string; note: string;
 };
 type Member = {
   id: string; name: string; email: string; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; link: string; nextBilling: string; daysToBilling: number;
-  cycle: string; photoCount: number; hasClinicPhoto: boolean; months: Month[];
+  cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; months: Month[];
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
@@ -176,8 +176,23 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                   <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={attach}>Attach</button>
                 </div>
               </div>
-              <div>
-                <h3 className="font-bold uppercase text-sm">AI photos ({full.aiUrls.length} of 6)</h3>
+              <div className="space-y-2">
+                <h3 className="font-bold uppercase text-sm">Studio photos ({full.aiUrls.length} of 4)</h3>
+                <p className="text-xs text-muted-foreground">2 black and white on a black studio backdrop, then 2 colour in their scrubs colour{member.hasClinicPhoto ? ", placed in their clinic" : " on plain white (they sent no clinic photo)"}. Scrubs: {String((member as any).details?.scrubs || "not given, navy blue will be used")}.</p>
+                {(member.photoUrls ?? []).length > 0 ? (
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold">Tap the photo to use as the reference</div>
+                    <div className="flex gap-2 overflow-x-auto">
+                      {(member.photoUrls ?? []).map((u) => {
+                        const on = (member.refPhotoUrl || (member.photoUrls ?? [])[0]) === u;
+                        return <img key={u} src={u} onClick={async () => { if (await call(`/club/members/${member.id}/reference`, { url: u }, "PUT")) { toast.success("Reference photo chosen"); reload(); } }} className={`h-24 rounded cursor-pointer border-4 ${on ? "border-pink-500" : "border-transparent"}`} />;
+                      })}
+                    </div>
+                  </div>
+                ) : <div className="text-sm text-red-600">They have not uploaded a photo of themselves yet.</div>}
+                <button disabled={busy || month.aiStatus === "working" || !(member.photoUrls ?? []).length} className="px-3 py-1.5 rounded border-2 border-black text-sm disabled:opacity-50" onClick={async () => { if (await call(`/club/months/${month.id}/studio`, {})) { toast.success("Making the 4 studio photos. Refresh in a couple of minutes."); reload(); } }}>{month.aiStatus === "working" ? "Making them now..." : full.aiUrls.length ? "Make the 4 studio photos again" : "Make the 4 studio photos"}</button>
+                {month.aiStatus === "failed" && <div className="text-xs text-red-600">It did not work{month.aiError ? `: ${month.aiError}` : ""}</div>}
+                {month.aiStatus === "ready" && month.aiError && <div className="text-xs text-yellow-700">Some did not work: {month.aiError}</div>}
                 <div className="flex gap-2 flex-wrap">{full.aiUrls.map((u) => <div key={u}><img src={u} className="h-32 rounded" /><button className="text-xs underline" onClick={() => removeAi(u)}>Remove</button></div>)}</div>
               </div>
               <div>

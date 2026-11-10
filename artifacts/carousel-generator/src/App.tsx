@@ -539,7 +539,8 @@ function AppContent() {
     return <PhotosView token={photosParams.token} />;
   }
   if (isTenFreeForm) {
-    return <TenFreePosts />;
+    window.location.replace(`${(import.meta.env.BASE_URL || "/").replace(/\/$/, "")}/premiumfreebies`);
+    return null;
   }
   if (isPremiumFreebies) {
     return <TenFreePosts premium />;

@@ -97,6 +97,8 @@ function ensureTables(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (month, kind)
     )`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS ref_photo_url TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -107,11 +109,11 @@ function ensureTables(): Promise<void> {
 
 type Member = {
   id: string; token: string; plan: PlanId; status: string; name: string; email: string; billing_day: number;
-  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; created_at: string; cancelled_at: string | null;
+  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; ref_photo_url?: string; created_at: string; cancelled_at: string | null;
 };
 type MonthRow = {
   id: string; member_id: string; month: string; status: string; choices: Record<string, any>; content: Record<string, any>;
-  ai_urls: string[]; ai_status: string; reels_status: string; admin_note: string; due_notified_at: string | null; approved_at: string | null; created_at: string;
+  ai_urls: string[]; ai_status: string; ai_error?: string; reels_status: string; admin_note: string; due_notified_at: string | null; approved_at: string | null; created_at: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -230,7 +232,7 @@ const detailsUpload = (req: Request, res: Response, next: NextFunction) =>
     res.status(400).json({ error: code === "LIMIT_FILE_SIZE" ? "One of those photos is very large. Please pick a smaller one." : "I could not receive those uploads. Please try again with fewer photos at once." });
   });
 
-const DETAIL_TEXT = ["clinicName", "clinicianName", "handle", "area", "howStarted", "hobbies", "pets", "why", "threeWords", "personality", "passion", "mum", "age", "bizType"];
+const DETAIL_TEXT = ["scrubs", "clinicName", "clinicianName", "handle", "area", "howStarted", "hobbies", "pets", "why", "threeWords", "personality", "passion", "mum", "age", "bizType"];
 
 // Details are filled in once. More photos can be added later (up to 20 in all), and Vanessa can reopen the form for a member.
 router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: Response) => {
@@ -403,35 +405,48 @@ async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
 
 async function makeAiShots(m: Member, monthId: string): Promise<void> {
   try {
-    await db.execute(sql`UPDATE club_months SET ai_status = 'working' WHERE id = ${monthId}`);
-    const src = (m.photo_urls ?? [])[0] ?? "";
+    await db.execute(sql`UPDATE club_months SET ai_status = 'working', ai_error = '' WHERE id = ${monthId}`);
+    // The reference photo is the one Vanessa picked for this member, or their first photo.
+    const photos = m.photo_urls ?? [];
+    const src = (m.ref_photo_url && photos.includes(m.ref_photo_url) ? m.ref_photo_url : photos[0]) ?? "";
     const key = src.replace("/api/free-samples/media/", "");
-    if (!key) throw new Error("no photo");
+    if (!key) throw new Error("This member has not uploaded a photo of themselves yet");
     const buf = await readKey(key);
     const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: m.details?.clinicName || m.name, photoUrl: `/api/media/${key}`, notes: "club" }).returning();
-    const pool = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-05", "bl-06", "bl-07", "bl-08"];
-    const pick = () => `fbb-${pool.splice(Math.floor(Math.random() * pool.length), 1)[0]}`;
-    const bw = [pick(), pick(), pick()];
-    const clinic = m.clinic_photo_url;
-    const colourCfg = clinic
-      ? ["a", "b", "c"].map((s, i) => ({ id: `club-clinic-${s}`, outfitType: ["white-shirt-jeans", "black-tee-trousers", "scrubs"][i], backgroundType: "upload-own", backgroundImageUrl: clinic, aspectRatio: "3:4" }))
-      : [{ id: "fb-03", aspectRatio: "3:4" }, { id: "fb-04", aspectRatio: "3:4" }, { id: "lifestyle-coworking", aspectRatio: "3:4" }];
-    const cfgs = [...bw.map((id) => ({ id, aspectRatio: "3:4" })), ...colourCfg];
+    // Two different black and white David Bailey shots, then two colour shots in the scrubs colour: in her clinic if she sent a clinic photo, otherwise on plain white.
+    const pool = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-06", "bl-07", "bl-08"];
+    const pick = () => `cbw-${pool.splice(Math.floor(Math.random() * pool.length), 1)[0]}`;
+    const scrub = String(m.details?.scrubs || "").trim().slice(0, 40) || "navy blue";
+    // The worker reads pictures from storage by their /api/media path.
+    const clinic = m.clinic_photo_url ? `/api/media/${m.clinic_photo_url.replace("/api/free-samples/media/", "")}` : "";
+    const cfgs: any[] = [
+      { id: pick(), aspectRatio: "3:4" },
+      { id: pick(), aspectRatio: "3:4" },
+      ...(clinic
+        ? [{ id: "club-clinic-1", aspectRatio: "3:4", scrubColor: scrub, backgroundImageUrl: clinic }, { id: "club-clinic-2", aspectRatio: "3:4", scrubColor: scrub, backgroundImageUrl: clinic }]
+        : [{ id: "club-white-1", aspectRatio: "3:4", scrubColor: scrub }, { id: "club-white-2", aspectRatio: "3:4", scrubColor: scrub }]),
+    ];
     const results = new Map<string, string>();
+    const reasons: string[] = [];
     let pending = cfgs;
-    for (let round = 0; round < 3 && pending.length > 0; round++) {
+    // The worker already retries each picture, so one round keeps the AI credits down.
+    for (let round = 0; round < 1 && pending.length > 0; round++) {
       const jobId = `club_${Date.now()}_${uuid().slice(0, 8)}`;
       createJob(jobId, pending.map((c) => c.id));
       await processPortraitJob(jobId, buf, source.id, m.details?.clinicName || m.name, pending as any);
-      for (const c of getJob(jobId)?.cards ?? []) if (c.status === "success" && c.outputImageUrl) results.set(c.scenarioId, c.outputImageUrl);
+      for (const c of getJob(jobId)?.cards ?? []) {
+        if (c.status === "success" && c.outputImageUrl) results.set(c.scenarioId, c.outputImageUrl);
+        else if (c.failureReason) reasons.push(`${c.scenarioId}: ${c.failureReason}`);
+      }
       pending = pending.filter((c) => !results.has(c.id));
       if (pending.length) await sleep(3000);
     }
     const urls = cfgs.map((c) => results.get(c.id)).filter((u): u is string => !!u);
-    await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"}, updated_at = now() WHERE id = ${monthId}`);
+    await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"}, ai_error = ${urls.length === cfgs.length ? "" : reasons.slice(-3).join(" | ").slice(0, 500)}, updated_at = now() WHERE id = ${monthId}`);
   } catch (err) {
     logger.warn({ err }, "Club AI shots failed");
-    await db.execute(sql`UPDATE club_months SET ai_status = 'failed' WHERE id = ${monthId}`).catch(() => undefined);
+    const msg = (err instanceof Error ? err.message : String(err)).slice(0, 500);
+    await db.execute(sql`UPDATE club_months SET ai_status = 'failed', ai_error = ${msg} WHERE id = ${monthId}`).catch(() => undefined);
   }
 }
 
@@ -493,10 +508,10 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
         const { date, month } = nextBilling(m.billing_day);
         return {
           id: m.id, name: m.name, email: m.email, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, details: m.details,
-          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url,
+          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
-            aiUrls: x.ai_urls, aiStatus: x.ai_status, reelsStatus: x.reels_status, note: x.admin_note,
+            aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
           })),
         };
       }),
@@ -523,6 +538,47 @@ router.patch("/club/members/:id", requireAuth, async (req: Request, res: Respons
 });
 
 // Start a month now (reel hooks, scripts and AI photos), without waiting for the five day mark.
+router.put("/club/members/:id/reference", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as Member | undefined;
+    if (!m) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    const url = str((req.body as any)?.url, 400);
+    if (url && !(m.photo_urls ?? []).includes(url)) {
+      res.status(400).json({ error: "That is not one of this member's photos" });
+      return;
+    }
+    await db.execute(sql`UPDATE club_members SET ref_photo_url = ${url} WHERE id = ${m.id}`);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save" });
+  }
+});
+
+// Makes the four studio photos for a month on its own, with the reference photo chosen for that member.
+router.post("/club/months/:id/studio", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as MonthRow | undefined;
+    const m = x ? ((await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member | undefined) : undefined;
+    if (!x || !m) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (x.ai_status === "working") {
+      res.status(409).json({ error: "The photos are already being made" });
+      return;
+    }
+    void makeAiShots(m, x.id);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not start" });
+  }
+});
+
 router.post("/club/members/:id/prepare", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();

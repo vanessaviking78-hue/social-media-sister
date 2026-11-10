@@ -2980,6 +2980,36 @@ const FREEBIE_PORTRAITS: PhotoStudioPreset[] = [
   },
 ];
 MEN_STUDIO_PRESETS.push(...FREEBIE_PORTRAITS);
+// The club's four monthly portraits: two black and white David Bailey style shots on a black studio backdrop, and two colour shots in the
+// scrubs colour the member gave, either placed in her own clinic or (with no clinic photo) on plain white.
+const CLUB_FRESH = " Create a brand new photograph. Do not copy the pose, expression, clothing, framing or background of the reference photo, take only the face and identity from it, and keep her natural hair colour, hair length and skin tone exactly as in the reference.";
+const CLUB_REAL = " Hyper-realistic, physically believable and naturally photographed, not CGI and not AI-looking: real skin pores and fine lines, natural asymmetry, individual hair strands, true fabric weave, authentic sensor grain. Mouth gently closed with lips together, no teeth showing. Hands natural with five correct fingers.";
+const CLUB_BW_IDS = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-06", "bl-07", "bl-08"];
+export const CLUB_BW_PORTRAITS: PhotoStudioPreset[] = CLUB_BW_IDS.map((id) => {
+  const base = BAILEY_PRESETS.find((p) => p.id === id)!;
+  return { ...base, id: `cbw-${id}`, name: `Club ${base.name}`, promptTemplate: base.promptTemplate + CLUB_FRESH + " Mouth closed with lips together, no teeth showing." };
+});
+const CLUB_FACELOCK = "STRICT FACELOCK: the person is the woman in the FIRST reference image. Preserve her exact face, facial proportions, bone structure, eyes, nose, lips, jawline, age and natural skin texture. Absolutely no face alteration, beautifying, slimming or smoothing.";
+export const CLUB_COLOUR_PORTRAITS: PhotoStudioPreset[] = [
+  {
+    id: "club-clinic-1", name: "Club: in her clinic, standing", hasColour: true,
+    promptTemplate: `Hyper-realistic colour editorial photograph of the person from the first reference image, placed inside the clinic shown in the SECOND reference image. ${CLUB_FACELOCK} She wears well fitted [COLOUR] medical scrubs, no logos or text. Standing in the room, three-quarter turn, hands relaxed, calm confident look towards the camera. Keep the clinic exactly as it appears in the second image: the same walls, floor, furniture, fittings and colours. Do not invent a different room. Match the perspective, scale, light direction, colour temperature and soft shadows of the clinic so she genuinely looks like she was photographed there. Shot on a 50mm lens, shallow depth of field.${CLUB_FRESH}${CLUB_REAL}`,
+  },
+  {
+    id: "club-clinic-2", name: "Club: in her clinic, leaning", hasColour: true,
+    promptTemplate: `Hyper-realistic colour lifestyle photograph of the person from the first reference image, placed inside the clinic shown in the SECOND reference image. ${CLUB_FACELOCK} She wears well fitted [COLOUR] medical scrubs, no logos or text. Leaning lightly against a surface in the room with her arms loosely folded, relaxed warm expression, looking slightly off camera. Keep the clinic exactly as it appears in the second image: the same walls, floor, furniture, fittings and colours. Do not invent a different room. Match the perspective, scale, light direction, colour temperature and soft shadows of the clinic so she genuinely looks like she was photographed there. Waist-up crop, shot on an 85mm lens.${CLUB_FRESH}${CLUB_REAL}`,
+  },
+  {
+    id: "club-white-1", name: "Club: plain white, arms folded", hasColour: true,
+    promptTemplate: `Hyper-realistic colour studio photograph of the person from the reference image. ${CLUB_FACELOCK} She wears well fitted [COLOUR] medical scrubs, no logos or text. Standing with her arms folded across her chest against a plain pure white seamless studio background, relaxed confident posture, looking straight into the camera. Waist-up. Bright, even, soft studio lighting with gentle natural shadows, crisp and clean, high-end healthcare brand portrait.${CLUB_FRESH}${CLUB_REAL}`,
+  },
+  {
+    id: "club-white-2", name: "Club: plain white, three quarter", hasColour: true,
+    promptTemplate: `Hyper-realistic colour studio photograph of the person from the reference image. ${CLUB_FACELOCK} She wears well fitted [COLOUR] medical scrubs, no logos or text. Three-quarter turn, one hand resting at her waist, warm composed expression with a soft closed-mouth smile, against a plain pure white seamless studio background. Waist-up. Bright, even, soft studio lighting with gentle natural shadows, crisp and clean, high-end healthcare brand portrait.${CLUB_FRESH}${CLUB_REAL}`,
+  },
+];
+MEN_STUDIO_PRESETS.push(...CLUB_BW_PORTRAITS, ...CLUB_COLOUR_PORTRAITS);
+
 /** The four portraits for one freebie: two different random shots from her David Bailey range, black scrubs with arms folded, and the coffee shop. */
 export function freebiePortraitIds(): string[] {
   const pool = [...BAILEY_IDS];

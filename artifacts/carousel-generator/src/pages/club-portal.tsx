@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
+import { injectSuiteFontCss } from "@/lib/suite-fonts";
 
 // cybersuite.com/club/<private token>: the member's own portal for the £69 and £222 clubs.
 // First visit: the one-off details form. After that: choose this month's treatments and posts, then download what has been approved.
@@ -32,6 +33,7 @@ const CSS = `
 .cp-btn.k { background:${INK}; }
 .cp-btn[disabled] { opacity:.45; cursor:default; }
 .cp-chips { display:flex; flex-wrap:wrap; gap:8px; }
+${PREMIUM_FONTS.map((ft) => `.cp .ff-${ft.id}, .cp .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; text-transform: none !important; }`).join("\n")}
 .cp-chip { border:2px solid ${INK}; background:#fff; padding:8px 12px; font-size:15px; cursor:pointer; font-family:inherit; color:${INK}; }
 .cp-chip.on { background:${PINK}; border-color:${PINK}; color:#fff; }
 .cp-chip[disabled] { opacity:.35; cursor:default; }
@@ -217,16 +219,21 @@ function Details({ token, onDone, existing }: { token: string; onDone: () => voi
       <label className="cp-field"><span>5 facts about you, or things people might not know (one per line)</span><textarea name="facts" defaultValue={(existing?.facts ?? []).join("\n")} placeholder={"I once met Dolly Parton\nI cannot parallel park\n..."} /></label>
       <label className="cp-field"><span>Your 5 favourite treatments to give (one per line)</span><textarea name="favTreatments" defaultValue={(existing?.favTreatments ?? []).join("\n")} /></label>
       <h2>Your look</h2>
+      {T("scrubs", "What colour scrubs do you wear?", "For example navy, black, teal, white")}
       <div className="cp-chips" style={{ alignItems: "center" }}>
         <label className="cp-chip" style={{ cursor: "default" }}>Main colour <input type="color" value={main} onChange={(e) => setMain(e.target.value)} style={{ verticalAlign: "middle", marginLeft: 6 }} /></label>
         <label className="cp-chip" style={{ cursor: "default" }}>Accent colour <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} style={{ verticalAlign: "middle", marginLeft: 6 }} /></label>
       </div>
-      <label className="cp-field"><span>Headline font</span>
-        <select value={font} onChange={(e) => setFont(e.target.value)}>{PREMIUM_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select>
-      </label>
+      <div className="cp-field"><span>Pick the font for your headlines</span>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {PREMIUM_FONTS.map((ft) => (
+            <button type="button" key={ft.id} onClick={() => setFont(ft.id)} className={`cp-chip ff-${ft.id}`} style={{ fontSize: 26, outline: font === ft.id ? `3px solid ${PINK}` : "none" }}>{ft.name}</button>
+          ))}
+        </div>
+      </div>
       <label className="cp-field"><span>Your logo (optional)</span><input type="file" name="logo" accept="image/*" /></label>
       <label className="cp-field"><span>Photos of you, up to 20 (the more the better)</span><input type="file" name="photos" accept="image/*" multiple /></label>
-      <label className="cp-field"><span>A photo of your clinic (optional, I will place you in it for your colour AI photos)</span><input type="file" name="clinicPhoto" accept="image/*" /></label>
+      <label className="cp-field"><span>A photo of your clinic (I will place you in it for your colour photos. No clinic photo means a plain white background)</span><input type="file" name="clinicPhoto" accept="image/*" /></label>
       {err && <div className="cp-err">{err}</div>}
       <button className="cp-btn" disabled={busy} type="submit">{busy ? progress || "Saving, please wait..." : "Save my details"}</button>
     </form>
@@ -321,7 +328,7 @@ function Content({ data, plan }: { data: Portal; plan: "69" | "222" }) {
       ))}
       {m.aiUrls.length > 0 && (
         <>
-          <h2>Your 6 AI photos</h2>
+          <h2>Your 4 studio photos</h2>
           <div className="cp-ai">{m.aiUrls.map((u, i) => <div key={u}><img src={u} alt={`AI photo ${i + 1}`} /><button className="cp-btn k" style={{ marginTop: 6 }} onClick={() => download(u, `${m.month}-photo-${i + 1}.jpg`)}>Download</button></div>)}</div>
         </>
       )}
@@ -394,6 +401,7 @@ export default function ClubPortal({ token }: { token: string }) {
     }
   }, [token]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { injectSuiteFontCss(); }, []);
 
   return (
     <div className="cp">
@@ -413,7 +421,7 @@ export default function ClubPortal({ token }: { token: string }) {
         {data && data.member.detailsDone && (
           <>
             <h1>Hello, <span>{data.member.name.split(" ")[0]}</span></h1>
-            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts and 6 AI photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
+            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
             <div className="cp-tabs">
               <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
               <button className={`cp-tab ${tab === "choose" ? "on" : ""}`} onClick={() => setTab("choose")}>This month</button>

@@ -61,7 +61,7 @@ function List() {
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Free posts: requests</h1><Link href="/10free-tracker" className="text-sm underline">Tracker of the ones done</Link></div>
-      <p className="text-sm text-muted-foreground">Premium form: {window.location.origin}{BASE}/premiumfreebies · Old form: {window.location.origin}{BASE}/10freeposts</p>
+      <p className="text-sm text-muted-foreground">Premium form: {window.location.origin}{BASE}/premiumfreebies</p>
       {loading && <p>Loading...</p>}
       {!loading && rows.length === 0 && <p>No requests yet.</p>}
       {rows.map((r) => (
