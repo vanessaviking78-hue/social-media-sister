@@ -56,7 +56,7 @@ type Reel = { n: number; kind: string; treatment?: string; hook: string; onScree
 type MonthContent = { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string };
-  cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string } };
+  cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
 };
 
@@ -103,6 +103,39 @@ async function download(url: string, name: string) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// A burst of confetti in the club colours, drawn on a canvas that removes itself when it has finished.
+function fireConfetti() {
+  try {
+    const c = document.createElement("canvas");
+    c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999";
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = window.innerWidth * dpr;
+    c.height = window.innerHeight * dpr;
+    document.body.appendChild(c);
+    const g = c.getContext("2d");
+    if (!g) { c.remove(); return; }
+    const colours = ["#ff1f8e", "#111111", "#ffffff", "#ff7ac0", "#ffd1e6", "#d6006f"];
+    const bits = Array.from({ length: 220 }, () => ({
+      x: c.width / 2 + (Math.random() - 0.5) * c.width * 0.3, y: c.height * 0.35,
+      vx: (Math.random() - 0.5) * 18 * dpr, vy: (-Math.random() * 16 - 4) * dpr,
+      w: (6 + Math.random() * 8) * dpr, h: (4 + Math.random() * 6) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
+      col: colours[Math.floor(Math.random() * colours.length)],
+    }));
+    const t0 = performance.now();
+    const frame = (now: number) => {
+      const age = now - t0;
+      g.clearRect(0, 0, c.width, c.height);
+      for (const b of bits) {
+        b.vy += 0.45 * dpr; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        g.save(); g.translate(b.x, b.y); g.rotate(b.r); g.globalAlpha = Math.max(0, 1 - age / 4200);
+        g.fillStyle = b.col; g.strokeStyle = "#11111133"; g.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); g.strokeRect(-b.w / 2, -b.h / 2, b.w, b.h); g.restore();
+      }
+      if (age < 4200) requestAnimationFrame(frame); else c.remove();
+    };
+    requestAnimationFrame(frame);
+  } catch { /* confetti is only a treat */ }
 }
 
 function Details({ token, onDone, existing }: { token: string; onDone: () => void; existing?: Record<string, any> }) {
@@ -203,6 +236,7 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Could not save");
       setMsg("Saved. You can change it any time until the closing date.");
+      fireConfetti();
       reload();
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not save");
@@ -219,6 +253,12 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       <h2>Your {monthName(data.cycle.month)} choices</h2>
       <p className="cp-sub">Choices close on {dateName(data.cycle.cutOff)}, a week before your next payment on {dateName(data.cycle.nextBilling)}. Your content is then built and checked by me personally.</p>
       {!open && <div className="cp-err">Choices have closed for this month. Message me if something has changed.</div>}
+      {data.cycle.choices.savedAt && (
+        <div className="cp-box" style={{ borderColor: "#ff1f8e" }}>
+          <b style={{ fontSize: 22 }}>That's your socials done for the month.</b>
+          <p className="cp-sub" style={{ marginTop: 6 }}>Vanessa will send you your link with your content shortly.</p>
+        </div>
+      )}
 
       <h2>What {caps.treatmentPosts} treatments would you like to promote this month? <span className="cp-count">{treatments.length} of {caps.treatmentPosts}</span></h2>
       <p className="cp-sub">If you only choose 1, 2 or 3, that is perfectly fine. You can promote the same treatment again another month, I will make it with fresh hooks so it never looks repeated.</p>

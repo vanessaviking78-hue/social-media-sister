@@ -296,7 +296,19 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
     const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter(Boolean).slice(0, caps.treatmentPosts);
     // The other posts are chosen by Vanessa, so whatever she has set is kept.
     const picks = Array.isArray(cur.choices?.picks) ? cur.choices.picks : [];
-    await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify({ treatments, picks, note: str(b.note, 500), savedAt: new Date().toISOString() })}::jsonb, updated_at = now() WHERE id = ${cur.id}`);
+    const firstTime = !cur.choices?.savedAt;
+    await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify({ treatments, picks, note: str(b.note, 500), savedAt: cur.choices?.savedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() })}::jsonb, updated_at = now() WHERE id = ${cur.id}`);
+    void emailVanessa(`${firstTime ? "" : "UPDATED: "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()}`, [
+      `*** ${firstTime ? "" : "UPDATED "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()} ***`,
+      "",
+      `${m.details?.clinicName || m.name} (${m.plan === "69" ? "£69" : "£222"} club), ${month}`,
+      `Treatments: ${treatments.join(", ") || "none chosen"}`,
+      ...(str(b.note, 500) ? [`Their note: ${str(b.note, 500)}`] : []),
+      "",
+      "Where to go to create the content:",
+      appLink("/club-admin"),
+      "Open their month, choose their other posts, then press Build the posts.",
+    ]);
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not save your choices" });
