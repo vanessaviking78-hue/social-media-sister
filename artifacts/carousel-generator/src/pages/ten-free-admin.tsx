@@ -10,7 +10,7 @@ import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { renderAboutPost, aboutDefaults, aboutMovable, ABOUT_LAYOUTS, ABOUT_FONTS, ABOUT_DEFAULT_FONTS, type AboutRenderOptions, type AboutLayout } from "@/lib/about-designs";
 import { ColourPicker } from "@/components/colour-picker";
-import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
+import { HOOKS as HOOK_BANK, pickedHookPayload, hookFits, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
 import { UNIQUE } from "@/lib/unique-designs";
 import { EMPOWER } from "@/lib/empower-designs";
@@ -320,7 +320,7 @@ export function Builder({ id }: { id: string }) {
       const uniqueIds = UNIQUE.filter((u) => u.photo).map((u) => u.id);
       const packSlots = plan.filter((s) => s.source === "pack") as Extract<(typeof TEN_PLAN)[number], { source: "pack" }>[];
       const cursor: { at: number; hookBase?: number; forced?: string[] } = { at: 0, hookBase: (req.seq ?? 0) * 5 };
-      if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text);
+      if (isPremium) cursor.forced = pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim(), req.clinicianName).map((h) => h.text);
       const built = packSlots.map((s) => {
         const relIds = relatableFor(ans.age, /^(yes|grandma)/i.test(ans.mum)).filter((id) => EMPOWER.some((e) => e.id === id));
         const design = s.design === "auto" ? uniqueIds[(req.seq ?? hashSeed(req.id)) % uniqueIds.length] : s.design === "relatable" ? relIds[(req.seq ?? hashSeed(req.id + "relatable")) % relIds.length] : s.design;
@@ -380,7 +380,7 @@ export function Builder({ id }: { id: string }) {
       // Some of the posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
       const BLOCK_N = isPremium ? plan.map((x) => x.n).filter((n) => n % 3 === 1) : [1, 3, 6, 8, 10];
       const blockFor = (n: number) => (isPremium && BLOCK_N.includes(n) ? (BLOCK_N.indexOf(n) % 2 ? accent : req.mainHex) : undefined);
-      const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
+      const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim(), req.clinicianName).map((h) => h.text) : [];
       let ai = 0, hi = 0, vi = 0;
       const out: Item[] = [];
       let ti = 0;
@@ -788,12 +788,12 @@ export function Builder({ id }: { id: string }) {
             ))}
           </div>
           <div className="max-h-[28rem] overflow-y-auto space-y-3">
-            {Array.from(HOOK_BANK.filter((h: Hook) => (h.theme || "Original") === hookSection).reduce((m, h: Hook) => m.set(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection, [...(m.get(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection) ?? []), h]), new Map<string, Hook[]>())).map(([g, list]) => (
+            {Array.from(HOOK_BANK.filter((h: Hook) => (h.theme || "Original") === hookSection && hookFits(h, [...req.treatments, ...chosenT])).reduce((m, h: Hook) => m.set(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection, [...(m.get(h.group || HOOK_SECTION_LABEL[hookSection] || hookSection) ?? []), h]), new Map<string, Hook[]>())).map(([g, list]) => (
               <div key={g}>
                 <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">{g}</div>
                 {list.map((h: Hook) => {
                   const on = pickedHooks.includes(h.code);
-                  const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text ?? h.text;
+                  const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim(), req.clinicianName)[0]?.text ?? h.text;
                   return (
                     <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
                       <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= nH} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
@@ -805,7 +805,7 @@ export function Builder({ id }: { id: string }) {
             ))}
           </div>
           {pickedHooks.length > 0 && (
-            <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim())[0]?.text).filter(Boolean).join("  |  ")}</div>
+            <div className="text-xs text-muted-foreground">Chosen: {pickedHooks.map((c) => pickedHookPayload([c], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim(), req.clinicianName)[0]?.text).filter(Boolean).join("  |  ")}</div>
           )}
         </div>
       )}

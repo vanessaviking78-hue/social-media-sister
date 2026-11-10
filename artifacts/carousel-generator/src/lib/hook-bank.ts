@@ -3,7 +3,7 @@
 
 export type HookDay = "Monday" | "Wednesday" | "Friday" | "Sunday" | "Any day";
 export type HookSeason = "" | "Halloween" | "Bonfire" | "Christmas" | "Black Friday" | "New Year" | "Valentine's" | "Mother's Day" | "Summer" | "Weddings";
-export type Hook = { code: string; day: HookDay; season: HookSeason; text: string; group?: string; theme?: string };
+export type Hook = { code: string; day: HookDay; season: HookSeason; text: string; group?: string; theme?: string; needs?: string[] };
 
 // Which of the pack's 20 rows each kind of hook fills, in order. The treatment hooks take the
 // three treatments in turn, then the first treatment again, matching how the pack is written.
@@ -504,8 +504,8 @@ export const HOOKS: Hook[] = [
   { code: "v003", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "The most underrated thing in my clinic is a consultation where I say no." },
   { code: "v004", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Bring me a photo of someone else’s face and I’ll tell you why it won’t work on yours." },
   { code: "v005", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "If you want to look “done”, book with someone else. I’m aiming for rested and faintly smug." },
-  { code: "v006", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Skin boosters won’t fix your sleep, and I’ll say so before I help with what they can do." },
-  { code: "v007", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Your lips are not the first thing I’d change. Ask me what is." },
+  { code: "v006", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Skin boosters won’t fix your sleep, and I’ll say so before I help with what they can do.", needs: ["booster", "profhilo", "polynucleotide"] },
+  { code: "v007", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Your lips are not the first thing I’d change. Ask me what is.", needs: ["lip"] },
   { code: "v008", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "One treatment every few months beats four treatments in one panic." },
   { code: "v009", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "I turn people away when they want everything at once, and they thank me later." },
   { code: "v010", day: "Any day", season: "", group: "Contrarian treatment hooks", text: "Don’t book the treatment your friend had. Her face and yours have never met." },
@@ -715,6 +715,21 @@ export function seasonRange(season: Exclude<HookSeason, "">): string {
 }
 
 // Drops the treatment name into a hook's [treatment] slot.
+// A hook with "needs" only fits a clinic that offers one of those treatments, going by what the injector told me.
+export function hookFits(h: Hook, offered: string[]): boolean {
+  if (!h.needs || !h.needs.length) return true;
+  const have = offered.map((t) => t.toLowerCase());
+  return have.some((t) => h.needs!.some((k) => t.includes(k)));
+}
+
+// "[NAME]" becomes the clinician's first name from the clinic info, in capitals when the hook is in capitals.
+export function fillName(text: string, fullName = ""): string {
+  const first = fullName.trim().split(/\s+/)[0];
+  if (!first) return text;
+  const caps = text === text.toUpperCase();
+  return text.replace(/\[name\]/gi, caps ? first.toUpperCase() : first);
+}
+
 export function fillTreatment(text: string, treatment: string): string {
   const t = treatment.trim();
   if (!t) return text;
@@ -749,7 +764,7 @@ export type PickedHookPayload = { text: string; season: string; kind: "treatment
 
 // The hooks a writing tool sends to the server, in the order picked, with the treatment slot filled in.
 // "treatment" hooks are the Monday ones, the others can go on any post.
-export function pickedHookPayload(picked: string[], treatment: string | string[] = "", area = ""): PickedHookPayload[] {
+export function pickedHookPayload(picked: string[], treatment: string | string[] = "", area = "", name = ""): PickedHookPayload[] {
   const out: PickedHookPayload[] = [];
   const list = (Array.isArray(treatment) ? treatment : [treatment]).map(t => t.trim()).filter(Boolean);
   let n = 0;
@@ -757,7 +772,7 @@ export function pickedHookPayload(picked: string[], treatment: string | string[]
     const h = HOOKS.find(x => x.code === code);
     if (!h) continue;
     const kind = h.day === "Monday" || /\[treatment\]/i.test(h.text) ? "treatment" : "other";
-    out.push({ text: fillArea(kind === "treatment" ? fillTreatment(h.text, list.length ? list[n++ % list.length] : "") : h.text, area), season: h.season ?? "", kind });
+    out.push({ text: fillName(fillArea(kind === "treatment" ? fillTreatment(h.text, list.length ? list[n++ % list.length] : "") : h.text, area), name), season: h.season ?? "", kind });
   }
   return out;
 }

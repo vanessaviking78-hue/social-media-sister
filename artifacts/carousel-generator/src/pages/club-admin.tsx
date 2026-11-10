@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
-import { HOOKS, type Hook } from "@/lib/hook-bank";
+import { HOOKS, hookFits, type Hook } from "@/lib/hook-bank";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
 // Vanessa's side of the £69 club (5 places) and the £222 club (7 places): members, their private links, the monthly prep, and the approval queue.
@@ -140,7 +140,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
             </div>
             <div className="flex flex-wrap gap-1">{SECTIONS.map((x) => <button key={x} className={`px-2 py-0.5 rounded border text-xs ${section === x ? "bg-pink-500 text-white" : ""}`} onClick={() => setSection(x)}>{x === "Original" ? "My first hooks" : x}</button>)}</div>
             <div className="max-h-64 overflow-y-auto">
-              {HOOKS.filter((h: Hook) => (h.theme || "Original") === section).map((h: Hook) => (
+              {HOOKS.filter((h: Hook) => (h.theme || "Original") === section && hookFits(h, [...(month.choices.treatments ?? []), ...(((member as any).details?.favTreatments as string[]) ?? [])])).map((h: Hook) => (
                 <label key={h.code} className="flex gap-2 items-start text-sm py-0.5">
                   <input type="checkbox" className="mt-1" checked={hookOn(h.code)} disabled={!hookOn(h.code) && picksFull} onChange={() => setPicks((a) => (hookOn(h.code) ? a.filter((x) => !(x.kind === "hook" && x.code === h.code)) : [...a, { kind: "hook", code: h.code, label: h.text.slice(0, 100) }]))} />
                   <span>{h.text}</span>
