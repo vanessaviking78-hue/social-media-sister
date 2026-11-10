@@ -2587,6 +2587,54 @@ export const BAILEY_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// ─── ROCK n ROLL GRANNY folder ─────────────────────────────────────────────
+// Ten black and white 9:16 rock and roll portraits. The character lock is pasted first on every prompt,
+// then one pose, exactly as written in her prompt sheet.
+const ROCK_GRANNY_LOCK = `Use the attached photograph as the identity reference. Keep the same woman throughout the series, preserving her facial structure, apparent age, natural skin texture and distinctive platinum-blonde, side-swept Hollywood waves. Keep her oversized black sunglasses, nose hoop, black leather biker jacket, large hoop earrings, layered chains with a coin pendant, stacked bracelets, dark statement ring and long manicured nails. She is smoking one lit cigarette, with a fine trail of smoke that leaves her features clear. Shoot in rich black and white, with deep blacks, luminous hair, realistic leather texture and subtle 35mm grain. Create one standalone vertical 9:16 portrait with a single subject. Exclude text, logos, borders, panels and collages.`;
+
+export const ROCK_GRANNY_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "rg-01", name: "The woman in the doorway", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nFull-length portrait outside a closed music venue. She leans one shoulder against the doorframe, ankles crossed, one hand tucked into her jacket pocket and the cigarette held loosely by her thigh. Her chin is slightly lowered towards the camera. A bare light above the doorway catches the wave in her hair and the metal on her jacket. Frame her on the right, with a dark stretch of wall on the left for Story text.`,
+  },
+  {
+    id: "rg-02", name: "Backstage, five minutes to curtain", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nPhotograph her seated sideways on a low flight case, leaning forward with one elbow resting on her knee. She holds the cigarette just below her chin and turns her head towards a sound off-camera. Shoot at seated eye level. A strip of stage light cuts across her cheek and the toe of one boot. Coiled cables and a velvet curtain fall softly out of focus behind her.`,
+  },
+  {
+    id: "rg-03", name: "The laugh she couldn’t hold in", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nTight waist-up portrait caught mid-laugh, head tipped back and shoulders relaxed. Her free hand grips the edge of a diner table. Her cigarette hand drops well away from her face, bracelets slipping towards her wrist. Use direct flash and a softly lit booth behind her. Give the shot the timing of a friend who caught her half a second before she composed herself.`,
+  },
+  {
+    id: "rg-04", name: "Over the shoulder", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nCatch her halfway down a wet alley, walking away with her shoulders facing down the street. She turns her head back towards the lens, showing just enough of her face to recognise her. The cigarette hangs at her side as she walks. A single streetlight picks out the blonde curls and the seam across her leather jacket. Place her on the right, with rain-dark brick on the left.`,
+  },
+  {
+    id: "rg-05", name: "The slow exhale", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nTight side-profile portrait against a black studio backdrop. She lifts her chin slightly and exhales a thin ribbon of smoke into the open space in front of her. The cigarette is lowered to chest height. Light her from behind so the edge of her blonde waves, nose hoop and earring catch the light. Keep the profile sharp and leave space in the direction she’s looking.`,
+  },
+  {
+    id: "rg-06", name: "The passenger seat", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nShoot through the open passenger window of a parked vintage car. She sits angled towards the door, elbow on the window ledge, cigarette held outside the car. Her other hand hooks casually into her jacket lapel. She looks straight towards the camera through her sunglasses. Let the window frame crop the portrait naturally, with a little light on the chrome and the top of her hair.`,
+  },
+  {
+    id: "rg-07", name: "In the dressing-room mirror", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nPhotograph her from behind and slightly to one side as she sits at a dressing table. Show her face clearly in one mirror reflection, with her actual shoulder soft in the foreground. She leans in to adjust a hoop earring with one hand while holding the cigarette low and away from her hair with the other. A row of warm dressing-room bulbs renders as soft white circles in the monochrome image.`,
+  },
+  {
+    id: "rg-08", name: "The record-shop regular", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nThree-quarter portrait of her standing at a record bin, weight shifted onto one hip. One hand draws a vinyl sleeve halfway out of the rack. She holds the cigarette out to the side and lifts her chin towards the camera as if she’s just been interrupted. Use a wide editorial crop with blurred shelves, unlettered sleeves and a strong shaft of window light.`,
+  },
+  {
+    id: "rg-09", name: "Into the wind", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nFull-length portrait from a slightly low angle on a rooftop. She stands feet apart, turning her body into the wind. One hand grips the collar of her leather jacket and the other holds the cigarette low by her side. Her blonde waves lift away from her face, with the sunglasses and nose hoop clearly visible. Keep the skyline low and leave open sky above her for a headline.`,
+  },
+  {
+    id: "rg-10", name: "The last frame of the night", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_LOCK}\n\nClose portrait at a near-empty bar. She leans sideways on the counter, resting her temple against the knuckles of her free hand. Her cigarette hand hangs past the counter edge in the foreground, showing her rings and stacked bracelets. Give her a small, lopsided smile, as if someone has just asked whether she’s ready to go home. Use one overhead pool of light, dark reflections and soft grain.`,
+  },
+];
+
 export const MIX_PRESETS: PhotoStudioPreset[] = [
   // Set 1: clinical, always black scrubs
   {

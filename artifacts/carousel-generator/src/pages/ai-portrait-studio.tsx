@@ -179,6 +179,19 @@ const ACADEMY_PRESETS: PhotoStudioPreset[] = [
   { id: "ac-10", name: "The academy founder", hasColour: false },
 ];
 
+const ROCK_GRANNY_PRESETS: PhotoStudioPreset[] = [
+  { id: "rg-01", name: "The woman in the doorway", hasColour: false },
+  { id: "rg-02", name: "Backstage, five minutes to curtain", hasColour: false },
+  { id: "rg-03", name: "The laugh she couldn’t hold in", hasColour: false },
+  { id: "rg-04", name: "Over the shoulder", hasColour: false },
+  { id: "rg-05", name: "The slow exhale", hasColour: false },
+  { id: "rg-06", name: "The passenger seat", hasColour: false },
+  { id: "rg-07", name: "In the dressing-room mirror", hasColour: false },
+  { id: "rg-08", name: "The record-shop regular", hasColour: false },
+  { id: "rg-09", name: "Into the wind", hasColour: false },
+  { id: "rg-10", name: "The last frame of the night", hasColour: false },
+];
+
 const SAME_ROOM_PRESETS: PhotoStudioPreset[] = [
   { id: "sr-01", name: "Arms Folded", hasColour: false },
   { id: "sr-02", name: "Holding A Syringe Tray", hasColour: false },
@@ -755,7 +768,7 @@ const MIX_STYLES: { value: string; label: string }[] = [
   { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
 ];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -953,7 +966,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1728,6 +1741,7 @@ export default function AiPortraitStudio() {
                 { key: "sameroom", label: "Same Room" },
                 { key: "bailey", label: "DAVID BAILEY" },
                 { key: "academy", label: "Academy" },
+                { key: "rockgranny", label: "ROCK n ROLL GRANNY" },
                 { key: "tweaked", label: "TWEAKED" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
@@ -1739,7 +1753,7 @@ export default function AiPortraitStudio() {
                 <button
                   key={tab.key}
                   type="button"
-                  onClick={() => setActiveSection(tab.key as typeof activeSection)}
+                  onClick={() => { setActiveSection(tab.key as typeof activeSection); if (tab.key === "rockgranny") setAspectRatio("9:16"); }}
                   className={`rounded-2xl border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
                     activeSection === tab.key
                       ? "border-pink-500/60 bg-gradient-to-br from-pink-500/30 to-pink-500/10 shadow-lg"
@@ -2161,6 +2175,43 @@ export default function AiPortraitStudio() {
                             />
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+{activeSection === "rockgranny" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">ROCK n ROLL GRANNY</p>
+<p className="text-xs text-muted-foreground mb-3">Ten black and white rock and roll portraits, all vertical 9:16. Upload one clear photo of her and the same character lock goes on every shot, so it stays one woman throughout. Tick the ones you want.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {ROCK_GRANNY_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
                       </div>
                     </div>
                   </div>
