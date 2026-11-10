@@ -189,7 +189,25 @@ function shade(ctx: CanvasRenderingContext2D, strength = 0.16) {
   ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
 }
 
-type Ctx = { photo: ImageBitmap; bio: string; name: string; headline: string; col: AboutColours; view?: AboutView; logo?: Img | null; logoPos?: LogoPos; hf: AboutFont; bf: AboutFont; facts: string[]; intro: string };
+// Movable pieces: every template draws its text and boxes between mvStart and mvEnd, so Vanessa can drag any of them anywhere.
+export type AboutMove = Record<string, [number, number]>;
+const mvStart = (ctx: CanvasRenderingContext2D, o: { move?: AboutMove }, k: string) => { const m = o.move?.[k] ?? [0, 0]; ctx.save(); ctx.translate(m[0], m[1]); };
+const mvEnd = (ctx: CanvasRenderingContext2D) => ctx.restore();
+/** The pieces she can move on each design. */
+export function aboutMovable(layout: AboutLayout, factCount = 6): { key: string; label: string }[] {
+  const n = (p: string, label: string, c: number) => Array.from({ length: Math.max(0, c) }, (_, i) => ({ key: `${p}${i}`, label: `${label} ${i + 1}` }));
+  switch (layout) {
+    case "cream": return [{ key: "head", label: "Headline" }, { key: "bio", label: "Bio" }];
+    case "peach": return [{ key: "head", label: "Headline" }, { key: "bio", label: "Bio" }, { key: "sig", label: "Name" }];
+    case "pills": return [{ key: "head", label: "Headline" }, ...n("pill", "Box", Math.min(5, factCount))];
+    case "intro": return [{ key: "introduce", label: "Introduce" }, { key: "myself", label: "Myself" }, { key: "hello", label: "Hello line" }];
+    case "hello": return [{ key: "hello", label: "Hello" }, { key: "name", label: "I\u2019m name" }, { key: "card", label: "Note card" }];
+    case "founder": return [{ key: "meet", label: "Meet the" }, { key: "word", label: "Headline" }, { key: "role", label: "Role" }, { key: "sig", label: "Signed name" }];
+    default: return n("fact", "Note", Math.min(6, factCount));
+  }
+}
+
+type Ctx = { move?: AboutMove; photo: ImageBitmap; bio: string; name: string; headline: string; col: AboutColours; view?: AboutView; logo?: Img | null; logoPos?: LogoPos; hf: AboutFont; bf: AboutFont; facts: string[]; intro: string };
 
 // ---------- template 1: cream page, huge headline over a tall photo, italic justified bio beside it ----------
 function templateCream(o: Ctx): HTMLCanvasElement {
@@ -202,12 +220,15 @@ function templateCream(o: Ctx): HTMLCanvasElement {
   const m = ctx.measureText(o.headline);
   const capH = m.actualBoundingBoxAscent;
   const tw = 900, th = 235;
+  mvStart(ctx, o, "head");
   ctx.save();
   ctx.translate(12, 475);
   ctx.scale(tw / m.width, th / capH);
   ctx.fillStyle = paintFor(ctx, o.col.head || d.head, 0, -capH, m.width, capH);
   ctx.fillText(o.headline, 0, 0);
   ctx.restore();
+  mvEnd(ctx);
+  mvStart(ctx, o, "bio");
   let size = 29, lines: string[] = [];
   for (; size >= 20; size -= 1) {
     ctx.font = fcss({ ...o.bf, italic: true }, size);
@@ -217,6 +238,7 @@ function templateCream(o: Ctx): HTMLCanvasElement {
   ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 585, 620, 387, 640);
   ctx.textAlign = "left";
   lines.forEach((ln, i) => ctx.fillText(ln, 585, 620 + i * size * 1.3));
+  mvEnd(ctx);
   drawLogo(ctx, o.logo, o.logoPos);
   return c;
 }
@@ -229,6 +251,7 @@ function templatePeach(o: Ctx, cutout?: ImageBitmap | null): HTMLCanvasElement {
   ctx.font = fcss(o.hf, 400);
   const m = ctx.measureText(o.headline);
   const capH = m.actualBoundingBoxAscent;
+  mvStart(ctx, o, "head");
   ctx.save();
   ctx.translate(440, H - 40);
   ctx.rotate(-Math.PI / 2);
@@ -236,6 +259,7 @@ function templatePeach(o: Ctx, cutout?: ImageBitmap | null): HTMLCanvasElement {
   ctx.fillStyle = paintFor(ctx, o.col.head || d.head, 0, -capH, m.width, capH);
   ctx.fillText(o.headline, 0, 0);
   ctx.restore();
+  mvEnd(ctx);
   if (cutout) {
     const s2 = Math.min(1000 / cutout.height, 700 / cutout.width * 1.15) * Math.max(1, o.view?.z ?? 1);
     const dw = cutout.width * s2, dh = cutout.height * s2;
@@ -258,6 +282,7 @@ function templatePeach(o: Ctx, cutout?: ImageBitmap | null): HTMLCanvasElement {
   // the logo sits top right, so the bio drops a little to leave it room
   const bioTop = o.logo ? 165 : 90, bioMax = o.logo ? 175 : 250;
   ctx.textBaseline = "alphabetic";
+  mvStart(ctx, o, "bio");
   let size = 31, lines: string[] = [];
   for (; size >= 20; size -= 1) {
     ctx.font = fcss(o.bf, size);
@@ -267,6 +292,8 @@ function templatePeach(o: Ctx, cutout?: ImageBitmap | null): HTMLCanvasElement {
   ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 483, bioTop, 560, bioMax);
   ctx.textAlign = "left";
   lines.forEach((ln, i) => ctx.fillText(ln, 483, bioTop + i * size * 1.25));
+  mvEnd(ctx);
+  mvStart(ctx, o, "sig");
   if (o.name) {
     ctx.save();
     ctx.fillStyle = "#F4F0EC";
@@ -278,6 +305,7 @@ function templatePeach(o: Ctx, cutout?: ImageBitmap | null): HTMLCanvasElement {
     ctx.fillText(o.name, 520, H - 170);
     ctx.restore();
   }
+  mvEnd(ctx);
   drawLogo(ctx, o.logo, o.logoPos);
   return c;
 }
@@ -301,10 +329,12 @@ function templatePills(o: Ctx): HTMLCanvasElement {
   ctx.font = fcss(o.hf, size);
   while (ctx.measureText(o.headline).width > 940 && size > 90) { size -= 6; ctx.font = fcss(o.hf, size); }
   const hw = ctx.measureText(o.headline).width;
+  mvStart(ctx, o, "head");
   ctx.fillStyle = paintFor(ctx, o.col.head || d.head, (W - hw) / 2, 410 - size * 0.7, hw, size * 0.8);
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.22)"; ctx.shadowBlur = 14;
   ctx.textAlign = "center"; ctx.fillText(o.headline, W / 2, 410);
   ctx.restore();
+  mvEnd(ctx);
   // pills
   const h = 82;
   const notes = o.facts.filter((f) => f.trim()).slice(0, PILL_SLOTS.length);
@@ -316,6 +346,7 @@ function templatePills(o: Ctx): HTMLCanvasElement {
     while (ctx.measureText(txt).width + 96 > 760 && fs > 22) { fs -= 1; ctx.font = fcss({ ...o.bf }, fs); }
     const w = ctx.measureText(txt).width + 96;
     const x = slot.right ? slot.x - w : slot.x;
+    mvStart(ctx, o, `pill${i}`);
     ctx.save();
     ctx.shadowColor = "rgba(0,0,0,0.18)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
     roundRect(ctx, x, slot.y, w, h, h / 2);
@@ -324,6 +355,7 @@ function templatePills(o: Ctx): HTMLCanvasElement {
     ctx.fillStyle = paintFor(ctx, o.col.text || d.text, x, slot.y, w, h);
     ctx.textAlign = "left";
     ctx.fillText(txt, x + 48, slot.y + h / 2 + fs * 0.34);
+    mvEnd(ctx);
   });
   drawLogo(ctx, o.logo, o.logoPos);
   return c;
@@ -359,6 +391,7 @@ function templateIntro(o: Ctx): HTMLCanvasElement {
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.28)"; ctx.shadowBlur = 14;
   ctx.fillStyle = ink;
   const cx = 530, cy = 810;
+  mvStart(ctx, o, "introduce");
   // INTRODUCE on a big arc
   let big = 200;
   ctx.font = fcss(o.hf, big);
@@ -367,6 +400,8 @@ function templateIntro(o: Ctx): HTMLCanvasElement {
   // allow me to, smaller and higher
   ctx.font = fcss({ ...o.hf, weight: 500 }, 64);
   arcText(ctx, "allow me to", cx + 14, cy, 670, -Math.PI / 2, 8);
+  mvEnd(ctx);
+  mvStart(ctx, o, "myself");
   // MYSELF, tilted
   let my = 230;
   ctx.font = fcss(o.hf, my);
@@ -374,15 +409,18 @@ function templateIntro(o: Ctx): HTMLCanvasElement {
   ctx.translate(540, 1150); ctx.rotate(-0.1); ctx.textAlign = "center";
   ctx.fillText("MYSELF", 0, 0);
   ctx.restore();
+  mvEnd(ctx);
   // doodles
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 8;
   sparkle(ctx, 175, 235, 0.5, ink); sparkle(ctx, 910, 545, -0.9, ink); sparkle(ctx, 880, 990, -0.4, ink);
   curlArrow(ctx, 200, 780, 360, 690, ink);
   // the hello line
+  mvStart(ctx, o, "hello");
   const intro = o.intro || `Hi! I'm ${o.name.split(" ")[0] || "me"} and this is me...`;
   ctx.fillStyle = ink; ctx.textAlign = "left";
   ctx.font = fcss(o.bf, 44);
   wrap(ctx, intro, 200).forEach((ln, i) => ctx.fillText(ln, 100, 835 + i * 46));
+  mvEnd(ctx);
   ctx.restore();
   drawLogo(ctx, o.logo, o.logoPos);
   return c;
@@ -408,6 +446,7 @@ function templateFacts(o: Ctx): HTMLCanvasElement {
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 10;
   facts.forEach((txt, i) => {
     const s = FACT_SLOTS[i];
+    mvStart(ctx, o, `fact${i}`);
     const size = 46;
     ctx.font = fcss(o.hf, size);
     const lines = wrap(ctx, txt, s.w);
@@ -430,6 +469,7 @@ function templateFacts(o: Ctx): HTMLCanvasElement {
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(qx, qy, x1, y1); ctx.stroke();
     const a = Math.atan2(y1 - qy, x1 - qx);
     ctx.beginPath(); ctx.moveTo(x1 - 30 * Math.cos(a - 0.5), y1 - 30 * Math.sin(a - 0.5)); ctx.lineTo(x1, y1); ctx.lineTo(x1 - 30 * Math.cos(a + 0.5), y1 - 30 * Math.sin(a + 0.5)); ctx.stroke();
+    mvEnd(ctx);
   });
   ctx.restore();
   drawLogo(ctx, o.logo, o.logoPos);
@@ -447,12 +487,15 @@ function templateHello(o: Ctx): HTMLCanvasElement {
   // the photo, tall on the right
   cover(ctx, o.photo, 390, 370, 602, 880, 0.3, o.view);
   // big script hello, tilted a little
+  mvStart(ctx, o, "hello");
   ctx.save();
   ctx.translate(-10, 300); ctx.rotate(-0.13);
   ctx.font = fcss(script, 330);
   ctx.fillStyle = paintFor(ctx, o.col.head || d.head, 0, -250, 520, 300);
   ctx.textAlign = "left"; ctx.fillText("Hello", 0, 0);
   ctx.restore();
+  mvEnd(ctx);
+  mvStart(ctx, o, "name");
   // I'm NAME in capitals, up to two lines
   ctx.font = fcss({ ...o.hf, weight: 500 }, 58);
   const first = `I\u2019M ${(o.name || "").toUpperCase()}`;
@@ -461,6 +504,8 @@ function templateHello(o: Ctx): HTMLCanvasElement {
   ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 580, 150, 470, 200);
   ctx.textAlign = "left";
   lines.forEach((ln, i) => ctx.fillText(ln, 580, 205 + i * 66));
+  mvEnd(ctx);
+  mvStart(ctx, o, "card");
   // the white note card
   const cx = 80, cy = 450, cw = 520, ch = 470;
   ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.10)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
@@ -490,6 +535,7 @@ function templateHello(o: Ctx): HTMLCanvasElement {
   ctx.font = fcss({ ...o.hf, italic: true, weight: 500 }, 34);
   ctx.fillStyle = paintFor(ctx, o.col.head || d.head, cx + 40, cy + ch - 70, 300, 40);
   ctx.fillText("Nice to meet you!", cx + 40, cy + ch - 36);
+  mvEnd(ctx);
   drawLogo(ctx, o.logo, o.logoPos ?? "tl");
   return c;
 }
@@ -504,24 +550,32 @@ function templateFounder(o: Ctx): HTMLCanvasElement {
   cover(ctx, o.photo, 310, 372, 484, 690, 0.3, o.view);
   ctx.textAlign = "center";
   const headPaint = (y: number, h: number) => paintFor(ctx, o.col.head || d.head, 0, y, W, h);
+  mvStart(ctx, o, "meet");
   ctx.font = fcss(script, 210);
   ctx.fillStyle = headPaint(70, 220);
   ctx.fillText("Meet the", W / 2 - 10, 250);
+  mvEnd(ctx);
+  mvStart(ctx, o, "word");
   let size = 230;
   const word = (o.headline && o.headline !== "ABOUT ME" ? o.headline : "FOUNDER").toUpperCase();
   ctx.font = fcss({ ...o.hf, weight: 700 }, size);
   while (ctx.measureText(word).width > 900 && size > 90) { size -= 6; ctx.font = fcss({ ...o.hf, weight: 700 }, size); }
   ctx.fillStyle = headPaint(250, size);
   ctx.fillText(word, W / 2, 262 + size * 0.72);
+  mvEnd(ctx);
+  mvStart(ctx, o, "role");
   const role = (o.intro || "AESTHETIC PRACTITIONER").toUpperCase();
   ctx.font = fcss({ ...o.bf, weight: 700 }, 30);
   ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 0, 1090, W, 40);
   ctx.fillText(role, W / 2, 1112);
+  mvEnd(ctx);
+  mvStart(ctx, o, "sig");
   let ns = 170;
   ctx.font = fcss(script, ns);
   while (ctx.measureText(o.name || "").width > 860 && ns > 70) { ns -= 6; ctx.font = fcss(script, ns); }
   ctx.fillStyle = headPaint(1130, 200);
   ctx.fillText(o.name || "", W / 2, 1250);
+  mvEnd(ctx);
   drawLogo(ctx, o.logo, o.logoPos ?? "tr");
   return c;
 }
@@ -540,6 +594,8 @@ export type AboutRenderOptions = {
   fonts?: AboutFonts;
   /** Short facts about her, used by the pill notes and fact arrows templates. */
   facts?: string[];
+  /** How far each movable piece has been dragged from its usual place (page pixels), keyed by piece. */
+  move?: AboutMove;
   /** The hello line on "allow me to introduce", e.g. "Hi! I'm Bea and this is me..." */
   intro?: string;
 };
@@ -553,7 +609,7 @@ export async function renderAboutPost(o: AboutRenderOptions): Promise<HTMLCanvas
   const raw = (o.headline || "ABOUT ME").trim();
   const ctx: Ctx = {
     photo: o.photo, bio: o.bio, name: o.name, headline: lower ? raw.toLowerCase() : raw, col: o.colours, view: o.view, logo: o.logo, logoPos: o.logoPos, hf, bf,
-    facts: o.facts ?? [], intro: o.intro ?? "",
+    facts: o.facts ?? [], intro: o.intro ?? "", move: o.move,
   };
   switch (o.layout) {
     case "cream": return templateCream(ctx);

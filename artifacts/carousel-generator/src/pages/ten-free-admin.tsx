@@ -8,7 +8,7 @@ import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
 import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
-import { renderAboutPost, aboutDefaults, ABOUT_LAYOUTS, ABOUT_FONTS, ABOUT_DEFAULT_FONTS, type AboutRenderOptions, type AboutLayout } from "@/lib/about-designs";
+import { renderAboutPost, aboutDefaults, aboutMovable, ABOUT_LAYOUTS, ABOUT_FONTS, ABOUT_DEFAULT_FONTS, type AboutRenderOptions, type AboutLayout } from "@/lib/about-designs";
 import { ColourPicker } from "@/components/colour-picker";
 import { HOOKS as HOOK_BANK, pickedHookPayload, type Hook } from "@/lib/hook-bank";
 import { pickReels } from "@/lib/tenfree-reels";
@@ -534,6 +534,32 @@ export function Builder({ id }: { id: string }) {
     if (!f) return;
     try { then(await createImageBitmap(f)); } catch { toast.error("That file would not open as a picture"); }
   };
+  // About me posts: pick a piece (a headline, a box, a note) and drag it anywhere on the picture.
+  const [moveSel, setMoveSel] = useState<Record<number, string>>({});
+  const aboutDrag = useRef<{ n: number; key: string; x: number; y: number; w: number; h: number; base: [number, number]; busy: boolean } | null>(null);
+  const aboutDown = (e: React.PointerEvent<HTMLImageElement>, it: Item): boolean => {
+    const key = moveSel[it.n];
+    if (!key || !it.aboutArgs) return false;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const r = e.currentTarget.getBoundingClientRect();
+    aboutDrag.current = { n: it.n, key, x: e.clientX, y: e.clientY, w: r.width, h: r.height, base: it.aboutArgs.move?.[key] ?? [0, 0], busy: false };
+    return true;
+  };
+  const aboutMove = async (e: React.PointerEvent<HTMLImageElement>): Promise<boolean> => {
+    const d = aboutDrag.current;
+    if (!d) return false;
+    if (d.busy) return true;
+    const it = itemsRef.current.find((x) => x.n === d.n);
+    if (!it?.aboutArgs) return true;
+    d.busy = true;
+    const mv: [number, number] = [Math.round(d.base[0] + ((e.clientX - d.x) / d.w) * 1080), Math.round(d.base[1] + ((e.clientY - d.y) / d.h) * 1350)];
+    try {
+      const aa = { ...it.aboutArgs, move: { ...(it.aboutArgs.move ?? {}), [d.key]: mv } };
+      const cv = await renderAboutPost(aa);
+      patchItem(d.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
+    } finally { d.busy = false; }
+    return true;
+  };
   // Text box cover: drag the box anywhere on the first slide.
   const boxDrag = useRef<{ n: number; w: number; h: number } | null>(null);
   const boxMove = (e: React.PointerEvent<HTMLImageElement>, it: Item) => {
@@ -588,21 +614,26 @@ export function Builder({ id }: { id: string }) {
     if (key === "textColour") { applyTextColour(val); return; }
     const assets = assetsRef.current;
     if (!assets) return;
+    let changed = 0;
     for (const it of itemsRef.current) {
       if (!it.uniArgs) continue;
       if (key === "block" && !it.uniArgs.block) continue;
       if (key === "gradColour" && it.uniArgs.block) continue;
+      changed++;
       const args: Record<string, unknown> = { ...it.uniArgs, [key]: val || undefined };
       for (const k of Object.keys(args)) if (args[k] === undefined) delete args[k];
       const a2 = args as unknown as UA;
       const cvs = renderUniversalPost(a2, assets);
       patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
     }
+    toast[changed ? "success" : "message"](changed ? `Changed ${changed} post${changed === 1 ? "" : "s"}.` : key === "block" ? "None of the posts are colour block posts, so nothing changed. Use Look of the post on a post to make one." : "No posts to change.");
   };
   const applyAllAbout = async (k: "bg" | "head" | "text" | "box" | "all" | "reset", val = "") => {
     if (!req) return;
+    let changed = 0;
     for (const it of itemsRef.current) {
       if (!it.aboutArgs) continue;
+      changed++;
       let colours = it.aboutArgs.colours;
       if (k === "reset") colours = { main: req.mainHex, accent: req.accentHex };
       else if (k === "all") {
@@ -616,6 +647,7 @@ export function Builder({ id }: { id: string }) {
       const cv = await renderAboutPost(aa);
       patchItem(it.n, { aboutArgs: aa, uni: [cv], previews: [cv.toDataURL("image/jpeg", 0.6)] });
     }
+    if (changed) toast.success(`Changed ${changed} About me post${changed === 1 ? "" : "s"}.`);
   };
 
   const publish = async () => {
@@ -840,7 +872,7 @@ export function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : `Build the ${nT + nA + nH} posts` : "Build the 10 posts"}</button>
+        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nA + nH} posts` : `Build the ${nT + nA + nH} posts` : "Build the 10 posts"}</button>
         {isPrem && !items.length && ((isClub ? chosenT.length < 1 : chosenT.length !== nT) || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">{isClub ? "Send to my approval queue" : "Publish and get the link"}</button>}
         <span className="text-sm">{status}</span>
@@ -876,9 +908,9 @@ export function Builder({ id }: { id: string }) {
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
-                <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={(e) => { if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; }}
+                <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; }}
                   onClick={() => (i === 0 && it.uniArgs?.box ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[30rem] rounded shrink-0 ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                  className={`h-[30rem] rounded shrink-0 ${it.aboutArgs && moveSel[it.n] ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -973,6 +1005,16 @@ export function Builder({ id }: { id: string }) {
               const needsFacts = ABOUT_LAYOUTS.find((l) => l.id === aa0.layout)?.needsFacts;
               return (
                 <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="space-y-1 rounded border p-2">
+                    <div className="font-semibold text-foreground">Move the text and boxes</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aboutMovable(aa0.layout, (aa0.facts ?? []).filter((f) => f.trim()).length).map((m) => (
+                        <button key={m.key} onClick={() => setMoveSel((s0) => ({ ...s0, [it.n]: s0[it.n] === m.key ? "" : m.key }))} className={`px-2 py-1 rounded border ${moveSel[it.n] === m.key ? "bg-pink-500 text-white border-pink-500" : ""}`}>{m.label}</button>
+                      ))}
+                      <button onClick={() => { setMoveSel((s0) => ({ ...s0, [it.n]: "" })); void aboutApply(it, { move: {} }); }} className="px-2 py-1 rounded border">Put everything back</button>
+                    </div>
+                    <div>{moveSel[it.n] ? "Now drag on the picture above and it moves. Tap the button again when you have finished." : "Tap a button, then drag on the picture to move it."}</div>
+                  </div>
                   <div className="font-semibold">Template</div>
                   <div className="flex flex-wrap gap-1.5">
                     {ABOUT_LAYOUTS.map((l) => (
