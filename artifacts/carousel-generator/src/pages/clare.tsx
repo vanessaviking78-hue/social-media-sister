@@ -1218,6 +1218,7 @@ const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null 
   { id: "fillers", label: "Fillers", Comp: lazyTab(() => import("./client-extras").then((m) => ({ default: m.FillersTab }))) },
   { id: "treatments", label: "Treatment carousels", Comp: lazyTab(() => import("./treatments")) },
   { id: "hooks", label: "My first hooks", Comp: lazyTab(() => import("./hooks-tab")) },
+  { id: "new", label: "NEW", Comp: lazyTab(() => import("./new-covers")) },
   { id: "about", label: "About me", Comp: lazyTab(() => import("./client-about")) },
   { id: "unique", label: "Unique", Comp: lazyTab(() => import("./unique")) },
   { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
