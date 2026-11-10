@@ -12,6 +12,7 @@ import { useForcedClient } from "@/lib/forced-client";
 import { uploadPngs } from "@/lib/month-engine";
 import { drawTitle, clientSlug, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { nextBankCta } from "@/lib/cta-bank";
+import { BoxControls } from "@/components/box-controls";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
 // UNIVERSAL: any client, every non prescription treatment, six posts each.
@@ -87,7 +88,7 @@ export type Post = {
   scheduling: boolean;
   banked?: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text" | "bw">>;
+  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text" | "bw" | "box">>;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -1045,6 +1046,7 @@ export default function UniversalPage() {
             <ColourPicker label="Gradient colour" value={look.wash} onChange={(hex) => setLook((l) => ({ ...l, wash: hex }))} swatches={washSwatches} />
             <ColourPicker label="Writing colour" value={look.text} onChange={(hex) => setLook((l) => ({ ...l, text: hex }))} swatches={textSwatches} />
           </div>
+          <BoxControls box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b }))} />
           <div className="grid md:grid-cols-4 gap-4 text-sm">
             <label className="space-y-1 block">
               <span className="text-white/60">Gradient strength: {look.opacity}%</span>
@@ -1227,6 +1229,7 @@ export default function UniversalPage() {
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-2 gap-4 text-xs">
                   <ColourPicker label="This post: gradient colour" value={lk.wash} onChange={(hex) => patch(post.id, { look: { ...post.look, wash: hex } })} swatches={washSwatches} />
                   <ColourPicker label="This post: writing colour" value={lk.text} onChange={(hex) => patch(post.id, { look: { ...post.look, text: hex } })} swatches={textSwatches} />
+                  <div className="md:col-span-2"><BoxControls box={lk.box} label="This post: text box on the cover" onChange={(bx) => patch(post.id, { look: { ...post.look, box: bx } })} /></div>
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lk.opacity}%</span>
                     <input type="range" min={0} max={100} step={5} value={lk.opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
