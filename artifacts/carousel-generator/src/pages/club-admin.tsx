@@ -152,7 +152,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
           </details>
           <div className="space-y-2">
             <div className="flex gap-2 flex-wrap items-center">
-            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>1. Build the posts</button>
+            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>1. Build the posts and studio photos</button>
             <button disabled={busy || month.status === "approved"} className="px-3 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={approve}>3. Approve and show to member</button>
             </div>
             {!member.detailsDone && <div className="text-sm text-red-600">Their details form is open again, so building is switched off. Ask them to press Send on it, or tell me.</div>}
@@ -198,7 +198,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                     <div className="flex gap-2 overflow-x-auto">
                       {(member.photoUrls ?? []).map((u) => {
                         const on = (member.refPhotoUrl || (member.photoUrls ?? [])[0]) === u;
-                        return <img key={u} src={u} onClick={async () => { if (await call(`/club/members/${member.id}/reference`, { url: u }, "PUT")) { toast.success("Reference photo chosen"); reload(); } }} className={`h-24 rounded cursor-pointer border-4 ${on ? "border-pink-500" : "border-transparent"}`} />;
+                        return <div key={u} className="shrink-0 text-center"><img src={u} onClick={async () => { if (await call(`/club/members/${member.id}/reference`, { url: u }, "PUT")) { toast.success("Reference photo chosen"); reload(); } }} className={`h-24 rounded cursor-pointer border-4 ${on ? "border-pink-500" : "border-transparent"}`} /><button className="text-xs underline text-red-600" onClick={async () => { if (await call(`/club/months/${month.id}/photos/remove`, { url: u })) { toast.success("Photo deleted"); reload(); } }}>Delete</button></div>;
                       })}
                     </div>
                   </div>

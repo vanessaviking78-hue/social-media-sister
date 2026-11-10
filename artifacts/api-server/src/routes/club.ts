@@ -445,6 +445,8 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
     }
     const urls = cfgs.map((c) => results.get(c.id)).filter((u): u is string => !!u);
     await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"}, ai_error = ${urls.length === cfgs.length ? "" : reasons.slice(-3).join(" | ").slice(0, 500)}, updated_at = now() WHERE id = ${monthId}`);
+    // The builder reads from its own request row, so hand the photos over there too.
+    await db.execute(sql`UPDATE tenfree_requests SET ai_urls = ${JSON.stringify(urls)}::jsonb, ai_status = ${urls.length ? "ready" : "failed"} WHERE id = ${`club-${monthId}`}`).catch(() => undefined);
   } catch (err) {
     logger.warn({ err }, "Club AI shots failed");
     const msg = (err instanceof Error ? err.message : String(err)).slice(0, 500);
@@ -727,9 +729,41 @@ router.post("/club/months/:id/build-request", requireAuth, async (req: Request, 
       res.status(404).json({ error: "Not found" });
       return;
     }
+    // One button does it all: the four studio photos start as the build opens, unless they are already made or being made.
+    try {
+      const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as MonthRow | undefined;
+      const m = x ? ((await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member | undefined) : undefined;
+      if (x && m && x.ai_status !== "working" && !(x.ai_urls ?? []).length && (m.photo_urls ?? []).length) {
+        await db.execute(sql`UPDATE tenfree_requests SET ai_status = 'working' WHERE id = ${id}`).catch(() => undefined);
+        void makeAiShots(m, x.id);
+      }
+    } catch (err) {
+      logger.warn({ err }, "Could not auto start club studio photos");
+    }
     res.json({ id });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not start the build" });
+  }
+});
+
+// Take one of a member's photos away (a mock up, a blurry one). Also removes it from the builder's copy.
+router.post("/club/months/:id/photos/remove", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as MonthRow | undefined;
+    const m = x ? ((await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member | undefined) : undefined;
+    if (!x || !m) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    const url = str((req.body as any)?.url, 400);
+    const photos = (m.photo_urls ?? []).filter((u) => u !== url);
+    const ref = m.ref_photo_url === url ? "" : (m.ref_photo_url ?? "");
+    await db.execute(sql`UPDATE club_members SET photo_urls = ${JSON.stringify(photos)}::jsonb, ref_photo_url = ${ref} WHERE id = ${m.id}`);
+    await db.execute(sql`UPDATE tenfree_requests SET photos = ${JSON.stringify(photos.slice(0, 12))}::jsonb, photo_url = ${photos[0] ?? ""} WHERE id = ${`club-${x.id}`}`).catch(() => undefined);
+    res.json({ ok: true, photos });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not remove" });
   }
 });
 

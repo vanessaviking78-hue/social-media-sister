@@ -1086,7 +1086,19 @@ export function Builder({ id }: { id: string }) {
                   <div className="text-xs font-semibold">Photo for slide {i + 1}</div>
                   <div className="text-xs text-muted-foreground">Their photos</div>
                   <div className="flex gap-2 overflow-x-auto">
-                    {ownRef.current.map((o) => <img key={o.url} src={o.url} onClick={() => setCustom(it, i, o.bmp)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                    {ownRef.current.map((o) => (
+                      <div key={o.url} className="shrink-0 text-center">
+                        <img src={o.url} onClick={() => setCustom(it, i, o.bmp)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />
+                        {isClub && <button className="text-[11px] underline text-red-600" onClick={async () => {
+                          if (!window.confirm("Delete this photo from their photos?")) return;
+                          const r = await fetch(`${API}/club/months/${String(req.id).replace(/^club-/, "")}/photos/remove`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ url: o.url }) });
+                          if (!r.ok) { toast.error("Could not delete it"); return; }
+                          ownRef.current = ownRef.current.filter((x) => x.url !== o.url);
+                          loadReq();
+                          toast.success("Photo deleted");
+                        }}>Delete</button>}
+                      </div>
+                    ))}
                   </div>
                   <div className="text-xs text-muted-foreground">Library photos</div>
                   <div className="flex gap-2 overflow-x-auto">
