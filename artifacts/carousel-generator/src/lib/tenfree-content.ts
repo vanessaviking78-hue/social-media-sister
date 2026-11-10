@@ -83,7 +83,7 @@ export type TreatmentPick = { treatment: UTreatment; angle: number; headline: st
  * hasPhotos: whether the Universal library holds photos for that treatment, because a post with no photos would be bare.
  * Spreads the three across different groups where it can, prefers the interesting ones, and never takes only polynucleotides.
  */
-export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string, seq = 0, count = 3, angles: Record<string, number> = {}): TreatmentPick[] {
+export function pickTreatments(ticked: string[], hasPhotos: (id: string) => boolean, seedText: string, seq = 0, count = 3, angles: Record<string, number> = {}, usedAngles: Record<string, number[]> = {}): TreatmentPick[] {
   const rand = rng(hashSeed(seedText));
   const byName = new Map(U_TREATMENTS.map((t) => [t.name.toLowerCase(), t]));
   // Only treatments she actually ticked. If fewer than three have photos, the same treatment is used again with a different angle.
@@ -103,9 +103,21 @@ export function pickTreatments(ticked: string[], hasPhotos: (id: string) => bool
     }
   }
   while (chosen.length < count) chosen.push(ranked[chosen.length % ranked.length]);
+  const taken = new Map<string, Set<number>>();
   return chosen.map((treatment, i) => {
+    const set = taken.get(treatment.id) ?? new Set<number>(usedAngles[treatment.id] ?? []);
+    taken.set(treatment.id, set);
     const forced = angles[treatment.name];
-    const angle = typeof forced === "number" && forced >= 0 && forced < 6 ? forced : ANGLE_ORDER[(seq + i * 2) % ANGLE_ORDER.length];
+    let angle = typeof forced === "number" && forced >= 0 && forced < 6 ? forced : -1;
+    // A treatment that has been promoted before gets a hook it has not had yet.
+    if (angle < 0) {
+      for (let k = 0; k < ANGLE_ORDER.length; k++) {
+        const a = ANGLE_ORDER[(seq + i * 2 + k) % ANGLE_ORDER.length];
+        if (!set.has(a)) { angle = a; break; }
+      }
+      if (angle < 0) angle = ANGLE_ORDER[(seq + i * 2) % ANGLE_ORDER.length];
+    }
+    set.add(angle);
     const type = postTypesFor(treatment)[angle];
     return { treatment, angle, headline: type.headline, brief: type.brief };
   });

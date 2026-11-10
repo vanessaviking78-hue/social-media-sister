@@ -57,7 +57,6 @@ type MonthContent = { posts?: { n: number; label: string; images: string[]; capt
 type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string } };
-  usedTreatments?: string[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
 };
 
@@ -195,7 +194,6 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const open = data.cycle.open;
-  const used = new Set(data.usedTreatments ?? []);
 
   const save = async () => {
     setBusy(true);
@@ -222,16 +220,15 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
       <p className="cp-sub">Choices close on {dateName(data.cycle.cutOff)}, a week before your next payment on {dateName(data.cycle.nextBilling)}. Your content is then built and checked by me personally.</p>
       {!open && <div className="cp-err">Choices have closed for this month. Message me if something has changed.</div>}
 
-      <h2>1. Your {caps.treatmentPosts} treatments <span className="cp-count">{treatments.length} of {caps.treatmentPosts}</span></h2>
-      <p className="cp-sub">Each one becomes its own treatment post, with matching reels. Once you have had a treatment it is crossed out, so you always get something new.</p>
+      <h2>What {caps.treatmentPosts} treatments would you like to promote this month? <span className="cp-count">{treatments.length} of {caps.treatmentPosts}</span></h2>
+      <p className="cp-sub">If you only choose 1, 2 or 3, that is perfectly fine. You can promote the same treatment again another month, I will make it with fresh hooks so it never looks repeated.</p>
       {U_GROUPS.map((g) => (
         <div key={g.id} style={{ margin: "14px 0" }}>
           <div className="cp-pink" style={{ fontWeight: 900, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase", marginBottom: 6 }}>{g.label}</div>
           <div className="cp-chips">
             {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
               const on = treatments.includes(t.name);
-              const done = used.has(t.name);
-              return <button key={t.id} type="button" title={done ? "You have already had this one" : undefined} style={done ? { textDecoration: "line-through", color: "#999", borderColor: "#ccc" } : undefined} disabled={done || !open || (!on && treatments.length >= caps.treatmentPosts)} className={`cp-chip ${on && !done ? "on" : ""}`} onClick={() => setTreatments((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))}>{t.name}</button>;
+              return <button key={t.id} type="button" disabled={!open || (!on && treatments.length >= caps.treatmentPosts)} className={`cp-chip ${on ? "on" : ""}`} onClick={() => setTreatments((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))}>{t.name}</button>;
             })}
           </div>
         </div>

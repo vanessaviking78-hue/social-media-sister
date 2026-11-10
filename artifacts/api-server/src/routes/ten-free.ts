@@ -725,7 +725,7 @@ Return JSON only: {"hooks":[{"hook":"","idea":""}],"polls":[{"n":1,"question":""
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const makeCode = () => `3FOR1-${Array.from(randomBytes(5), (b) => CODE_CHARS[b % CODE_CHARS.length]).join("")}`;
 
-type PubPost = { n: number; kind: string; label: string; images: string[]; caption: string; tags: string };
+type PubPost = { n: number; kind: string; label: string; images: string[]; caption: string; tags: string; treatment?: string; angle?: number };
 type PubStory = { n: number; image: string; instruction?: string; poll: { question: string; a: string; b: string } };
 
 // "Attach to the Cyber Suite": when a clinic comes on board, this turns the request into a client in her tools, with the logo, photo, colours and website carried over.
@@ -804,7 +804,8 @@ router.post("/ten-free/publish", requireAuth, async (req: Request, res: Response
       mainHex: r.main_hex,
       accentHex: r.accent_hex,
       logoUrl: str(b.logoUrl, 400),
-      posts: b.posts.slice(0, 12).map((p) => ({
+      posts: b.posts.slice(0, id.startsWith("club-") ? 24 : 12).map((p) => ({
+        ...(p.treatment ? { treatment: str(p.treatment, 60), angle: Number(p.angle) || 0 } : {}),
         n: Number(p.n) || 0,
         kind: str(p.kind, 30),
         label: str(p.label, 80),

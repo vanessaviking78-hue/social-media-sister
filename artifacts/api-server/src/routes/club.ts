@@ -187,11 +187,9 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     const cur = await getOrMakeMonth(m.id, month);
     const cutOffDate = new Date(date.getTime() - CUT_OFF_DAYS * 86400000);
     const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at, choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
-    const usedTreatments = Array.from(new Set((approved.rows as any[]).filter((r) => r.month !== month).flatMap((r) => (r.choices?.treatments as string[]) ?? [])));
     res.set("Cache-Control", "private, no-store");
     res.json({
       member: publicMember(m),
-      usedTreatments,
       cycle: {
         month,
         nextBilling: ymd(date),
@@ -295,9 +293,7 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
     }
     const caps = CLUB_PLANS[m.plan];
     const b = req.body as { treatments?: unknown; note?: unknown };
-    // Treatments they have already had in an approved month are not offered again.
-    const had = new Set(((await db.execute(sql`SELECT choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' AND month <> ${month}`)).rows as any[]).flatMap((r) => (r.choices?.treatments as string[]) ?? []));
-    const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter((t) => t && !had.has(t)).slice(0, caps.treatmentPosts);
+    const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter(Boolean).slice(0, caps.treatmentPosts);
     // The other posts are chosen by Vanessa, so whatever she has set is kept.
     const picks = Array.isArray(cur.choices?.picks) ? cur.choices.picks : [];
     await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify({ treatments, picks, note: str(b.note, 500), savedAt: new Date().toISOString() })}::jsonb, updated_at = now() WHERE id = ${cur.id}`);
@@ -537,12 +533,16 @@ router.post("/club/months/:id/build-request", requireAuth, async (req: Request, 
     const d = m.details ?? {};
     const caps = CLUB_PLANS[m.plan];
     const picks = ((x.choices?.picks as any[]) ?? []);
+    // The same treatment can come round again in a later month, but never with the same hook as before.
+    const earlier = (await db.execute(sql`SELECT content FROM club_months WHERE member_id = ${m.id} AND id <> ${x.id}`)).rows as any[];
+    const usedAngles: Record<string, number[]> = {};
+    for (const e of earlier) for (const p of (e.content?.posts as any[]) ?? []) if (p.treatment && typeof p.angle === "number") (usedAngles[p.treatment] ??= []).push(p.angle);
     const hookCodes = picks.filter((p) => p.kind === "hook" && p.code).map((p) => p.code);
     const answers = {
       bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
       threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
       facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-      clubHooks: hookCodes, clubHookSlots: Math.min(caps.picks, Math.max(hookCodes.length, caps.picks - picks.filter((p) => p.kind === "tool").length)),
+      usedAngles, clubHooks: hookCodes, clubHookSlots: Math.min(caps.picks, Math.max(hookCodes.length, caps.picks - picks.filter((p) => p.kind === "tool").length)),
     };
     await ensureTenFreeTable();
     const rid = `club-${x.id}`;

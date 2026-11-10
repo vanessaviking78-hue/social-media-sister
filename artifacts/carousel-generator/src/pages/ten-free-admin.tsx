@@ -225,8 +225,8 @@ function Builder({ id }: { id: string }) {
 
   const build = async () => {
     if (!req) return;
-    if (isPrem && chosenT.length !== nT) {
-      toast.error(`Please pick exactly ${nT} treatments first. You have ${chosenT.length}.`);
+    if (isPrem && (isClub ? chosenT.length < 1 : chosenT.length !== nT)) {
+      toast.error(isClub ? "Please pick at least one treatment first." : `Please pick exactly ${nT} treatments first. You have ${chosenT.length}.`);
       return;
     }
     if (isPrem && pickedHooks.length !== nH) {
@@ -248,7 +248,7 @@ function Builder({ id }: { id: string }) {
       const lib = (await (await fetch(`${API}/universal/images`)).json()).images as { treatmentId: string; url: string }[];
       const byT = new Map<string, string[]>();
       lib.forEach((i) => byT.set(i.treatmentId, [...(byT.get(i.treatmentId) ?? []), i.url]));
-      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0, isPremium ? nT : 3, tAngles);
+      const picks = pickTreatments(tList, (tid) => (byT.get(tid)?.length ?? 0) >= 1, req.id, req.seq ?? 0, isPremium ? nT : 3, tAngles, ((req.answers as any)?.usedAngles as Record<string, number[]>) ?? {});
       if (picks.length < (isPremium ? nT : 3)) throw new Error("None of the treatments she ticked have photos in the Universal library");
       const distinct = new Set(picks.map((p) => p.treatment.id)).size;
       if (distinct < (isPremium ? nT : 3)) toast.message(`Only ${distinct} of the treatments she ticked have photos in the Universal library, so some posts reuse a treatment at a different angle.`);
@@ -600,7 +600,7 @@ function Builder({ id }: { id: string }) {
         const cvs = it.post ? await renderPackPost(it.post, client, 1) : it.uni!;
         const images: string[] = [];
         for (const [k, c] of cvs.entries()) images.push(await upload(await jpg(c), `post-${it.n}-${k + 1}.jpg`));
-        posts.push({ n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags });
+        posts.push({ n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags, ...(it.uniArgs && it.source === "universal" ? { treatment: it.uniArgs.treatmentId, angle: it.uniArgs.angle } : {}) });
         stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
       }
       const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
@@ -779,7 +779,7 @@ function Builder({ id }: { id: string }) {
       </div>
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : "Build the premium 6 posts" : "Build the 10 posts"}</button>
-        {isPrem && !items.length && (chosenT.length !== nT || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
+        {isPrem && !items.length && ((isClub ? chosenT.length < 1 : chosenT.length !== nT) || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
         <span className="text-sm">{status}</span>
         <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
