@@ -2635,6 +2635,53 @@ export const ROCK_GRANNY_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// ─── ROCK n ROLL GRANNY COLOUR folder ──────────────────────────────────────
+// The colour sister of the black and white set: same woman, same look, ten new scenes in rich true-to-life colour.
+const ROCK_GRANNY_COLOUR_LOCK = `Use the attached photograph as the identity reference. Keep the same woman throughout the series, preserving her facial structure, apparent age, natural skin texture and distinctive platinum-blonde, side-swept Hollywood waves. Keep her oversized black sunglasses, nose hoop, black leather biker jacket, large hoop earrings, layered chains with a coin pendant, stacked bracelets, dark statement ring and long manicured nails. She is smoking one lit cigarette, with a fine trail of smoke that leaves her features clear. Shoot in rich, true-to-life colour with natural skin tones, luminous platinum hair, realistic leather texture and subtle 35mm film grain. Create one standalone vertical 9:16 portrait with a single subject. Exclude text, logos, borders, panels and collages.`;
+
+export const ROCK_GRANNY_COLOUR_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "rgc-01", name: "The tour bus window", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nWaist-up portrait of her sitting in a worn tour bus seat, turned towards the window with one boot propped on the seat opposite. She rests the cigarette hand on the window ledge and looks back at the camera over the top of her sunglasses. Late afternoon sun floods through the glass in warm amber, with the dusty road and a soft blur of passing fields behind her. Leave clean space on the left for Story text.`,
+  },
+  {
+    id: "rgc-02", name: "Neon on the pavement", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nFull-length portrait on a wet city pavement at night, leaning back against a lamp post with one knee bent and a boot flat against the pole. The cigarette is held low and loose. Pink and electric blue neon from a bar window spills across the leather jacket and reflects in the puddles at her feet. Her chin is raised and her expression is unbothered. Keep the signage out of focus and unreadable.`,
+  },
+  {
+    id: "rgc-03", name: "The festival field", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nTight waist-up portrait caught mid-laugh in a festival field at golden hour, head thrown back, a paper wristband on her wrist beside the stacked bracelets. The cigarette hand is held out to one side, away from her face. Soft focus behind her shows bunting, a distant stage and a sea of happy blurred people. Warm low sun rims her platinum waves with light. Mud on her boots is just visible at the edge of the frame.`,
+  },
+  {
+    id: "rgc-04", name: "The launderette at midnight", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nFull-length portrait of her sitting on top of a row of washing machines in an empty launderette, legs crossed at the ankle and swinging, one hand flat beside her on the machine. The cigarette is held lazily away from the machines. Cool green-white strip lighting overhead contrasts with the warm glow of her skin and the jet black of her jacket. Rows of round machine doors glow softly behind her. Shoot at eye level with a slightly wide lens.`,
+  },
+  {
+    id: "rgc-05", name: "Sunset on the bonnet", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nThree-quarter portrait of her perched on the bonnet of a cherry-red vintage car parked on an empty desert road at sunset. She leans back on one hand, the other holding the cigarette away from her body, boots crossed in front of her. The sky is peach, tangerine and violet. A low sun backlights her platinum waves. Frame her on the left with open road stretching away on the right.`,
+  },
+  {
+    id: "rgc-06", name: "The guitar shop", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nThree-quarter portrait of her standing in a guitar shop, one hand resting on the neck of an electric guitar on the wall, the cigarette held out to the side. Rows of guitars in cherry, sunburst and turquoise fill the blurred wall behind her, with no brand names or lettering visible. She tilts her head and gives the camera a knowing look. Warm tungsten shop lighting with one shaft of daylight from the door catching her hair.`,
+  },
+  {
+    id: "rgc-07", name: "The red velvet booth", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nWaist-up portrait of her slouched in a deep red velvet booth in a dim club, one arm stretched along the back of the seat. The cigarette hand rests on the table beside a flickering candle in a glass holder. Warm candlelight lifts her cheekbones and the gold of her chains against the rich red velvet. A soft haze hangs in the room. She looks straight into the lens with a slow, amused half-smile.`,
+  },
+  {
+    id: "rgc-08", name: "The seaside arcade", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nWaist-up portrait of her standing at a seaside arcade, one hand resting on the glass of a pinball machine, the cigarette held away from it. Coloured arcade lights wash across her face in pink, yellow and turquoise. The machines behind her blur into a sparkle of bokeh, with no readable text or logos. She glances at the camera sideways with her chin dipped, caught mid-game.`,
+  },
+  {
+    id: "rgc-09", name: "The flyer wall", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nFull-length portrait of her leaning against a brick wall plastered with layers of torn, colourful gig flyers, all blank or abstract with no readable words. One boot is flat against the wall, one hand in her jacket pocket, the cigarette held at her hip. Bright mid-morning sun throws a crisp shadow of her silhouette across the paper and brick. Her expression is cool and a little mischievous. Frame her on the right with the busiest part of the wall behind her.`,
+  },
+  {
+    id: "rgc-10", name: "Golden hour on the fire escape", hasColour: false,
+    promptTemplate: `${ROCK_GRANNY_COLOUR_LOCK}\n\nPortrait from slightly above of her sitting on the iron steps of a city fire escape, elbows on her knees, looking down into the lens. The cigarette dangles from her fingers between her knees, rings and stacked bracelets clearly visible. A golden hour sky glows behind her over a skyline of rooftops, warming her skin and setting her platinum hair alight. Keep the background soft and the expression relaxed and a little wistful.`,
+  },
+];
+
 export const MIX_PRESETS: PhotoStudioPreset[] = [
   // Set 1: clinical, always black scrubs
   {
