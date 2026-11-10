@@ -23,7 +23,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 export const CLUB_PLANS = {
-  "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 7, reels: 10, tailoredReels: 4 },
+  "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 9, reels: 10, tailoredReels: 4 },
   "222": { price: 222, posts: 20, treatmentPosts: 4, aboutPosts: 2, picks: 16, reels: 20, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
