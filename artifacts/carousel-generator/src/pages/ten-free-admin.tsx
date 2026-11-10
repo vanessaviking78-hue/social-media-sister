@@ -725,24 +725,6 @@ export function Builder({ id }: { id: string }) {
               </div>
             </div>
           ))}
-          {chosenT.length > 0 && (
-            <div className="border-t pt-3 space-y-2">
-              <div className="text-xs font-semibold uppercase text-pink-500">Choose the hook for each treatment post</div>
-              {chosenT.map((name) => {
-                const t = U_TREATMENTS.find((x) => x.name === name);
-                if (!t) return null;
-                return (
-                  <label key={name} className="flex items-center gap-2 text-sm flex-wrap">
-                    <span className="font-medium w-48">{name}</span>
-                    <select className="border rounded px-2 py-1 text-sm max-w-full" value={tAngles[name] ?? -1} onChange={(e) => { const v = Number(e.target.value); setTAngles((a) => { const n = { ...a }; if (v < 0) delete n[name]; else n[name] = v; return n; }); }}>
-                      <option value={-1}>Pick for me</option>
-                      {postTypesFor(t).map((pt, i) => <option key={pt.key} value={i}>{pt.headline}</option>)}
-                    </select>
-                  </label>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
       {isPrem && about && (
