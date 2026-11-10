@@ -1,3 +1,5 @@
+import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
+import { BoxControls } from "@/components/box-controls";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
@@ -38,7 +40,7 @@ const CLINIC_KEY = "kathryn";
 const CLINIC_NAME = DENTAL_CLINICS[CLINIC_KEY].name;
 const LOOK_KEY = "kathryn-look-v1";
 
-type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean };
+type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean ; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "#ffffff", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -213,7 +215,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "box">>; // this post only; empty means the page setting
 };
 
 type LibImage = { id: number; groupId: string; name: string; url: string };
@@ -397,6 +399,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
+    if (look.box) { drawCoverBox(ctx, { headline: post.hook || "", box: look.box, tf: tf as any, headFont: f.head, ts }); return; }
     if (!look.block) wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
@@ -842,9 +845,10 @@ function KathrynPage() {
               <span className="text-white/60">Bottom of the page (the default for every post)</span>
               <div className="flex gap-1">
                 {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v }))} className={`flex-1 rounded border px-1 py-1 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
+                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v, box: undefined }))} className={`flex-1 rounded border px-1 py-1 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
                 ))}
               </div>
+              <BoxControls box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b, block: b ? false : l.block }))} />
             </div>
             <label className="space-y-1 block max-w-sm">
               <span className="text-white/60">Gradient strength: {look.opacity}%</span>
@@ -1019,9 +1023,10 @@ function KathrynPage() {
                     <span className="text-white/60">This post: bottom of the page</span>
                     <div className="flex gap-1">
                       {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
+                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v, box: undefined } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
                       ))}
                     </div>
+                    <BoxControls box={lookFor(post).box} onChange={(b) => patch(post.id, { look: { ...post.look, box: b, block: b ? false : lookFor(post).block } })} />
                   </div>
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>

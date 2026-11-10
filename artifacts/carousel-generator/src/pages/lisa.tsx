@@ -1,3 +1,5 @@
+import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
+import { BoxControls } from "@/components/box-controls";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
@@ -32,7 +34,7 @@ const WASHES: Record<WashColour, { rgb: string; bg: string; light: boolean }> = 
   gold: { rgb: "201,162,74", bg: "#c9a24a", light: false },
   silver: { rgb: "201,204,209", bg: "#c9ccd1", light: false },
 };
-type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "gold"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "gold"; block?: boolean };
+type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "gold"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "gold"; block?: boolean ; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -117,7 +119,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "box">>; // this post only; empty means the page setting
 };
 
 const TEMPLATES = [{ id: "t1", name: "1. Photo with gradient wash" }];
@@ -268,6 +270,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
+    if (look.box) { drawCoverBox(ctx, { headline: post.hook || "", box: look.box, tf: tf as any, headFont: f.head, ts }); return; }
     if (!look.block) wash(ctx, 0.52, look);
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
@@ -600,9 +603,10 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
               <span className="text-white/60">Bottom of the page (the default for every post)</span>
               <div className="flex gap-2">
                 {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v }))} className={`flex-1 rounded-md border px-2 py-2 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v, box: undefined }))} className={`flex-1 rounded-md border px-2 py-2 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
                 ))}
               </div>
+              <BoxControls box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b, block: b ? false : l.block }))} />
             </div>
             <div className="space-y-1">
               <span className="text-white/60">Gradient colour (the default for every post)</span>
@@ -768,9 +772,10 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
                     <span className="text-white/60">This post: bottom of the page</span>
                     <div className="flex gap-1">
                       {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
+                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v, box: undefined } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
                       ))}
                     </div>
+                    <BoxControls box={lookFor(post).box} onChange={(b) => patch(post.id, { look: { ...post.look, box: b, block: b ? false : lookFor(post).block } })} />
                   </div>
                   <div className="space-y-1">
                     <span className="text-white/60">This post: gradient</span>
