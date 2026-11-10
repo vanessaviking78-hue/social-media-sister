@@ -386,6 +386,7 @@ function AppContent() {
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
+  const [isKirstyDove] = useRoute("/kirstydove");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -554,6 +555,7 @@ function AppContent() {
       </div>
     );
   }
+  if (isKirstyDove) return <ClubPortal token="kirstydove" />;
   if (isClubPortal && clubParams?.token) {
     return <ClubPortal token={clubParams.token} />;
   }

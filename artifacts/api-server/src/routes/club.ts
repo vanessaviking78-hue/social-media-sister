@@ -554,8 +554,14 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
 router.patch("/club/members/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
-    const b = req.body as { status?: string; billingDay?: number; email?: string; reopenDetails?: boolean };
+    const b = req.body as { status?: string; billingDay?: number; email?: string; reopenDetails?: boolean; token?: string };
     const id = String(req.params.id);
+    // A short friendly link word, for a member who has asked for one (letters, numbers and dashes only, and never one that is already taken).
+    if (typeof b.token === "string" && /^[a-z0-9-]{6,60}$/.test(b.token)) {
+      const taken = (await db.execute(sql`SELECT id FROM club_members WHERE token = ${b.token} AND id <> ${id}`)).rows.length;
+      if (taken) { res.status(409).json({ error: "That link word is already taken" }); return; }
+      await db.execute(sql`UPDATE club_members SET token = ${b.token} WHERE id = ${id}`);
+    }
     if (b.status === "cancelled") await db.execute(sql`UPDATE club_members SET status = 'cancelled', cancelled_at = now() WHERE id = ${id}`);
     if (b.status === "active") await db.execute(sql`UPDATE club_members SET status = 'active', cancelled_at = NULL WHERE id = ${id}`);
     if (b.billingDay) await db.execute(sql`UPDATE club_members SET billing_day = ${Math.min(28, Math.max(1, Number(b.billingDay)))} WHERE id = ${id}`);
