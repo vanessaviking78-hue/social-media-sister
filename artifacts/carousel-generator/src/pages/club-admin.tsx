@@ -150,13 +150,30 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
             <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={savePicks}>Save these posts</button>
           </div>
           </details>
-          <div className="flex gap-2 flex-wrap">
-            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>Build the posts</button>
+          <div className="space-y-2">
+            <div className="flex gap-2 flex-wrap items-center">
+            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>1. Build the posts</button>
+            <button disabled={busy || month.status === "approved"} className="px-3 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={approve}>3. Approve and show to member</button>
+            </div>
+            {!member.detailsDone && <div className="text-sm text-red-600">Their details form is open again, so building is switched off. Ask them to press Send on it, or tell me.</div>}
+            <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">More options (you rarely need these)</summary>
+              <div className="space-y-2 pt-2"><div className="flex gap-2 flex-wrap">
             <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reel hooks. Refresh in a minute."); }}>Write the reel hooks (no AI photos)</button>
-            <button disabled={busy || month.status === "approved"} className="px-3 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={approve}>Approve and show to member</button>
             <button disabled={busy} className="px-3 py-1.5 rounded border" onClick={sendBack}>Send back to build</button>
-          </div>
+              </div>
           <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Note to yourself when sending back" value={note} onChange={(e) => setNote(e.target.value)} />
+                <details className="mt-3 border rounded p-2">
+                  <summary className="cursor-pointer text-sm font-semibold">Attach a post built in another tool (optional, most months you will not)</summary>
+                  <div className="space-y-2 pt-2">
+                  <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Label, for example Empower" value={label} onChange={(e) => setLabel(e.target.value)} />
+                  <textarea className="w-full border rounded px-2 py-1 text-sm" placeholder="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
+                  <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
+                  <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={attach}>Attach</button>
+                  </div>
+                </details>
+              </div>
+            </details>
+          </div>
 
           {full && (
             <>
@@ -171,18 +188,9 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                     </div>
                   ))}
                 </div>
-                <details className="mt-3 border rounded p-2">
-                  <summary className="cursor-pointer text-sm font-semibold">Attach a post built in another tool (optional, most months you will not)</summary>
-                  <div className="space-y-2 pt-2">
-                  <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Label, for example Empower" value={label} onChange={(e) => setLabel(e.target.value)} />
-                  <textarea className="w-full border rounded px-2 py-1 text-sm" placeholder="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
-                  <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
-                  <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={attach}>Attach</button>
-                  </div>
-                </details>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold uppercase text-sm">Studio photos ({full.aiUrls.length} of 4)</h3>
+                <h3 className="font-bold uppercase text-sm">2. Studio photos ({full.aiUrls.length} of 4)</h3>
                 <p className="text-xs text-muted-foreground">2 black and white on a black studio backdrop, then 2 colour in their scrubs colour{member.hasClinicPhoto ? ", placed in their clinic" : " on plain white (they sent no clinic photo)"}. Scrubs: {String((member as any).details?.scrubs || "not given, navy blue will be used")}.</p>
                 {(member.photoUrls ?? []).length > 0 ? (
                   <div className="space-y-1">
