@@ -816,7 +816,7 @@ export function Builder({ id }: { id: string }) {
         const dot = (bg: string) => <span className="keep-colour inline-block w-4 h-4 rounded-full border" style={{ background: bg }} />;
         const grp = (title: string, key: "block" | "gradColour" | "textColour" | "bgColour", withMetal: boolean, autoLabel: string) => (
           <div className={line}>
-            <span className="text-sm font-semibold w-52 shrink-0">{title}</span>
+            <span className="inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide shrink-0">{title}</span>
             <input type="color" defaultValue="#d4a93c" onChange={(e) => applyAll(key, e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
             {base.map(([label, hex]) => (
               <button key={label} onClick={() => applyAll(key, hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(hex)}{label}</button>
@@ -953,7 +953,7 @@ export function Builder({ id }: { id: string }) {
                     </div>
                   )}
                   {it.uniArgs.block && (
-                    <div className={row}><span className="w-44 shrink-0">Block colour</span>
+                    <div className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Block colour</span>
                       <input type="color" value={/^#[0-9a-f]{6}$/i.test(it.uniArgs.block) ? it.uniArgs.block : "#d4a93c"} onChange={(e) => upd({ block: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                       {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
                         <button key={label} onClick={() => upd({ block: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
@@ -963,17 +963,17 @@ export function Builder({ id }: { id: string }) {
                       ))}
                     </div>
                   )}
-                  <label className={row}><span className="w-44 shrink-0">Headline and writing position</span>
+                  <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Headline and writing position</span>
                     <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
-                  <label className={row}><span className="w-44 shrink-0">Cover text position</span>
+                  <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Cover text position</span>
                     <input type="range" min={-900} max={200} step={10} className="flex-1" value={it.uniArgs.coverY ?? 0} onChange={(e) => upd({ coverY: Number(e.target.value) })} /></label>
-                  <label className={row}><span className="w-44 shrink-0">Colour block height</span>
+                  <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Colour block height</span>
                     <input type="range" min={0.5} max={2} step={0.05} className="flex-1" value={it.uniArgs.blockScale ?? 1} onChange={(e) => upd({ blockScale: Number(e.target.value) })} /></label>
-                  <label className={row}><span className="w-44 shrink-0">Cover text size</span>
+                  <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Cover text size</span>
                     <input type="range" min={0.5} max={1.6} step={0.05} className="flex-1" value={it.uniArgs.coverScale ?? 1} onChange={(e) => upd({ coverScale: Number(e.target.value) })} /></label>
-                  <label className={row}><span className="w-44 shrink-0">Gradient strength</span>
+                  <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Gradient strength</span>
                     <input type="range" min={0} max={100} step={5} className="flex-1" value={it.uniArgs.gradOpacity ?? 60} onChange={(e) => upd({ gradOpacity: Number(e.target.value) })} /></label>
-                  <div className={row}><span className="w-44 shrink-0">Gradient colour</span>
+                  <div className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Gradient colour</span>
                     <input type="color" value={/^#[0-9a-f]{6}$/i.test(it.uniArgs.gradColour || "") ? it.uniArgs.gradColour! : "#111111"} onChange={(e) => upd({ gradColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["Black", "#111111"], ["White", "#ffffff"]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ gradColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
@@ -983,14 +983,14 @@ export function Builder({ id }: { id: string }) {
                     ))}
                     <button onClick={() => upd({}, ["gradColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
-                  <div className={row}><span className="w-44 shrink-0">Text colour (this post)</span>
+                  <div className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Text colour (this post)</span>
                     <input type="color" value={it.uniArgs.textColour || "#ffffff"} onChange={(e) => upd({ textColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["White", "#ffffff"], ["Black", "#111111"], ["Main", req.mainHex], ["Accent", req.accentHex]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ textColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>
                     ))}
                     <button onClick={() => upd({}, ["textColour"])} className="px-2 py-0.5 rounded border">Auto</button>
                   </div>
-                  <div className={row}><span className="w-44 shrink-0">Background colour (instead of the photo)</span>
+                  <div className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Background colour (instead of the photo)</span>
                     <input type="color" value={it.uniArgs.bgColour || "#ffffff"} onChange={(e) => upd({ bgColour: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
                     {[["Main", req.mainHex], ["Accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]].map(([label, hex]) => (
                       <button key={label} onClick={() => upd({ bgColour: hex })} className="px-2 py-0.5 rounded border flex items-center gap-1"><span className="keep-colour inline-block w-3 h-3 rounded-full border" style={{ background: hex }} />{label}</button>

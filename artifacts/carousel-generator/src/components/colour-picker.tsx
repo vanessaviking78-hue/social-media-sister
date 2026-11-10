@@ -46,7 +46,7 @@ export function ColourPicker({ label, value, onChange, brand = [], placeholder, 
   return (
     <div className="space-y-1.5 text-sm">
       <div className="flex items-center gap-2">
-        <span className="font-medium">{label}</span>
+        <span className="inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">{label}</span>
         <span className="inline-block h-5 w-5 rounded border border-black/20" style={swatchStyle(cur)} />
         {onReset && value ? <button type="button" className="text-xs underline opacity-70 hover:opacity-100" onClick={onReset}>use the template colour</button> : null}
       </div>
