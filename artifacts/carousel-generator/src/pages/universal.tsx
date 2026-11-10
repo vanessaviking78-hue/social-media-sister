@@ -38,7 +38,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; blockScale?: number; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const lumHex = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
@@ -315,7 +315,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const hH4 = hl4 ? titleHeight(hl4) : 0;
     let y = withPhoto ? (top ? 190 : H - 170 - total) : (H - total) / 2 - 20;
     if (withPhoto && blk) {
-      const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), total + 120));
+      const bh = Math.min(H, Math.max(Math.round(H * 0.12), Math.round(Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), total + 120)) * (look.blockScale || 1))));
       const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
       const bm = metalOf(blk);
       ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;
@@ -412,7 +412,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const baseY = top ? 190 : H - 110 - subH - gap - headH;
     let startY = Math.min(H - 60 - (headH + gap + subH), Math.max(40, baseY + (look.coverY || 0)));
     if (blk) {
-      const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.55), headH + gap + subH + 110));
+      const bh = Math.min(H, Math.max(Math.round(H * 0.12), Math.round(Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.55), headH + gap + subH + 110)) * (look.blockScale || 1))));
       const bt = Math.max(0, Math.min(H - bh, H - bh + (look.coverY || 0)));
       const bmc = metalOf(blk);
       ctx.fillStyle = bmc ? metalFill(ctx, bmc, 0, bt, W, bt + bh) : blk;
@@ -451,7 +451,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const hl = headLayout();
   if (blk) {
     const hH = hl ? titleHeight(hl) + 26 : 0;
-    const bh = Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), hH + total + 100));
+    const bh = Math.min(H, Math.max(Math.round(H * 0.12), Math.round(Math.max(Math.round(H * 0.25), Math.min(Math.round(H * 0.5), hH + total + 100)) * (look.blockScale || 1))));
     const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
     const bm = metalOf(blk);
     ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;

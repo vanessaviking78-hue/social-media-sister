@@ -84,7 +84,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number }; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; blockScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number }; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
   aboutArgs?: AboutRenderOptions;
   aboutLogo?: HTMLCanvasElement;
@@ -931,7 +931,7 @@ export function Builder({ id }: { id: string }) {
               const row = "flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground";
               return (
                 <div className="space-y-1">
-                  <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
+                  <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
                   <div className={row}><span className="w-44 shrink-0">Headline on every slide</span>
                     <button onClick={() => upd({ noHead: false })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "bg-pink-500 text-white border-pink-500" : ""}`}>On</button>
                     <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "" : "bg-pink-500 text-white border-pink-500"}`}>Cover only</button>
@@ -967,6 +967,8 @@ export function Builder({ id }: { id: string }) {
                     <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-44 shrink-0">Cover text position</span>
                     <input type="range" min={-900} max={200} step={10} className="flex-1" value={it.uniArgs.coverY ?? 0} onChange={(e) => upd({ coverY: Number(e.target.value) })} /></label>
+                  <label className={row}><span className="w-44 shrink-0">Colour block height</span>
+                    <input type="range" min={0.5} max={2} step={0.05} className="flex-1" value={it.uniArgs.blockScale ?? 1} onChange={(e) => upd({ blockScale: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-44 shrink-0">Cover text size</span>
                     <input type="range" min={0.5} max={1.6} step={0.05} className="flex-1" value={it.uniArgs.coverScale ?? 1} onChange={(e) => upd({ coverScale: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-44 shrink-0">Gradient strength</span>
