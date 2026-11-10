@@ -352,6 +352,31 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
 
 type Reel = { n: number; kind: "treatment" | "engagement"; treatment?: string; hook: string; onScreen: string; script: string };
 
+type Story = { n: number; text: string; poll: { question: string; a: string; b: string } };
+
+// Twelve story ideas a month, each with a suggested poll sticker she can copy straight onto Instagram.
+async function writeStories(m: Member, month: MonthRow): Promise<Story[]> {
+  const d = m.details;
+  const treatments: string[] = (month.choices?.treatments as string[]) ?? [];
+  const profile = [
+    `Clinician: ${d.clinicianName || m.name}`, `Clinic: ${d.clinicName || ""}`, `Area: ${d.area || ""}`,
+    d.personality && `Her personality and how she talks: ${d.personality}`, d.hobbies && `Hobbies: ${d.hobbies}`, d.pets && `Pets: ${d.pets}`,
+    treatments.length && `Treatments she is promoting this month: ${treatments.join(", ")}`,
+  ].filter(Boolean).join("\n");
+  const r = await openai.chat.completions.create({
+    model: "gpt-4o",
+    temperature: 0.95,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write Instagram stories for a UK aesthetics clinician, in HER first person. Write exactly 12. Each has a short line for the story itself (max 25 words, warm, funny, never salesy) and a suggested poll sticker: a question under 12 words with two short answers (max 3 words each) that women over 35 will tap without thinking. Spread them: a few about her life and the clinic, a few about common beauty myths, a few light this or that questions, and at most 3 that nudge towards her treatments. Never mention a website, Botox, anti-wrinkle or prescription treatments, never promise a result, no emojis, no em dashes, no negative parallelism, no AI patter. British spelling. Return JSON: {"stories":[{"text":string,"question":string,"a":string,"b":string}]}` },
+      { role: "user", content: profile },
+    ],
+  });
+  let list: any[] = [];
+  try { list = JSON.parse(r.choices[0]?.message?.content ?? "{}").stories ?? []; } catch { list = []; }
+  return list.slice(0, 12).map((x, i) => ({ n: i + 1, text: noDashes(x.text).slice(0, 200), poll: { question: noDashes(x.question).slice(0, 90), a: noDashes(x.a).slice(0, 24), b: noDashes(x.b).slice(0, 24) } })).filter((x) => x.text && x.poll.question);
+}
+
 async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
   const caps = CLUB_PLANS[m.plan];
   const d = m.details;
@@ -464,7 +489,8 @@ async function prepareMonth(memberId: string, month: string): Promise<void> {
   // AI studio photos are only ever made when I press the button in the club admin, so no credits are spent by surprise.
   try {
     const reels = await writeReels(m, cur);
-    const content = { ...(cur.content ?? {}), reels };
+    const stories = await writeStories(m, cur).catch((err) => { logger.warn({ err }, "Club stories failed"); return [] as Story[]; });
+    const content = { ...(cur.content ?? {}), reels, stories };
     await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, reels_status = ${reels.length ? "ready" : "failed"}, updated_at = now() WHERE id = ${cur.id}`);
   } catch (err) {
     logger.warn({ err }, "Club reels failed");
@@ -843,7 +869,7 @@ router.patch("/club/months/:id", requireAuth, async (req: Request, res: Response
   try {
     await ensureTables();
     const id = String(req.params.id);
-    const b = req.body as { reels?: any[]; aiUrls?: string[]; choices?: Record<string, any> };
+    const b = req.body as { reels?: any[]; stories?: any[]; aiUrls?: string[]; choices?: Record<string, any> };
     const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${id}`)).rows[0] as unknown as MonthRow | undefined;
     if (!x) {
       res.status(404).json({ error: "Not found" });
@@ -851,6 +877,10 @@ router.patch("/club/months/:id", requireAuth, async (req: Request, res: Response
     }
     if (Array.isArray(b.reels)) {
       const content = { ...(x.content ?? {}), reels: b.reels.slice(0, 30).map((r: any, i: number) => ({ n: i + 1, kind: r.kind === "treatment" ? "treatment" : "engagement", treatment: str(r.treatment, 60), hook: noDashes(r.hook).slice(0, 220), onScreen: noDashes(r.onScreen).slice(0, 80), script: noDashes(r.script).slice(0, 900) })) };
+      await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${id}`);
+    }
+    if (Array.isArray(b.stories)) {
+      const content = { ...(x.content ?? {}), stories: b.stories.slice(0, 12).map((s: any, i: number) => ({ n: i + 1, text: noDashes(s.text).slice(0, 200), poll: { question: noDashes(s.poll?.question).slice(0, 90), a: noDashes(s.poll?.a).slice(0, 24), b: noDashes(s.poll?.b).slice(0, 24) } })) };
       await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${id}`);
     }
     if (Array.isArray(b.aiUrls)) await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(b.aiUrls.map((u) => str(u, 400)).slice(0, 12))}::jsonb WHERE id = ${id}`);

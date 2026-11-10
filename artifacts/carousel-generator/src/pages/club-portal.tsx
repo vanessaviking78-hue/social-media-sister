@@ -67,7 +67,8 @@ ${PREMIUM_FONTS.map((ft) => `.cp .ff-${ft.id}, .cp .ff-${ft.id} * { font-family:
 type Caps = { price: number; posts: number; treatmentPosts: number; picks: number; reels: number; tailoredReels: number };
 type Pick = { kind: "hook" | "tool"; code?: string; tool?: string; useTemplate?: boolean; label?: string };
 type Reel = { n: number; kind: string; treatment?: string; hook: string; onScreen?: string; script: string };
-type MonthContent = { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
+type Story = { n: number; text: string; poll: { question: string; a: string; b: string } };
+type MonthContent = { stories?: Story[]; posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
@@ -343,6 +344,19 @@ function Content({ data, plan }: { data: Portal; plan: "69" | "222" }) {
           <button className="cp-btn k" onClick={() => navigator.clipboard?.writeText(`${r.hook}\n\n${r.script}`)}>Copy</button>
         </div>
       ))}
+      {(m.content.stories ?? []).length > 0 && (
+        <>
+          <h2>Your {m.content.stories!.length} stories with poll ideas</h2>
+          {m.content.stories!.map((s) => (
+            <div key={s.n} className="cp-reel">
+              <div className="cp-pink" style={{ fontWeight: 900, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase" }}>Story {s.n}</div>
+              <p><b>{s.text}</b></p>
+              <p className="cp-sub">Poll: {s.poll.question} &nbsp;{s.poll.a} or {s.poll.b}</p>
+              <button className="cp-btn k" onClick={() => navigator.clipboard?.writeText(`${s.text}\n\nPoll: ${s.poll.question}\n${s.poll.a}\n${s.poll.b}`)}>Copy</button>
+            </div>
+          ))}
+        </>
+      )}
       <div className="cp-box"><b>Upload these yourself.</b><p className="cp-sub">Download the images, copy the captions, and post when you like. For {plan === "69" ? "anything you need, I am on the end of WhatsApp like a big sister in the background" : "anything you need, message me on Instagram DM"}.</p></div>
     </div>
   );
@@ -409,6 +423,7 @@ export default function ClubPortal({ token }: { token: string }) {
       <style>{CSS}</style>
       <div className="cp-w">
         <div className="cp-top"><span>Social Media Sister</span><span>{data ? (data.member.plan === "69" ? "The £69 club" : "The £222 club") : "The club"}</span></div>
+        {data && /tester account/i.test(data.member.name) && <div style={{ background: "#111", color: "#fff", textAlign: "center", fontWeight: 900, letterSpacing: ".2em", textTransform: "uppercase", padding: "8px 12px", borderRadius: 8, margin: "0 0 12px" }}>Tester account</div>}
         {ended && <><h1>See you <span>soon</span></h1><p className="cp-sub">{ended}</p></>}
         {error && <p className="cp-err">{error}</p>}
         {!data && !ended && !error && <p>Loading...</p>}
@@ -425,7 +440,7 @@ export default function ClubPortal({ token }: { token: string }) {
               {data.member.welcomePhotoUrl && <img src={data.member.welcomePhotoUrl} alt="" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", border: `4px solid ${PINK}` }} />}
               <h1 style={{ margin: 0 }}>Welcome back, <span>{data.member.name.split(" ")[0]}</span></h1>
             </div>
-            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
+            <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts, 12 stories with poll ideas and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
             <div className="cp-tabs">
               <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
               <button className={`cp-tab ${tab === "choose" ? "on" : ""}`} onClick={() => setTab("choose")}>This month</button>
