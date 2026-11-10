@@ -457,7 +457,7 @@ async function prepareMonth(memberId: string, month: string): Promise<void> {
   const cur = await getOrMakeMonth(memberId, month);
   if (cur.status === "approved") return;
   await db.execute(sql`UPDATE club_months SET status = CASE WHEN status = 'choosing' THEN 'to_build' ELSE status END, reels_status = 'working', updated_at = now() WHERE id = ${cur.id}`);
-  void makeAiShots(m, cur.id);
+  // AI studio photos are only ever made when I press the button in the club admin, so no credits are spent by surprise.
   try {
     const reels = await writeReels(m, cur);
     const content = { ...(cur.content ?? {}), reels };

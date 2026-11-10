@@ -123,7 +123,9 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
               <ul className="list-disc ml-5">{toolPicks.map((p, i) => <li key={i}>{p.label || p.tool} {p.useTemplate ? "(use that tool's template)" : "(any design)"}</li>)}</ul>
             </div>
           )}
-          <div className="border rounded p-3 space-y-2">
+          <details className="border rounded p-3">
+            <summary className="cursor-pointer text-sm font-semibold">Change their picks (you do not need to)</summary>
+          <div className="space-y-2 pt-2">
             <h3 className="font-bold uppercase text-sm">Your choice of other posts <span className="text-pink-500">{picks.length} of {cap}</span></h3>
             <div className="flex flex-wrap gap-3">
               {TOOLS.map((t) => {
@@ -147,9 +149,10 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
             </div>
             <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={savePicks}>Save these posts</button>
           </div>
+          </details>
           <div className="flex gap-2 flex-wrap">
             <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>Build the posts</button>
-            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reels and AI photos. Refresh in a few minutes."); }}>Make reels and AI photos now</button>
+            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reel hooks. Refresh in a minute."); }}>Write the reel hooks (no AI photos)</button>
             <button disabled={busy || month.status === "approved"} className="px-3 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={approve}>Approve and show to member</button>
             <button disabled={busy} className="px-3 py-1.5 rounded border" onClick={sendBack}>Send back to build</button>
           </div>
@@ -168,13 +171,15 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 space-y-2 border rounded p-2">
-                  <div className="text-sm font-semibold">Attach a post built in another tool</div>
+                <details className="mt-3 border rounded p-2">
+                  <summary className="cursor-pointer text-sm font-semibold">Attach a post built in another tool (optional, most months you will not)</summary>
+                  <div className="space-y-2 pt-2">
                   <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Label, for example Empower" value={label} onChange={(e) => setLabel(e.target.value)} />
                   <textarea className="w-full border rounded px-2 py-1 text-sm" placeholder="Caption" value={caption} onChange={(e) => setCaption(e.target.value)} />
                   <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
                   <button disabled={busy} className="px-3 py-1 rounded border text-sm" onClick={attach}>Attach</button>
-                </div>
+                  </div>
+                </details>
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold uppercase text-sm">Studio photos ({full.aiUrls.length} of 4)</h3>
