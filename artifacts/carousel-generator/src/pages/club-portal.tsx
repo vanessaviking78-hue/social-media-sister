@@ -69,7 +69,7 @@ type Pick = { kind: "hook" | "tool"; code?: string; tool?: string; useTemplate?:
 type Reel = { n: number; kind: string; treatment?: string; hook: string; onScreen?: string; script: string };
 type MonthContent = { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
-  member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string };
+  member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
@@ -351,7 +351,7 @@ const EXTRA_LABEL: Record<string, string> = { rants: "Rants", recipe: "Recipes",
 const EXTRA_ORDER = ["rants", "recipe", "book"] as const;
 
 // The front page: a little bit of me before the business, then a big button to the content.
-function Home({ data, go }: { data: Portal; go: (t: "choose" | "content") => void }) {
+function Home({ data, go, plan }: { data: Portal; go: (t: "choose" | "content") => void; plan: "69" | "222" }) {
   const [open, setOpen] = useState<string>("");
   const byKind = new Map((data.extras ?? []).map((x) => [x.kind, x]));
   return (
@@ -372,12 +372,12 @@ function Home({ data, go }: { data: Portal; go: (t: "choose" | "content") => voi
           );
         })}
       </div>
-      <button type="button" className="cp-big" onClick={() => go("content")}>My content</button>
       {data.cycle.status === "choosing" && !data.cycle.choices.savedAt && data.cycle.open && (
         <p style={{ textAlign: "center", margin: "14px 0" }}>
           <button type="button" className="cp-btn k" onClick={() => go("choose")}>Choose this month's treatments</button>
         </p>
       )}
+      <Content data={data} plan={plan} />
     </div>
   );
 }
@@ -420,7 +420,10 @@ export default function ClubPortal({ token }: { token: string }) {
         )}
         {data && data.member.detailsDone && (
           <>
-            <h1>Hello, <span>{data.member.name.split(" ")[0]}</span></h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", margin: "6px 0 4px" }}>
+              {data.member.welcomePhotoUrl && <img src={data.member.welcomePhotoUrl} alt="" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", border: `4px solid ${PINK}` }} />}
+              <h1 style={{ margin: 0 }}>Welcome back, <span>{data.member.name.split(" ")[0]}</span></h1>
+            </div>
             <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts and 4 studio photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
             <div className="cp-tabs">
               <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
@@ -428,7 +431,7 @@ export default function ClubPortal({ token }: { token: string }) {
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
-            {tab === "home" && <Home data={data} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
+            {tab === "home" && <Home data={data} plan={data.member.plan} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
             {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
               <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
             )}

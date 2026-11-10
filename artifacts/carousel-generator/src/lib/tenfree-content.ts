@@ -50,7 +50,8 @@ export function clubPlan(treatments: number, hooks: number, aboutLayouts: ("crea
   ];
 }
 export const PREMIUM_TREATMENTS = 2;
-export const PREMIUM_HOOKS = 4;
+export const PREMIUM_HOOKS = 5;
+export const PREMIUM_ABOUT = 3;
 
 // Treatments that make a more interesting post than the obvious ones. They get picked first when a clinic ticks them.
 const INTERESTING = new Set([

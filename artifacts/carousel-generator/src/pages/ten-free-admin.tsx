@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearch } from "wouter";
 import { toast } from "sonner";
 import { postTypesFor } from "@/lib/universal-treatments";
-import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK, PREMIUM_TREATMENTS, PREMIUM_HOOKS, clubPlan } from "@/lib/tenfree-content";
+import { TEN_PLAN, PREMIUM_PLAN, RELATABLE_IDS, relatableFor, GATECRASHER_PRESET, pickTreatments, pickFact, monthNameUK, PREMIUM_TREATMENTS, PREMIUM_HOOKS, PREMIUM_ABOUT, clubPlan } from "@/lib/tenfree-content";
 import { buildAssets, renderStory, renderUniversalPost, loadPlayfair } from "@/lib/tenfree-engine";
 import { hashSeed } from "@/lib/pack-plan";
 import { U_GROUPS, U_TREATMENTS } from "@/lib/universal-treatments";
@@ -125,6 +125,7 @@ export function Builder({ id }: { id: string }) {
   const isPrem = req?.kind === "premium" || isClub;
   const monthId = id.startsWith("club-") ? id.slice(5) : "";
   const nT = isClub ? 4 : PREMIUM_TREATMENTS;
+  const nA = isClub ? 2 : PREMIUM_ABOUT;
   const nH = isClub ? Math.max(0, Number((req?.answers as any)?.clubHookSlots) || 0) : PREMIUM_HOOKS;
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -160,7 +161,7 @@ export function Builder({ id }: { id: string }) {
   const [uniFont, setUniFont] = useState<string>("hatcher");
   const [about, setAbout] = useState<Req["answers"] | null>(null);
   // Club: the two About me designs she picks from the five.
-  const [aboutPick, setAboutPick] = useState<AboutLayout[]>(["hello", "founder"]);
+  const [aboutPick, setAboutPick] = useState<AboutLayout[]>(["hello", "founder", "intro"]);
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
@@ -277,7 +278,7 @@ export function Builder({ id }: { id: string }) {
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
       const pool: PoolPhoto[] = [];
-      const plan = isClub ? clubPlan(nT, nH, aboutPick) : isPremium ? PREMIUM_PLAN : TEN_PLAN;
+      const plan = isPremium ? clubPlan(nT, nH, aboutPick.slice(0, nA)) : TEN_PLAN;
       // Premium: her two AI portraits first, then the three photos the clinic sent. The free version has the AI portraits and the one photo.
       const sources = [...(req.aiUrls ?? []), ...(isPremium ? (req.photos ?? []) : req.photoUrl ? [req.photoUrl] : [])];
       for (const [i, u] of sources.entries()) {
@@ -374,7 +375,7 @@ export function Builder({ id }: { id: string }) {
       }
       ownRef.current = (await Promise.all(pool.map(async (p) => { const bmp = await createImageBitmap(p.file).catch(() => null); return bmp ? { url: p.url, bmp } : null; }))).filter((x): x is { url: string; bmp: ImageBitmap } => !!x);
       // Some of the posts get a solid block along the bottom instead of the gradient, alternating the two brand colours. She can switch any post either way.
-      const BLOCK_N = isClub ? plan.map((x) => x.n).filter((n) => n % 3 === 1) : isPremium ? [1, 4, 6] : [1, 3, 6, 8, 10];
+      const BLOCK_N = isPremium ? plan.map((x) => x.n).filter((n) => n % 3 === 1) : [1, 3, 6, 8, 10];
       const blockFor = (n: number) => (isPremium && BLOCK_N.includes(n) ? (BLOCK_N.indexOf(n) % 2 ? accent : req.mainHex) : undefined);
       const hookTexts = isPremium ? pickedHookPayload(pickedHooks, tList, req.area.split(",")[0].trim()).map((h) => h.text) : [];
       let ai = 0, hi = 0, vi = 0;
@@ -708,22 +709,23 @@ export function Builder({ id }: { id: string }) {
       )}
       {isPrem && about && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
-          <h2 className="font-bold uppercase">2. About me (2 posts)</h2>
-          {isClub && (
+          <h2 className="font-bold uppercase">2. About me ({nA} posts)</h2>
+          {isPrem && (
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase text-pink-500">Pick the 2 About me designs <span>({aboutPick.length} of 2)</span></div>
+              <div className="text-xs font-semibold uppercase text-pink-500">Pick the {nA} About me designs <span>({aboutPick.slice(0, nA).length} of {nA})</span></div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 {ABOUT_LAYOUTS.filter((l) => !["cream", "peach"].includes(l.id)).map((l) => {
-                  const on = aboutPick.includes(l.id);
+                  const sel = aboutPick.slice(0, nA);
+                  const on = sel.includes(l.id);
                   return (
-                    <button key={l.id} type="button" onClick={() => setAboutPick((a) => (a.includes(l.id) ? a.filter((x) => x !== l.id) : a.length >= 2 ? [...a.slice(1), l.id] : [...a, l.id]))} className={`rounded border-2 p-1 text-left text-xs ${on ? "border-pink-500 bg-pink-50" : "border-gray-200"}`}>
+                    <button key={l.id} type="button" onClick={() => setAboutPick(sel.includes(l.id) ? sel.filter((x) => x !== l.id) : sel.length >= nA ? [...sel.slice(1), l.id] : [...sel, l.id])} className={`rounded border-2 p-1 text-left text-xs ${on ? "border-pink-500 bg-pink-50" : "border-gray-200"}`}>
                       <img src={`${import.meta.env.BASE_URL}about-templates/${l.id}.jpg`} alt="" className="w-full rounded mb-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       <span className="font-semibold">{l.label}</span>
                     </button>
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground">Tap two. Tapping a third swaps out the first. You can still change a post's template after it is built.</p>
+              <p className="text-xs text-muted-foreground">Tap {nA}. Tapping one more swaps out the first. You can still change a post's template after it is built.</p>
             </div>
           )}
           <p className="text-xs text-muted-foreground">Their answers are below. Tidy them up and the posts are written from exactly this.</p>
@@ -838,7 +840,7 @@ export function Builder({ id }: { id: string }) {
         <span className="text-xs text-muted-foreground">Then press Rebuild.</span>
       </div>
       <div className="flex gap-3 items-center flex-wrap">
-        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : "Build the premium 6 posts" : "Build the 10 posts"}</button>
+        <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : `Build the ${nT + nA + nH} posts` : "Build the 10 posts"}</button>
         {isPrem && !items.length && ((isClub ? chosenT.length < 1 : chosenT.length !== nT) || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
         {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">{isClub ? "Send to my approval queue" : "Publish and get the link"}</button>}
         <span className="text-sm">{status}</span>

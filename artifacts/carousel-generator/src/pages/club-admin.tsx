@@ -20,7 +20,7 @@ type Month = {
 };
 type Member = {
   id: string; name: string; email: string; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; link: string; nextBilling: string; daysToBilling: number;
-  cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; months: Month[];
+  cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; welcomePhotoUrl?: string; months: Month[];
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
@@ -236,6 +236,37 @@ const EXTRAS: { kind: "book" | "recipe" | "rants"; name: string; hint: string }[
 ];
 const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
+function WelcomePhoto({ member, reload }: { member: Member; reload: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const send = async (file: File | null, remove = false) => {
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      if (remove) fd.set("remove", "1");
+      if (file) fd.set("image", await shrinkPhoto(file, 800, 0.9));
+      const r = await fetch(`${API}/club/members/${member.id}/welcome-photo`, { method: "PUT", headers: authOnly(), body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Could not save");
+      toast.success(remove ? "Photo removed" : "Welcome photo saved");
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="flex items-center gap-3 flex-wrap text-sm border rounded-lg p-2">
+      {member.welcomePhotoUrl ? <img src={member.welcomePhotoUrl} className="h-16 w-16 rounded-full object-cover" /> : <div className="h-16 w-16 rounded-full bg-gray-100" />}
+      <div>
+        <div className="font-semibold">Their welcome photo (shown beside "Welcome back, {member.name.split(" ")[0]}")</div>
+        <input type="file" accept="image/*" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void send(f); }} />
+        {member.welcomePhotoUrl && <button className="ml-2 text-xs underline" disabled={busy} onClick={() => send(null, true)}>Remove</button>}
+      </div>
+    </div>
+  );
+}
+
 function ExtraForm({ month, kind, name, hint }: { month: string; kind: string; name: string; hint: string }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -376,6 +407,7 @@ export default function ClubAdmin() {
                       : <button className="px-3 py-1 rounded border" onClick={() => patch(m.id, { status: "active" })}>Reactivate</button>}
                   </div>
                 </div>
+                <WelcomePhoto member={m} reload={load} />
                 {m.months.filter((x) => x.status !== "pending_approval").slice(0, 3).map((x) => <MonthPanel key={x.id} member={m} month={x} reload={load} />)}
                 {m.months.length === 0 && m.detailsDone && (
                   <button className="px-3 py-1 rounded border text-sm" onClick={async () => { await fetch(`${API}/club/members/${m.id}/prepare`, { method: "POST", headers: jsonHeaders(), body: "{}" }); toast.success("Started. Refresh in a few minutes."); load(); }}>Start their first month now</button>

@@ -98,6 +98,7 @@ function ensureTables(): Promise<void> {
       PRIMARY KEY (month, kind)
     )`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS ref_photo_url TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS welcome_photo_url TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
@@ -109,7 +110,7 @@ function ensureTables(): Promise<void> {
 
 type Member = {
   id: string; token: string; plan: PlanId; status: string; name: string; email: string; billing_day: number;
-  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; ref_photo_url?: string; created_at: string; cancelled_at: string | null;
+  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; ref_photo_url?: string; welcome_photo_url?: string; created_at: string; cancelled_at: string | null;
 };
 type MonthRow = {
   id: string; member_id: string; month: string; status: string; choices: Record<string, any>; content: Record<string, any>;
@@ -171,6 +172,7 @@ const publicMember = (m: Member) => ({
   logoUrl: m.logo_url,
   photoUrls: m.photo_urls,
   clinicPhotoUrl: m.clinic_photo_url,
+  welcomePhotoUrl: m.welcome_photo_url ?? "",
 });
 
 async function memberByToken(token: string): Promise<Member | null> {
@@ -508,7 +510,7 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
         const { date, month } = nextBilling(m.billing_day);
         return {
           id: m.id, name: m.name, email: m.email, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, details: m.details,
-          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "",
+          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
@@ -553,6 +555,30 @@ router.put("/club/members/:id/reference", requireAuth, async (req: Request, res:
     }
     await db.execute(sql`UPDATE club_members SET ref_photo_url = ${url} WHERE id = ${m.id}`);
     res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save" });
+  }
+});
+
+// The photo that sits beside "Welcome back" on a member's front page. Vanessa uploads it for them (or removes it).
+router.put("/club/members/:id/welcome-photo", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as Member | undefined;
+    if (!m) {
+      res.status(404).json({ error: "Member not found" });
+      return;
+    }
+    const f = req.file;
+    if (f && !IMAGE_MIMES.includes(f.mimetype)) {
+      res.status(400).json({ error: "Please use a JPG, PNG or WebP image" });
+      return;
+    }
+    let url = m.welcome_photo_url ?? "";
+    if ((req.body as any)?.remove === "1") url = "";
+    if (f) url = `/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "welcome")}`;
+    await db.execute(sql`UPDATE club_members SET welcome_photo_url = ${url} WHERE id = ${m.id}`);
+    res.json({ ok: true, url });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not save" });
   }
