@@ -24,3 +24,183 @@
 [[edge_functions]]
   path = "/premiumfreebies"
   function = "premium-og"
+
+[[edge_functions]]
+  path = "/know-me"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/know-me/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/treatments-form"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/fontlab-form"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/approve/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/client-approval/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/portal/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/submit/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/clientquestion"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/onboard/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/prizes"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/joingroup"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/99club"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/landing"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/dailytasks"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/trialbundle"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/getmysample"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/sample/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/getmyposts"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/pack/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/over50"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/photoshoot"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/photos/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/shop"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/secretshop"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/10freeposts"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/club"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/club/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/yearpass/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/bundle/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/founder-signup"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/founder-welcome"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/freecall"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/coffee"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/competition"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/podcast"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/rants"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/rant/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/socialmediasister"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/about"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/bank/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/preview/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/showcase/*"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/no1bodypostsready"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/no1feed"
+  function = "link-og"
