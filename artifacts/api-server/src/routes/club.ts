@@ -23,8 +23,8 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 export const CLUB_PLANS = {
-  "69": { price: 69, posts: 10, treatmentPosts: 4, picks: 6, reels: 10, tailoredReels: 4 },
-  "222": { price: 222, posts: 20, treatmentPosts: 4, picks: 16, reels: 20, tailoredReels: 8 },
+  "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 7, reels: 10, tailoredReels: 4 },
+  "222": { price: 222, posts: 20, treatmentPosts: 4, aboutPosts: 2, picks: 16, reels: 20, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
 const MAX_PHOTOS = 20;
@@ -699,7 +699,7 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
     bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
     threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
     facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-    usedAngles, clubHooks: hookCodes, clubAboutSlots: 2, clubHookSlots: Math.min(caps.picks - 2, Math.max(hookCodes.length, caps.picks - 2 - picks.filter((p) => p.kind === "tool").length)),
+    usedAngles, clubHooks: hookCodes, clubTreatmentSlots: caps.treatmentPosts, clubAboutSlots: caps.aboutPosts, clubHookSlots: Math.min(caps.picks - caps.aboutPosts, Math.max(hookCodes.length, caps.picks - caps.aboutPosts - picks.filter((p) => p.kind === "tool").length)),
   };
   await ensureTenFreeTable();
   const rid = `club-${x.id}`;

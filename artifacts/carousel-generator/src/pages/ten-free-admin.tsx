@@ -124,8 +124,8 @@ export function Builder({ id }: { id: string }) {
   const isClub = id.startsWith("club-") || !!req?.kind?.startsWith("club");
   const isPrem = req?.kind === "premium" || isClub;
   const monthId = id.startsWith("club-") ? id.slice(5) : "";
-  const nT = isClub ? 4 : PREMIUM_TREATMENTS;
-  const nA = isClub ? 2 : PREMIUM_ABOUT;
+  const nT = isClub ? Math.max(1, Number((req?.answers as any)?.clubTreatmentSlots) || 4) : PREMIUM_TREATMENTS;
+  const nA = isClub ? Math.max(1, Number((req?.answers as any)?.clubAboutSlots) || 2) : PREMIUM_ABOUT;
   const nH = isClub ? Math.max(0, Number((req?.answers as any)?.clubHookSlots) || 0) : PREMIUM_HOOKS;
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
@@ -208,7 +208,7 @@ export function Builder({ id }: { id: string }) {
   useEffect(() => { loadReq(); }, [loadReq]);
   useEffect(() => {
     if (!req) return;
-    setChosenT((c) => (c.length ? c : req.treatments.slice(0, req.kind?.startsWith("club") ? 4 : 3)));
+    setChosenT((c) => (c.length ? c : req.treatments.slice(0, req.kind?.startsWith("club") ? Math.max(1, Number((req.answers as any)?.clubTreatmentSlots) || 4) : 3)));
     if (req.kind?.startsWith("club")) setPickedHooks((h) => (h.length ? h : (((req.answers as any).clubHooks as string[]) ?? [])));
     setAbout((a) => a ?? req.answers);
     if (req.answers.font) setUniFont(req.answers.font);
