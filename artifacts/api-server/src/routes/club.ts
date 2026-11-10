@@ -319,7 +319,7 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
     let buildLink = appLink("/club-admin");
     try {
       const rid = await ensureBuildRequest(cur.id);
-      if (rid) buildLink = appLink(`/10free-admin?id=${rid}`);
+      if (rid) buildLink = appLink(`/club-builder?id=${rid}`);
     } catch (err) {
       logger.warn({ err }, "Club build request failed");
     }
@@ -617,7 +617,7 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
     bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
     threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
     facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-    usedAngles, clubHooks: hookCodes, clubHookSlots: Math.min(caps.picks, Math.max(hookCodes.length, caps.picks - picks.filter((p) => p.kind === "tool").length)),
+    usedAngles, clubHooks: hookCodes, clubAboutSlots: 2, clubHookSlots: Math.min(caps.picks - 2, Math.max(hookCodes.length, caps.picks - 2 - picks.filter((p) => p.kind === "tool").length)),
   };
   await ensureTenFreeTable();
   const rid = `club-${x.id}`;
@@ -689,6 +689,7 @@ router.post("/club/months/:id/posts", requireAuth, async (req: Request, res: Res
       n: Number(p.n) || i + 1, kind: str(p.kind, 30), label: str(p.label, 100),
       images: (p.images ?? []).map((u: unknown) => str(u, 400)).filter(Boolean).slice(0, 10),
       caption: noDashes(p.caption).slice(0, 1800), tags: noDashes(p.tags).slice(0, 300),
+      ...(p.treatment ? { treatment: str(p.treatment, 60), angle: Number(p.angle) || 0 } : {}),
     }));
     const content = { ...(x.content ?? {}), posts };
     if (Array.isArray(b.reels)) {

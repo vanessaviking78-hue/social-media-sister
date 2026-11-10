@@ -328,7 +328,7 @@ router.get("/ai-credit-status", requireAuth, async (_req: Request, res: Response
 router.get("/ten-free/requests", requireAuth, async (_req: Request, res: Response) => {
   try {
     await ensureTable();
-    const r = await db.execute(sql`SELECT * FROM tenfree_requests ORDER BY created_at DESC LIMIT 300`);
+    const r = await db.execute(sql`SELECT * FROM tenfree_requests WHERE kind NOT LIKE 'club%' ORDER BY created_at DESC LIMIT 300`);
     res.json({ requests: (r.rows as unknown as Row[]).map(shape) });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load the requests" });

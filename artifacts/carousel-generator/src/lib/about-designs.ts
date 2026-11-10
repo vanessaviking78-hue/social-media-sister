@@ -14,13 +14,15 @@ const lumOf = (h: string) => { const [r, g, b] = hx(h).map((c) => { const x = c 
 /** A plain hex for the maths, even when the colour chosen is metallic. */
 const flat = (v: string | undefined, fb: string) => (isHexColour(v) ? v : metalOfValue(v)?.stops[1] ?? fb);
 
-export type AboutLayout = "cream" | "peach" | "pills" | "intro" | "facts";
+export type AboutLayout = "cream" | "peach" | "pills" | "intro" | "facts" | "hello" | "founder";
 export const ABOUT_LAYOUTS: { id: AboutLayout; label: string; needsFacts?: boolean }[] = [
   { id: "cream", label: "Cream editorial" },
   { id: "peach", label: "Peach vertical" },
   { id: "pills", label: "Pill notes", needsFacts: true },
   { id: "intro", label: "Allow me to introduce" },
   { id: "facts", label: "Fact arrows", needsFacts: true },
+  { id: "hello", label: "Hello, I am" },
+  { id: "founder", label: "Meet the founder" },
 ];
 
 /** Colour values are a hex or "metal:id". Anything left empty falls back to the template's own default. */
@@ -33,6 +35,8 @@ export function aboutDefaults(layout: AboutLayout, col: AboutColours): { bg: str
   if (layout === "cream") return { bg: mix(main, 255, 0.94), head: lumOf(accent) > 0.6 ? mix(accent, 0, 0.1) : mix(accent, 255, 0.3), text: mix(main, 0, 0.8), box: mix(main, 255, 0.7) };
   if (layout === "peach") return { bg: mix(accent, 255, 0.62), head: lumOf(main) > 0.35 ? mix(main, 0, 0.35) : main, text: mix(main, 0, 0.8), box: mix(main, 255, 0.7) };
   if (layout === "pills") return { bg: "#000000", head: mix(main, 255, 0.72), text: mix(main, 0, 0.85), box: mix(main, 255, 0.72) };
+  if (layout === "hello") return { bg: mix(main, 255, 0.95), head: lumOf(accent) > 0.6 ? mix(accent, 0, 0.35) : accent, text: mix(main, 0, 0.7), box: "#ffffff" };
+  if (layout === "founder") return { bg: mix(main, 255, 0.95), head: mix(main, 0, 0.55), text: mix(main, 0, 0.6), box: "#ffffff" };
   return { bg: "#000000", head: "#ffffff", text: "#ffffff", box: mix(main, 255, 0.72) };
 }
 
@@ -69,6 +73,8 @@ export const ABOUT_DEFAULT_FONTS: Record<AboutLayout, { head: string; body: stri
   pills: { head: "gilda", body: "josefin-i" },
   intro: { head: "fredoka", body: "gaegu" },
   facts: { head: "gaegu", body: "gaegu" },
+  hello: { head: "cormorant", body: "poppins" },
+  founder: { head: "montserrat", body: "montserrat" },
 };
 const fcss = (f: AboutFont, size: number) => `${f.italic ? "italic " : ""}${f.weight ?? 400} ${size}px "${f.family}", sans-serif`;
 
@@ -430,6 +436,96 @@ function templateFacts(o: Ctx): HTMLCanvasElement {
   return c;
 }
 
+
+// ---------- template 6: "Hello, I'm ..." cream page, big script hello, name in capitals, white note card beside a tall photo ----------
+function templateHello(o: Ctx): HTMLCanvasElement {
+  const { c, ctx } = newCanvas();
+  const d = aboutDefaults("hello", o.col);
+  ctx.fillStyle = paintFor(ctx, o.col.bg || d.bg, 0, 0, W, H); ctx.fillRect(0, 0, W, H);
+  const script = aboutFontById("delafield", "delafield");
+  ctx.textBaseline = "alphabetic";
+  // the photo, tall on the right
+  cover(ctx, o.photo, 390, 370, 602, 880, 0.3, o.view);
+  // big script hello, tilted a little
+  ctx.save();
+  ctx.translate(-10, 300); ctx.rotate(-0.13);
+  ctx.font = fcss(script, 330);
+  ctx.fillStyle = paintFor(ctx, o.col.head || d.head, 0, -250, 520, 300);
+  ctx.textAlign = "left"; ctx.fillText("Hello", 0, 0);
+  ctx.restore();
+  // I'm NAME in capitals, up to two lines
+  ctx.font = fcss({ ...o.hf, weight: 500 }, 58);
+  const first = `I\u2019M ${(o.name || "").toUpperCase()}`;
+  let lines = wrap(ctx, first, 470);
+  if (lines.length > 3) lines = lines.slice(0, 3);
+  ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 580, 150, 470, 200);
+  ctx.textAlign = "left";
+  lines.forEach((ln, i) => ctx.fillText(ln, 580, 205 + i * 66));
+  // the white note card
+  const cx = 80, cy = 450, cw = 520, ch = 470;
+  ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.10)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+  ctx.fillStyle = paintFor(ctx, o.col.box || d.box, cx, cy, cw, ch); ctx.fillRect(cx, cy, cw, ch);
+  ctx.restore();
+  const label = (o.intro || "ABOUT ME").toUpperCase();
+  ctx.font = fcss({ ...o.hf, weight: 500 }, 32);
+  ctx.fillStyle = paintFor(ctx, o.col.text || d.text, cx + 40, cy + 40, 360, 50);
+  ctx.fillText(label, cx + 40, cy + 74);
+  // heart badge
+  const hxp = cx + cw - 56, hyp = cy + 62;
+  ctx.fillStyle = paintFor(ctx, o.col.head || d.head, hxp - 26, hyp - 26, 52, 52);
+  ctx.beginPath(); ctx.arc(hxp, hyp, 26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath(); ctx.moveTo(hxp, hyp + 11); ctx.bezierCurveTo(hxp - 20, hyp - 3, hxp - 11, hyp - 17, hxp, hyp - 7); ctx.bezierCurveTo(hxp + 11, hyp - 17, hxp + 20, hyp - 3, hxp, hyp + 11); ctx.fill();
+  ctx.strokeStyle = paintFor(ctx, o.col.head || d.head, cx + 40, cy + 110, cw - 80, 4); ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx + 40, cy + 112); ctx.lineTo(cx + cw - 40, cy + 112); ctx.stroke();
+  // bio
+  let size = 30, bl: string[] = [];
+  for (; size >= 20; size -= 1) {
+    ctx.font = fcss({ ...o.bf, weight: 400 }, size);
+    bl = wrap(ctx, o.bio, cw - 80);
+    if (bl.length * size * 1.5 <= 250) break;
+  }
+  ctx.fillStyle = paintFor(ctx, o.col.text || d.text, cx + 40, cy + 150, cw - 80, 260);
+  bl.slice(0, 8).forEach((ln, i) => ctx.fillText(ln, cx + 40, cy + 170 + i * size * 1.5));
+  ctx.font = fcss({ ...o.hf, italic: true, weight: 500 }, 34);
+  ctx.fillStyle = paintFor(ctx, o.col.head || d.head, cx + 40, cy + ch - 70, 300, 40);
+  ctx.fillText("Nice to meet you!", cx + 40, cy + ch - 36);
+  drawLogo(ctx, o.logo, o.logoPos ?? "tl");
+  return c;
+}
+
+// ---------- template 7: "Meet the founder" soft page, script lead in, heavy capitals over a centred photo, role and signed name below ----------
+function templateFounder(o: Ctx): HTMLCanvasElement {
+  const { c, ctx } = newCanvas();
+  const d = aboutDefaults("founder", o.col);
+  ctx.fillStyle = paintFor(ctx, o.col.bg || d.bg, 0, 0, W, H); ctx.fillRect(0, 0, W, H);
+  const script = aboutFontById("delafield", "delafield");
+  ctx.textBaseline = "alphabetic";
+  cover(ctx, o.photo, 310, 372, 484, 690, 0.3, o.view);
+  ctx.textAlign = "center";
+  const headPaint = (y: number, h: number) => paintFor(ctx, o.col.head || d.head, 0, y, W, h);
+  ctx.font = fcss(script, 210);
+  ctx.fillStyle = headPaint(70, 220);
+  ctx.fillText("Meet the", W / 2 - 10, 250);
+  let size = 230;
+  const word = (o.headline && o.headline !== "ABOUT ME" ? o.headline : "FOUNDER").toUpperCase();
+  ctx.font = fcss({ ...o.hf, weight: 700 }, size);
+  while (ctx.measureText(word).width > 900 && size > 90) { size -= 6; ctx.font = fcss({ ...o.hf, weight: 700 }, size); }
+  ctx.fillStyle = headPaint(250, size);
+  ctx.fillText(word, W / 2, 262 + size * 0.72);
+  const role = (o.intro || "AESTHETIC PRACTITIONER").toUpperCase();
+  ctx.font = fcss({ ...o.bf, weight: 700 }, 30);
+  ctx.fillStyle = paintFor(ctx, o.col.text || d.text, 0, 1090, W, 40);
+  ctx.fillText(role, W / 2, 1112);
+  let ns = 170;
+  ctx.font = fcss(script, ns);
+  while (ctx.measureText(o.name || "").width > 860 && ns > 70) { ns -= 6; ctx.font = fcss(script, ns); }
+  ctx.fillStyle = headPaint(1130, 200);
+  ctx.fillText(o.name || "", W / 2, 1250);
+  drawLogo(ctx, o.logo, o.logoPos ?? "tr");
+  return c;
+}
+
 export type AboutRenderOptions = {
   layout: AboutLayout;
   photo: ImageBitmap;
@@ -464,6 +560,8 @@ export async function renderAboutPost(o: AboutRenderOptions): Promise<HTMLCanvas
     case "peach": return templatePeach(ctx, o.cutout);
     case "pills": return templatePills(ctx);
     case "intro": return templateIntro(ctx);
+    case "hello": return templateHello(ctx);
+    case "founder": return templateFounder(ctx);
     default: return templateFacts(ctx);
   }
 }

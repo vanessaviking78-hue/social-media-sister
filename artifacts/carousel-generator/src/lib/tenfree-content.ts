@@ -7,7 +7,7 @@ export type TenSlot =
   | { n: number; label: string; carousel: boolean; source: "universal" }
   | { n: number; label: string; carousel: boolean; source: "pack"; kind: PackKind; design: string; idea: string; preset?: Record<string, string> }
   // An about me poster drawn from one of her two About me templates (cream or peach) with the clinic's own photo and bio.
-  | { n: number; label: string; carousel: boolean; source: "about"; kind: "about-me" | "about-love"; layout: "cream" | "peach" }
+  | { n: number; label: string; carousel: boolean; source: "about"; kind: "about-me" | "about-love"; layout: "cream" | "peach" | "pills" | "intro" | "facts" | "hello" | "founder" }
   // A hook she picked from the bank as the cover of a Universal layout carousel.
   | { n: number; label: string; carousel: boolean; source: "hook" };
 
@@ -42,10 +42,11 @@ export const PREMIUM_PLAN: TenSlot[] = [
   ...[3, 4, 5, 6].map((n): TenSlot => ({ n, label: "Hook carousel", carousel: true, source: "hook" })),
 ];
 /** The plan for a club month: treatment carousels first, then one hook carousel for each hook pick. */
-export function clubPlan(treatments: number, hooks: number): TenSlot[] {
+export function clubPlan(treatments: number, hooks: number, aboutLayouts: ("cream" | "peach" | "pills" | "intro" | "facts" | "hello" | "founder")[] = []): TenSlot[] {
   return [
     ...Array.from({ length: treatments }, (_, i): TenSlot => ({ n: i + 1, label: "Treatment carousel", carousel: true, source: "universal" })),
-    ...Array.from({ length: hooks }, (_, i): TenSlot => ({ n: treatments + i + 1, label: "Hook carousel", carousel: true, source: "hook" })),
+    ...aboutLayouts.map((layout, i): TenSlot => ({ n: treatments + i + 1, label: "About me", carousel: false, source: "about", kind: i % 2 ? "about-love" : "about-me", layout })),
+    ...Array.from({ length: hooks }, (_, i): TenSlot => ({ n: treatments + aboutLayouts.length + i + 1, label: "Hook carousel", carousel: true, source: "hook" })),
   ];
 }
 export const PREMIUM_TREATMENTS = 2;

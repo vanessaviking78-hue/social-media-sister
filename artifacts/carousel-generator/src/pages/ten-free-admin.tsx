@@ -84,7 +84,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number }; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
   aboutArgs?: AboutRenderOptions;
   aboutLogo?: HTMLCanvasElement;
@@ -104,12 +104,26 @@ const HEAD_FONTS = [
 ] as const;
 const BODY_CSS = "'Playfair Display', serif";
 
-function Builder({ id }: { id: string }) {
+// Short lines for the pill notes and fact arrows templates, taken only from what the clinician told us.
+function aboutFacts(a: Record<string, any>, area: string): string[] {
+  const clip = (t: unknown, n = 44) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, n).replace(/[\s,.;:-]+\S*$/, (m) => (String(t ?? "").trim().length > n ? "" : m));
+  const out: string[] = [];
+  const hob = clip(a.hobbies); if (hob) out.push(`Happiest when: ${hob}`);
+  const pets = clip(a.pets); if (pets && !/^(no|none|n\/a)/i.test(pets)) out.push(`Pets: ${pets}`);
+  const why = clip(a.why, 60); if (why) out.push(why);
+  const pass = clip(a.passion, 56); if (pass) out.push(`Passionate about ${pass}`);
+  const tw = clip(a.threeWords, 40); if (tw) out.push(`In three words: ${tw}`);
+  const ar = String(area || "").split(",")[0].trim(); if (ar) out.push(`Proudly local to ${ar}`);
+  return out.slice(0, 6);
+}
+
+export function Builder({ id }: { id: string }) {
   const [headChoice, setHeadChoice] = useState<(typeof HEAD_FONTS)[number]["id"]>("instrument");
   const [req, setReq] = useState<Req | null>(null);
   // A club month is built like a premium freebie, with its own sizes: four treatment carousels and one hook carousel for each hook the member picked.
-  const isClub = !!req?.kind?.startsWith("club");
+  const isClub = id.startsWith("club-") || !!req?.kind?.startsWith("club");
   const isPrem = req?.kind === "premium" || isClub;
+  const monthId = id.startsWith("club-") ? id.slice(5) : "";
   const nT = isClub ? 4 : PREMIUM_TREATMENTS;
   const nH = isClub ? Math.max(0, Number((req?.answers as any)?.clubHookSlots) || 0) : PREMIUM_HOOKS;
   const [status, setStatus] = useState("");
@@ -145,6 +159,8 @@ function Builder({ id }: { id: string }) {
   const [textHex, setTextHex] = useState<string>("");
   const [uniFont, setUniFont] = useState<string>("hatcher");
   const [about, setAbout] = useState<Req["answers"] | null>(null);
+  // Club: the two About me designs she picks from the five.
+  const [aboutPick, setAboutPick] = useState<AboutLayout[]>(["hello", "founder"]);
   const [sel, setSel] = useState<{ n: number; i: number } | null>(null);
   const clientRef = useRef<PackClient | null>(null);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
@@ -261,7 +277,7 @@ function Builder({ id }: { id: string }) {
 
       // The pool for the pack templates: her three Studio portraits, then the photo she sent.
       const pool: PoolPhoto[] = [];
-      const plan = isClub ? clubPlan(nT, nH) : isPremium ? PREMIUM_PLAN : TEN_PLAN;
+      const plan = isClub ? clubPlan(nT, nH, aboutPick) : isPremium ? PREMIUM_PLAN : TEN_PLAN;
       // Premium: her two AI portraits first, then the three photos the clinic sent. The free version has the AI portraits and the one photo.
       const sources = [...(req.aiUrls ?? []), ...(isPremium ? (req.photos ?? []) : req.photoUrl ? [req.photoUrl] : [])];
       for (const [i, u] of sources.entries()) {
@@ -378,7 +394,7 @@ function Builder({ id }: { id: string }) {
               if (rr.ok) cutout = await createImageBitmap(await rr.blob());
             } catch { /* plain photo */ }
           }
-          const aboutArgs = { layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName, logo: logoCanvas, logoPos: "tr" as const, facts: [] as string[] };
+          const aboutArgs = { layout: slot.layout, photo: aboutBmps[ai % aboutBmps.length], cutout, colours: { main: req.mainHex, accent: accent }, bio: w.body || w.subtitle || "", name: req.clinicianName, logo: logoCanvas, logoPos: "tr" as const, facts: ABOUT_LAYOUTS.find((l) => l.id === slot.layout)?.needsFacts ? aboutFacts(ans, req.area) : ([] as string[]) };
           const cv = await renderAboutPost(aboutArgs);
           ai++;
           out.push({ n: slot.n, label: slot.label, source: "universal", carousel: false, uni: [cv], aboutArgs, aboutLogo: logoCanvas, caption: w.caption || "", tags: (w.hashtags || []).map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: [cv.toDataURL("image/jpeg", 0.6)], poll: { question: "", a: "", b: "", instruction: "" } });
@@ -411,17 +427,20 @@ function Builder({ id }: { id: string }) {
         }
       }
 
-      setStatus("Picking the 10 reels and writing the story polls...");
-      const extras = await post("/ten-free/extras", { clinic, answers: ans, posts: out.map((o) => ({ n: o.n, label: o.label })) });
-      setHooks(pickReels(10));
-      for (const o of out) {
-        const pl = (extras.polls || []).find((x: any) => x.n === o.n);
-        if (pl) o.poll = { question: pl.question, a: pl.a, b: pl.b, instruction: pl.instruction || "" };
+      // Club members get posts, reels and photos only. The reels are written by the server, so there are no story polls to write here.
+      if (!isClub) {
+        setStatus("Picking the 10 reels and writing the story polls...");
+        const extras = await post("/ten-free/extras", { clinic, answers: ans, posts: out.map((o) => ({ n: o.n, label: o.label })) });
+        setHooks(pickReels(10));
+        for (const o of out) {
+          const pl = (extras.polls || []).find((x: any) => x.n === o.n);
+          if (pl) o.poll = { question: pl.question, a: pl.a, b: pl.b, instruction: pl.instruction || "" };
+        }
       }
       itemsRef.current = out;
       setItems(out);
       setFact(pickFact(req.id));
-      if (assets.logo) setLogoUrl(await upload(await canvasToPng(assets.logo), "logo.png").catch(() => ""));
+      if (!isClub && assets.logo) setLogoUrl(await upload(await canvasToPng(assets.logo), "logo.png").catch(() => ""));
       setStatus("Built. Drag a photo to move it in its frame, click a treatment photo to swap it, then publish.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "The build stopped");
@@ -514,7 +533,18 @@ function Builder({ id }: { id: string }) {
     if (!f) return;
     try { then(await createImageBitmap(f)); } catch { toast.error("That file would not open as a picture"); }
   };
+  // Text box cover: drag the box anywhere on the first slide.
+  const boxDrag = useRef<{ n: number; w: number; h: number } | null>(null);
+  const boxMove = (e: React.PointerEvent<HTMLImageElement>, it: Item) => {
+    const d = boxDrag.current;
+    if (!d || d.n !== it.n || !it.uniArgs?.box) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0.1, Math.min(0.9, (e.clientX - r.left) / r.width));
+    const y = Math.max(0.08, Math.min(0.92, (e.clientY - r.top) / r.height));
+    applyUni(it, { ...it.uniArgs, box: { ...it.uniArgs.box, x, y } });
+  };
   const onDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number) => {
+    if (i === 0 && it.uniArgs?.box) { e.currentTarget.setPointerCapture(e.pointerId); boxDrag.current = { n: it.n, w: 0, h: 0 }; boxMove(e, it); return; }
     if (!it.post || it.post.kind === "tweet") return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const r = (e.target as HTMLElement).getBoundingClientRect();
@@ -601,12 +631,17 @@ function Builder({ id }: { id: string }) {
         const images: string[] = [];
         for (const [k, c] of cvs.entries()) images.push(await upload(await jpg(c), `post-${it.n}-${k + 1}.jpg`));
         posts.push({ n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags, ...(it.uniArgs && it.source === "universal" ? { treatment: it.uniArgs.treatmentId, angle: it.uniArgs.angle } : {}) });
-        stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
+        if (!isClub) stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
       }
-      const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
-      setLink(siteLink(j.slug));
-      setCode(j.code);
-      setStatus(isClub ? "Saved to the club approval queue. Nothing reaches the member until you approve it." : "Published. Send her the link.");
+      if (isClub) {
+        await post(`/club/months/${monthId}/posts`, { posts });
+        setStatus("Saved to your approval queue. Nothing reaches the member until you approve it.");
+      } else {
+        const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
+        setLink(siteLink(j.slug));
+        setCode(j.code);
+        setStatus("Published. Send her the link.");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Publishing failed");
     } finally {
@@ -618,7 +653,7 @@ function Builder({ id }: { id: string }) {
   const ticked = req.treatments.join(", ");
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-5">
-      <Link href={isClub ? "/club-admin" : "/10free-admin"} className="text-sm underline">{isClub ? "Back to the clubs" : "Back to requests"}</Link>
+      <Link href={isClub ? `/club-admin` : "/10free-admin"} className="text-sm underline">{isClub ? "Back to the clubs" : "Back to requests"}</Link>
       <h1 className="text-2xl font-bold">{req.clinicName}</h1>
       <div className="text-sm space-y-1">
         <div>{req.clinicianName} · {req.email} · {req.area} · @{req.handle}</div>
@@ -627,9 +662,10 @@ function Builder({ id }: { id: string }) {
         <div>{req.answers.bizType === "Academy" && <b className="text-pink-500">ACADEMY (academy posts are not built yet) · </b>}Age: {req.answers.age || "not given"} · Hobbies: {req.answers.hobbies} · Mum: {req.answers.mum} · Pets: {req.answers.pets}</div>
         <div>Why: {req.answers.why}</div>
         <div>Three words: {req.answers.threeWords} · Passion: {req.answers.passion}</div>
+        {isClub ? <div className="font-semibold">Studio photos: {req.aiUrls.length ? `${req.aiUrls.length} ready` : "none yet. Make them in the club admin."}</div> : (
         <div className="font-semibold">Studio portraits: {req.photoUrl ? (req.aiStatus === "ready" ? `${req.aiUrls.length} ready` : req.aiStatus === "failed" ? "failed" : "still being made") : "no photo sent"}
           {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
-        </div>
+        </div>)}
         {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
         {isPrem && (req.photos ?? []).length > 0 && (
           <div><div className="font-semibold">Their 3 photos</div><div className="flex gap-2">{(req.photos ?? []).map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div></div>
@@ -673,6 +709,23 @@ function Builder({ id }: { id: string }) {
       {isPrem && about && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <h2 className="font-bold uppercase">2. About me (2 posts)</h2>
+          {isClub && (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase text-pink-500">Pick the 2 About me designs <span>({aboutPick.length} of 2)</span></div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {ABOUT_LAYOUTS.filter((l) => !["cream", "peach"].includes(l.id)).map((l) => {
+                  const on = aboutPick.includes(l.id);
+                  return (
+                    <button key={l.id} type="button" onClick={() => setAboutPick((a) => (a.includes(l.id) ? a.filter((x) => x !== l.id) : a.length >= 2 ? [...a.slice(1), l.id] : [...a, l.id]))} className={`rounded border-2 p-1 text-left text-xs ${on ? "border-pink-500 bg-pink-50" : "border-gray-200"}`}>
+                      <img src={`${import.meta.env.BASE_URL}about-templates/${l.id}.jpg`} alt="" className="w-full rounded mb-1" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      <span className="font-semibold">{l.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">Tap two. Tapping a third swaps out the first. You can still change a post's template after it is built.</p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">Their answers are below. Tidy them up and the posts are written from exactly this.</p>
           <div className="grid md:grid-cols-2 gap-3 text-sm">
             {([["hobbies", "Hobbies"], ["pets", "Pets"], ["why", "Why aesthetics"], ["threeWords", "Three words"], ["personality", "Personality (the voice)"], ["passion", "Passion"], ["mum", "Mum"]] as const).map(([k, label]) => (
@@ -780,9 +833,9 @@ function Builder({ id }: { id: string }) {
       <div className="flex gap-3 items-center flex-wrap">
         <button disabled={busy} onClick={build} className="px-4 py-2 rounded bg-pink-500 text-white disabled:opacity-50">{items.length ? "Rebuild" : isPrem ? isClub ? `Build the ${nT + nH} posts` : "Build the premium 6 posts" : "Build the 10 posts"}</button>
         {isPrem && !items.length && ((isClub ? chosenT.length < 1 : chosenT.length !== nT) || pickedHooks.length !== nH) && <span className="text-sm text-red-600">Before you build: {chosenT.length} of {nT} treatments and {pickedHooks.length} of {nH} hooks chosen.</span>}
-        {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">Publish and get the link</button>}
+        {items.length > 0 && <button disabled={busy} onClick={publish} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">{isClub ? "Send to my approval queue" : "Publish and get the link"}</button>}
         <span className="text-sm">{status}</span>
-        <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
+        {!isClub && <button disabled={attaching} className="px-4 py-2 rounded border-2 border-black disabled:opacity-50" onClick={async () => {
           if (req.presetId) { window.location.href = `${BASE}/presets`; return; }
           if (!confirm(`Attach ${req.clinicName} to the Cyber Suite as a client?`)) return;
           setAttaching(true);
@@ -795,7 +848,7 @@ function Builder({ id }: { id: string }) {
           } finally {
             setAttaching(false);
           }
-        }}>{req.presetId ? "Attached, open my clients" : "Attach to the Cyber Suite"}</button>
+        }}>{req.presetId ? "Attached, open my clients" : "Attach to the Cyber Suite"}</button>}
       </div>
       {link && (
         <div className="border rounded p-4 space-y-2">
@@ -814,9 +867,9 @@ function Builder({ id }: { id: string }) {
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
-                <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={onMove} onPointerUp={() => { dragRef.current = null; }}
-                  onClick={() => (isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[30rem] rounded shrink-0 ${it.post && it.post.kind !== "tweet" ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                <img key={i} src={src} draggable={false} onPointerDown={(e) => onDown(e, it, i)} onPointerMove={(e) => { if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; }}
+                  onClick={() => (i === 0 && it.uniArgs?.box ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
+                  className={`h-[30rem] rounded shrink-0 ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -836,10 +889,22 @@ function Builder({ id }: { id: string }) {
                     <button onClick={() => upd({ noHead: false })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "bg-pink-500 text-white border-pink-500" : ""}`}>On</button>
                     <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "" : "bg-pink-500 text-white border-pink-500"}`}>Cover only</button>
                   </div>
-                  <div className={row}><span className="w-44 shrink-0">Bottom of the page</span>
-                    <button onClick={() => upd({}, ["block"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "" : "bg-pink-500 text-white border-pink-500"}`}>Gradient</button>
-                    <button onClick={() => upd({ block: it.uniArgs?.block || req.mainHex })} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "bg-pink-500 text-white border-pink-500" : ""}`}>Colour block</button>
+                  <div className={row}><span className="w-44 shrink-0">Look of the post</span>
+                    <button onClick={() => upd({}, ["block", "box"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block || it.uniArgs.box ? "" : "bg-pink-500 text-white border-pink-500"}`}>Gradient</button>
+                    <button onClick={() => upd({ block: it.uniArgs?.block || req.mainHex }, ["box"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.block ? "bg-pink-500 text-white border-pink-500" : ""}`}>Colour block</button>
+                    <button onClick={() => upd({ box: it.uniArgs?.box || { fill: req.mainHex, x: 0.5, y: 0.5 } }, ["block"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.box ? "bg-pink-500 text-white border-pink-500" : ""}`}>Text box</button>
                   </div>
+                  {it.uniArgs.box && (
+                    <div className="space-y-1 border rounded p-2">
+                      <div className="text-xs">The full photo with a text box on the cover. Drag the box anywhere on the first slide. The slides after it use the gradient.</div>
+                      <div className="bg-white text-black rounded-lg p-2 space-y-2">
+                        <ColourPicker label="Box colour" value={it.uniArgs.box.fill} onChange={(v) => v && upd({ box: { ...it.uniArgs!.box!, fill: v } })} brand={[req.mainHex, req.accentHex]} />
+                        <ColourPicker label="Box text colour" value={it.uniArgs.box.text} placeholder="Automatic" onChange={(v) => upd({ box: { ...it.uniArgs!.box!, text: v || undefined } })} onReset={() => upd({ box: { ...it.uniArgs!.box!, text: undefined } })} brand={[req.mainHex, req.accentHex]} />
+                      </div>
+                      <label className={row}><span className="w-44 shrink-0">Box width</span>
+                        <input type="range" min={460} max={980} step={20} className="flex-1" value={it.uniArgs.box.w ?? 780} onChange={(e) => upd({ box: { ...it.uniArgs!.box!, w: Number(e.target.value) } })} /></label>
+                    </div>
+                  )}
                   {it.uniArgs.block && (
                     <div className={row}><span className="w-44 shrink-0">Block colour</span>
                       <input type="color" value={/^#[0-9a-f]{6}$/i.test(it.uniArgs.block) ? it.uniArgs.block : "#d4a93c"} onChange={(e) => upd({ block: e.target.value })} className="h-7 w-12 cursor-pointer rounded border" />
@@ -909,6 +974,10 @@ function Builder({ id }: { id: string }) {
                     <label className="block space-y-1"><span>Facts, one per line</span>
                       <textarea className="w-full rounded border p-2 text-foreground" rows={5} value={(aa0.facts ?? []).join("\n")} onChange={(e) => void aboutApply(it, { facts: e.target.value.split("\n") })} /></label>
                   )}
+                  {(aa0.layout === "hello" || aa0.layout === "founder") && (
+                    <label className="block space-y-1"><span>{aa0.layout === "hello" ? "Label on the card (for example AESTHETIC NURSE)" : "Role under the photo (for example AESTHETIC INJECTOR)"}</span>
+                      <input className="w-full rounded border p-2 text-foreground" value={aa0.intro ?? ""} placeholder={aa0.layout === "hello" ? "ABOUT ME" : "AESTHETIC PRACTITIONER"} onChange={(e) => void aboutApply(it, { intro: e.target.value })} /></label>
+                  )}
                   {aa0.layout === "intro" && (
                     <label className="block space-y-1"><span>Hello line</span>
                       <input className="w-full rounded border p-2 text-foreground" value={aa0.intro ?? ""} placeholder={`Hi! I'm ${(aa0.name || "").split(" ")[0]} and this is me...`} onChange={(e) => void aboutApply(it, { intro: e.target.value })} /></label>
@@ -917,7 +986,7 @@ function Builder({ id }: { id: string }) {
                     <ColourPicker label="Change all (headline and boxes)" value={aa0.colours.head && aa0.colours.head === aa0.colours.box ? aa0.colours.head : undefined} onChange={(v) => void set({ head: v, box: v })} brand={brand} />
                     <ColourPicker label="Headline" value={aa0.colours.head} placeholder={d.head} onChange={(v) => void set({ head: v })} onReset={() => void set({ head: undefined })} brand={brand} />
                     {aa0.layout === "pills" && <ColourPicker label="Boxes" value={aa0.colours.box} placeholder={d.box} onChange={(v) => void set({ box: v })} onReset={() => void set({ box: undefined })} brand={brand} />}
-                    {(aa0.layout === "cream" || aa0.layout === "peach") && <ColourPicker label="Background" value={aa0.colours.bg} placeholder={d.bg} onChange={(v) => void set({ bg: v })} onReset={() => void set({ bg: undefined })} brand={brand} />}
+                    {(aa0.layout === "cream" || aa0.layout === "peach" || aa0.layout === "hello" || aa0.layout === "founder") && <ColourPicker label="Background" value={aa0.colours.bg} placeholder={d.bg} onChange={(v) => void set({ bg: v })} onReset={() => void set({ bg: undefined })} brand={brand} />}
                     <ColourPicker label="Text" value={aa0.colours.text} placeholder={d.text} onChange={(v) => void set({ text: v })} onReset={() => void set({ text: undefined })} brand={brand} />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -1002,5 +1071,6 @@ function Builder({ id }: { id: string }) {
 export default function TenFreeAdmin() {
   // useSearch re-renders when the link changes only the ?id=, which a plain read of window.location did not.
   const id = new URLSearchParams(useSearch()).get("id");
+  if (id?.startsWith("club-")) { window.location.replace(`${BASE}/club-builder?id=${id}`); return <div className="p-6">Opening the club builder...</div>; }
   return id ? <Builder key={id} id={id} /> : <List />;
 }

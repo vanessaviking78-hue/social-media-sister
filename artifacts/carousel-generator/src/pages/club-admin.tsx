@@ -25,7 +25,8 @@ type Member = {
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
 const LIMITS = { "69": 5, "222": 7 } as const;
-const PICK_CAP = { "69": 6, "222": 16 } as const;
+// Two of the places are the About me posts she chooses in the builder, so the rest are picked here.
+const PICK_CAP = { "69": 4, "222": 14 } as const;
 const TOOLS: { id: string; name: string }[] = [
   { id: "empower", name: "Empower" }, { id: "november-posts", name: "November posts" }, { id: "xmas-posts", name: "Christmas and New Year posts" },
   { id: "unique", name: "Unique" }, { id: "halloween-posts", name: "Halloween posts" }, { id: "lux", name: "LUX" },
@@ -77,7 +78,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
 
   const build = async () => {
     const j = await call(`/club/months/${month.id}/build-request`, {});
-    if (j?.id) nav(`/10free-admin?id=${j.id}`);
+    if (j?.id) nav(`/club-builder?id=${j.id}`);
   };
   const attach = async () => {
     if (!files?.length) { toast.error("Choose the images first"); return; }

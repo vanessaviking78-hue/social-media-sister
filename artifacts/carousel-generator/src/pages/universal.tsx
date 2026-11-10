@@ -37,9 +37,10 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string; noHead?: boolean };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
+const lumHex = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
 const isHex = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v);
 // Metallic finishes. A colour value is either a hex, or "metal:name" for a shiny multi stop gradient.
 export const METALS: { id: string; name: string; stops: string[] }[] = [
@@ -352,6 +353,42 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   } else {
     ctx.fillStyle = "#3a3633";
     ctx.fillRect(0, 0, W, H);
+  }
+
+  if (n === 0 && look.box && (isHex(look.box.fill) || metalOf(look.box.fill))) {
+    // Text box cover: the whole photo is left clear and the headline and subtitle sit inside one coloured box that can go anywhere on the page.
+    const bx = look.box;
+    const bw = Math.max(460, Math.min(W - 80, bx.w ?? 780));
+    const pad = 56;
+    const boxText = bx.text && (isHex(bx.text) || metalOf(bx.text)) ? bx.text : (isHex(bx.fill) ? (lumHex(bx.fill) > 0.45 ? "#111111" : "#ffffff") : "#111111");
+    const cs2 = look.coverScale || 1;
+    const sub2 = fitText(ctx, post.subtitle || "", (px) => body(px), bw - pad * 2, 200 * cs2, Math.round(34 * bs * cs2), Math.round(22 * bs * cs2), 1.4);
+    const subH2 = post.subtitle ? sub2.lines.length * sub2.px * 1.4 : 0;
+    let size2 = Math.round(96 * ts * cs2);
+    const mk = (sz: number) => (tf ? layoutTitle(tf.lf, post.headline || "", tf.style, sz, bw - pad * 2, 1.1) : null);
+    let lay2 = mk(size2);
+    while (lay2 && size2 > Math.round(40 * ts * cs2) && titleHeight(lay2) > 420 * Math.max(1, ts * cs2)) { size2 -= 4; lay2 = mk(size2); }
+    const headH2 = lay2 ? titleHeight(lay2) : 100;
+    const gap2 = subH2 ? 26 : 0;
+    const bh = headH2 + gap2 + subH2 + pad * 2;
+    const bl = Math.max(20, Math.min(W - bw - 20, Math.round(bx.x * W - bw / 2)));
+    const bt = Math.max(20, Math.min(H - bh - 20, Math.round(bx.y * H - bh / 2)));
+    const bm = metalOf(bx.fill);
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.22)"; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+    ctx.fillStyle = bm ? metalFill(ctx, bm, bl, bt, bl + bw, bt + bh) : bx.fill;
+    ctx.fillRect(bl, bt, bw, bh);
+    ctx.restore();
+    const ty = bt + pad;
+    if (tf && lay2) drawTitle(ctx, tf.lf, lay2, tf.style, bl + pad, ty, "left", bw - pad * 2, inkPaint(ctx, boxText, ty, headH2));
+    else { ctx.fillStyle = inkPaint(ctx, boxText, ty, 100); ctx.font = `400 80px "${BODY_FONT}", sans-serif`; ctx.textAlign = "left"; ctx.fillText(post.headline || "", bl + pad, ty); }
+    ctx.textAlign = "left";
+    ctx.fillStyle = inkPaint(ctx, boxText, ty + headH2 + gap2, subH2 || 10);
+    ctx.font = body(sub2.px);
+    let yy = ty + headH2 + gap2;
+    for (const l of sub2.lines) { ctx.fillText(l, bl + pad, yy); yy += sub2.px * 1.4; }
+    drawLogo(ctx, logo, look);
+    return;
   }
 
   if (n === 0) {
