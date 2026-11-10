@@ -46,6 +46,18 @@ const CSS = `
 .cp-ai img { width:100%; display:block; }
 .cp-reel { border-bottom:1px solid #e5e5e5; padding:14px 0; }
 .cp-reel b { font-weight:900; }
+.cp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin:22px 0; }
+.cp-card { border:3px solid ${INK}; background:#fff; text-align:left; padding:0; cursor:pointer; font-family:inherit; color:${INK}; display:block; width:100%; }
+.cp-card.open { border-color:${PINK}; grid-column:1 / -1; }
+.cp-card .pic { aspect-ratio:4/3; width:100%; object-fit:cover; display:block; background:${PINK}; }
+.cp-card.open .pic { aspect-ratio:16/7; }
+.cp-card .ph { aspect-ratio:4/3; background:${PINK}; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:900; letter-spacing:.2em; text-transform:uppercase; font-size:13px; }
+.cp-card.open .ph { aspect-ratio:16/5; }
+.cp-card .in { padding:16px 16px 18px; border-top:3px solid ${INK}; }
+.cp-card .tag { color:${PINK}; font-weight:900; letter-spacing:.18em; text-transform:uppercase; font-size:12px; }
+.cp-card .tt { font-weight:900; font-size:22px; line-height:1.05; margin:6px 0; text-transform:uppercase; }
+.cp-card .bd { font-size:16px; line-height:1.45; white-space:pre-wrap; }
+.cp-big { display:block; width:100%; background:${PINK}; color:#fff; border:0; padding:26px 12px; font-weight:900; font-size:clamp(26px,6vw,46px); letter-spacing:.14em; text-transform:uppercase; cursor:pointer; font-family:inherit; margin:10px 0 6px; }
 .cp-err { color:#b3001b; font-weight:700; margin:10px 0; }
 `;
 
@@ -57,6 +69,7 @@ type MonthContent = { posts?: { n: number; label: string; images: string[]; capt
 type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
+  extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
 };
 
@@ -327,11 +340,46 @@ function Content({ data, plan }: { data: Portal; plan: "69" | "222" }) {
   );
 }
 
+const EXTRA_LABEL: Record<string, string> = { rants: "Rants", recipe: "Recipes", book: "Reading List" };
+const EXTRA_ORDER = ["rants", "recipe", "book"] as const;
+
+// The front page: a little bit of me before the business, then a big button to the content.
+function Home({ data, go }: { data: Portal; go: (t: "choose" | "content") => void }) {
+  const [open, setOpen] = useState<string>("");
+  const byKind = new Map((data.extras ?? []).map((x) => [x.kind, x]));
+  return (
+    <div>
+      <div className="cp-grid">
+        {EXTRA_ORDER.map((k) => {
+          const x = byKind.get(k);
+          const on = open === k;
+          return (
+            <button key={k} type="button" className={`cp-card ${on ? "open" : ""}`} onClick={() => setOpen(on ? "" : k)} aria-expanded={on}>
+              {x?.imageUrl ? <img className="pic" src={x.imageUrl} alt="" loading="lazy" /> : <div className="ph">{k === "book" ? "Reading List" : k === "recipe" ? "Recipes" : "Rants"}</div>}
+              <div className="in">
+                <div className="tag">{EXTRA_LABEL[k]}</div>
+                {x?.title ? <div className="tt">{x.title}</div> : <div className="tt" style={{ color: "#999" }}>Coming soon</div>}
+                {x?.body && (on ? <div className="bd">{x.body}</div> : <div className="bd" style={{ color: "#555" }}>{x.body.length > 110 ? x.body.slice(0, 110).trimEnd() + "..." : x.body}<div className="cp-pink" style={{ fontWeight: 900, marginTop: 6 }}>Tap to read</div></div>)}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" className="cp-big" onClick={() => go("content")}>My content</button>
+      {data.cycle.status === "choosing" && !data.cycle.choices.savedAt && data.cycle.open && (
+        <p style={{ textAlign: "center", margin: "14px 0" }}>
+          <button type="button" className="cp-btn k" onClick={() => go("choose")}>Choose this month's treatments</button>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function ClubPortal({ token }: { token: string }) {
   const [data, setData] = useState<Portal | null>(null);
   const [ended, setEnded] = useState("");
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"choose" | "content" | "me">("choose");
+  const [tab, setTab] = useState<"home" | "choose" | "content" | "me">("home");
   const [detailsSent, setDetailsSent] = useState(false);
   const load = useCallback(async () => {
     try {
@@ -359,7 +407,7 @@ export default function ClubPortal({ token }: { token: string }) {
           <>
             <h1>Welcome, <span>{data.member.name.split(" ")[0]}</span></h1>
             <p className="cp-sub">Fill in your details once and I will do the rest, every single month.</p>
-            <Details token={token} onDone={() => { setDetailsSent(true); window.scrollTo({ top: 0 }); load(); }} existing={data.member.details} />
+            <Details token={token} onDone={() => { setDetailsSent(true); setTab("choose"); window.scrollTo({ top: 0 }); load(); }} existing={data.member.details} />
           </>
         )}
         {data && data.member.detailsDone && (
@@ -367,10 +415,12 @@ export default function ClubPortal({ token }: { token: string }) {
             <h1>Hello, <span>{data.member.name.split(" ")[0]}</span></h1>
             <p className="cp-sub">{data.member.caps.posts} posts, {data.member.caps.reels} reel hooks and scripts and 6 AI photos every month. {data.member.plan === "69" ? "My full support via WhatsApp, think big sister in the background you can always ask anything you want." : "Message me on Instagram DM any time."}</p>
             <div className="cp-tabs">
+              <button className={`cp-tab ${tab === "home" ? "on" : ""}`} onClick={() => setTab("home")}>Home</button>
               <button className={`cp-tab ${tab === "choose" ? "on" : ""}`} onClick={() => setTab("choose")}>This month</button>
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
+            {tab === "home" && <Home data={data} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
             {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
               <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
             )}

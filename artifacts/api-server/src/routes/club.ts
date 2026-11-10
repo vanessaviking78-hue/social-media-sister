@@ -88,6 +88,15 @@ function ensureTables(): Promise<void> {
       approved_at TIMESTAMPTZ,
       UNIQUE (member_id, month)
     )`))
+    .then(() => db.execute(sql`CREATE TABLE IF NOT EXISTS club_extras (
+      month TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      image_url TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (month, kind)
+    )`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -187,8 +196,17 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     const cur = await getOrMakeMonth(m.id, month);
     const cutOffDate = new Date(date.getTime() - CUT_OFF_DAYS * 86400000);
     const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at, choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
+    // The welcome page extras: this calendar month's, or the most recent month she has filled in.
+    const nowMonth = `${new Date().getUTCFullYear()}-${pad(new Date().getUTCMonth() + 1)}`;
+    let extraRows = (await db.execute(sql`SELECT * FROM club_extras WHERE month = ${nowMonth}`)).rows as any[];
+    if (!extraRows.length) {
+      const last = (await db.execute(sql`SELECT month FROM club_extras ORDER BY month DESC LIMIT 1`)).rows[0] as any;
+      if (last) extraRows = (await db.execute(sql`SELECT * FROM club_extras WHERE month = ${last.month}`)).rows as any[];
+    }
+    const extras = extraRows.filter((r) => r.title || r.body || r.image_url).map((r) => ({ kind: r.kind, title: r.title, body: r.body, imageUrl: r.image_url }));
     res.set("Cache-Control", "private, no-store");
     res.json({
+      extras,
       member: publicMember(m),
       cycle: {
         month,
@@ -531,6 +549,45 @@ router.get("/club/months/:id", requireAuth, async (req: Request, res: Response) 
   }
 });
 
+
+
+// The personal bit of the welcome page: Vanessa's book, recipe and rants for the month, the same for every member.
+const EXTRA_KINDS = ["book", "recipe", "rants"];
+router.get("/club/extras/:month", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const rows = (await db.execute(sql`SELECT * FROM club_extras WHERE month = ${String(req.params.month)}`)).rows as any[];
+    res.json({ extras: rows.map((r) => ({ kind: r.kind, title: r.title, body: r.body, imageUrl: r.image_url })) });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not load" });
+  }
+});
+router.put("/club/extras/:month/:kind", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const month = String(req.params.month);
+    const kind = String(req.params.kind);
+    if (!/^\d{4}-\d{2}$/.test(month) || !EXTRA_KINDS.includes(kind)) {
+      res.status(400).json({ error: "That month or section is not right" });
+      return;
+    }
+    const b = req.body as Record<string, string>;
+    const f = req.file;
+    if (f && !IMAGE_MIMES.includes(f.mimetype)) {
+      res.status(400).json({ error: "Please use a JPG, PNG or WebP image" });
+      return;
+    }
+    const prev = (await db.execute(sql`SELECT image_url FROM club_extras WHERE month = ${month} AND kind = ${kind}`)).rows[0] as any;
+    let image = prev?.image_url ?? "";
+    if (b.removeImage === "1") image = "";
+    if (f) image = `/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, `extra-${kind}`)}`;
+    await db.execute(sql`INSERT INTO club_extras (month, kind, title, body, image_url) VALUES (${month}, ${kind}, ${str(b.title, 160)}, ${String(b.body ?? "").trim().slice(0, 5000)}, ${image})
+      ON CONFLICT (month, kind) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body, image_url = EXCLUDED.image_url, updated_at = now()`);
+    res.json({ ok: true, imageUrl: image });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save" });
+  }
+});
 
 // Turns a month into a build request the browser builder already understands (same photos, details, treatments and about me answers).
 router.post("/club/months/:id/build-request", requireAuth, async (req: Request, res: Response) => {

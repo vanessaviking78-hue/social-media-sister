@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { HOOKS, type Hook } from "@/lib/hook-bank";
+import { shrinkPhoto } from "@/lib/shrink-photo";
 
 // Vanessa's side of the £69 club (5 places) and the £222 club (7 places): members, their private links, the monthly prep, and the approval queue.
 // Nothing reaches a member's portal until she presses Approve here.
@@ -199,6 +200,73 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
   );
 }
 
+const EXTRAS: { kind: "book" | "recipe" | "rants"; name: string; hint: string }[] = [
+  { kind: "rants", name: "Rants", hint: "A headline for the rant, then the rant" },
+  { kind: "recipe", name: "Recipes", hint: "Name of the dish, then the recipe" },
+  { kind: "book", name: "Reading List", hint: "Title and author, then why you loved it" },
+];
+const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+
+function ExtraForm({ month, kind, name, hint }: { month: string; kind: string; name: string; hint: string }) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [img, setImg] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    setFile(null);
+    fetch(`${API}/club/extras/${month}`, { headers: authOnly() }).then((r) => r.json()).then((j) => {
+      if (!live) return;
+      const x = (j.extras ?? []).find((e: { kind: string }) => e.kind === kind);
+      setTitle(x?.title ?? ""); setBody(x?.body ?? ""); setImg(x?.imageUrl ?? "");
+    }).catch(() => undefined);
+    return () => { live = false; };
+  }, [month, kind]);
+  const save = async (removeImage = false) => {
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.set("title", title); fd.set("body", body);
+      if (removeImage) fd.set("removeImage", "1");
+      if (file) fd.set("image", await shrinkPhoto(file, 1600, 0.85));
+      const r = await fetch(`${API}/club/extras/${month}/${kind}`, { method: "PUT", headers: authOnly(), body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Could not save");
+      setImg(j.imageUrl ?? ""); setFile(null);
+      toast.success("Saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="border rounded-lg p-3 space-y-2">
+      <div className="text-xs uppercase font-bold text-pink-500">{name}</div>
+      {img && <div className="flex items-end gap-3"><img src={img} className="h-24 rounded" /><button className="text-xs underline" onClick={() => save(true)}>Remove image</button></div>}
+      <input className="w-full border rounded px-2 py-1 text-sm font-semibold" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
+      <textarea className="w-full border rounded px-2 py-1 text-sm" rows={5} placeholder={hint} value={body} onChange={(e) => setBody(e.target.value)} />
+      <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+      <div><button disabled={busy} className="px-3 py-1 rounded bg-pink-500 text-white text-sm" onClick={() => save(false)}>{busy ? "Saving..." : "Save"}</button></div>
+    </div>
+  );
+}
+
+function WelcomeEditor() {
+  const [month, setMonth] = useState(thisMonth());
+  return (
+    <div className="border-2 border-black rounded-lg p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-bold uppercase">The welcome page, the personal bit</h2>
+        <label className="text-sm flex items-center gap-2">Month <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value || thisMonth())} /></label>
+      </div>
+      <p className="text-sm text-muted-foreground">Every member sees these on their front page. If you have not filled in a new month yet, they keep seeing the last one.</p>
+      <div className="grid gap-3 md:grid-cols-3">{EXTRAS.map((x) => <ExtraForm key={x.kind} month={month} kind={x.kind} name={x.name} hint={x.hint} />)}</div>
+    </div>
+  );
+}
+
 export default function ClubAdmin() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,6 +307,8 @@ export default function ClubAdmin() {
         {waiting.length === 0 && <p className="text-sm text-muted-foreground">Nothing waiting. Five days before each billing date I prepare the reels and AI photos and email you.</p>}
         {waiting.map(({ m, x }) => <MonthPanel key={x.id} member={m} month={x} reload={load} />)}
       </div>
+
+      <WelcomeEditor />
 
       <div className="border-2 border-black rounded-lg p-4 space-y-3">
         <h2 className="font-bold uppercase">Add a member</h2>
