@@ -170,6 +170,7 @@ import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
+import ClubLinks from "@/pages/club-links";
 import ClubPortal from "@/pages/club-portal";
 import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
@@ -203,6 +204,7 @@ function ProtectedRouter() {
       <Route path="/hub" component={Hub} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
       <Route path="/club-admin" component={ClubAdmin} />
+      <Route path="/club-links" component={ClubLinks} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />

@@ -316,6 +316,13 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
     const picks = Array.isArray(cur.choices?.picks) ? cur.choices.picks : [];
     const firstTime = !cur.choices?.savedAt;
     await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify({ treatments, picks, note: str(b.note, 500), savedAt: cur.choices?.savedAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() })}::jsonb, updated_at = now() WHERE id = ${cur.id}`);
+    let buildLink = appLink("/club-admin");
+    try {
+      const rid = await ensureBuildRequest(cur.id);
+      if (rid) buildLink = appLink(`/10free-admin?id=${rid}`);
+    } catch (err) {
+      logger.warn({ err }, "Club build request failed");
+    }
     void emailVanessa(`${firstTime ? "" : "UPDATED: "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()}`, [
       `*** ${firstTime ? "" : "UPDATED "}MONTHLY CONTENT SUBMITTED FOR ${m.name.toUpperCase()} ***`,
       "",
@@ -323,9 +330,11 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
       `Treatments: ${treatments.join(", ") || "none chosen"}`,
       ...(str(b.note, 500) ? [`Their note: ${str(b.note, 500)}`] : []),
       "",
-      "Where to go to create the content:",
+      "Create the content here:",
+      buildLink,
+      "",
+      "Their month, reels and approval queue:",
       appLink("/club-admin"),
-      "Open their month, choose their other posts, then press Build the posts.",
     ]);
     res.json({ ok: true });
   } catch (err: unknown) {
@@ -590,46 +599,53 @@ router.put("/club/extras/:month/:kind", requireAuth, upload.single("image"), asy
 });
 
 // Turns a month into a build request the browser builder already understands (same photos, details, treatments and about me answers).
+// Makes (or refreshes) the build request the browser builder opens for a month. Returns its id.
+async function ensureBuildRequest(monthId: string): Promise<string | null> {
+  await ensureTables();
+  const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${monthId}`)).rows[0] as unknown as MonthRow | undefined;
+  if (!x) return null;
+  const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member;
+  const d = m.details ?? {};
+  const caps = CLUB_PLANS[m.plan];
+  const picks = ((x.choices?.picks as any[]) ?? []);
+  // The same treatment can come round again in a later month, but never with the same hook as before.
+  const earlier = (await db.execute(sql`SELECT content FROM club_months WHERE member_id = ${m.id} AND id <> ${x.id}`)).rows as any[];
+  const usedAngles: Record<string, number[]> = {};
+  for (const e of earlier) for (const p of (e.content?.posts as any[]) ?? []) if (p.treatment && typeof p.angle === "number") (usedAngles[p.treatment] ??= []).push(p.angle);
+  const hookCodes = picks.filter((p) => p.kind === "hook" && p.code).map((p) => p.code);
+  const answers = {
+    bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
+    threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
+    facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
+    usedAngles, clubHooks: hookCodes, clubHookSlots: Math.min(caps.picks, Math.max(hookCodes.length, caps.picks - picks.filter((p) => p.kind === "tool").length)),
+  };
+  await ensureTenFreeTable();
+  const rid = `club-${x.id}`;
+  const kind = `club${m.plan}`;
+  const aiUrls = (x.ai_urls ?? []);
+  const photos = (m.photo_urls ?? []).slice(0, 12);
+  const treatments = ((x.choices?.treatments as string[]) ?? []).slice(0, 4);
+  const exists = (await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE id = ${rid}`)).rows.length > 0;
+  if (exists) {
+    await db.execute(sql`UPDATE tenfree_requests SET treatments = ${JSON.stringify(treatments)}::jsonb, answers = ${JSON.stringify(answers)}::jsonb, ai_urls = ${JSON.stringify(aiUrls)}::jsonb,
+      photos = ${JSON.stringify(photos)}::jsonb, logo_url = ${m.logo_url}, photo_url = ${photos[0] ?? ""}, main_hex = ${hex(d.mainHex, "#d6006f")}, accent_hex = ${hex(d.accentHex, "#1a1a1a")}, updated_at = now() WHERE id = ${rid}`);
+  } else {
+    await db.execute(sql`INSERT INTO tenfree_requests
+      (id, email, email_key, clinic_name, clinician_name, handle, area, website, whatsapp, main_hex, accent_hex, treatments, answers, logo_url, photo_url, kind, photos, ai_urls, ai_status)
+      VALUES (${rid}, ${m.email}, ${`club:${x.id}`}, ${d.clinicName || m.name}, ${d.clinicianName || m.name}, ${String(d.handle || "").replace(/^@/, "")}, ${d.area || ""}, '', '',
+        ${hex(d.mainHex, "#d6006f")}, ${hex(d.accentHex, "#1a1a1a")}, ${JSON.stringify(treatments)}::jsonb, ${JSON.stringify(answers)}::jsonb, ${m.logo_url}, ${photos[0] ?? ""}, ${kind}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify(aiUrls)}::jsonb, 'ready')`);
+  }
+  return rid;
+}
+
 router.post("/club/months/:id/build-request", requireAuth, async (req: Request, res: Response) => {
   try {
-    await ensureTables();
-    const x = (await db.execute(sql`SELECT * FROM club_months WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as MonthRow | undefined;
-    if (!x) {
+    const id = await ensureBuildRequest(String(req.params.id));
+    if (!id) {
       res.status(404).json({ error: "Not found" });
       return;
     }
-    const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member;
-    const d = m.details ?? {};
-    const caps = CLUB_PLANS[m.plan];
-    const picks = ((x.choices?.picks as any[]) ?? []);
-    // The same treatment can come round again in a later month, but never with the same hook as before.
-    const earlier = (await db.execute(sql`SELECT content FROM club_months WHERE member_id = ${m.id} AND id <> ${x.id}`)).rows as any[];
-    const usedAngles: Record<string, number[]> = {};
-    for (const e of earlier) for (const p of (e.content?.posts as any[]) ?? []) if (p.treatment && typeof p.angle === "number") (usedAngles[p.treatment] ??= []).push(p.angle);
-    const hookCodes = picks.filter((p) => p.kind === "hook" && p.code).map((p) => p.code);
-    const answers = {
-      bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
-      threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
-      facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-      usedAngles, clubHooks: hookCodes, clubHookSlots: Math.min(caps.picks, Math.max(hookCodes.length, caps.picks - picks.filter((p) => p.kind === "tool").length)),
-    };
-    await ensureTenFreeTable();
-    const rid = `club-${x.id}`;
-    const kind = `club${m.plan}`;
-    const aiUrls = (x.ai_urls ?? []);
-    const photos = (m.photo_urls ?? []).slice(0, 12);
-    const treatments = ((x.choices?.treatments as string[]) ?? []).slice(0, 4);
-    const exists = (await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE id = ${rid}`)).rows.length > 0;
-    if (exists) {
-      await db.execute(sql`UPDATE tenfree_requests SET treatments = ${JSON.stringify(treatments)}::jsonb, answers = ${JSON.stringify(answers)}::jsonb, ai_urls = ${JSON.stringify(aiUrls)}::jsonb,
-        photos = ${JSON.stringify(photos)}::jsonb, logo_url = ${m.logo_url}, photo_url = ${photos[0] ?? ""}, main_hex = ${hex(d.mainHex, "#d6006f")}, accent_hex = ${hex(d.accentHex, "#1a1a1a")}, updated_at = now() WHERE id = ${rid}`);
-    } else {
-      await db.execute(sql`INSERT INTO tenfree_requests
-        (id, email, email_key, clinic_name, clinician_name, handle, area, website, whatsapp, main_hex, accent_hex, treatments, answers, logo_url, photo_url, kind, photos, ai_urls, ai_status)
-        VALUES (${rid}, ${m.email}, ${`club:${x.id}`}, ${d.clinicName || m.name}, ${d.clinicianName || m.name}, ${String(d.handle || "").replace(/^@/, "")}, ${d.area || ""}, '', '',
-          ${hex(d.mainHex, "#d6006f")}, ${hex(d.accentHex, "#1a1a1a")}, ${JSON.stringify(treatments)}::jsonb, ${JSON.stringify(answers)}::jsonb, ${m.logo_url}, ${photos[0] ?? ""}, ${kind}, ${JSON.stringify(photos)}::jsonb, ${JSON.stringify(aiUrls)}::jsonb, 'ready')`);
-    }
-    res.json({ id: rid });
+    res.json({ id });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not start the build" });
   }
@@ -721,7 +737,10 @@ router.patch("/club/months/:id", requireAuth, async (req: Request, res: Response
       await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${id}`);
     }
     if (Array.isArray(b.aiUrls)) await db.execute(sql`UPDATE club_months SET ai_urls = ${JSON.stringify(b.aiUrls.map((u) => str(u, 400)).slice(0, 12))}::jsonb WHERE id = ${id}`);
-    if (b.choices && typeof b.choices === "object") await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify(b.choices)}::jsonb WHERE id = ${id}`);
+    if (b.choices && typeof b.choices === "object") {
+      await db.execute(sql`UPDATE club_months SET choices = ${JSON.stringify(b.choices)}::jsonb WHERE id = ${id}`);
+      await ensureBuildRequest(id).catch(() => null);
+    }
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not update" });
