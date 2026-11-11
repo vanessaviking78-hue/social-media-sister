@@ -5,7 +5,7 @@ import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 
 const router = Router();
 
-async function nextFreeMinute(desired: Date): Promise<Date> {
+export async function nextFreeMinute(desired: Date): Promise<Date> {
   const candidate = new Date(desired);
   candidate.setSeconds(0, 0);
   for (let i = 0; i < 1440; i++) {
