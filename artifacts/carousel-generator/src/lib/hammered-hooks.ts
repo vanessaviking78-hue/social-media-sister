@@ -2,16 +2,22 @@
 // Kept apart from the clinic Hook Bank (hook-bank.ts) so none of these show up in the clinic tools.
 // To add a hook, add a line to HAMMERED_HOOKS. The group says what the hook is for.
 
-export type HammeredHookGroup = "Site banter" | "Their marketing" | "What Hammered can do";
+export type HammeredHookGroup = "About me" | "Site banter" | "Their marketing" | "What Hammered can do";
 export type HammeredHook = { code: string; group: HammeredHookGroup; text: string };
 
 export const HAMMERED_HOOK_GROUPS: { group: HammeredHookGroup; label: string }[] = [
+  { group: "About me", label: "The first three posts: who Vanessa is and what she does" },
   { group: "Site banter", label: "Site banter people will send to the work group" },
   { group: "Their marketing", label: "Take the piss out of their marketing" },
   { group: "What Hammered can do", label: "Show what Hammered can do" },
 ];
 
 export const HAMMERED_HOOKS: HammeredHook[] = [
+  // The first three posts: who I am and what I do
+  { code: "HA1", group: "About me", text: "Hello, I’m Vanessa and I make tradespeople look as good as their work." },
+  { code: "HA2", group: "About me", text: "Yes, I have actually worked on a building site." },
+  { code: "HA3", group: "About me", text: "Your work is brilliant. Your Facebook page is a ghost town." },
+
   // Site banter people will send to the work group
   { code: "HB1", group: "Site banter", text: "Every site has a bloke who says “while we’re here” and costs everyone another Saturday." },
   { code: "HB2", group: "Site banter", text: "Which trade says “I’ll be out of your way in five” with the least respect for the concept of time?" },

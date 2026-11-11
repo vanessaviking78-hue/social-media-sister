@@ -5,6 +5,18 @@
 export type HammeredCopy = { body: string; cta: string };
 
 export const HAMMERED_COPY: Record<string, HammeredCopy> = {
+  HA1: {
+    body: "I have worked with over 500 businesses, and every one of them taught me what makes a stranger trust a company online. I have also spent 30 years behind a camera, so I know a good photo when I see one. Now I am pointing all of it at the building trade.",
+    cta: "Fancy a free sample? Comment HAMMERED and I will show you what your page could look like.",
+  },
+  HA2: {
+    body: "I know a hard day when I see one, and I know how much graft sits behind every finished job. The work is brilliant and it very rarely gets shown properly. That is the bit I fix.",
+    cta: "Your hard work deserves better than a blurry photo from a van. Comment HAMMERED and let me sort it.",
+  },
+  HA3: {
+    body: "People hire the tradesperson they trust, so I show your work, your face and a bit of your humour. Three posts at a time, written and designed for you. All you do is turn up and do what you do best.",
+    cta: "Want a free 5 day trial? Comment HAMMERED and I will get you started.",
+  },
   HB1: {
     body: "It always starts with one extra socket. Three weeks later the garden is a building site and nobody remembers the original quote. Put the extras in writing and you save the weekend and the friendship.",
     cta: "Send this to the one who says it on every single job.",
