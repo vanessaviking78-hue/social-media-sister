@@ -123,6 +123,11 @@ const JOB_GROUPS: { id: string; label: string; items: string[] }[] = [
   { id: "outside", label: "Outside", items: ["Driveways", "Patios and paving", "Fencing", "Decking", "Garden landscaping", "Gutters"] },
 ];
 
+try {
+  const r0 = new URLSearchParams(window.location.search).get("ref");
+  if (r0) sessionStorage.setItem("hammered-ref", r0);
+} catch { /* ignore */ }
+
 export default function HammeredFreebies() {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "anton", passion: "", funny: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
@@ -204,6 +209,12 @@ export default function HammeredFreebies() {
       fd.append("treatments", JSON.stringify(ticked));
       fd.append("consent", "yes");
       fd.append("kind", "hammered");
+      // Tracking name from the link (?ref=dave). Kept for the visit so it survives if they wander off and come back.
+      let ref = "";
+      try {
+        ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("hammered-ref") || "";
+      } catch { /* ignore */ }
+      if (ref) fd.append("ref", ref);
       if (logoBlob) fd.append("logo", new File([logoBlob], "logo.png", { type: "image/png" }));
       photos.forEach((ph) => fd.append("photos", ph));
       const r = await fetch("/api/ten-free/intake", { method: "POST", body: fd });

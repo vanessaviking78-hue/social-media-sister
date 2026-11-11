@@ -210,6 +210,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       personality: str(b.personality, 300),
       font: /^[a-z0-9-]{1,40}$/.test(str(b.font, 40)) ? str(b.font, 40) : "hatcher",
       passion: str(b.passion, 400),
+      ref: str(b.ref, 40).toLowerCase().replace(/[^a-z0-9_-]/g, ""),
     };
     const missingAnswers = hammered
       ? !answers.bizType || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.funny
@@ -283,7 +284,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       throw err;
     }
     if (photoKey && !hammered) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
-    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
+    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free intake failed");
