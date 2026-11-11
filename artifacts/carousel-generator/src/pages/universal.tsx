@@ -38,7 +38,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; coverScale?: number; blockScale?: number; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; textX?: number; coverScale?: number; blockScale?: number; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const lumHex = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
@@ -258,6 +258,10 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
   const ink = look.text;
   const body = (px: number, w = 400) => `${w} ${px}px "${look.bodyFont || BODY_FONT}", serif`;
   const LEFT = 100;
+  const dxText = Math.max(-400, Math.min(400, look.textX || 0));
+  let shifted = false;
+  const shift = () => { if (!shifted && dxText) { ctx.save(); ctx.translate(dxText, 0); shifted = true; } };
+  const unshift = () => { if (shifted) { ctx.restore(); shifted = false; } };
   const top = look.dir === "top";
   // A solid block along the bottom of the page instead of the gradient (at least a quarter of the page, taller if the writing needs it).
   const blk = look.block && (isHex(look.block) || metalOf(look.block)) ? look.block : null;
@@ -308,6 +312,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       ctx.fillRect(0, 0, W, H);
     }
     ctx.textAlign = "left";
+    shift();
     const maxH = withPhoto ? (blk ? 250 : 380) : 520;
     const fit = fitText(ctx, post.cta || "", (px) => body(px, 600), W - LEFT * 2, maxH * Math.max(1, bs), Math.round(76 * bs), Math.round(40 * bs), 1.25);
     const total = fit.lines.length * fit.px * 1.25;
@@ -319,7 +324,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
       const bm = metalOf(blk);
       ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;
-      ctx.fillRect(0, bt, W, bh);
+      ctx.fillRect(-400, bt, W + 800, bh);
       y = bt + Math.round((bh - total) / 2);
     } else if (hl4) {
       const blockH = hH4 + 30 + total + 40;
@@ -341,6 +346,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     ctx.lineTo(LEFT + 120, y + 36);
     ctx.stroke();
     ctx.globalAlpha = 1;
+    unshift();
     drawLogo(ctx, logo, look);
     return;
   }
@@ -388,6 +394,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     ctx.font = body(sub2.px);
     let yy = ty + headH2 + gap2;
     for (const l of sub2.lines) { ctx.fillText(l, bl + pad, yy); yy += sub2.px * 1.4; }
+    unshift();
     drawLogo(ctx, logo, look);
     return;
   }
@@ -416,9 +423,10 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       const bt = Math.max(0, Math.min(H - bh, H - bh + (look.coverY || 0)));
       const bmc = metalOf(blk);
       ctx.fillStyle = bmc ? metalFill(ctx, bmc, 0, bt, W, bt + bh) : blk;
-      ctx.fillRect(0, bt, W, bh);
+      ctx.fillRect(-400, bt, W + 800, bh);
       startY = bt + Math.round((bh - (headH + gap + subH)) / 2);
     }
+    shift();
     if (tf && layout) {
       drawTitle(ctx, tf.lf, layout, tf.style, 100, startY, look.left ? "left" : "center", W - 200, inkPaint(ctx, ink, startY, headH + subH + gap));
     } else {
@@ -435,6 +443,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
       y += sub.px * 1.45;
     }
     ctx.globalAlpha = 1;
+    unshift();
     drawLogo(ctx, logo, look);
     return;
   }
@@ -444,6 +453,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     if (look.left && !look.noShade) bottomShade();
   }
   ctx.textAlign = "left";
+  shift();
   const text = post.slides[n - 1] || "";
   const fit = fitText(ctx, text, (px) => body(px), W - LEFT * 2, (blk ? 250 : 520) * Math.max(1, bs), Math.round(40 * bs), Math.round((blk ? 22 : 26) * bs), 1.55);
   const total = fit.lines.length * fit.px * 1.55;
@@ -455,7 +465,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const bt = Math.max(0, Math.min(H - bh, H - bh + (look.blockY || 0)));
     const bm = metalOf(blk);
     ctx.fillStyle = bm ? metalFill(ctx, bm, 0, bt, W, bt + bh) : blk;
-    ctx.fillRect(0, bt, W, bh);
+    ctx.fillRect(-400, bt, W + 800, bh);
     const t0 = bt + Math.round((bh - (hH + total)) / 2);
     if (hl) {
       drawHead(hl, t0);
@@ -475,6 +485,7 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     ctx.fillText(l, LEFT, y);
     y += fit.px * 1.55;
   }
+  unshift();
   drawLogo(ctx, logo, look);
 }
 

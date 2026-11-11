@@ -86,7 +86,7 @@ function List() {
 
 type Item = {
   n: number; label: string; source: "universal" | "pack"; carousel: boolean;
-  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; coverScale?: number; blockScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number }; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
+  post?: PackPost; uni?: HTMLCanvasElement[]; uniArgs?: { treatmentId: string; headline: string; copy: { subtitle: string; slides: any; cta: string }; photos: ImageBitmap[]; offset: number; angle: number; shift: number[]; blockY?: number; variant?: number; textColour?: string; coverY?: number; textX?: number; textScale?: number; coverScale?: number; blockScale?: number; gradOpacity?: number; gradColour?: string; bgColour?: string; block?: string; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number }; zoom?: number[]; panX?: number[]; panY?: number[]; custom?: (ImageBitmap | null)[] }; caption: string; tags: string; previews: string[];
   poll: Poll & { instruction: string }; libUrls?: string[];
   aboutArgs?: AboutRenderOptions;
   aboutLogo?: HTMLCanvasElement;
@@ -164,6 +164,9 @@ export function Builder({ id }: { id: string }) {
   const [chosenT, setChosenT] = useState<string[]>([]);
   const [oldTools, setOldTools] = useState(false);
   const [chEl, setChEl] = useState<Record<number, string>>({});
+  // Drag the writing: when "Move text" is on for a post, dragging its picture moves the words (sideways and up/down) instead of the photo.
+  const [moveTextOn, setMoveTextOn] = useState<Record<number, boolean>>({});
+  const textDrag = useRef<{ n: number; i: number; x: number; y: number; tx: number; ty: number; ratio: number } | null>(null);
   const [tAngles, setTAngles] = useState<Record<string, number>>({});
   const [textHex, setTextHex] = useState<string>("");
   const [uniFont, setUniFont] = useState<string>("hatcher");
@@ -643,6 +646,30 @@ export function Builder({ id }: { id: string }) {
   };
   // Text box cover: drag the box anywhere on the first slide.
   const boxDrag = useRef<{ n: number; w: number; h: number } | null>(null);
+  const textDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number): boolean => {
+    if (!moveTextOn[it.n] || !it.uniArgs || it.uniArgs.box || i > 4) return false;
+    const r = e.currentTarget.getBoundingClientRect();
+    const a = it.uniArgs;
+    textDrag.current = { n: it.n, i, x: e.clientX, y: e.clientY, tx: a.textX ?? 0, ty: (i === 0 ? a.coverY : a.blockY) ?? 0, ratio: 1080 / Math.max(1, r.width) };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* fine */ }
+    return true;
+  };
+  const textMove = (e: React.PointerEvent<HTMLImageElement>) => {
+    const d = textDrag.current;
+    const assets = assetsRef.current;
+    if (!d || !assets) return;
+    const it = itemsRef.current.find((x) => x.n === d.n);
+    if (!it?.uniArgs) return;
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v / 10) * 10));
+    const tx = clamp(d.tx + (e.clientX - d.x) * d.ratio, -300, 300);
+    const ty = d.i === 0 ? clamp(d.ty + (e.clientY - d.y) * d.ratio, -900, 200) : clamp(d.ty + (e.clientY - d.y) * d.ratio, -600, 120);
+    const args = { ...it.uniArgs, textX: tx, ...(d.i === 0 ? { coverY: ty } : { blockY: ty }) } as UA;
+    if (args.textX === it.uniArgs.textX && (d.i === 0 ? args.coverY === it.uniArgs.coverY : args.blockY === it.uniArgs.blockY)) return;
+    try {
+      const cvs = renderUniversalPost(args, assets);
+      patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+    } catch { /* keep the last good picture */ }
+  };
   const boxMove = (e: React.PointerEvent<HTMLImageElement>, it: Item) => {
     const d = boxDrag.current;
     if (!d || d.n !== it.n || !it.uniArgs?.box) return;
@@ -985,9 +1012,9 @@ export function Builder({ id }: { id: string }) {
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
-                <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
-                  onClick={() => (i === 0 && it.uniArgs?.box ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (textDown(e, it, i)) return; if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (textDrag.current) textMove(e); else if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { textDrag.current = null; dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
+                  onClick={() => (moveTextOn[it.n] || (i === 0 && it.uniArgs?.box) ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
+                  className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${moveTextOn[it.n] && it.uniArgs ? "cursor-move touch-none ring-2 ring-pink-500" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -1025,7 +1052,10 @@ export function Builder({ id }: { id: string }) {
                     {dots.map(([label, val, css]) => <button key={label} type="button" title={label} onClick={() => setU({ [keyEl]: val })} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
                     {keyEl !== "block" && <button type="button" className="px-1 py-0.5 rounded border bg-white text-black" onClick={() => setU({}, [keyEl])}>{keyEl === "bgColour" ? "Photo" : "Auto"}</button>}
                   </span>
+                  <button type="button" className={pill(!!moveTextOn[it.n])} onClick={() => setMoveTextOn((m) => ({ ...m, [it.n]: !m[it.n] }))}>{moveTextOn[it.n] ? "Moving text: drag the picture" : "Move text"}</button>
                   {sl("Writing up/down", "blockY", -600, 120, 10, 0)}
+                  {sl("Text left/right", "textX", -300, 300, 10, 0)}
+                  {sl("Writing size", "textScale", 0.6, 1.6, 0.05, 1)}
                   {sl("Cover text up/down", "coverY", -900, 200, 10, 0)}
                   {sl("Cover text size", "coverScale", 0.5, 1.6, 0.05, 1)}
                   {it.uniArgs.block && sl("Block height", "blockScale", 0.5, 2, 0.05, 1)}
@@ -1034,14 +1064,14 @@ export function Builder({ id }: { id: string }) {
                     <button type="button" className={pill(it.uniArgs.noHead === false)} onClick={() => setU({ noHead: false })}>Every slide</button>
                     <button type="button" className={pill(it.uniArgs.noHead !== false)} onClick={() => setU({ noHead: true })}>Cover only</button>
                   </span>
-                  <button type="button" className="px-1.5 py-1 rounded border bg-white text-black" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset</button>
+                  <button type="button" className="px-1.5 py-1 rounded border bg-white text-black" onClick={() => upd({}, ["blockY", "coverY", "textX", "textScale", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset</button>
                 </div>
               );
               return (
                 <div className="space-y-1">
                   {compactBar}
                   {oldTools && (<>
-                  <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
+                  <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "textX", "textScale", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
                   <div className={row}><span className="w-44 shrink-0">Headline on every slide</span>
                     <button onClick={() => upd({ noHead: false })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "bg-pink-500 text-white border-pink-500" : ""}`}>On</button>
                     <button onClick={() => upd({ noHead: true })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "" : "bg-pink-500 text-white border-pink-500"}`}>Cover only</button>
