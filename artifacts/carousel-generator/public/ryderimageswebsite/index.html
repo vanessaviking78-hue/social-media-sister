@@ -66,8 +66,8 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
 <main id="m"></main></div>
 <div id="cd" class="hide">
-<div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. They appear just below, where you can edit, download or delete them. They stay on this computer and are not shown to anyone else.</p><button id="cdadd">Upload more images</button><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
-<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add appear here.</p></main>
+<div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. They go on this page straight away, so your client can see and download them. You can edit or delete them below.</p><button id="cdadd">Upload more images</button><p><button id="mig" class="hide" style="flex:none;margin-top:12px"></button></p><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
+<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add will appear here for your client.</p></main>
 <main><h2>Content Day, 15th October</h2><p class="empty" id="drnote">Tap Download under any picture to save it. Tap Copy link to share it.</p><div class="grid" id="drgrid"></div></main>
 </div>
 <input type="file" id="f" accept="image/*" hidden>
@@ -149,32 +149,39 @@ document.querySelectorAll("button.tab").forEach(function(b){b.addEventListener("
   document.getElementById("cd").classList.toggle("hide",b.dataset.tab!=="cd");
   window.scrollTo(0,0);
 })});
-var CU={},cchg=null;
+var CN="Ryder Content Day 15 Oct",PT="ryder-content-day";
+var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
+if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
+document.getElementById("drop").classList.toggle("hide",!OWN);
 function cdb(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-content-day",1);q.onupgradeneeded=function(){q.result.createObjectStore("c",{autoIncrement:true})};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
 function cRun(mode,fn){return cdb().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("c",mode),s=tx.objectStore("c"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
-function cdRender(){
-  Promise.all([cRun("readonly",function(s){return s.getAllKeys()}),cRun("readonly",function(s){return s.getAll()})]).then(function(a){
-    var keys=a[0]||[],vals=a[1]||[],g=document.getElementById("cdgrid");
-    Object.keys(CU).forEach(function(k){URL.revokeObjectURL(CU[k])});CU={};
-    g.innerHTML="";
-    document.getElementById("cdempty").classList.toggle("hide",keys.length>0);
-    keys.forEach(function(k,i){
-      var v=vals[i],u=URL.createObjectURL(v.blob);CU[k]=u;
-      var f=document.createElement("figure");f.className="card";f.dataset.key=k;
-      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><button class="cdl">Download</button><button class="cchg">Change image</button><button class="cedt">Edit image</button><button class="crem">Delete</button></div></figcaption>';
-      f.querySelector("img").src=u;f.querySelector("b").textContent=v.name;
-      f.querySelector(".cdl").style.cssText="flex:1 1 42%;background:var(--pink);border-color:var(--pink);color:#fff";
-      f.querySelector(".cchg").style.cssText="flex:1 1 40%;border-color:var(--pink);color:var(--pink)";f.querySelector(".cedt").style.cssText="flex:1 1 40%;border-color:var(--pink);color:var(--pink)";
-      g.appendChild(f);
-    });
+function upFile(blob,name){
+  var fd=new FormData();fd.append("file",blob,name);fd.append("clientName",CN);
+  return fetch("/api/library/upload-file",{method:"POST",body:fd}).then(function(r){if(!r.ok)throw new Error("upload");return r.json()}).then(function(j){
+    return fetch("/api/library",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({clientName:CN,postType:PT,caption:name,mediaUrl:j.url,metadata:{name:name}})}).then(function(r){if(!r.ok)throw new Error("save");return r.json()});
   });
 }
+function cdRender(){
+  fetch("/api/library?clientName="+encodeURIComponent(CN)).then(function(r){return r.json()}).then(function(j){
+    var items=(j.items||[]).filter(function(i){return i.postType===PT&&i.mediaUrl}).reverse(),g=document.getElementById("cdgrid");
+    g.innerHTML="";document.getElementById("cdempty").classList.toggle("hide",items.length>0||!OWN);
+    items.forEach(function(it){
+      var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
+      f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;
+      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
+      f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
+      var a=f.querySelector(".cdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
+      g.appendChild(f);
+    });
+  }).catch(function(){});
+}
 function cdAdd(files){
+  if(!OWN)return;
   var list=Array.prototype.slice.call(files).filter(function(f){return f.type.indexOf("image/")===0});
   if(!list.length){say("Those were not pictures");return}
-  var p=Promise.resolve();
-  list.forEach(function(f){p=p.then(function(){return cRun("readwrite",function(s){return s.add({name:f.name,blob:f})})})});
-  p.then(function(){cdRender();say(list.length+" added. They stay on this computer.")});
+  var bad=0,p=Promise.resolve();
+  list.forEach(function(f,i){p=p.then(function(){say("Uploading "+(i+1)+" of "+list.length);return upFile(f,f.name).then(function(){},function(){bad++})})});
+  p.then(function(){cdRender();say(bad?("Added "+(list.length-bad)+", "+bad+" failed. Try those again."):("Added "+list.length+". Your client can see them now."))});
 }
 document.getElementById("cdadd").addEventListener("click",function(){document.getElementById("cdf").click()});
 document.getElementById("cdf").addEventListener("change",function(e){cdAdd(e.target.files);e.target.value=""});
@@ -182,21 +189,29 @@ var dz=document.getElementById("drop");
 ["dragenter","dragover"].forEach(function(n){dz.addEventListener(n,function(e){e.preventDefault();dz.classList.add("over")})});
 ["dragleave","drop"].forEach(function(n){dz.addEventListener(n,function(e){e.preventDefault();dz.classList.remove("over")})});
 dz.addEventListener("drop",function(e){cdAdd(e.dataTransfer.files)});
-document.getElementById("cdc").addEventListener("change",function(e){
-  var f=e.target.files[0];e.target.value="";if(!f||cchg===null)return;var k=cchg;
-  cRun("readonly",function(s){return s.get(k)}).then(function(v){
-    var name=v?v.name:f.name;
-    return cRun("readwrite",function(s){return s.put({name:name,blob:f},k)});
-  }).then(function(){cdRender();say("Image changed")});
+function migCheck(){
+  if(!OWN)return;
+  cRun("readonly",function(s){return s.getAllKeys()}).then(function(k){k=k||[];var b=document.getElementById("mig");b.textContent="Publish "+k.length+" earlier picture"+(k.length===1?"":"s")+" from this computer";b.classList.toggle("hide",k.length===0)});
+}
+document.getElementById("mig").addEventListener("click",function(){
+  Promise.all([cRun("readonly",function(s){return s.getAllKeys()}),cRun("readonly",function(s){return s.getAll()})]).then(function(a){
+    var ks=a[0]||[],vs=a[1]||[],p=Promise.resolve(),n=0;
+    ks.forEach(function(k,i){p=p.then(function(){say("Publishing "+(i+1)+" of "+ks.length);return upFile(vs[i].blob,vs[i].name).then(function(){return cRun("readwrite",function(s){return s.delete(k)})}).then(function(){n++},function(){})})});
+    p.then(function(){cdRender();migCheck();say("Published "+n+". Your client can see them now.")});
+  });
 });
 document.getElementById("cdgrid").addEventListener("click",function(e){
-  var c=e.target.closest(".card");if(!c)return;var k=isNaN(c.dataset.key)?c.dataset.key:Number(c.dataset.key);
-  if(e.target.closest(".cedt")){openEd("c",k)}
-  else if(e.target.closest(".cchg")){cchg=k;document.getElementById("cdc").click()}
-  else if(e.target.closest(".crem")){cRun("readwrite",function(s){return s.delete(k)}).then(function(){cdRender();say("Deleted")})}
-  else if(e.target.closest(".cdl")){cRun("readonly",function(s){return s.get(k)}).then(function(v){if(v)save(v.blob,v.name)})}
+  var c=e.target.closest(".card");if(!c)return;var id=c.dataset.key;
+  if(e.target.closest(".ccp")){
+    var u="https://www.thecybersuite.com"+c.dataset.url;
+    if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){say("Link copied")},function(){say("Copy failed")});
+  }else if(e.target.closest(".cedt")){openEd("c",id,c.dataset.fn)}
+  else if(e.target.closest(".crem")){
+    var d=e.target.closest(".crem");
+    if(!d.dataset.sure){d.dataset.sure="1";d.dataset.t=d.textContent;d.textContent="Sure? Tap again";setTimeout(function(){delete d.dataset.sure;d.textContent=d.dataset.t},3000);return}
+    fetch("/api/library/"+id,{method:"DELETE"}).then(function(r){if(!r.ok)throw new Error("x");cdRender();say("Deleted for everyone")}).catch(function(){say("Could not delete that one")});
+  }
 });
-
 var ED=null,edc=document.getElementById("edc"),edm=document.getElementById("ed"),edb=document.getElementById("edb"),edz=document.getElementById("edz"),edsz=document.getElementById("edsz"),edw=document.getElementById("edw"),edh=document.getElementById("edh"),edg=document.getElementById("edg"),edcw=document.getElementById("edcw"),edDrag=null;
 function tgt(){
   var iw=ED.im.naturalWidth,ih=ED.im.naturalHeight,v=edsz.value,a,ow,oh;
@@ -246,7 +261,7 @@ document.getElementById("eds").addEventListener("click",function(){
     if(!b){say("Could not save that edit");return}
     if(st.kind==="w"){show(st.key,b);dbRun("readwrite",function(s){return s.put(b,st.key)});say("Edited. Download it to keep a copy.")}
     else if(st.kind==="d"){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
-    else{cRun("readonly",function(s){return s.get(st.key)}).then(function(v){return cRun("readwrite",function(s){return s.put({name:v?v.name:"edited.jpg",blob:b},st.key)})}).then(function(){cdRender();say("Edited")})}
+    else{var base=(st.name||"edited").replace(/\.[^.]+$/,"");say("Saving for your client");upFile(b,base+".jpg").then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){cdRender();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     edm.classList.add("hide");ED=null;
   },"image/jpeg",0.92)}catch(err){say("Could not edit this one. Try again on www.thecybersuite.com")}
 });
@@ -281,5 +296,5 @@ document.addEventListener("click",function(e){
   }
 });
 happly();
-cdRender();
+cdRender();migCheck();
 </script></body></html>
