@@ -5,6 +5,7 @@ import { saveAs } from "file-saver";
 import { toast } from "sonner";
 import { HAMMERED_HOOKS, HAMMERED_HOOK_GROUPS, type HammeredHook } from "@/lib/hammered-hooks";
 import { HAMMERED_COPY } from "@/lib/hammered-copy";
+import { hammeredCaptionFor } from "@/lib/hammered-captions";
 import { HAMMERED_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { usePresets } from "@/lib/use-presets";
@@ -111,9 +112,10 @@ export default function HammeredPage() {
   const addPosts = useCallback((hooks: HammeredHook[]) => {
     setPosts((cur) => {
       const have = new Set(cur.map((p) => p.code));
-      const fresh = hooks.filter((h) => !have.has(h.code)).map<Post>((h) => {
+      const fresh = hooks.filter((h) => !have.has(h.code)).map<Post>((h, i) => {
         const c = HAMMERED_COPY[h.code] ?? { body: "", cta: "" };
-        return { id: uid(), code: h.code, label: h.code, texts: [h.text, c.body, c.cta], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {}, caption: "" };
+        // Each hook arrives with its ready written northern grit caption. Write it / Rewrite it can still make a fresh one.
+        return { id: uid(), code: h.code, label: h.code, texts: [h.text, c.body, c.cta], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {}, caption: hammeredCaptionFor(h.code, cur.length + i) };
       });
       return [...cur, ...fresh];
     });
