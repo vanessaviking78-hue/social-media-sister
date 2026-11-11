@@ -66,9 +66,10 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
 <main id="m"></main></div>
 <div id="cd" class="hide">
+<div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. They appear just below, where you can edit, download or delete them. They stay on this computer and are not shown to anyone else.</p><button id="cdadd">Upload more images</button><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
+<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add appear here.</p></main>
 <main><h2>Content Day, 15th October</h2><p class="empty" id="drnote">Tap Download under any picture to save it. Tap Copy link to share it.</p><div class="grid" id="drgrid"></div></main>
-<div class="up" id="drop"><p><b>Your own extra pictures.</b> Add more here to change or edit. These stay on this computer only and are not shown to anyone else.</p><button id="cdadd">Upload images</button><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
-<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Nothing here yet. Upload your first pictures above.</p></main></div>
+</div>
 <input type="file" id="f" accept="image/*" hidden>
 <div id="ed" class="hide"><div class="edbox"><canvas id="edc"></canvas>
 <label>Shape <select id="edsz"><option value="o">Original</option><option value="1">Square</option><option value="0.75">Vertical</option><option value="1.3333">Horizontal</option><option value="c">Custom (banners)</option></select></label>
