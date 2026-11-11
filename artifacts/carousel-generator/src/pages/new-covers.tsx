@@ -50,7 +50,7 @@ export default function NewCovers() {
       const add = (id: number, url: string) => { if (url && !seen.has(url)) { seen.add(url); out.push({ id, url, thumb: url }); } };
       // The Approvals tool: images the client has approved, matched on the client's preset or name.
       try {
-        const r = await fetch(`${BASE}/api/approval/approved-images`, { credentials: "include" });
+        const r = await fetch(`${BASE}/api/approval/approved-images`, { credentials: "include", headers: authHeaders() });
         const d = (await r.json()) as { id: number; imageUrl: string; clientName: string; presetId: number | null }[];
         if (Array.isArray(d)) for (const im of d) {
           const cn = (im.clientName || "").trim().toLowerCase();
@@ -226,7 +226,7 @@ export default function NewCovers() {
             <div className="flex gap-1.5 flex-wrap">
               {(approved ?? []).map((im) => (
                 <button key={im.id} type="button" onClick={() => void useApproved(im)} className={`rounded overflow-hidden border-2 ${usedIds.includes(im.id) ? "border-pink-500" : "border-transparent"}`}>
-                  <img src={im.thumb} alt="" className="w-16 h-20 object-cover max-w-none shrink-0" />
+                  <img src={im.thumb} alt="" loading="lazy" className="w-16 h-20 object-cover max-w-none shrink-0" />
                 </button>
               ))}
             </div>
