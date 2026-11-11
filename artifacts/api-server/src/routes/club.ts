@@ -13,7 +13,8 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { logger } from "../lib/logger";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 
-// THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £275 club (Instagram DM, 7 places).
+// THE CLUBS. £69 club (free injectors WhatsApp group, 10 places) and £275 club (Instagram DM, 7 places).
+// The £69 club also has a public invitation page (/youreinvited): someone accepts the promise, becomes a PENDING member, fills in the details form, and waits for Vanessa to approve her.
 // A member is made by Vanessa, gets a private link /club/<token>, fills in their details once, then picks their treatments and posts each month.
 // Five days before their billing date the month is prepared (reel hooks and scripts, six AI photos), and an email tells Vanessa it is waiting.
 // She builds the posts, vets everything in the approval queue, and only approved months reach the member's portal. Cancelled members lose access.
@@ -27,6 +28,7 @@ export const CLUB_PLANS = {
   "222": { price: 275, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
+export const PLACES = { "69": 10, "222": 7 } as const;
 const MAX_PHOTOS = 20;
 const CUT_OFF_DAYS = 7; // members choose up to a week before billing, generation starts five days before
 const PREP_DAYS = 5;
@@ -100,6 +102,9 @@ function ensureTables(): Promise<void> {
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS ref_photo_url TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS welcome_photo_url TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_name TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -110,7 +115,7 @@ function ensureTables(): Promise<void> {
 
 type Member = {
   id: string; token: string; plan: PlanId; status: string; name: string; email: string; billing_day: number;
-  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; ref_photo_url?: string; welcome_photo_url?: string; created_at: string; cancelled_at: string | null;
+  details: Record<string, any>; details_done: boolean; logo_url: string; photo_urls: string[]; clinic_photo_url: string; ref_photo_url?: string; welcome_photo_url?: string; phone?: string; agreed_name?: string; agreed_at?: string | null; created_at: string; cancelled_at: string | null;
 };
 type MonthRow = {
   id: string; member_id: string; month: string; status: string; choices: Record<string, any>; content: Record<string, any>;
@@ -181,6 +186,71 @@ async function memberByToken(token: string): Promise<Member | null> {
 }
 
 // ---------------------------------------------------------------------------
+// The £69 club invitation (public, unlisted link). Accepting makes a PENDING member who fills in the details form and waits for Vanessa.
+// ---------------------------------------------------------------------------
+
+async function placesTaken(plan: PlanId): Promise<number> {
+  return Number((await db.execute(sql`SELECT count(*)::int AS n FROM club_members WHERE plan = ${plan} AND status IN ('active', 'pending')`)).rows[0]?.n ?? 0);
+}
+
+router.get("/club/invite/69", async (_req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const total = PLACES["69"];
+    const left = Math.max(0, total - (await placesTaken("69")));
+    res.set("Cache-Control", "no-store");
+    res.json({ total, left, open: left > 0 });
+  } catch {
+    res.status(500).json({ error: "Could not load the invitation" });
+  }
+});
+
+const inviteHits = new Map<string, number[]>();
+router.post("/club/invite/69", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const ip = String(req.ip ?? "");
+    const recent = (inviteHits.get(ip) ?? []).filter((t) => Date.now() - t < 3600_000);
+    if (recent.length >= 6) { res.status(429).json({ error: "That is a lot of tries. Please message me and I will sort it." }); return; }
+    inviteHits.set(ip, [...recent, Date.now()]);
+    const b = req.body as { name?: string; email?: string; phone?: string; agreed?: boolean; agreedName?: string; website?: string };
+    if (b.website) { res.json({ ok: true, token: "" }); return; } // hidden field only a bot fills in
+    const name = str(b.name, 100);
+    const email = str(b.email, 160).toLowerCase();
+    const phone = str(b.phone, 40);
+    const agreedName = str(b.agreedName, 100);
+    if (name.length < 2) { res.status(400).json({ error: "Please add your name" }); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { res.status(400).json({ error: "Please add an email address I can reach you on" }); return; }
+    if (phone.replace(/\D/g, "").length < 7) { res.status(400).json({ error: "Please add your WhatsApp number" }); return; }
+    if (!b.agreed || agreedName.length < 2) { res.status(400).json({ error: "Please tick the promise and type your name to sign it" }); return; }
+    const dup = (await db.execute(sql`SELECT id FROM club_members WHERE plan = '69' AND lower(email) = ${email} AND status IN ('active', 'pending')`)).rows.length;
+    if (dup) { res.status(409).json({ error: "It looks like you have already accepted. I have your details and will be in touch, or message me if you need anything." }); return; }
+    const id = uuid();
+    const token = randomBytes(18).toString("base64url");
+    const billingDay = Math.min(28, new Date().getUTCDate());
+    const ins = await db.execute(sql`INSERT INTO club_members (id, token, plan, status, name, email, billing_day, phone, agreed_name, agreed_at)
+      SELECT ${id}::text, ${token}::text, '69', 'pending', ${name}::text, ${email}::text, ${billingDay}::int, ${phone}::text, ${agreedName}::text, now()
+      WHERE (SELECT count(*) FROM club_members WHERE plan = '69' AND status IN ('active', 'pending')) < ${PLACES["69"]}::int
+      RETURNING id`);
+    if (!ins.rows.length) { res.status(409).json({ full: true, error: "All the places have just been taken. Message me and I will add you to the list." }); return; }
+    const left = Math.max(0, PLACES["69"] - (await placesTaken("69")));
+    void emailVanessa(`Club invitation accepted: ${name}`, [
+      `${name} has accepted the club invitation and signed the promise (typed name: ${agreedName}).`,
+      `Email: ${email}`,
+      `WhatsApp: ${phone}`,
+      "",
+      `${left} of ${PLACES["69"]} places left. She is waiting for your approval in Club admin, and is now filling in her details.`,
+      "",
+      appLink("/club-admin"),
+    ]);
+    res.json({ ok: true, token });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "club invite failed");
+    res.status(500).json({ error: "Something went wrong, please try again" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // The member side
 // ---------------------------------------------------------------------------
 
@@ -190,6 +260,12 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     const m = await memberByToken(String(req.params.token));
     if (!m) {
       res.status(404).json({ error: "That link does not look right. Please ask Vanessa for your link." });
+      return;
+    }
+    if (m.status === "pending") {
+      // Accepted the invitation, waiting for Vanessa. She can fill in her details but gets no months, choices or content yet.
+      res.set("Cache-Control", "private, no-store");
+      res.json({ pending: true, extras: [], member: publicMember(m), cycle: { month: "", nextBilling: "", cutOff: "", open: false, status: "building", choices: {} }, months: [] });
       return;
     }
     if (m.status !== "active") {
@@ -241,7 +317,7 @@ router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: 
   try {
     await ensureTables();
     const m = await memberByToken(String(req.params.token));
-    if (!m || m.status !== "active") {
+    if (!m || (m.status !== "active" && m.status !== "pending")) {
       res.status(403).json({ error: "This link is not active" });
       return;
     }
@@ -280,7 +356,7 @@ router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: 
       await db.execute(sql`UPDATE club_members SET details = ${JSON.stringify(details)}::jsonb, details_done = true,
         logo_url = ${logoKey ? `/api/free-samples/media/${logoKey}` : m.logo_url}, clinic_photo_url = ${clinicKey ? `/api/free-samples/media/${clinicKey}` : m.clinic_photo_url},
         photo_urls = ${JSON.stringify(photoUrls)}::jsonb WHERE id = ${m.id}`);
-      void emailVanessa(`Club: ${m.name} has filled in her details`, [`${m.name} (${m.plan === "69" ? "£69" : "£275"} club) has completed the one-off details form.`, "", appLink("/club-admin")]);
+      void emailVanessa(`Club: ${m.name} has filled in her details`, [`${m.name} (${m.plan === "69" ? "£69" : "£275"} club) has completed the one-off details form.${m.status === "pending" ? " She accepted your invitation and is waiting for you to approve her." : ""}`, "", appLink("/club-admin")]);
     } else {
       // Already done: only extra photos, a new logo or a clinic photo can be added.
       await db.execute(sql`UPDATE club_members SET photo_urls = ${JSON.stringify(photoUrls)}::jsonb,
@@ -512,10 +588,10 @@ router.post("/club/members", requireAuth, async (req: Request, res: Response) =>
       res.status(400).json({ error: "A name and a plan (69 or 222) are needed" });
       return;
     }
-    const limit = plan === "69" ? 5 : 7;
-    const n = Number((await db.execute(sql`SELECT count(*)::int AS n FROM club_members WHERE plan = ${plan} AND status = 'active'`)).rows[0]?.n ?? 0);
+    const limit = PLACES[plan];
+    const n = Number((await db.execute(sql`SELECT count(*)::int AS n FROM club_members WHERE plan = ${plan} AND status IN ('active', 'pending')`)).rows[0]?.n ?? 0);
     if (n >= limit && !(req.body as any).overrideLimit) {
-      res.status(409).json({ error: `The ${plan === "69" ? "£69" : "£275"} club is full (${limit} places). Tick "allow a sixth place" if you want to go over.`, full: true });
+      res.status(409).json({ error: `The ${plan === "69" ? "£69" : "£275"} club is full (${limit} places). Tick "allow an extra place" if you want to go over.`, full: true });
       return;
     }
     const id = uuid();
@@ -537,7 +613,7 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
       members: ms.map((m) => {
         const { date, month } = nextBilling(m.billing_day);
         return {
-          id: m.id, name: m.name, email: m.email, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, details: m.details,
+          id: m.id, name: m.name, email: m.email, phone: m.phone ?? "", agreedName: m.agreed_name ?? "", agreedAt: m.agreed_at ?? null, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, details: m.details,
           link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,

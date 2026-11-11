@@ -204,6 +204,14 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
   "desc": "Your monthly content lives here."
  },
  {
+  "id": "youreinvited",
+  "paths": [
+   "/youreinvited"
+  ],
+  "title": "You are invited",
+  "desc": "A place is waiting for you in my monthly content club for aesthetic injectors."
+ },
+ {
   "id": "yearpass",
   "paths": [
    "/yearpass/*"

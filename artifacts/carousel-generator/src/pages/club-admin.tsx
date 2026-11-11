@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { HOOKS, hookFits, type Hook } from "@/lib/hook-bank";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// Vanessa's side of the £69 club (5 places) and the £275 club (7 places): members, their private links, the monthly prep, and the approval queue.
+// Vanessa's side of the £69 club (10 places) and the £275 club (7 places): members, their private links, the monthly prep, and the approval queue.
 // Nothing reaches a member's portal until she presses Approve here.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -19,12 +19,12 @@ type Month = {
   reelCount: number; postCount: number; aiUrls: string[]; aiStatus: string; aiError?: string; reelsStatus: string; note: string;
 };
 type Member = {
-  id: string; name: string; email: string; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; link: string; nextBilling: string; daysToBilling: number;
+  id: string; name: string; email: string; phone?: string; agreedName?: string; agreedAt?: string | null; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; link: string; nextBilling: string; daysToBilling: number;
   cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; welcomePhotoUrl?: string; months: Month[];
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
-const LIMITS = { "69": 5, "222": 7 } as const;
+const LIMITS = { "69": 10, "222": 7 } as const;
 // Two of the places are the About me posts she chooses in the builder, so the rest are picked here.
 const PICK_CAP = { "69": 4, "222": 14 } as const;
 const TOOLS: { id: string; name: string }[] = [
@@ -386,24 +386,26 @@ export default function ClubAdmin() {
       {loading && <p>Loading...</p>}
       {(["69", "222"] as const).map((p) => {
         const list = members.filter((m) => m.plan === p);
-        const active = list.filter((m) => m.status === "active").length;
+        const active = list.filter((m) => m.status === "active" || m.status === "pending").length;
         return (
           <div key={p} className="space-y-3">
             <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£275 club"} <span className="text-pink-500">{active} of {LIMITS[p]} places</span></h2>
             {list.length === 0 && <p className="text-sm text-muted-foreground">No members yet.</p>}
             {list.map((m) => (
-              <div key={m.id} className={`border rounded-lg p-4 space-y-2 ${m.status !== "active" ? "opacity-60" : ""}`}>
+              <div key={m.id} className={`border rounded-lg p-4 space-y-2 ${m.status === "cancelled" ? "opacity-60" : ""} ${m.status === "pending" ? "border-pink-500 border-2" : ""}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <div className="font-semibold">{m.name} <span className="text-xs uppercase text-pink-500">{m.status}</span></div>
+                    <div className="font-semibold">{m.name} <span className="text-xs uppercase text-pink-500">{m.status === "pending" ? "waiting for your approval" : m.status}</span></div>
+                    {m.status === "pending" && <div className="text-xs">{m.phone ? `WhatsApp ${m.phone} · ` : ""}signed the promise as "{m.agreedName}"{m.agreedAt ? ` on ${new Date(m.agreedAt).toLocaleDateString("en-GB")}` : ""}</div>}
                     <div className="text-xs text-muted-foreground">{m.email || "no email"} · bills on day {m.billingDay} · next {m.nextBilling} ({m.daysToBilling} days) · {m.detailsDone ? `details done, ${m.photoCount} photos${m.hasClinicPhoto ? ", clinic photo" : ""}` : "details not filled in yet"}</div>
                   </div>
                   <div className="flex gap-2 text-sm flex-wrap">
                     <button className="px-3 py-1 rounded border" onClick={() => { navigator.clipboard?.writeText(m.link); toast.success("Link copied"); }}>Copy link</button>
                     <button className="px-3 py-1 rounded border" onClick={() => { const d = prompt("New billing day (1 to 28)", String(m.billingDay)); if (d) patch(m.id, { billingDay: Number(d) }); }}>Billing day</button>
                     {m.detailsDone && <button className="px-3 py-1 rounded border" onClick={() => patch(m.id, { reopenDetails: true })}>Reopen their details</button>}
-                    {m.status === "active"
-                      ? <button className="px-3 py-1 rounded border text-red-600" onClick={() => confirm(`Cancel ${m.name}? Their portal closes straight away.`) && patch(m.id, { status: "cancelled" })}>Cancel</button>
+                    {m.status === "pending" && <button className="px-3 py-1 rounded bg-pink-500 text-white" onClick={() => { patch(m.id, { status: "active", billingDay: Math.min(28, new Date().getDate()) }); toast.success(`${m.name} approved. Her billing day is today's date, change it if you like.`); }}>Approve</button>}
+                    {m.status === "pending" || m.status === "active"
+                      ? <button className="px-3 py-1 rounded border text-red-600" onClick={() => confirm(`${m.status === "pending" ? "Decline" : "Cancel"} ${m.name}? Their link closes straight away.`) && patch(m.id, { status: "cancelled" })}>{m.status === "pending" ? "Decline" : "Cancel"}</button>
                       : <button className="px-3 py-1 rounded border" onClick={() => patch(m.id, { status: "active" })}>Reactivate</button>}
                   </div>
                 </div>

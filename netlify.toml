@@ -204,3 +204,7 @@
 [[edge_functions]]
   path = "/no1feed"
   function = "link-og"
+
+[[edge_functions]]
+  path = "/youreinvited"
+  function = "link-og"

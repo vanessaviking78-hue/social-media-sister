@@ -25,7 +25,7 @@ export default function ClubLinks() {
       {loading && <p>Loading...</p>}
       {!loading && members.length === 0 && <p className="text-sm">No members yet. Add one in <Link href="/club-admin" className="underline">Club admin</Link> and their link appears here.</p>}
       {(["69", "222"] as const).map((p) => {
-        const list = members.filter((m) => m.plan === p && m.status === "active");
+        const list = members.filter((m) => m.plan === p && (m.status === "active" || m.status === "pending"));
         if (!list.length) return null;
         return (
           <div key={p} className="space-y-2">

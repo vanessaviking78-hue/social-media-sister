@@ -70,6 +70,7 @@ type Reel = { n: number; kind: string; treatment?: string; hook: string; onScree
 type Story = { n: number; text: string; poll: { question: string; a: string; b: string } };
 type MonthContent = { stories?: Story[]; posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
+  pending?: boolean;
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
@@ -430,11 +431,20 @@ export default function ClubPortal({ token }: { token: string }) {
         {data && !data.member.detailsDone && (
           <>
             <h1>Welcome, <span>{data.member.name.split(" ")[0]}</span></h1>
-            <p className="cp-sub">Fill in your details once and I will do the rest, every single month.</p>
-            <Details token={token} onDone={() => { setDetailsSent(true); setTab("choose"); window.scrollTo({ top: 0 }); load(); }} existing={data.member.details} />
+            <p className="cp-sub">{data.pending ? "Your place is being held for you. Fill in your details once, as chatty as you like, and I will take it from here." : "Fill in your details once and I will do the rest, every single month."}</p>
+            <Details token={token} onDone={() => { setDetailsSent(true); setTab("choose"); window.scrollTo({ top: 0 }); if (data.pending) fireConfetti(); load(); }} existing={data.member.details} />
           </>
         )}
-        {data && data.member.detailsDone && (
+        {data && data.pending && data.member.detailsDone && (
+          <>
+            <h1>Thank you, <span>{data.member.name.split(" ")[0]}</span></h1>
+            <div className="cp-box" style={{ borderColor: PINK, background: "#fff5fa" }}>
+              <b>Your place is being held and your details are with me.</b>
+              <p className="cp-sub" style={{ marginTop: 8 }}>I will message you on WhatsApp very soon to say hello and get you started. Until then, you can pop back to this page any time with the same link. Keep it somewhere safe.</p>
+            </div>
+          </>
+        )}
+        {data && !data.pending && data.member.detailsDone && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", margin: "6px 0 4px" }}>
               {data.member.welcomePhotoUrl && <img src={data.member.welcomePhotoUrl} alt="" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", border: `4px solid ${PINK}` }} />}

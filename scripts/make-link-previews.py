@@ -36,6 +36,7 @@ L = [
  ("secretshop", ["/secretshop"], ["THE SECRET"], "SHOP", "JUST FOR YOU", "The secret shop", "Something extra, just for you."),
  ("10freeposts", ["/10freeposts"], ["10 FREE"], "POSTS", "MADE FOR YOUR CLINIC", "10 free posts for your clinic", "Ten free posts, stories and reel hooks made for your clinic."),
  ("club", ["/club", "/club/*"], ["YOUR CLUB"], "PORTAL", "YOUR MONTHLY CONTENT LIVES HERE", "Your club portal", "Your monthly content lives here."),
+ ("youreinvited", ["/youreinvited"], ["YOU ARE"], "INVITED", "10 PLACES ONLY AND ONE IS FOR YOU", "You are invited", "A place is waiting for you in my monthly content club for aesthetic injectors."),
  ("yearpass", ["/yearpass/*"], ["YOUR YEAR"], "PASS", "A WHOLE YEAR OF CONTENT", "Your Year Pass", "Your whole year of clinic content lives here."),
  ("bundle", ["/bundle/*"], ["YOUR CONTENT"], "BUNDLE", "TAP TO SEE WHAT I HAVE MADE", "Your content bundle", "Tap to see what I have made for your clinic."),
  ("founder", ["/founder-signup", "/founder-welcome"], ["FOUNDER"], "SIGN UP", "JOIN THE FIRST CLINICS IN", "Founder sign up", "Join the first clinics in."),
