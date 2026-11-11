@@ -6,7 +6,7 @@ import { getUsedHooks, syncUsedHooks, markHooksUsed } from "@/lib/hook-used";
 
 // The Month tool's whole hook bank for a single clinic page. She taps a section first (Nostalgia, Treatment and so on),
 // then taps the hook she wants, and it drops into the front slide of that post.
-const SECTION_ORDER = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
+const SECTION_ORDER = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Seasonal", "Original"];
 const SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
 const sectionOf = (h: Hook) => h.theme || "Original";
 

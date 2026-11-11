@@ -87,7 +87,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
   const visibleDays = dayRows.filter(d => dayFilter === "All" || dayFilter === d.day || dayRows.length === 1);
   // In the pop up the list is split by theme, each with its own heading. Elsewhere it is split by day.
   type Section = { key: string; label: string; test: (h: Hook) => boolean; cap: number };
-  const themeOrder = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal"];
+  const themeOrder = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Injectors", "Seasonal"];
   const sections: Section[] = inline
     ? [...themeOrder, "Original"].map(t => ({
         key: t,

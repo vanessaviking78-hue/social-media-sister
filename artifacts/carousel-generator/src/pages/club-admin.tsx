@@ -31,7 +31,7 @@ const TOOLS: { id: string; name: string }[] = [
   { id: "empower", name: "Empower" }, { id: "november-posts", name: "November posts" }, { id: "xmas-posts", name: "Christmas and New Year posts" },
   { id: "unique", name: "Unique" }, { id: "halloween-posts", name: "Halloween posts" }, { id: "lux", name: "LUX" },
 ];
-const SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
+const SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Injectors", "Seasonal", "Original"];
 type PickT = { kind: string; code?: string; tool?: string; useTemplate?: boolean; label?: string };
 const STATUS: Record<string, string> = { choosing: "Member choosing", to_build: "Ready for you to build", pending_approval: "Waiting for your approval", approved: "Approved and live" };
 const monthName = (ym: string) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }); };

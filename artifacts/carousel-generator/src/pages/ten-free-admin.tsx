@@ -94,7 +94,7 @@ type Item = {
 };
 
 // The Month tool's hook sections, in the same order as the clinic pages.
-const HOOK_SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal", "Original"];
+const HOOK_SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Injectors", "Seasonal", "Original"];
 const HOOK_SECTION_LABEL: Record<string, string> = { Original: "My first hooks" };
 
 const voiceFor = (personality?: string) => `VOICE FOR THIS POST: ${personality?.trim() ? `her own words for her personality are "${personality.trim()}". Write exactly like that person: if it says northern grit, plain talking, dry and warm with a bit of bite; super professional, polished and assured with the odd dry line; professional with personality, expert first with a wink; cute and girly, giggly and sweet with a sparkle; sassy and feral, loud, savage and funny.` : "professional with a cheeky streak. She knows her stuff and says it with a raised eyebrow."} Write like a clever friend who happens to be the expert. Every slide should have one line a reader would screenshot or send to a friend, an unexpected comparison, a wry aside or a blunt truth. Short sentences, everyday words, no stock phrases and nothing that could sit on any clinic's page. No emojis, no dashes, no tea or biscuit jokes, no 'not X but Y' phrasing, no medical lecture.`;

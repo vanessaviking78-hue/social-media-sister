@@ -72,7 +72,7 @@ export function ClientFirstHooks() {
     return () => { live = false; };
   }, [client]);
   // every section of the hook bank: Treatment, Emotional, Personal, Nostalgia, Engagement, Audience, Seasonal and My first hooks
-  const ORDER = ["Original", "Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Seasonal"];
+  const ORDER = ["Original", "Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Seasonal"];
   const LABEL: Record<string, string> = { Original: "My first hooks" };
   const [section, setSection] = useState("Original");
   const hooks = HOOKS.filter((h) => (h.theme || "Original") === section);
