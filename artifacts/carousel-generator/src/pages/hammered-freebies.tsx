@@ -131,6 +131,21 @@ try {
 export default function HammeredFreebies() {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "anton", passion: "", funny: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
+  // Tell the Hammered links dashboard this link was opened, and (once) that they started filling it in.
+  const startedRef = useRef(false);
+  const visitorId = () => {
+    try {
+      let v = localStorage.getItem("hammered-visitor");
+      if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem("hammered-visitor", v); }
+      return v;
+    } catch { return ""; }
+  };
+  const track = (kind: "open" | "start") => {
+    let ref = "";
+    try { ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("hammered-ref") || ""; } catch { /* ignore */ }
+    fetch("/api/hammered/hit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, ref, visitor: visitorId() }) }).catch(() => undefined);
+  };
+  useEffect(() => { track("open"); }, []);
   const [cols, setCols] = useState<Colours>({ main: "#ffd60a", accent: "#111111" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
@@ -238,7 +253,7 @@ export default function HammeredFreebies() {
   );
 
   return (
-    <div className="tf">
+    <div className="tf" onInput={() => { if (!startedRef.current) { startedRef.current = true; track("start"); } }}>
       <style>{CSS}</style>
       <div className="tf-wrap">
         <div className="tf-top">
