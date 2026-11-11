@@ -4,6 +4,7 @@
 export const HW = 1080;
 export const HH = 1350;
 export const HAMMERED_YELLOW = "#ffd60a";
+export const HAMMERED_HIVIS = "#eeff00";
 
 export type HammeredStyle = "gradient" | "box" | "block";
 export type SlideKind = "hook" | "body" | "cta";
@@ -11,7 +12,7 @@ export type SlideKind = "hook" | "body" | "cta";
 export type SlideLook = {
   style: HammeredStyle;
   colour: string; // block or box fill, or the gradient colour
-  textColour: "auto" | "white" | "black";
+  textColour: "hivis" | "auto" | "white" | "black";
   headFamily: string; // canvas font family for hooks and closing lines
   bodyFamily: string;
   upper: boolean;
@@ -99,7 +100,9 @@ export function drawHammeredSlide(canvas: HTMLCanvasElement, kind: SlideKind, te
   // text colour: on a block or box it follows the fill, on a gradient it follows the gradient
   const fillForText = look.style === "gradient" ? look.colour : look.colour;
   const autoText = look.style === "gradient" ? (lum(fillForText) > 0.5 ? "#111111" : "#ffffff") : lum(fillForText) > 0.4 ? "#111111" : "#ffffff";
-  const textCol = look.textColour === "white" ? "#ffffff" : look.textColour === "black" ? "#111111" : autoText;
+  // high vis yellow writing, but on a pale or yellow fill it would vanish, so it drops to black there
+  const hiVis = lum(fillForText) > 0.4 ? "#111111" : HAMMERED_HIVIS;
+  const textCol = look.textColour === "hivis" ? hiVis : look.textColour === "white" ? "#ffffff" : look.textColour === "black" ? "#111111" : autoText;
 
   ctx.textBaseline = "top";
   ctx.textAlign = "left";

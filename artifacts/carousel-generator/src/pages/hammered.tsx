@@ -76,7 +76,7 @@ export default function HammeredPage() {
   const [handle, setHandle] = useState("");
   const [logo, setLogo] = useState<ImageBitmap | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [look, setLook] = useState<Omit<SlideLook, "bodyFamily">>({ style: "gradient", colour: "#000000", textColour: "auto", headFamily: "SuiteAnton", upper: false, textScale: 1, boxY: 1 });
+  const [look, setLook] = useState<Omit<SlideLook, "bodyFamily">>({ style: "gradient", colour: "#000000", textColour: "hivis", headFamily: "SuiteAnton", upper: false, textScale: 1, boxY: 1 });
   const [fontId, setFontId] = useState("anton");
   const [posts, setPosts] = useState<Post[]>([]);
   const [group, setGroup] = useState(HAMMERED_HOOK_GROUPS[0].group);
@@ -282,7 +282,7 @@ function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily">
       </div>
       <label className="l">Writing colour</label>
       <div className="hm-row">
-        {(["auto", "white", "black"] as const).map((t) => <button key={t} className={`b ${look.textColour === t ? "on" : ""}`} onClick={() => onChange({ textColour: t })}>{t}</button>)}
+        {(["hivis", "auto", "white", "black"] as const).map((t) => <button key={t} className={`b ${look.textColour === t ? "on" : ""}`} onClick={() => onChange({ textColour: t })}>{t === "hivis" ? "hi-vis yellow" : t}</button>)}
         <button className={`b ${look.upper ? "on" : ""}`} onClick={() => onChange({ upper: !look.upper })}>CAPITALS</button>
       </div>
       <label className="l">Text size {Math.round(look.textScale * 100)}%</label>
