@@ -16,7 +16,7 @@ export const HAMMERED_HOOKS: HammeredHook[] = [
   // The first three posts: who I am and what I do
   { code: "HA2", group: "About me", text: "Yes, I have actually worked on a building site." },
   { code: "HA1", group: "About me", text: "Hello, I’m Vanessa and I make tradespeople look as good as their work." },
-  { code: "HA3", group: "About me", text: "Your work is brilliant. Your Facebook page is a ghost town." },
+  { code: "HA3", group: "About me", text: "Your work is brilliant. Your Facebook page is still just foundations." },
 
   // Site banter people will send to the work group
   { code: "HB1", group: "Site banter", text: "Every site has a bloke who says “while we’re here” and costs everyone another Saturday." },

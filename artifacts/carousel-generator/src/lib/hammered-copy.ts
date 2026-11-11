@@ -14,8 +14,8 @@ export const HAMMERED_COPY: Record<string, HammeredCopy> = {
     cta: "Your hard work deserves better than a blurry photo from a van. Comment HAMMERED and let me sort it.",
   },
   HA3: {
-    body: "People hire the tradesperson they trust, so I show your work, your face and a bit of your humour. Three posts at a time, written and designed for you. All you do is turn up and do what you do best.",
-    cta: "Want a free 5 day trial? Comment HAMMERED and I will get you started.",
+    body: "People hire the tradesperson they trust, so I build your page on your work, your face and a bit of your humour. Three posts at a time, written and designed for you, and every one goes up like a good wall. All you do is turn up and do what you do best.",
+    cta: "Want a free 5 day trial? Comment HAMMERED and I will lay the first brick.",
   },
   HB1: {
     body: "It always starts with one extra socket. Three weeks later the garden is a building site and nobody remembers the original quote. Put the extras in writing and you save the weekend and the friendship.",
