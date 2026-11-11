@@ -1,6 +1,6 @@
 // The new slide 1 cover templates, drawn on canvas like the About me ones so the clinic's photos, colours and words drop straight in.
 // Every piece of text or shape is drawn through piece(), so it can be dragged anywhere and sized on its own.
-// Two fonts: a heading font (the client's own) and a subheading font (Roboto unless changed).
+// Two fonts: a heading font (the client's own) and a subheading font (Playfair Display unless changed).
 import { ABOUT_FONTS, aboutFontById, loadAboutFonts, type AboutFont, type AboutView } from "./about-designs";
 import { paintFor, isHexColour, metalOfValue } from "./metal-colours";
 
@@ -51,6 +51,8 @@ export type CoverColours = { main: string; accent: string; bg?: string; head?: s
 
 // ---------- fonts ----------
 const EXTRA: AboutFont[] = [
+  { id: "playfair", label: "Playfair Display", family: "Playfair Display", weight: 400, group: "Google fonts" },
+  { id: "playfair-i", label: "Playfair Display italic", family: "Playfair Display", weight: 400, italic: true, group: "Google fonts" },
   { id: "roboto", label: "Roboto", family: "Roboto", weight: 400, group: "Google fonts" },
   { id: "roboto-i", label: "Roboto italic", family: "Roboto", weight: 400, italic: true, group: "Google fonts" },
   { id: "special", label: "Special Elite (typewriter)", family: "Special Elite", weight: 400, group: "Google fonts" },
@@ -65,8 +67,8 @@ async function loadFonts(fonts: AboutFont[]) {
   if (!cssAdded && typeof document !== "undefined") {
     cssAdded = true;
     const l = document.createElement("link");
-    l.id = "cover-fonts-v1"; l.rel = "stylesheet";
-    l.href = "https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Special+Elite&family=Inter:wght@400;600;700&family=Instrument+Serif:ital@0;1&display=swap";
+    l.id = "cover-fonts-v2"; l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Special+Elite&family=Inter:wght@400;600;700&family=Instrument+Serif:ital@0;1&display=swap";
     document.head.appendChild(l);
   }
   await loadAboutFonts(fonts);
@@ -569,7 +571,7 @@ export const clientHeadFont = (fontId?: string): string => (fontId && COVER_FONT
 
 export async function renderCoverPost(o: CoverOptions): Promise<HTMLCanvasElement> {
   const hf = coverFont(o.fonts?.head, "gilda");
-  const bf = coverFont(o.fonts?.body, "roboto");
+  const bf = coverFont(o.fonts?.body, "playfair");
   const sf = bf;
   await loadFonts([hf, bf]);
   const { c, ctx } = newCanvas();

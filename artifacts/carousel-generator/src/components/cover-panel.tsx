@@ -55,7 +55,7 @@ export function CoverPanel({ value, onChange, base, makeCutout, moveSel, setMove
     const next: CoverOptions = {
       layout, photos, colours: { main: base.brand[0], accent: base.brand[1] }, lines, sub: value?.sub ?? "", body: value?.body ?? "",
       subs: li.needs.subs ? (value?.subs?.length ? value.subs : base.facts.slice(0, Math.max(...li.needs.subs))) : value?.subs ?? [], points: value?.points, name: base.name,
-      fonts: { head: clientHeadFont(base.fontId), body: "roboto" }, move: {}, size: {}, views: [], deco: true, cutout: null,
+      fonts: { head: clientHeadFont(base.fontId), body: "playfair" }, move: {}, size: {}, views: [], deco: true, cutout: null,
     };
     if (li.cutout && photos[0]) next.cutout = await makeCutout(photos[0]);
     onChange(next);
@@ -123,7 +123,7 @@ export function CoverPanel({ value, onChange, base, makeCutout, moveSel, setMove
   const sel = moveSel;
   const FontSelect = ({ k, label }: { k: "head" | "body"; label: string }) => (
     <label className="block space-y-1"><span>{label}</span>
-      <select disabled={!value} className="w-full rounded border p-1.5 text-foreground bg-background" value={value?.fonts?.[k] ?? (k === "body" ? "roboto" : "gilda")} onChange={(e) => set({ fonts: { ...(value?.fonts ?? {}), [k]: e.target.value } })}>
+      <select disabled={!value} className="w-full rounded border p-1.5 text-foreground bg-background" value={value?.fonts?.[k] ?? (k === "body" ? "playfair" : "gilda")} onChange={(e) => set({ fonts: { ...(value?.fonts ?? {}), [k]: e.target.value } })}>
         {["Google fonts", "Your fonts"].map((g) => <optgroup key={g} label={g}>{COVER_FONTS.filter((f) => f.group === g).map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</optgroup>)}
       </select></label>
   );
