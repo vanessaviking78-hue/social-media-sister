@@ -33,10 +33,15 @@ const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },
 ];
 
+// Hammered (the construction business) has one tool only: the Hammered posts page. None of the clinic tabs belong there.
+const HAMMERED_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "hammered", label: "Hammered posts", Comp: lazyTab(() => import("./hammered")) },
+];
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }) {
-  const [tab, setTab] = useState("new");
+  const [tab, setTab] = useState(/hammered/i.test(label) ? "hammered" : "new");
   const [ids, setIds] = useState<string[] | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -72,7 +77,8 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
   }, [pattern, label]);
   const forced: ForcedClient = { pattern, treatmentIds: ids };
   const isSms = /social\s*media\s*sis|very\s*vanessa|vanessa|^sms$/i.test(label);
-  const tabs = isSms ? SMS_TABS : TABS;
+  const isHammered = /hammered/i.test(label);
+  const tabs = isHammered ? HAMMERED_TABS : isSms ? SMS_TABS : TABS;
   const current = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div className="min-h-screen bg-[#161616] text-white">
@@ -84,7 +90,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
           ))}
         </div>
       </div>
-      {!isSms && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
+      {!isSms && !isHammered && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
       <ForcedClientContext.Provider value={forced}>
         <div className="[&_a[href='/hub']]:hidden">
           <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>
