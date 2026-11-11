@@ -9,6 +9,12 @@ const YELLOW = "#ffd60a";
 
 const TILES: { href: string; name: string; description: string; live: boolean }[] = [
   {
+    href: "/hammeredposts",
+    name: "Make posts",
+    description: "3 slide carousels on a full bleed photo: the hook, the body and a cheeky closing line. 30 hooks ready to go.",
+    live: true,
+  },
+  {
     href: "/hammeredfreeies",
     name: "Free sample",
     description: "The page a tradesperson fills in for their free 5 day trial: logo, colours, fonts, what they do.",
