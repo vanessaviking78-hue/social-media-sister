@@ -35,8 +35,28 @@ export default function NewCovers() {
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [moveSel, setMoveSel] = useState("");
+  const [showApproved, setShowApproved] = useState(false);
+  const [approved, setApproved] = useState<{ id: number; url: string; thumb: string }[] | null>(null);
+  const [usedIds, setUsedIds] = useState<number[]>([]);
   const cvRef = useRef<HTMLCanvasElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const loadApproved = async () => {
+    setShowApproved((v) => !v);
+    if (approved) return;
+    try {
+      const r = await fetch(`${BASE}/api/approval-bundles/approved-images?client=${encodeURIComponent(preset?.name || name || "")}`);
+      const d = (await r.json()) as { images?: { id: number; url: string; thumb: string }[] };
+      setApproved(d.images ?? []);
+    } catch { setApproved([]); toast.error("I could not load the approved images."); }
+  };
+  const useApproved = async (img: { id: number; url: string }) => {
+    try {
+      const b = await (await fetch(img.url, { mode: "cors" })).blob();
+      const bmp = await createImageBitmap(b);
+      setOwn((o) => [...o, { url: URL.createObjectURL(b), bmp }]);
+      setUsedIds((u) => [...u, img.id]);
+    } catch { toast.error("I could not open that image."); }
+  };
   const valRef = useRef<CoverOptions | undefined>(undefined);
   valRef.current = value;
 
@@ -180,8 +200,21 @@ export default function NewCovers() {
       <div className="space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
           <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-1" />Add photos</Button>
+          <Button size="sm" variant="outline" onClick={() => void loadApproved()}>{showApproved ? "Hide approved images" : "Approved images"}</Button>
           {!value && <Button size="sm" variant="outline" onClick={() => setSeed((x) => x + 1)}>Shuffle the words</Button>}
         </div>
+        {showApproved && (
+          <div className="rounded border border-white/20 p-2 space-y-1">
+            <div className="text-white/60">{approved === null ? "Loading..." : approved.length ? "Tap an image to use it for the covers." : "No approved images for this client yet."}</div>
+            <div className="flex gap-1.5 flex-wrap">
+              {(approved ?? []).map((im) => (
+                <button key={im.id} type="button" onClick={() => void useApproved(im)} className={`rounded overflow-hidden border-2 ${usedIds.includes(im.id) ? "border-pink-500" : "border-transparent"}`}>
+                  <img src={im.thumb} alt="" className="w-16 h-20 object-cover max-w-none shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
         <div className="flex gap-1 flex-wrap">{own.map((p, i) => <img key={i} src={p.url} alt="" className="w-12 h-16 object-cover rounded max-w-none shrink-0" />)}</div>
         {!own.length && <p className="text-white/50">Add at least one photo of the clinician to start. The photos are shared out down the list, so the more you add the more variety you see.</p>}

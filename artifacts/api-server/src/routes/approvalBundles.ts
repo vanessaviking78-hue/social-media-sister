@@ -233,6 +233,30 @@ router.post("/approval-bundles/from-images", async (req: Request, res: Response)
   }
 });
 
+// Every image a client has approved, for the NEW covers tab. Matches on the client name, newest first.
+router.get("/approval-bundles/approved-images", async (req: Request, res: Response) => {
+  try {
+    const q = String(req.query.client ?? "").trim().toLowerCase();
+    const bundles = await db.select().from(approvalBundlesTable);
+    const mine = bundles.filter((b) => !q || b.clientName.toLowerCase().includes(q) || (b.clientName.trim() !== "" && q.includes(b.clientName.toLowerCase())));
+    if (!mine.length) { res.json({ images: [] }); return; }
+    const ids = mine.map((b) => b.id);
+    const responses = await db.select().from(approvalResponsesTable)
+      .where(and(inArray(approvalResponsesTable.bundleId, ids), eq(approvalResponsesTable.status, "approved")));
+    const libIds = [...new Set(responses.map((r) => r.libraryItemId))];
+    if (!libIds.length) { res.json({ images: [] }); return; }
+    const items = await db.select().from(contentLibraryTable).where(inArray(contentLibraryTable.id, libIds));
+    const images = items
+      .map((i) => ({ id: i.id, url: i.mediaUrl || i.mediaUrls?.[0] || i.thumbnailUrl || "", thumb: i.thumbnailUrl || i.mediaUrl || i.mediaUrls?.[0] || "", createdAt: i.createdAt }))
+      .filter((i) => i.url)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    res.json({ images });
+  } catch (err: unknown) {
+    req.log.error({ err }, "approved-images failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 router.get("/approval-bundles/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
