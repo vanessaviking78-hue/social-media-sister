@@ -56,6 +56,14 @@ export const SUITE_FONTS: SuiteFont[] = [
   { id: "saira-stencil-one", name: "Saira Stencil One", family: "SuiteSairaStencil" },
   { id: "permanent-marker", name: "Permanent Marker", family: "SuitePermanentMarker" },
   { id: "bowlby-one", name: "Bowlby One", family: "SuiteBowlbyOne" },
+  // Hammered fonts from Vanessa's own downloads (11 Nov 2026).
+  { id: "naleni", name: "Naleni", family: "SuiteNaleni" },
+  { id: "honey-biscuit", name: "Honey Biscuit", family: "SuiteHoneyBiscuit" },
+  { id: "andigo", name: "Andigo", family: "SuiteAndigo", note: "Capitals style, no pound sign" },
+  { id: "stoner-bold", name: "Stoner Bold", family: "SuiteStonerBold" },
+  { id: "bordie-unfocus", name: "Bordie Unfocus", family: "SuiteBordieUnfocus" },
+  { id: "bordie-unfocus-italic", name: "Bordie Unfocus Italic", family: "SuiteBordieUnfocusItalic", italic: true },
+  { id: "verstep", name: "Verstep", family: "SuiteVerstep" },
 ];
 
 export const fontById = (id: string) => SUITE_FONTS.find((f) => f.id === id) || SUITE_FONTS[0];
