@@ -165,6 +165,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     const b = req.body as Record<string, string>;
     // The premium form sends three photos of the clinician. The first one is the main photo that the Studio portraits are made from.
     const premium = b.kind === "premium";
+    // Hammered (the construction industry freebies at /hammeredfreeies) has its own list, its own questions and no AI Studio portraits.
+    const hammered = b.kind === "hammered";
     const extraPhotos = files.photos ?? [];
     const photo = files.photo?.[0] ?? extraPhotos[0];
 
@@ -194,8 +196,11 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
         return;
       }
     }
+    const HAMMERED_TRADES = ["Builder", "Plumber", "Electrician", "Roofer", "Joiner or carpenter", "Plasterer", "Landscaper", "Kitchen or bathroom fitter", "Decorator", "Heating engineer", "Groundworker", "Other trade"];
     const answers = {
-      bizType: ["Clinic", "Academy"].includes(str(b.bizType, 20)) ? str(b.bizType, 20) : "",
+      bizType: hammered ? (HAMMERED_TRADES.includes(str(b.bizType, 40)) ? str(b.bizType, 40) : "") : ["Clinic", "Academy"].includes(str(b.bizType, 20)) ? str(b.bizType, 20) : "",
+      years: str(b.years, 40),
+      funny: str(b.funny, 800),
       age: ["Under 30", "30 to 37", "38 to 44", "45 to 54", "55 or over"].includes(str(b.age, 20)) ? str(b.age, 20) : "",
       hobbies: str(b.hobbies, 400),
       mum: str(b.mum, 40),
@@ -206,8 +211,15 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       font: /^[a-z0-9-]{1,40}$/.test(str(b.font, 40)) ? str(b.font, 40) : "hatcher",
       passion: str(b.passion, 400),
     };
-    if (!answers.bizType || !answers.age || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets) {
+    const missingAnswers = hammered
+      ? !answers.bizType || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.funny
+      : !answers.bizType || !answers.age || !answers.hobbies || !answers.why || !answers.threeWords || !answers.passion || !answers.mum || !answers.pets;
+    if (missingAnswers) {
       res.status(400).json({ error: "Please answer every question about you, the posts are built from them" });
+      return;
+    }
+    if (hammered && extraPhotos.length < 1) {
+      res.status(400).json({ error: "Please add at least 1 photo, ideally you and a job you are proud of" });
       return;
     }
     if (premium && extraPhotos.length < 3) {
@@ -240,8 +252,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     // freebies@cybersuite.com is the shared address Vanessa hands out, so it never trips the one turn rule (she checks repeats herself).
     const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email) || /^freebies@(cybersuite|thecybersuite)\.com$/i.test(email);
     // Premium has its own list, so everyone who had a free turn before gets a fresh one and the old requests stay untouched.
-    const kind = premium ? "premium" : "free";
-    const base = premium ? `premium:${emailKey(email)}` : emailKey(email);
+    const kind = hammered ? "hammered" : premium ? "premium" : "free";
+    const base = hammered ? `hammered:${emailKey(email)}` : premium ? `premium:${emailKey(email)}` : emailKey(email);
     const MAX_TURNS = 3;
     // Each email and each clinic can have up to three turns. The first keeps the plain key, later ones get a suffix because the column is unique.
     const used = isTest ? 0 : Number((await db.execute(sql`SELECT count(*)::int AS n FROM tenfree_requests WHERE email_key = ${base} OR left(email_key, ${base.length + 1}) = ${base + "#"}`)).rows[0]?.n ?? 0);
@@ -254,8 +266,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
 
     const logoKey = logo ? await saveSampleFile(logo.buffer, logo.mimetype, "logo") : "";
     const photoUrls: string[] = [];
-    for (const f of premium ? extraPhotos : []) photoUrls.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
-    const photoKey = premium ? (photoUrls[0] ?? "").replace("/api/free-samples/media/", "") : photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
+    for (const f of premium || hammered ? extraPhotos : []) photoUrls.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
+    const photoKey = premium || hammered ? (photoUrls[0] ?? "").replace("/api/free-samples/media/", "") : photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
     const id = uuid();
     try {
       await db.execute(sql`INSERT INTO tenfree_requests
@@ -270,8 +282,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       }
       throw err;
     }
-    if (photoKey) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
-    void notifyTenFreeRequest({ clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
+    if (photoKey && !hammered) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
+    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free intake failed");

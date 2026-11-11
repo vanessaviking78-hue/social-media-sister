@@ -26,6 +26,14 @@
   function = "premium-og"
 
 [[edge_functions]]
+  path = "/hammeredfreeies"
+  function = "hammered-og"
+
+[[edge_functions]]
+  path = "/hammeredfreebies"
+  function = "hammered-og"
+
+[[edge_functions]]
   path = "/know-me"
   function = "link-og"
 

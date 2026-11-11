@@ -165,6 +165,7 @@ import ClientBank from "@/pages/client-bank";
 import DailyFive from "@/pages/daily-five";
 import InjectorReels from "@/pages/injector-reels";
 import TenFreePosts from "@/pages/ten-free-posts";
+import HammeredFreebies from "@/pages/hammered-freebies";
 import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
@@ -385,6 +386,8 @@ function AppContent() {
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
+  const [isHammeredFreebies] = useRoute("/hammeredfreeies");
+  const [isHammeredFreebiesAlt] = useRoute("/hammeredfreebies");
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
   const [isKirstyDove] = useRoute("/kirstydove");
@@ -548,6 +551,9 @@ function AppContent() {
   }
   if (isPremiumFreebies) {
     return <TenFreePosts premium />;
+  }
+  if (isHammeredFreebies || isHammeredFreebiesAlt) {
+    return <HammeredFreebies />;
   }
   if (isClubBare) {
     return (
