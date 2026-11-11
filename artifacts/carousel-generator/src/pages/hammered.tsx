@@ -37,6 +37,7 @@ type Post = {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap');
 .hm { background:#fff; color:${INK}; min-height:100vh; font-family:'Montserrat',sans-serif; }
+.hm h1::after { background:${HAMMERED_YELLOW} !important; }
 .hm * { box-sizing:border-box; }
 .hm h1, .hm h2 { font-weight:800; text-transform:uppercase; letter-spacing:-.01em; margin:0; }
 .hm-wrap { max-width:1280px; margin:0 auto; padding:28px 22px 80px; }
@@ -85,6 +86,11 @@ export default function HammeredPage() {
   const logoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { injectSuiteFontCss(); }, []);
+  // The signed in site flips every colour to build its white theme, which turns yellow lime and brown. Hammered is drawn in true colours, so switch the flip off here (same switch the hub uses).
+  useEffect(() => {
+    document.documentElement.classList.add("cs-hub");
+    return () => document.documentElement.classList.remove("cs-hub");
+  }, []);
 
   // Fonts must be ready before the canvas draws with them, so load the picked one and redraw when it lands.
   useEffect(() => {
