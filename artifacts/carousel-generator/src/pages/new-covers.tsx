@@ -4,7 +4,10 @@ import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
 import { CoverPanel } from "@/components/cover-panel";
-import { renderCoverPost, type CoverOptions } from "@/lib/cover-designs";
+import { renderCoverPost, COVER_LAYOUTS, coverInfo, splitIntoLines, clientHeadFont, type CoverOptions, type CoverLayout } from "@/lib/cover-designs";
+import { COVER_CONTRARIAN, COVER_SETS, COVER_SUBS_TREATMENT, COVER_BET, COVER_STOIC } from "@/lib/cover-banks";
+import { SPLIT_HOOKS } from "@/lib/split-hooks";
+import { fillTreatment, fillName, fillArea } from "@/lib/hook-bank";
 import { usePresets } from "@/lib/use-presets";
 import { useForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
@@ -86,6 +89,66 @@ export default function NewCovers() {
     } catch { return null; }
   };
 
+  // The gallery: all 23 covers drawn at once on the photos and words above, so she can scroll down the list and pick.
+  const [seed, setSeed] = useState(0);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [drawn, setDrawn] = useState(0);
+  const optsRef = useRef<Map<CoverLayout, CoverOptions>>(new Map());
+  const cutRef = useRef<Map<ImageBitmap, Promise<ImageBitmap | null>>>(new Map());
+  const factsKey = facts.join("|");
+
+  const starter = async (layout: CoverLayout): Promise<CoverOptions> => {
+    const li = coverInfo(layout);
+    const t = treatment.trim() || "lip filler";
+    const fill = (x: string) => fillName(fillArea(fillTreatment(x, t), area.trim() || "your area"), name);
+    const pick = <T,>(arr: T[], off = 0): T => arr[(seed + li.n + off) % arr.length];
+    const photos = Array.from({ length: Math.max(1, li.photos) }, (_, i) => own[(li.n - 1 + i) % Math.max(1, own.length)]?.bmp).filter(Boolean) as ImageBitmap[];
+    const n = li.needs.lines ?? 1;
+    const hook = pick(SPLIT_HOOKS);
+    const heading = n > 1 ? splitIntoLines(fill(`${hook[2]} ${hook[3]}`), n) : [fill(pick(COVER_CONTRARIAN))];
+    const o: CoverOptions = {
+      layout, photos, colours: { main: brand[0], accent: brand[1] }, lines: heading, sub: li.needs.sub ? fill(pick(COVER_SUBS_TREATMENT)) : "",
+      body: li.needs.body ? fill(pick(COVER_BET)) : "", subs: [], name, fonts: { head: clientHeadFont(fontId), body: "playfair" }, move: {}, size: {}, views: [], deco: true, cutout: null,
+    };
+    if (li.needs.subs) {
+      const max = Math.max(...li.needs.subs);
+      o.subs = facts.length ? facts.slice(0, max) : Array.from({ length: max }, (_, i) => fill(pick(COVER_SUBS_TREATMENT, i * 3)));
+    }
+    if (li.needs.points) { const set = pick(COVER_SETS); o.lines = [fill(set.h)]; o.points = set.p.map((x) => ({ t: fill(x[0]), b: fill(x[1]) })); }
+    if (li.needs.quote) { const q = pick(COVER_STOIC); o.lines = [q[0]]; o.body = q[1] ?? ""; }
+    if (li.cutout && photos[0]) {
+      if (!cutRef.current.has(photos[0])) cutRef.current.set(photos[0], makeCutout(photos[0]));
+      o.cutout = await cutRef.current.get(photos[0])!;
+    }
+    return o;
+  };
+
+  useEffect(() => {
+    if (value) return;
+    let live = true;
+    const timer = setTimeout(async () => {
+      setDrawn(0);
+      for (let i = 0; i < COVER_LAYOUTS.length; i++) {
+        if (!live) return;
+        const l = COVER_LAYOUTS[i];
+        try {
+          const o = await starter(l.id);
+          optsRef.current.set(l.id, o);
+          const cv = await renderCoverPost(o);
+          const small = document.createElement("canvas"); small.width = 540; small.height = 675;
+          small.getContext("2d")!.drawImage(cv, 0, 0, 540, 675);
+          if (!live) return;
+          setThumbs((t) => ({ ...t, [l.id]: small.toDataURL("image/jpeg", 0.7) }));
+        } catch { /* one bad cover should not stop the rest */ }
+        setDrawn(i + 1);
+      }
+    }, 500);
+    return () => { live = false; clearTimeout(timer); };
+  }, [value, own.length, treatment, area, name, fontId, brand[0], brand[1], factsKey, seed]);
+
+  const edit = (l: CoverLayout) => { const o = optsRef.current.get(l); if (o) { setMoveSel(""); setValue(o); window.scrollTo({ top: 0, behavior: "smooth" }); } };
+  const saveOne = async (l: CoverLayout) => { const o = optsRef.current.get(l); if (!o) return; const cv = await renderCoverPost(o); cv.toBlob((b) => { if (b) saveAs(b, `new-cover-${l}.png`); }, "image/png"); };
+
   // drag the selected piece on the preview
   const drag = useRef<{ x: number; y: number; w: number; h: number; base: [number, number]; key: string } | null>(null);
   const down = (e: React.PointerEvent<HTMLImageElement>) => {
@@ -106,36 +169,65 @@ export default function NewCovers() {
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4 text-sm">
       <h1 className="text-xl font-semibold">NEW covers</h1>
-      <p className="text-white/60">Pick one of the 23 new slide 1 covers, fill the words from a bank, then drag and size every piece. Brand colours, font and photo come through on their own.{!preset && " (I cannot see her saved look yet.)"}</p>
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
-            <label className="space-y-1"><span className="text-white/60">Treatment</span>
-              <input list="nc-treatments" value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. lip filler" className="w-full rounded bg-white/10 px-2 py-1" />
-              <datalist id="nc-treatments">{U_TREATMENTS.map((t) => <option key={t.id} value={t.name} />)}</datalist></label>
-            <label className="space-y-1"><span className="text-white/60">Area</span><input value={area} onChange={(e) => setArea(e.target.value)} className="w-full rounded bg-white/10 px-2 py-1" /></label>
-            <label className="space-y-1"><span className="text-white/60">Clinician</span><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded bg-white/10 px-2 py-1" /></label>
-          </div>
-          <div className="space-y-1">
-            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-1" />Add photos</Button>
-            <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
-            <div className="flex gap-1 flex-wrap">{own.map((p, i) => <img key={i} src={p.url} alt="" className="w-12 h-16 object-cover rounded" />)}</div>
-            {!own.length && <p className="text-white/50">Add at least one photo of the clinician to start.</p>}
-          </div>
-          <div className="text-black bg-white rounded p-2">
-            <CoverPanel value={value} onChange={(nx) => setValue(nx ?? undefined)} busy={busy} makeCutout={async (b) => { setBusy(true); const r = await makeCutout(b); setBusy(false); return r; }}
-              base={{ own, headline: "", name, treatment, area, brand, fontId, facts, offset: 0 }} moveSel={moveSel} setMoveSel={setMoveSel} />
-          </div>
-        </div>
-        <div className="space-y-2">
-          {preview ? (
-            <>
-              <img src={preview} alt="" onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = null; }} className={`w-full max-w-md rounded ${moveSel ? "cursor-grab touch-none" : ""}`} />
-              <Button size="sm" onClick={download}><Download className="w-4 h-4 mr-1" />Download</Button>
-            </>
-          ) : <div className="text-white/50 border border-dashed border-white/20 rounded p-10 text-center">Choose a cover on the left and it will show here.</div>}
-        </div>
+      <p className="text-white/60">Add the clinician's photos and the treatment, and all 23 new slide 1 covers draw below. Scroll down the list, then tap Edit on any one to change the words, drag and size every piece. Brand colours, font and photo come through on their own.{!preset && " (I cannot see her saved look yet.)"}</p>
+      <div className="grid grid-cols-3 gap-2 max-w-2xl">
+        <label className="space-y-1"><span className="text-white/60">Treatment</span>
+          <input list="nc-treatments" value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. lip filler" className="w-full rounded bg-white/10 px-2 py-1" />
+          <datalist id="nc-treatments">{U_TREATMENTS.map((t) => <option key={t.id} value={t.name} />)}</datalist></label>
+        <label className="space-y-1"><span className="text-white/60">Area</span><input value={area} onChange={(e) => setArea(e.target.value)} className="w-full rounded bg-white/10 px-2 py-1" /></label>
+        <label className="space-y-1"><span className="text-white/60">Clinician</span><input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded bg-white/10 px-2 py-1" /></label>
       </div>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}><ImagePlus className="w-4 h-4 mr-1" />Add photos</Button>
+          {!value && <Button size="sm" variant="outline" onClick={() => setSeed((x) => x + 1)}>Shuffle the words</Button>}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
+        <div className="flex gap-1 flex-wrap">{own.map((p, i) => <img key={i} src={p.url} alt="" className="w-12 h-16 object-cover rounded max-w-none shrink-0" />)}</div>
+        {!own.length && <p className="text-white/50">Add at least one photo of the clinician to start. The photos are shared out down the list, so the more you add the more variety you see.</p>}
+      </div>
+
+      {!value && (
+        <div className="space-y-3">
+          <p className="text-white/60">{drawn < COVER_LAYOUTS.length ? `Drawing the covers... ${drawn} of ${COVER_LAYOUTS.length}` : "All 23 are ready. Tap Edit on the one you like."}</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {COVER_LAYOUTS.map((l) => (
+              <div key={l.id} className="space-y-1.5">
+                {thumbs[l.id]
+                  ? <img src={thumbs[l.id]} alt="" onClick={() => edit(l.id)} className="w-full h-auto rounded border cursor-pointer" />
+                  : <div className="w-full aspect-[4/5] rounded border border-dashed flex items-center justify-center text-white/40">Drawing...</div>}
+                <div className="font-semibold">{l.n}. {l.label}{l.statik ? " (static)" : ""}</div>
+                <div className="flex gap-1.5">
+                  <Button size="sm" disabled={!thumbs[l.id]} onClick={() => edit(l.id)}>Edit</Button>
+                  <Button size="sm" variant="outline" disabled={!thumbs[l.id]} onClick={() => void saveOne(l.id)}><Download className="w-4 h-4 mr-1" />PNG</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {value && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <div className="text-black bg-white rounded p-2">
+              <CoverPanel value={value} onChange={(nx) => setValue(nx ?? undefined)} busy={busy} makeCutout={async (b) => { setBusy(true); const r = await makeCutout(b); setBusy(false); return r; }}
+                base={{ own, headline: "", name, treatment, area, brand, fontId, facts, offset: 0 }} moveSel={moveSel} setMoveSel={setMoveSel} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            {preview ? (
+              <>
+                <img src={preview} alt="" onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = null; }} className={`w-full max-w-md rounded ${moveSel ? "cursor-grab touch-none" : ""}`} />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={download}><Download className="w-4 h-4 mr-1" />Download</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setMoveSel(""); setValue(undefined); }}>Back to all 23</Button>
+                </div>
+              </>
+            ) : <div className="text-white/50 border border-dashed border-white/20 rounded p-10 text-center">Drawing...</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
