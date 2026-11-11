@@ -162,6 +162,8 @@ export function Builder({ id }: { id: string }) {
   const [attaching, setAttaching] = useState(false);
   // Premium: the three treatments, the about me answers and the two about me designs are chosen here before building.
   const [chosenT, setChosenT] = useState<string[]>([]);
+  const [oldTools, setOldTools] = useState(false);
+  const [chEl, setChEl] = useState<Record<number, string>>({});
   const [tAngles, setTAngles] = useState<Record<string, number>>({});
   const [textHex, setTextHex] = useState<string>("");
   const [uniFont, setUniFont] = useState<string>("hatcher");
@@ -245,6 +247,20 @@ export function Builder({ id }: { id: string }) {
     itemsRef.current = itemsRef.current.map((x) => (x.n === n ? { ...x, ...p } : x));
     setItems(itemsRef.current);
   };
+
+  // The colour buttons need the loaded logo, fonts and photos. If this page was opened on posts that are already built, load them now.
+  const ensureAssets = async () => {
+    if (assetsRef.current || !req) return assetsRef.current;
+    try {
+      const logoBlob = logoPick === "none" ? null : logoPick instanceof File ? logoPick : req.logoUrl ? await fetch(req.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
+      const photoBlob = req.photoUrl ? await fetch(req.photoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
+      assetsRef.current = await buildAssets({ main: req.mainHex, accent: req.accentHex, clinicName: req.clinicName, handle: req.handle, whatsapp: "", logoBlob, photoBlob, titleFont: uniFont, premium: isPrem });
+    } catch { toast.error("I could not load the fonts and photos for these posts. Press Rebuild."); }
+    return assetsRef.current;
+  };
+  useEffect(() => {
+    if (req && items.length && !assetsRef.current) void ensureAssets().then(() => setItems([...itemsRef.current]));
+  }, [req, items.length]);
 
   const build = async () => {
     if (!req) return;
@@ -661,25 +677,31 @@ export function Builder({ id }: { id: string }) {
   };
 
   // Premium: one text colour for every carousel (blank means each post picks the colour that reads best on its gradient).
-  const applyTextColour = (hex: string) => {
+  const applyTextColour = async (hex: string) => {
     setTextHex(hex);
-    const assets = assetsRef.current;
-    if (!assets) return;
-    for (const it of itemsRef.current) {
-      if (!it.uniArgs) continue;
-      const args = { ...it.uniArgs, textColour: hex || undefined };
-      const cvs = renderUniversalPost(args, assets);
-      patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
-    }
+    const assets = assetsRef.current ?? (await ensureAssets());
+    if (!assets) { toast.error("The photos are still loading, please press again in a moment."); return; }
+    let changed = 0;
+    try {
+      for (const it of itemsRef.current) {
+        if (!it.uniArgs) continue;
+        const args = { ...it.uniArgs, textColour: hex || undefined };
+        const cvs = renderUniversalPost(args, assets);
+        patchItem(it.n, { uniArgs: args, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
+        changed++;
+      }
+      toast[changed ? "success" : "message"](changed ? `Text colour changed on ${changed} post${changed === 1 ? "" : "s"}.` : "No posts to change.");
+    } catch { toast.error("That colour would not draw. Try another."); }
   };
 
   // Change all: one colour applied to every post at once (block, gradient, text, background, about me).
   type UA = NonNullable<Item["uniArgs"]>;
-  const applyAll = (key: "block" | "gradColour" | "textColour" | "bgColour", val: string) => {
-    if (key === "textColour") { applyTextColour(val); return; }
-    const assets = assetsRef.current;
-    if (!assets) return;
+  const applyAll = async (key: "block" | "gradColour" | "textColour" | "bgColour", val: string) => {
+    if (key === "textColour") { void applyTextColour(val); return; }
+    const assets = assetsRef.current ?? (await ensureAssets());
+    if (!assets) { toast.error("The photos are still loading, please press again in a moment."); return; }
     let changed = 0;
+    try {
     for (const it of itemsRef.current) {
       if (!it.uniArgs) continue;
       if (key === "block" && !it.uniArgs.block) continue;
@@ -691,6 +713,7 @@ export function Builder({ id }: { id: string }) {
       const cvs = renderUniversalPost(a2, assets);
       patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
     }
+    } catch { toast.error("That colour would not draw. Try another."); return; }
     toast[changed ? "success" : "message"](changed ? `Changed ${changed} post${changed === 1 ? "" : "s"}.` : key === "block" ? "None of the posts are colour block posts, so nothing changed. Use Look of the post on a post to make one." : "No posts to change.");
   };
   const applyAllAbout = async (k: "bg" | "head" | "text" | "box" | "all" | "reset", val = "") => {
@@ -779,24 +802,27 @@ export function Builder({ id }: { id: string }) {
         )}
       </div>
       </details>
-      {isPrem && (
+      {isPrem && items.length > 0 && (
+        <label className="flex items-center gap-2 text-xs cursor-pointer select-none"><input type="checkbox" checked={oldTools} onChange={(e) => setOldTools(e.target.checked)} />Show the treatment chooser, About me answers, hooks and the old long tools</label>
+      )}
+      {isPrem && (oldTools || !items.length) && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <h2 className="font-bold uppercase">1. The {nT} treatments <span className="text-pink-500">({chosenT.length} of {nT})</span></h2>
-          <p className="text-xs text-muted-foreground">They ticked: {ticked || "nothing"}. Change them if you like. Every Universal treatment is here, with its photos.</p>
+          <p className="text-xs text-muted-foreground">They ticked: {ticked || "nothing"}. Pick {nT}. Tap a different one and it swaps out the first, so you never need to untick anything.</p>
           {U_GROUPS.map((g) => (
             <div key={g.id}>
               <div className="text-xs font-semibold uppercase text-pink-500 mb-1">{g.label}</div>
               <div className="flex flex-wrap gap-2">
                 {U_TREATMENTS.filter((t) => t.group === g.id).map((t) => {
                   const on = chosenT.includes(t.name);
-                  return <button key={t.id} disabled={!on && chosenT.length >= nT} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm ${on ? "bg-pink-500 text-white border-pink-500" : ""} ${!on && chosenT.length >= nT ? "opacity-40" : ""}`}>{t.name}</button>;
+                  return <button key={t.id} onClick={() => setChosenT((c) => (on ? c.filter((x) => x !== t.name) : c.length >= nT ? [...c.slice(1), t.name] : [...c, t.name]))} className={`px-3 py-1 rounded border text-sm bg-white text-black ${on ? "!bg-pink-500 !text-white border-pink-500" : ""}`}>{t.name}</button>;
                 })}
               </div>
             </div>
           ))}
         </div>
       )}
-      {isPrem && about && (
+      {isPrem && about && (oldTools || !items.length) && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <h2 className="font-bold uppercase">2. About me ({nA} posts)</h2>
           {isPrem && (
@@ -827,7 +853,7 @@ export function Builder({ id }: { id: string }) {
           </div>
         </div>
       )}
-      {isPrem && (
+      {isPrem && (oldTools || !items.length) && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="font-bold uppercase">3. Pick the {nH} hooks <span className="text-pink-500">({pickedHooks.length} of {nH})</span></h2>
@@ -863,19 +889,13 @@ export function Builder({ id }: { id: string }) {
       {isPrem && items.length > 0 && (() => {
         const base: [string, string][] = [["Their main", req.mainHex], ["Their accent", req.accentHex], ["White", "#ffffff"], ["Black", "#111111"]];
         const metals: [string, string, string][] = [["Gold", "metal:gold", "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)"], ["Silver", "metal:silver", "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)"]];
-        const line = "flex gap-2 items-center flex-wrap";
-        const dot = (bg: string) => <span className="keep-colour inline-block w-4 h-4 rounded-full border" style={{ background: bg }} />;
         const grp = (title: string, key: "block" | "gradColour" | "textColour" | "bgColour", withMetal: boolean, autoLabel: string) => (
-          <div className={line}>
-            <span className="inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide shrink-0">{title}</span>
-            <input type="color" defaultValue="#d4a93c" onChange={(e) => applyAll(key, e.target.value)} className="h-9 w-14 cursor-pointer rounded border" />
-            {base.map(([label, hex]) => (
-              <button key={label} onClick={() => applyAll(key, hex)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(hex)}{label}</button>
-            ))}
-            {withMetal && metals.map(([label, val, css]) => (
-              <button key={label} onClick={() => applyAll(key, val)} className="px-2 py-1 rounded border text-xs flex items-center gap-1">{dot(css)}Metallic {label.toLowerCase()}</button>
-            ))}
-            {key !== "block" && <button onClick={() => applyAll(key, "")} className="px-2 py-1 rounded border text-xs">{autoLabel}</button>}
+          <div className="flex gap-1.5 items-center flex-wrap text-[10px] leading-none">
+            <span className="w-44 shrink-0 font-bold uppercase text-foreground">{title}</span>
+            <input type="color" title="Pick any colour" defaultValue="#d4a93c" onChange={(e) => void applyAll(key, e.target.value)} className="h-4 w-5 p-0 cursor-pointer rounded border" />
+            {base.map(([label, hex]) => <button key={label} type="button" title={label} onClick={() => void applyAll(key, hex)} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: hex }} />)}
+            {withMetal && metals.map(([label, val, css]) => <button key={label} type="button" title={`Metallic ${label.toLowerCase()}`} onClick={() => void applyAll(key, val)} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
+            {key !== "block" && <button type="button" onClick={() => void applyAll(key, "")} className="px-1 py-0.5 rounded border">{autoLabel}</button>}
           </div>
         );
         const aboutGrp = (title: string, k: "bg" | "head" | "text" | "box" | "all") => (
@@ -980,8 +1000,47 @@ export function Builder({ id }: { id: string }) {
                 patchItem(it.n, { uniArgs: a2, uni: cvs, previews: cvs.map((cv) => cv.toDataURL("image/jpeg", 0.6)) });
               };
               const row = "flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground";
+              const ua = it.uniArgs as unknown as Record<string, any>;
+              const setU = (patch: Record<string, unknown>, clear: string[] = []) => upd(patch as Partial<NonNullable<Item["uniArgs"]>>, clear);
+              const els: [string, string][] = [[it.uniArgs.block ? "block" : "gradColour", it.uniArgs.block ? "Colour block" : "Gradient"], ["textColour", "Text"], ["bgColour", "Background"]];
+              const keyEl = els.some(([k]) => k === chEl[it.n]) ? chEl[it.n] : els[0][0];
+              const curV = String(ua[keyEl] ?? "");
+              const goldCss = "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)";
+              const silverCss = "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)";
+              const dots: [string, string, string][] = [["Main", req.mainHex, req.mainHex], ["Accent", req.accentHex, req.accentHex], ["White", "#ffffff", "#ffffff"], ["Black", "#111111", "#111111"], ...(keyEl === "textColour" || keyEl === "bgColour" ? [] : ([["Gold", "metal:gold", goldCss], ["Silver", "metal:silver", silverCss]] as [string, string, string][]))];
+              const pill = (on: boolean) => `px-1.5 py-1 rounded border ${on ? "bg-pink-500 text-white border-pink-500" : "bg-white text-black"}`;
+              const sl = (label: string, key: string, min: number, max: number, step: number, dflt: number) => (
+                <label key={key} className="flex items-center gap-1"><span>{label}</span><input type="range" className="w-20 h-2" min={min} max={max} step={step} value={Number(ua[key] ?? dflt)} onChange={(e) => setU({ [key]: Number(e.target.value) })} /></label>
+              );
+              const compactBar = (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded border px-2 py-1.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="flex items-center gap-1"><b className="uppercase text-foreground">Look</b>
+                    <button type="button" className={pill(!it.uniArgs.block && !it.uniArgs.box)} onClick={() => setU({}, ["block", "box"])}>Gradient</button>
+                    <button type="button" className={pill(!!it.uniArgs.block)} onClick={() => setU({ block: it.uniArgs?.block || req.mainHex }, ["box"])}>Block</button>
+                    <button type="button" className={pill(!!it.uniArgs.box)} onClick={() => setU({ box: it.uniArgs?.box || { fill: req.mainHex, x: 0.5, y: 0.5 } }, ["block"])}>Text box</button>
+                  </span>
+                  <span className="flex items-center gap-1"><b className="uppercase text-foreground">Changing</b>
+                    <select className="rounded border bg-white text-black px-1 py-0.5 text-[10px]" value={keyEl} onChange={(e) => setChEl((c) => ({ ...c, [it.n]: e.target.value }))}>{els.map(([k, l]) => <option key={k} value={k}>{l} colour</option>)}</select>
+                    <input type="color" title="Pick any colour" className="h-4 w-5 p-0 cursor-pointer rounded border" value={/^#[0-9a-f]{6}$/i.test(curV) ? curV : "#888888"} onChange={(e) => setU({ [keyEl]: e.target.value })} />
+                    {dots.map(([label, val, css]) => <button key={label} type="button" title={label} onClick={() => setU({ [keyEl]: val })} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
+                    {keyEl !== "block" && <button type="button" className="px-1 py-0.5 rounded border bg-white text-black" onClick={() => setU({}, [keyEl])}>{keyEl === "bgColour" ? "Photo" : "Auto"}</button>}
+                  </span>
+                  {sl("Writing up/down", "blockY", -600, 120, 10, 0)}
+                  {sl("Cover text up/down", "coverY", -900, 200, 10, 0)}
+                  {sl("Cover text size", "coverScale", 0.5, 1.6, 0.05, 1)}
+                  {it.uniArgs.block && sl("Block height", "blockScale", 0.5, 2, 0.05, 1)}
+                  {!it.uniArgs.block && sl("Gradient %", "gradOpacity", 0, 100, 5, 60)}
+                  <span className="flex items-center gap-1"><b className="uppercase text-foreground">Headline</b>
+                    <button type="button" className={pill(it.uniArgs.noHead === false)} onClick={() => setU({ noHead: false })}>Every slide</button>
+                    <button type="button" className={pill(it.uniArgs.noHead !== false)} onClick={() => setU({ noHead: true })}>Cover only</button>
+                  </span>
+                  <button type="button" className="px-1.5 py-1 rounded border bg-white text-black" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset</button>
+                </div>
+              );
               return (
                 <div className="space-y-1">
+                  {compactBar}
+                  {oldTools && (<>
                   <div className="flex justify-end"><button className="px-2 py-0.5 rounded border text-xs" onClick={() => upd({}, ["blockY", "coverY", "coverScale", "blockScale", "gradOpacity", "gradColour", "bgColour", "textColour"])}>Reset this post's look</button></div>
                   <div className={row}><span className="w-44 shrink-0">Headline on every slide</span>
                     <button onClick={() => upd({ noHead: false })} className={`px-2 py-0.5 rounded border ${it.uniArgs.noHead === false ? "bg-pink-500 text-white border-pink-500" : ""}`}>On</button>
@@ -1048,6 +1107,7 @@ export function Builder({ id }: { id: string }) {
                     ))}
                     <button onClick={() => upd({}, ["bgColour"])} className={`px-2 py-0.5 rounded border ${it.uniArgs.bgColour ? "" : "bg-pink-500 text-white border-pink-500"}`}>Photo</button>
                   </div>
+                  </>)}
                 </div>
               );
             })()}

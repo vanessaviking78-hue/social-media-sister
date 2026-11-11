@@ -190,7 +190,7 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
     }
   }
 
-  const toggle = (name: string) => setTicked((p) => (p.includes(name) ? p.filter((x) => x !== name) : p.length >= 3 ? p : [...p, name]));
+  const toggle = (name: string) => setTicked((p) => (p.includes(name) ? p.filter((x) => x !== name) : p.length >= 3 ? [...p.slice(1), name] : [...p, name]));
 
   async function submit() {
     setErr("");
@@ -369,13 +369,13 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
             <div className="tf-sec">
               <div className="tf-num">03</div>
               <h2>Choose which 3 treatments you want to feature</h2>
-              <p className="sub">Pick your three. They become your three treatment carousels. {ticked.length} of 3 chosen.</p>
+              <p className="sub">Pick your three. They become your three treatment carousels. Changed your mind? Tap a different one and it swaps in. {ticked.length} of 3 chosen.</p>
               {groups.map((g) => (
                 <div className="tf-grp" key={g.id}>
                   <h3>{g.label}</h3>
                   <div className="tf-chips">
                     {g.items.map((t) => (
-                      <button type="button" key={t.id} className={`tf-chip${ticked.includes(t.name) ? " on" : ""}`} disabled={!ticked.includes(t.name) && ticked.length >= 3} style={!ticked.includes(t.name) && ticked.length >= 3 ? { opacity: 0.4, cursor: "not-allowed" } : undefined} onClick={() => toggle(t.name)}>
+                      <button type="button" key={t.id} className={`tf-chip${ticked.includes(t.name) ? " on" : ""}`} onClick={() => toggle(t.name)}>
                         {t.name}
                       </button>
                     ))}
