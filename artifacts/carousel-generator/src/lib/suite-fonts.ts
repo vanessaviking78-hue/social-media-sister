@@ -46,6 +46,16 @@ export const SUITE_FONTS: SuiteFont[] = [
   { id: "just-sans-semibold", name: "JUST Sans SemiBold", family: "SuiteJustSemiBold" },
   { id: "just-sans-bold", name: "JUST Sans Bold", family: "SuiteJustBold" },
   { id: "just-sans-exbold", name: "JUST Sans ExBold", family: "SuiteJustExBold" },
+  // Hammered (construction) headline fonts, free open fonts from Google Fonts.
+  { id: "anton", name: "Anton", family: "SuiteAnton" },
+  { id: "bebas-neue", name: "Bebas Neue", family: "SuiteBebasNeue" },
+  { id: "archivo-black", name: "Archivo Black", family: "SuiteArchivoBlack" },
+  { id: "oswald-bold", name: "Oswald", family: "SuiteOswald" },
+  { id: "alfa-slab-one", name: "Alfa Slab One", family: "SuiteAlfaSlab" },
+  { id: "stardos-stencil-bold", name: "Stardos Stencil", family: "SuiteStardosStencil" },
+  { id: "saira-stencil-one", name: "Saira Stencil One", family: "SuiteSairaStencil" },
+  { id: "permanent-marker", name: "Permanent Marker", family: "SuitePermanentMarker" },
+  { id: "bowlby-one", name: "Bowlby One", family: "SuiteBowlbyOne" },
 ];
 
 export const fontById = (id: string) => SUITE_FONTS.find((f) => f.id === id) || SUITE_FONTS[0];

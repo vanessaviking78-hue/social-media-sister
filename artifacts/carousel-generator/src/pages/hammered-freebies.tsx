@@ -1,4 +1,4 @@
-import { PREMIUM_FONTS } from "@/lib/tenfree-fonts";
+import { HAMMERED_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { useEffect, useRef, useState } from "react";
 import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
@@ -13,7 +13,7 @@ const INK = "#111111";
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@900&display=swap');
 .tf, .tf * { font-family: 'League Spartan', sans-serif !important; font-weight: 900 !important; box-sizing: border-box; }
-${PREMIUM_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; }`).join("\n")}
+${HAMMERED_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; }`).join("\n")}
 .tf { background: #fff; color: ${INK}; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 .tf ::placeholder { color: #b9b9b9; font-weight: 900; }
 .tf-wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
@@ -124,7 +124,7 @@ const JOB_GROUPS: { id: string; label: string; items: string[] }[] = [
 ];
 
 export default function HammeredFreebies() {
-  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "hatcher", passion: "", funny: "" });
+  const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "anton", passion: "", funny: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
   const [cols, setCols] = useState<Colours>({ main: "#ffd60a", accent: "#111111" });
   const [ticked, setTicked] = useState<string[]>([]);
@@ -370,7 +370,7 @@ export default function HammeredFreebies() {
                 <div className="tf-f full">
                   <span className="tf-l">Pick the font for your headlines</span>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {PREMIUM_FONTS.map((ft) => (
+                    {HAMMERED_FONTS.map((ft) => (
                       <button type="button" key={ft.id} onClick={() => setF((x) => ({ ...x, font: ft.id }))} className={`tf-in ff-${ft.id}`} style={{ width: "auto", cursor: "pointer", fontSize: 26, outline: f.font === ft.id ? `3px solid ${PINK}` : "none" }}>{ft.name}</button>
                     ))}
                   </div>

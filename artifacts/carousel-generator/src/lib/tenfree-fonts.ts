@@ -15,3 +15,16 @@ export const PREMIUM_FONTS: { id: string; name: string; family: string }[] = [
   { id: "luxe-bonanza", name: "Luxe Bonanza", family: "SuiteLuxeBonanza" },
   { id: "annyra", name: "Annyra", family: "SuiteAnnyra" },
 ];
+
+// The headline fonts a Hammered (construction) freebie can choose from. Bold and blocky, all on the Cyber Suite font shelf.
+export const HAMMERED_FONTS: { id: string; name: string; family: string }[] = [
+  { id: "anton", name: "Anton", family: "SuiteAnton" },
+  { id: "bebas-neue", name: "Bebas Neue", family: "SuiteBebasNeue" },
+  { id: "archivo-black", name: "Archivo Black", family: "SuiteArchivoBlack" },
+  { id: "oswald-bold", name: "Oswald", family: "SuiteOswald" },
+  { id: "alfa-slab-one", name: "Alfa Slab One", family: "SuiteAlfaSlab" },
+  { id: "stardos-stencil-bold", name: "Stardos Stencil", family: "SuiteStardosStencil" },
+  { id: "saira-stencil-one", name: "Saira Stencil One", family: "SuiteSairaStencil" },
+  { id: "permanent-marker", name: "Permanent Marker", family: "SuitePermanentMarker" },
+  { id: "bowlby-one", name: "Bowlby One", family: "SuiteBowlbyOne" },
+];
