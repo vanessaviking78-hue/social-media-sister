@@ -10,7 +10,7 @@ export const HAMMERED_COPY: Record<string, HammeredCopy> = {
     cta: "Fancy a free sample? Comment HAMMERED and I will show you what your page could look like.",
   },
   HA2: {
-    body: "I know a hard day when I see one, and I know how much graft sits behind every finished job. The work is brilliant and it very rarely gets shown properly. That is the bit I fix.",
+    body: "It was lockdown, my private medical clients could not practise, so neither could I. Next thing I knew I was putting a mix on and climbing a ladder with a coloured bucket on my shoulder. I lasted six weeks, threw a trowel at the boss and went back to marketing, but I know exactly how hard you graft.",
     cta: "Your hard work deserves better than a blurry photo from a van. Comment HAMMERED and let me sort it.",
   },
   HA3: {
