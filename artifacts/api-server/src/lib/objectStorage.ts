@@ -63,8 +63,20 @@ function authHeader(): string {
 // Turns an object key like "ai-portraits/source/<uuid>/source.jpg" into the
 // folder + file name ImageKit expects, while keeping the public URL exactly
 // "<endpoint>/<key>" so downloads by key stay predictable.
-function splitKey(key: string): { folder: string; fileName: string } {
+// ImageKit only keeps letters, numbers, dots, underscores and hyphens in a file
+// name and silently swaps anything else (spaces, brackets, etc.) for "_". We
+// apply the same rule to the file name part of every key so the address we ask
+// for matches the name ImageKit actually stored.
+function ikSafeKey(key: string): string {
   const clean = key.replace(/^\/+/, "");
+  const idx = clean.lastIndexOf("/");
+  const dir = idx === -1 ? "" : clean.slice(0, idx + 1);
+  const name = idx === -1 ? clean : clean.slice(idx + 1);
+  return dir + name.replace(/[^A-Za-z0-9._-]/g, "_");
+}
+
+function splitKey(key: string): { folder: string; fileName: string } {
+  const clean = ikSafeKey(key);
   const idx = clean.lastIndexOf("/");
   if (idx === -1) {
     return { folder: "/", fileName: clean };
@@ -73,11 +85,11 @@ function splitKey(key: string): { folder: string; fileName: string } {
 }
 
 function publicUrlForKey(key: string): string {
-  return `${getUrlEndpoint()}/${key.replace(/^\/+/, "")}`;
+  return `${getUrlEndpoint()}/${ikSafeKey(key)}`;
 }
 
 function signedUrlForKey(key: string, ttlSec: number): string {
-  const cleanKey = key.replace(/^\/+/, "");
+  const cleanKey = ikSafeKey(key);
   const expire = Math.floor(Date.now() / 1000) + (ttlSec > 0 ? ttlSec : 300);
   const baseUrl = `${getUrlEndpoint()}/${cleanKey}`;
   const signature = createHmac("sha1", getPrivateKey()).update(baseUrl + expire).digest("hex");
@@ -394,7 +406,7 @@ export async function signObjectURL({
 
 // A signed ImageKit URL with a transformation on it (for example "e-bgremove"). ImageKit signs the whole URL, query included.
 export function signedTransformUrl(key: string, tr: string, ttlSec = 600): string {
-  const base = `${getUrlEndpoint()}/${key.replace(/^\/+/, "")}?tr=${tr}`;
+  const base = `${getUrlEndpoint()}/${ikSafeKey(key)}?tr=${tr}`;
   const expire = Math.floor(Date.now() / 1000) + ttlSec;
   const signature = createHmac("sha1", getPrivateKey()).update(base + expire).digest("hex");
   return `${base}&ik-t=${expire}&ik-s=${signature}`;
