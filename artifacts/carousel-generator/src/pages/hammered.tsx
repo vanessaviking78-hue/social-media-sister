@@ -17,6 +17,7 @@ const INK = "#111111";
 const KINDS: SlideKind[] = ["hook", "body", "cta"];
 const KIND_LABEL: Record<SlideKind, string> = { hook: "Slide 1: the hook", body: "Slide 2: the body", cta: "Slide 3: the closing line" };
 const STYLE_LABEL: Record<HammeredStyle, string> = { gradient: "Gradient", box: "Text box", block: "Block" };
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",");
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -32,6 +33,7 @@ type Post = {
   panX: number[];
   panY: number[];
   override: Override;
+  caption: string;
 };
 
 const CSS = `
@@ -109,13 +111,13 @@ export default function HammeredPage() {
       const have = new Set(cur.map((p) => p.code));
       const fresh = hooks.filter((h) => !have.has(h.code)).map<Post>((h) => {
         const c = HAMMERED_COPY[h.code] ?? { body: "", cta: "" };
-        return { id: uid(), code: h.code, label: h.code, texts: [h.text, c.body, c.cta], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {} };
+        return { id: uid(), code: h.code, label: h.code, texts: [h.text, c.body, c.cta], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {}, caption: "" };
       });
       return [...cur, ...fresh];
     });
   }, []);
 
-  const addBlank = () => setPosts((cur) => [...cur, { id: uid(), code: `X${cur.length + 1}`, label: "My own", texts: ["", "", ""], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {} }]);
+  const addBlank = () => setPosts((cur) => [...cur, { id: uid(), code: `X${cur.length + 1}`, label: "My own", texts: ["", "", ""], photo: [null, null, null], zoom: [1, 1, 1], panX: [0, 0, 0], panY: [0, 0, 0], override: {}, caption: "" }]);
   const patch = (id: string, fn: (p: Post) => Post) => setPosts((cur) => cur.map((p) => (p.id === id ? fn(p) : p)));
 
   async function onPhotos(files: FileList | null) {
@@ -158,6 +160,7 @@ export default function HammeredPage() {
         const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b as Blob), "image/png"));
         zip.file(`hammered-${p.code}-slide${i + 1}.png`, blob);
       }
+      if (p.caption.trim()) zip.file(`hammered-${p.code}-caption.txt`, p.caption);
     }
     saveAs(await zip.generateAsync({ type: "blob" }), `${zipName}.zip`);
   }
@@ -257,6 +260,7 @@ export default function HammeredPage() {
                 look={lookFor(p)}
                 paint={paint}
                 tick={fontTick}
+                handle={handle}
                 onPatch={(fn) => patch(p.id, fn)}
                 onRemove={() => setPosts((cur) => cur.filter((x) => x.id !== p.id))}
                 onDownload={() => downloadPosts([p], `hammered-${p.code}`)}
@@ -304,7 +308,7 @@ function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily">
 }
 
 function PostCard(props: {
-  post: Post; order: number; photos: Photo[]; look: SlideLook; tick: number;
+  post: Post; order: number; photos: Photo[]; look: SlideLook; tick: number; handle: string;
   paint: (c: HTMLCanvasElement, p: Post, i: number, order: number) => void;
   onPatch: (fn: (p: Post) => Post) => void; onRemove: () => void; onDownload: () => void; onApplyAll: () => void;
 }) {
@@ -312,6 +316,27 @@ function PostCard(props: {
   const refs = [useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null)];
   const [slide, setSlide] = useState(0);
   const [showLook, setShowLook] = useState(false);
+  const [writing, setWriting] = useState(false);
+
+  const writeIt = async () => {
+    if (!post.texts[0].trim()) { toast.error("Add the hook first so I know what the post is about"); return; }
+    setWriting(true);
+    try {
+      const res = await fetch(`${BASE}/api/hammered-captions/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hook: post.texts[0], body: post.texts[1], cta: post.texts[2], handle: props.handle }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.caption) throw new Error(data.error || "The caption did not come through");
+      onPatch((p) => ({ ...p, caption: noDashes(String(data.caption)) }));
+      toast.success("Caption written. Have a read, you can change any of it.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The caption did not come through. Press Write it again.");
+    } finally {
+      setWriting(false);
+    }
+  };
 
   useEffect(() => {
     refs.forEach((r, i) => r.current && paint(r.current, post, i, order));
@@ -349,6 +374,17 @@ function PostCard(props: {
         {KINDS.map((k, i) => <button key={k} className={`b ${slide === i ? "on" : ""}`} onClick={() => setSlide(i)}>{KIND_LABEL[k]}</button>)}
       </div>
       <textarea rows={slide === 1 ? 5 : 3} value={post.texts[slide]} onChange={(e) => setText(slide, e.target.value)} />
+
+      <div className="hm-box" style={{ marginTop: 14 }}>
+        <div className="hm-row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <h3 style={{ margin: 0 }}>Caption</h3>
+          <div className="hm-row">
+            <button className="b go" disabled={writing} onClick={writeIt}>{writing ? "Writing..." : post.caption ? "Rewrite it" : "Write it"}</button>
+            <button className="b" disabled={!post.caption.trim()} onClick={() => { navigator.clipboard.writeText(post.caption).then(() => toast.success("Caption copied"), () => toast.error("I could not copy that")); }}>Copy</button>
+          </div>
+        </div>
+        <textarea rows={7} value={post.caption} onChange={(e) => onPatch((p) => ({ ...p, caption: noDashes(e.target.value) }))} placeholder="Press Write it, or write your own here." />
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginTop: 8 }}>
         <div>
