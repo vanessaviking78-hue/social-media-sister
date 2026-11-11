@@ -165,7 +165,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     const b = req.body as Record<string, string>;
     // The premium form sends three photos of the clinician. The first one is the main photo that the Studio portraits are made from.
     const premium = b.kind === "premium";
-    // Hammered (the construction industry freebies at /hammeredfreeies) has its own list, its own questions and no AI Studio portraits.
+    // Hammered (the construction industry freebies at /hammeredfreebies) has its own list, its own questions and no AI Studio portraits.
     const hammered = b.kind === "hammered";
     const extraPhotos = files.photos ?? [];
     const photo = files.photo?.[0] ?? extraPhotos[0];

@@ -390,8 +390,8 @@ function AppContent() {
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
-  const [isHammeredFreebies] = useRoute("/hammeredfreeies");
-  const [isHammeredFreebiesAlt] = useRoute("/hammeredfreebies");
+  const [isHammeredFreebies] = useRoute("/hammeredfreebies");
+  const [isHammeredFreebiesAlt] = useRoute("/hammeredfreeies"); // old spelling still works
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
   const [isKirstyDove] = useRoute("/kirstydove");

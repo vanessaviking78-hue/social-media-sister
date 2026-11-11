@@ -5,7 +5,7 @@ import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 import { canvasToPng, makeClearLogo } from "@/lib/logo-clear";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// cybersuite.com/hammeredfreeies : the Hammered (construction) freebies form. A copy of the premium freebies page: same fonts and layout, bright yellow in place of hot pink.
+// cybersuite.com/hammeredfreebies : the Hammered (construction) freebies form. A copy of the premium freebies page: same fonts and layout, bright yellow in place of hot pink.
 
 const PINK = "#ffd60a"; // Hammered bright yellow (not hi-vis). Named PINK only so the copied CSS below stays identical.
 const INK = "#111111";
@@ -245,7 +245,7 @@ export default function HammeredFreebies() {
             </h1>
             <p className="tf-lede">I will get your posts made and over to you as soon as I can. I will send you a WhatsApp and an email. Have a look, and tell me what to change. Thanks for giving it a go.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another tradesperson who could do with some decent posts? Send them this.</p>
-            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Hammered for a free 5 day trial of posts made from my own work and photos. Grab yours here: https://www.thecybersuite.com/hammeredfreeies")}`}>Share with another tradesperson</a>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Hammered for a free 5 day trial of posts made from my own work and photos. Grab yours here: https://www.thecybersuite.com/hammeredfreebies")}`}>Share with another tradesperson</a>
           </div>
         ) : (
           <>

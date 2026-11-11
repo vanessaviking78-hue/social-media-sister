@@ -7,7 +7,7 @@ export default async (request: Request, context: { next: () => Promise<Response>
   const origin = new URL(request.url).origin;
   const title = "Hammered: free social media posts for tradespeople";
   const desc = "Try 5 days of posts, stories and reel scripts made from your own work and photos. Show people you are the trustworthy one to call.";
-  const tags = `<meta property="og:title" content="${title}" /><meta property="og:description" content="${desc}" /><meta property="og:type" content="website" /><meta property="og:url" content="${origin}/hammeredfreeies" /><meta name="twitter:card" content="summary" /><meta name="twitter:title" content="${title}" /><meta name="twitter:description" content="${desc}" /><meta name="description" content="${desc}" />`;
+  const tags = `<meta property="og:title" content="${title}" /><meta property="og:description" content="${desc}" /><meta property="og:type" content="website" /><meta property="og:url" content="${origin}/hammeredfreebies" /><meta name="twitter:card" content="summary" /><meta name="twitter:title" content="${title}" /><meta name="twitter:description" content="${desc}" /><meta name="description" content="${desc}" />`;
   let html = await res.text();
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`).replace(/<meta[^>]+(property="og:[^"]*"|name="twitter:[^"]*"|name="description")[^>]*>/g, "").replace("</head>", `${tags}</head>`);
   return new Response(html, { status: res.status, headers: res.headers });
