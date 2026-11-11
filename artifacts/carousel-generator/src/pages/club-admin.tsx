@@ -183,7 +183,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                   {(full.content.posts ?? []).map((p) => (
                     <div key={p.n} className="border-b pb-2">
                       <div className="text-xs uppercase text-pink-500">Post {p.n} · {p.label}</div>
-                      <div className="flex gap-2 overflow-x-auto">{p.images.map((u) => <img key={u} src={u} className="h-40 rounded" />)}</div>
+                      <div className="flex gap-2 overflow-x-auto">{p.images.map((u) => <img key={u} src={u} className="h-40 rounded max-w-none shrink-0" />)}</div>
                       <div className="text-xs whitespace-pre-wrap mt-1">{p.caption}</div>
                     </div>
                   ))}
@@ -206,7 +206,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
                 <button disabled={busy || month.aiStatus === "working" || !(member.photoUrls ?? []).length} className="px-3 py-1.5 rounded border-2 border-black text-sm disabled:opacity-50" onClick={async () => { if (await call(`/club/months/${month.id}/studio`, {})) { toast.success("Making the 4 studio photos. Refresh in a couple of minutes."); reload(); } }}>{month.aiStatus === "working" ? "Making them now..." : full.aiUrls.length ? "Make the 4 studio photos again" : "Make the 4 studio photos"}</button>
                 {month.aiStatus === "failed" && <div className="text-xs text-red-600">It did not work{month.aiError ? `: ${month.aiError}` : ""}</div>}
                 {month.aiStatus === "ready" && month.aiError && <div className="text-xs text-yellow-700">Some did not work: {month.aiError}</div>}
-                <div className="flex gap-2 flex-wrap">{full.aiUrls.map((u) => <div key={u}><img src={u} className="h-32 rounded" /><button className="text-xs underline" onClick={() => removeAi(u)}>Remove</button></div>)}</div>
+                <div className="flex gap-2 flex-wrap">{full.aiUrls.map((u) => <div key={u}><img src={u} className="h-32 rounded max-w-none" /><button className="text-xs underline" onClick={() => removeAi(u)}>Remove</button></div>)}</div>
               </div>
               <div>
                 <h3 className="font-bold uppercase text-sm">Reel hooks and scripts ({reels.length})</h3>
@@ -304,7 +304,7 @@ function ExtraForm({ month, kind, name, hint }: { month: string; kind: string; n
   return (
     <div className="border rounded-lg p-3 space-y-2">
       <div className="text-xs uppercase font-bold text-pink-500">{name}</div>
-      {img && <div className="flex items-end gap-3"><img src={img} className="h-24 rounded" /><button className="text-xs underline" onClick={() => save(true)}>Remove image</button></div>}
+      {img && <div className="flex items-end gap-3"><img src={img} className="h-24 rounded max-w-none" /><button className="text-xs underline" onClick={() => save(true)}>Remove image</button></div>}
       <input className="w-full border rounded px-2 py-1 text-sm font-semibold" placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
       <textarea className="w-full border rounded px-2 py-1 text-sm" rows={5} placeholder={hint} value={body} onChange={(e) => setBody(e.target.value)} />
       <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />

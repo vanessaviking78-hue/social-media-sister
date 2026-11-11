@@ -750,9 +750,18 @@ export function Builder({ id }: { id: string }) {
   if (!req) return <div className="p-6">Loading...</div>;
   const ticked = req.treatments.join(", ");
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-5">
+    <div className="max-w-5xl mx-auto p-3 sm:p-6 space-y-5">
       <Link href={isClub ? `/club-admin` : "/10free-admin"} className="text-sm underline">{isClub ? "Back to the clubs" : "Back to requests"}</Link>
       <h1 className="text-2xl font-bold">{req.clinicName}</h1>
+      {isClub && (
+        <div className="border-2 border-pink-500 rounded-lg p-3 bg-pink-50 text-sm space-y-1">
+          <div className="font-bold uppercase text-pink-600">How this works</div>
+          <div><b>1.</b> Build each post below. Tap a photo to swap it, drag text to move it, and use the little panel under each post to change the look.</div>
+          <div><b>2.</b> Happy with them all? Press <b>Send to my approval queue</b> at the bottom.</div>
+          <div><b>3.</b> Go back to the clubs page, check it, then press Approve. Nothing reaches the member until you do.</div>
+        </div>
+      )}
+      <details open={!isClub} className="text-sm"><summary className="cursor-pointer font-semibold underline mb-2">{isClub ? "Show everything she told me" : "Show their details"}</summary>
       <div className="text-sm space-y-1">
         <div>{req.clinicianName} · {req.email} · {req.area} · @{req.handle}</div>
         <div>{req.website} {req.whatsapp && `· WhatsApp ${req.whatsapp}`}</div>
@@ -764,11 +773,12 @@ export function Builder({ id }: { id: string }) {
         <div className="font-semibold">Studio portraits: {req.photoUrl ? (req.aiStatus === "ready" ? `${req.aiUrls.length} ready` : req.aiStatus === "failed" ? "failed" : "still being made") : "no photo sent"}
           {req.photoUrl && req.aiStatus !== "working" && <button className="ml-3 underline" onClick={async () => { await post(`/ten-free/requests/${req.id}/studio`, {}); loadReq(); }}>{req.aiStatus === "ready" ? "Make again" : "Try again"}</button>}
         </div>)}
-        {req.aiUrls.length > 0 && <div className="flex gap-2">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div>}
+        {req.aiUrls.length > 0 && <div className="flex gap-2 overflow-x-auto">{req.aiUrls.map((u) => <img key={u} src={u} className="h-24 rounded max-w-none shrink-0" />)}</div>}
         {isPrem && (req.photos ?? []).length > 0 && (
-          <div><div className="font-semibold">Their 3 photos</div><div className="flex gap-2">{(req.photos ?? []).map((u) => <img key={u} src={u} className="h-24 rounded" />)}</div></div>
+          <div><div className="font-semibold">Their 3 photos</div><div className="flex gap-2 overflow-x-auto">{(req.photos ?? []).map((u) => <img key={u} src={u} className="h-24 rounded max-w-none shrink-0" />)}</div></div>
         )}
       </div>
+      </details>
       {isPrem && (
         <div className="border-2 border-black rounded-lg p-4 space-y-3">
           <h2 className="font-bold uppercase">1. The {nT} treatments <span className="text-pink-500">({chosenT.length} of {nT})</span></h2>
@@ -957,7 +967,7 @@ export function Builder({ id }: { id: string }) {
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
                   onClick={() => (i === 0 && it.uniArgs?.box ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[30rem] rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                  className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -1119,7 +1129,7 @@ export function Builder({ id }: { id: string }) {
                   <button className="px-2 py-0.5 rounded border" onClick={() => void set({}, true)}>Back to their brand colours</button>
                   <div className="font-semibold pt-1">Photo</div>
                   <div className="flex gap-2 overflow-x-auto">
-                    {ownRef.current.map((o) => <img key={o.url} src={o.url} onClick={() => void aboutPhoto(it, o.bmp)} className="h-16 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                    {ownRef.current.map((o) => <img key={o.url} src={o.url} onClick={() => void aboutPhoto(it, o.bmp)} className="h-16 rounded max-w-none shrink-0 cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
                   </div>
                   <label className="underline cursor-pointer block">Upload my own photo<input type="file" accept="image/*" className="hidden" onChange={(e) => void onFile(e, (b) => void aboutPhoto(it, b))} /></label>
                   {([["Zoom", "z", 1, 2.5, 1], ["Left and right", "x", -1, 1, 0], ["Up and down", "y", -1, 1, 0]] as const).map(([label, key, mn, mx, def]) => (
@@ -1142,7 +1152,7 @@ export function Builder({ id }: { id: string }) {
                   <div className="flex gap-2 overflow-x-auto">
                     {ownRef.current.map((o) => (
                       <div key={o.url} className="shrink-0 text-center">
-                        <img src={o.url} onClick={() => setCustom(it, i, o.bmp)} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />
+                        <img src={o.url} onClick={() => setCustom(it, i, o.bmp)} className="h-20 rounded max-w-none shrink-0 cursor-pointer border-2 border-transparent hover:border-pink-500" />
                         {isClub && <button className="text-[11px] underline text-red-600" onClick={async () => {
                           if (!window.confirm("Delete this photo from their photos?")) return;
                           const r = await fetch(`${API}/club/months/${String(req.id).replace(/^club-/, "")}/photos/remove`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ url: o.url }) });
@@ -1156,7 +1166,7 @@ export function Builder({ id }: { id: string }) {
                   </div>
                   <div className="text-xs text-muted-foreground">Library photos</div>
                   <div className="flex gap-2 overflow-x-auto">
-                    {(it.libUrls ?? []).map((u, k) => <img key={u} src={u} onClick={() => { setCustom(it, i, null); pickPhoto({ ...it, uniArgs: { ...it.uniArgs!, custom: undefined } }, i, k); }} className="h-20 rounded cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
+                    {(it.libUrls ?? []).map((u, k) => <img key={u} src={u} onClick={() => { setCustom(it, i, null); pickPhoto({ ...it, uniArgs: { ...it.uniArgs!, custom: undefined } }, i, k); }} className="h-20 rounded max-w-none shrink-0 cursor-pointer border-2 border-transparent hover:border-pink-500" />)}
                   </div>
                   <label className="text-xs underline cursor-pointer">Upload my own photo<input type="file" accept="image/*" className="hidden" onChange={(e) => void onFile(e, (b) => setCustom(it, i, b))} /></label>
                   {slider("Zoom", "zoom", 1, 2.5, 0.05, 1)}

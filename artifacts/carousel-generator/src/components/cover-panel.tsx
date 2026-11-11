@@ -209,7 +209,7 @@ export function CoverPanel({ value, onChange, base, makeCutout, moveSel, setMove
                 <div key={slot} className="space-y-1">
                   <div>Photo {slot + 1}</div>
                   <div className="flex gap-2 overflow-x-auto">
-                    {own.map((o) => <img key={o.url} src={o.url} onClick={() => void setPhoto(slot, o.bmp)} className={`h-14 rounded cursor-pointer border-2 ${value.photos[slot] === o.bmp ? "border-pink-500" : "border-transparent"}`} />)}
+                    {own.map((o) => <img key={o.url} src={o.url} onClick={() => void setPhoto(slot, o.bmp)} className={`h-14 rounded max-w-none shrink-0 cursor-pointer border-2 ${value.photos[slot] === o.bmp ? "border-pink-500" : "border-transparent"}`} />)}
                   </div>
                   <label className="flex items-center gap-2"><span className="w-12 shrink-0">Zoom</span><input type="range" min={1} max={3} step={0.05} value={value.views?.[slot]?.z ?? 1} onChange={(e) => setView(slot, { z: Number(e.target.value) })} className="flex-1" /></label>
                   <label className="flex items-center gap-2"><span className="w-12 shrink-0">Left, right</span><input type="range" min={-1} max={1} step={0.05} value={value.views?.[slot]?.x ?? 0} onChange={(e) => setView(slot, { x: Number(e.target.value) })} className="flex-1" /></label>
