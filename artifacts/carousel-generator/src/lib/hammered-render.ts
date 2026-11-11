@@ -111,8 +111,8 @@ export function drawHammeredSlide(canvas: HTMLCanvasElement, kind: SlideKind, te
     const top = HH - pad - textH - (kind === "cta" && handle ? 46 : 0);
     const g = ctx.createLinearGradient(0, Math.max(0, top - 330), 0, HH);
     g.addColorStop(0, rgba(look.colour, 0));
-    g.addColorStop(0.6, rgba(look.colour, 0.82));
-    g.addColorStop(1, rgba(look.colour, 0.96));
+    g.addColorStop(0.45, rgba(look.colour, 0.92));
+    g.addColorStop(1, rgba(look.colour, 1));
     ctx.fillStyle = g;
     ctx.fillRect(0, Math.max(0, top - 330), HW, HH);
     ctx.fillStyle = textCol;

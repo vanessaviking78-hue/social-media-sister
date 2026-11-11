@@ -265,7 +265,8 @@ export default function HammeredPage() {
 }
 
 function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily"> | SlideLook; onChange: (o: Override) => void }) {
-  const swatches = ["#000000", HAMMERED_YELLOW, "#ffffff", "#1d3557", "#c1121f"];
+  // warm construction yellows first so bright yellow never drifts to lemon
+  const swatches = ["#000000", HAMMERED_YELLOW, "#ffc400", "#ffb000", "#ffffff", "#1d3557", "#c1121f"];
   return (
     <div>
       <label className="l">Layout</label>
