@@ -38,35 +38,31 @@ export function ColourPicker({ label, value, onChange, brand = [], placeholder, 
         title={title}
         aria-label={`${label}: ${title}`}
         onClick={() => onChange(v)}
-        className={`keep-colour shrink-0 rounded-md border ${small ? "h-6 w-6" : "h-8 w-8"} ${on ? "border-pink-500 ring-2 ring-pink-500/50" : "border-black/20 hover:border-black/60"}`}
+        className={`keep-colour shrink-0 rounded-md border ${small ? "h-5 w-5" : "h-6 w-6"} ${on ? "border-pink-500 ring-2 ring-pink-500/50" : "border-black/20 hover:border-black/60"}`}
         style={swatchStyle(v)}
       />
     );
   };
+  const [open, setOpen] = useState(false);
   return (
-    <div className="space-y-1.5 text-sm">
-      <div className="flex items-center gap-2">
-        <span className="inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">{label}</span>
-        <span className="inline-block h-5 w-5 rounded border border-black/20" style={swatchStyle(cur)} />
-        {onReset && value ? <button type="button" className="text-xs underline opacity-70 hover:opacity-100" onClick={onReset}>use the template colour</button> : null}
-      </div>
-      {dedupBrand.length ? (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs opacity-60 w-14">Brand</span>
-          {dedupBrand.map((b) => <Swatch key={b} v={b} title={`Brand ${b}`} />)}
-        </div>
-      ) : null}
+    <div className="space-y-1 text-sm">
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-xs opacity-60 w-14">Colours</span>
-        {PALETTE.map((p) => <Swatch key={p} v={p} title={p} small />)}
+        <span className="inline-block border border-current rounded px-1.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide">{label}</span>
+        <span className="inline-block h-5 w-5 rounded border border-black/30" title="Colour now" style={swatchStyle(cur)} />
+        {dedupBrand.map((b) => <Swatch key={b} v={b} title={`Brand ${b}`} small />)}
+        <button type="button" className="text-[11px] underline opacity-70 hover:opacity-100" onClick={() => setOpen((o) => !o)}>{open ? "Less" : "More colours"}</button>
+        {onReset && value ? <button type="button" className="text-[11px] underline opacity-70 hover:opacity-100" onClick={onReset}>use the template colour</button> : null}
       </div>
-      {allowMetal ? (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs opacity-60 w-14">Metallic</span>
-          {MAIN_METALS.map((id) => { const m = METAL_FINISHES.find((x) => x.id === id)!; return <Swatch key={id} v={`metal:${id}`} title={m.name} />; })}
-          {METAL_FINISHES.filter((m) => !MAIN_METALS.includes(m.id)).map((m) => <Swatch key={m.id} v={`metal:${m.id}`} title={m.name} small />)}
-        </div>
-      ) : null}
+      {open ? (
+        <div className="space-y-1 rounded border border-black/10 p-1.5">
+          <div className="flex items-center gap-1 flex-wrap">
+            {PALETTE.map((p) => <Swatch key={p} v={p} title={p} small />)}
+          </div>
+          {allowMetal ? (
+            <div className="flex items-center gap-1 flex-wrap">
+              {METAL_FINISHES.map((m) => <Swatch key={m.id} v={`metal:${m.id}`} title={m.name} small />)}
+            </div>
+          ) : null}
       <div className="flex items-center gap-2">
         <input
           className="w-24 rounded border border-black/20 bg-transparent px-2 py-1 text-xs"
@@ -79,6 +75,8 @@ export function ColourPicker({ label, value, onChange, brand = [], placeholder, 
           any colour
         </label>
       </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -66,7 +66,7 @@ export default function NewCovers() {
   useEffect(() => {
     let live = true;
     if (!value) { setPreview(""); return; }
-    renderCoverPost(value).then((cv) => { if (!live) return; cvRef.current = cv; setPreview(cv.toDataURL("image/jpeg", 0.8)); })
+    renderCoverPost(value).then((cv) => { if (!live) return; cvRef.current = cv; setPreview(cv.toDataURL("image/jpeg", 0.95)); })
       .catch(() => toast.error("That cover would not draw. Try another photo."));
     return () => { live = false; };
   }, [value]);
@@ -208,17 +208,17 @@ export default function NewCovers() {
       )}
 
       {value && (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-3">
+        <div className="grid md:grid-cols-2 gap-3 md:gap-6">
+          <div className="space-y-3 order-last md:order-none">
             <div className="text-black bg-white rounded p-2">
               <CoverPanel value={value} onChange={(nx) => setValue(nx ?? undefined)} busy={busy} makeCutout={async (b) => { setBusy(true); const r = await makeCutout(b); setBusy(false); return r; }}
                 base={{ own, headline: "", name, treatment, area, brand, fontId, facts, offset: 0 }} moveSel={moveSel} setMoveSel={setMoveSel} />
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 order-first md:order-none sticky top-0 z-20 self-start bg-black pb-2 pt-1 -mx-1 px-1">
             {preview ? (
               <>
-                <img src={preview} alt="" onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = null; }} className={`w-full max-w-md rounded ${moveSel ? "cursor-grab touch-none" : ""}`} />
+                <img src={preview} alt="" onPointerDown={down} onPointerMove={move} onPointerUp={() => { drag.current = null; }} className={`w-auto max-h-[46vh] md:max-h-[85vh] max-w-full mx-auto md:mx-0 rounded ${moveSel ? "cursor-grab touch-none" : ""}`} />
                 <div className="flex gap-2">
                   <Button size="sm" onClick={download}><Download className="w-4 h-4 mr-1" />Download</Button>
                   <Button size="sm" variant="outline" onClick={() => { setMoveSel(""); setValue(undefined); }}>Back to all 23</Button>

@@ -129,7 +129,7 @@ export function CoverPanel({ value, onChange, base, makeCutout, moveSel, setMove
   );
 
   return (
-    <div className="space-y-2 text-xs text-neutral-600 bg-white rounded border-2 border-pink-500 p-2 [&_.text-foreground]:!text-neutral-900 [&_.bg-background]:!bg-white [&_.text-muted-foreground]:!text-neutral-500 [&_input]:!bg-white [&_select]:!bg-white [&_input]:!text-neutral-900 [&_select]:!text-neutral-900 [&_button:not(.bg-pink-500)]:!bg-white [&_button:not(.bg-pink-500)]:!text-neutral-800">
+    <div className="space-y-2 text-xs text-neutral-600 bg-white rounded border-2 border-pink-500 p-2 [&_.text-foreground]:!text-neutral-900 [&_.bg-background]:!bg-white [&_.text-muted-foreground]:!text-neutral-500 [&_input]:!bg-white [&_select]:!bg-white [&_input]:!text-neutral-900 [&_select]:!text-neutral-900 [&_button:not(.bg-pink-500):not(.keep-colour)]:!bg-white [&_button:not(.bg-pink-500):not(.keep-colour)]:!text-neutral-800">
       <div className="flex items-center justify-between">
         <div className="font-extrabold uppercase tracking-wide text-foreground text-sm">New slide 1 cover {busy && <span className="text-pink-500">drawing...</span>}</div>
         {value && <button onClick={() => { setMoveSel(""); onChange(null); }} className="px-2 py-1 rounded border">Back to the normal cover</button>}
