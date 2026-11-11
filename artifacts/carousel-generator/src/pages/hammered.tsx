@@ -7,6 +7,8 @@ import { HAMMERED_HOOKS, HAMMERED_HOOK_GROUPS, type HammeredHook } from "@/lib/h
 import { HAMMERED_COPY } from "@/lib/hammered-copy";
 import { HAMMERED_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
+import { usePresets } from "@/lib/use-presets";
+import { POST_TIME } from "@/lib/schedule";
 import { drawHammeredSlide, HAMMERED_YELLOW, type HammeredStyle, type SlideKind, type SlideLook } from "@/lib/hammered-render";
 
 // cybersuite.com/hammeredposts : the Hammered tool, for the Hammered page and every Hammered client.
@@ -52,7 +54,7 @@ const CSS = `
 .hm-box { border:2px solid ${INK}; padding:14px; }
 .hm-box h3 { font-size:12px; letter-spacing:.2em; text-transform:uppercase; font-weight:800; margin:0 0 10px; background:${HAMMERED_YELLOW}; display:inline-block; padding:2px 8px; }
 .hm label.l { display:block; font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; margin:10px 0 4px; }
-.hm input[type=text], .hm textarea, .hm select { width:100%; border:2px solid ${INK}; padding:8px 10px; font:inherit; font-size:14px; background:#fff; color:${INK}; border-radius:0; }
+.hm input[type=text], .hm input[type=datetime-local], .hm textarea, .hm select { width:100%; border:2px solid ${INK}; padding:8px 10px; font:inherit; font-size:14px; background:#fff; color:${INK}; border-radius:0; }
 .hm textarea { resize:vertical; line-height:1.35; }
 .hm button.b { border:2px solid ${INK}; background:#fff; color:${INK}; padding:7px 12px; font:inherit; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
 .hm button.b:hover { background:#fffbe0; }
@@ -165,6 +167,46 @@ export default function HammeredPage() {
     saveAs(await zip.generateAsync({ type: "blob" }), `${zipName}.zip`);
   }
 
+  // The Hammered client preset is the page the posts go out on.
+  const { presets } = usePresets();
+  const hammeredPreset = presets.find((x) => /hammered/i.test(x.name));
+
+  /** Draws the three slides, uploads them and queues the post for the Hammered page at the time she picked. */
+  async function scheduleToHammered(p: Post, whenLocal: string): Promise<void> {
+    if (!hammeredPreset) throw new Error("I cannot find the Hammered client. Add a client called Hammered first.");
+    if (!photos.length) throw new Error("Add your photos first so the slides are not blank.");
+    if (!p.caption.trim()) throw new Error("Press Write it first so the post has a caption.");
+    const when = new Date(whenLocal);
+    if (!whenLocal || isNaN(when.getTime())) throw new Error("Pick a date and time first.");
+    if (when.getTime() < Date.now() + 60_000) throw new Error("Pick a time in the future.");
+    const order = posts.indexOf(p);
+    const images: { name: string; base64: string }[] = [];
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElement("canvas");
+      paint(c, p, i, order);
+      images.push({ name: `hammered-${p.code}-${Date.now()}-slide${i + 1}.jpg`, base64: c.toDataURL("image/jpeg", 0.9) });
+    }
+    const up = await fetch(`${BASE}/api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images }) });
+    if (!up.ok) throw new Error("The slides did not upload. Try again.");
+    const upData = await up.json().catch(() => ({}));
+    const imageUrls: string[] = (upData.results || []).map((x: { url: string }) => x.url);
+    if (imageUrls.length !== 3) throw new Error("The slides did not upload. Try again.");
+    const r = await fetch(`${BASE}/api/scheduler/posts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        presetId: hammeredPreset.id,
+        postType: "carousel",
+        content: { imageUrls, caption: p.caption, title: p.texts[0].slice(0, 80), platforms: ["instagram", "facebook"], sourceTool: "Hammered" },
+        scheduledAt: when.toISOString(),
+      }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: "Scheduling failed" }));
+      throw new Error(err.error || "Scheduling failed");
+    }
+  }
+
   const groupHooks = HAMMERED_HOOKS.filter((h) => h.group === group);
 
   return (
@@ -261,6 +303,7 @@ export default function HammeredPage() {
                 paint={paint}
                 tick={fontTick}
                 handle={handle}
+                onSchedule={(when) => scheduleToHammered(p, when)}
                 onPatch={(fn) => patch(p.id, fn)}
                 onRemove={() => setPosts((cur) => cur.filter((x) => x.id !== p.id))}
                 onDownload={() => downloadPosts([p], `hammered-${p.code}`)}
@@ -308,7 +351,7 @@ function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily">
 }
 
 function PostCard(props: {
-  post: Post; order: number; photos: Photo[]; look: SlideLook; tick: number; handle: string;
+  post: Post; order: number; photos: Photo[]; look: SlideLook; tick: number; handle: string; onSchedule: (whenLocal: string) => Promise<void>;
   paint: (c: HTMLCanvasElement, p: Post, i: number, order: number) => void;
   onPatch: (fn: (p: Post) => Post) => void; onRemove: () => void; onDownload: () => void; onApplyAll: () => void;
 }) {
@@ -317,6 +360,28 @@ function PostCard(props: {
   const [slide, setSlide] = useState(0);
   const [showLook, setShowLook] = useState(false);
   const [writing, setWriting] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduledFor, setScheduledFor] = useState("");
+  // Next posting slot at the usual time: tomorrow at 19:45 unless she picks another.
+  const [when, setWhen] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${POST_TIME}`;
+  });
+  const scheduleIt = async () => {
+    setScheduling(true);
+    try {
+      await props.onSchedule(when);
+      const label = new Date(when).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+      setScheduledFor(label);
+      toast.success(`Scheduled to Hammered for ${label}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Scheduling failed. Try again.");
+    } finally {
+      setScheduling(false);
+    }
+  };
 
   const writeIt = async () => {
     if (!post.texts[0].trim()) { toast.error("Add the hook first so I know what the post is about"); return; }
@@ -384,6 +449,11 @@ function PostCard(props: {
           </div>
         </div>
         <textarea rows={7} value={post.caption} onChange={(e) => onPatch((p) => ({ ...p, caption: noDashes(e.target.value) }))} placeholder="Press Write it, or write your own here." />
+        <div className="hm-row" style={{ marginTop: 10, alignItems: "center" }}>
+          <input type="datetime-local" value={when} onChange={(e) => { setWhen(e.target.value); setScheduledFor(""); }} style={{ width: "auto" }} aria-label="When to post" />
+          <button className="b go" disabled={scheduling} onClick={scheduleIt}>{scheduling ? "Scheduling..." : "Schedule to Hammered"}</button>
+        </div>
+        {scheduledFor && <div className="hm-small" style={{ marginTop: 6 }}>Scheduled for {scheduledFor}. Change the time and press again to add another.</div>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginTop: 8 }}>
