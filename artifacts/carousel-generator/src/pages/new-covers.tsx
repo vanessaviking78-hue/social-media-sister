@@ -44,9 +44,26 @@ export default function NewCovers() {
     setShowApproved((v) => !v);
     if (approved) return;
     try {
-      const r = await fetch(`${BASE}/api/approval-bundles/approved-images?client=${encodeURIComponent(preset?.name || name || "")}`);
-      const d = (await r.json()) as { images?: { id: number; url: string; thumb: string }[] };
-      setApproved(d.images ?? []);
+      const want = (preset?.name || name || "").trim().toLowerCase();
+      const out: { id: number; url: string; thumb: string }[] = [];
+      const seen = new Set<string>();
+      const add = (id: number, url: string) => { if (url && !seen.has(url)) { seen.add(url); out.push({ id, url, thumb: url }); } };
+      // The Approvals tool: images the client has approved, matched on the client's preset or name.
+      try {
+        const r = await fetch(`${BASE}/api/approval/approved-images`, { credentials: "include" });
+        const d = (await r.json()) as { id: number; imageUrl: string; clientName: string; presetId: number | null }[];
+        if (Array.isArray(d)) for (const im of d) {
+          const cn = (im.clientName || "").trim().toLowerCase();
+          if ((preset && im.presetId === preset.id) || (want && cn && (cn === want || cn.includes(want) || want.includes(cn)))) add(im.id, im.imageUrl);
+        }
+      } catch { /* try the other source */ }
+      // Approval bundles sent through the library.
+      try {
+        const r = await fetch(`${BASE}/api/approval-bundles/approved-images?client=${encodeURIComponent(want)}`, { credentials: "include" });
+        const d = (await r.json()) as { images?: { id: number; url: string }[] };
+        for (const im of d.images ?? []) add(1_000_000 + im.id, im.url);
+      } catch { /* fine */ }
+      setApproved(out);
     } catch { setApproved([]); toast.error("I could not load the approved images."); }
   };
   const useApproved = async (img: { id: number; url: string }) => {
