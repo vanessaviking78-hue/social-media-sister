@@ -166,6 +166,8 @@ import DailyFive from "@/pages/daily-five";
 import InjectorReels from "@/pages/injector-reels";
 import TenFreePosts from "@/pages/ten-free-posts";
 import HammeredFreebies from "@/pages/hammered-freebies";
+import ChooseBusiness from "@/pages/choose-business";
+import HammeredHome from "@/pages/hammered-home";
 import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
@@ -400,6 +402,8 @@ function AppContent() {
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
+  const isChoose = location === "/choose";
+  const isHammered = location === "/hammered";
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -460,6 +464,12 @@ function AppContent() {
   }
   if (isSplash) {
     return <Splash />;
+  }
+  if (isChoose) {
+    return <ChooseBusiness />;
+  }
+  if (isHammered) {
+    return <HammeredHome />;
   }
   if (isPrivacy) {
     return <Privacy />;
