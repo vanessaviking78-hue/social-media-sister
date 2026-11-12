@@ -39,6 +39,30 @@ export function NewMonth(props: {
   const [days, setDays] = useState<string[]>([]);
   const [time, setTime] = useState(preset.defaultPostTime || "18:00");
   const started = useRef(false);
+  // One logo for the whole month: top right, drawn over every slide of every post, so the size and colour here change them all.
+  const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+  const [logoSize, setLogoSize] = useState(130);
+  const [logoWhite, setLogoWhite] = useState(false);
+  const logoBox = () => {
+    if (!logoImg || !logoImg.naturalWidth) return null;
+    const k = logoSize / 100;
+    const sc = Math.min((210 * k) / logoImg.naturalWidth, (100 * k) / logoImg.naturalHeight);
+    return { w: logoImg.naturalWidth * sc, h: logoImg.naturalHeight * sc };
+  };
+  const withLogo = async (dataUrl: string): Promise<string> => {
+    const box = logoBox();
+    if (!box || !logoImg) return dataUrl;
+    const base = await new Promise<HTMLImageElement>((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = dataUrl; });
+    const c = document.createElement("canvas"); c.width = base.naturalWidth; c.height = base.naturalHeight;
+    const g = c.getContext("2d")!; g.drawImage(base, 0, 0);
+    const x = c.width - 60 - box.w;
+    if (logoWhite) {
+      const t = document.createElement("canvas"); t.width = Math.max(1, Math.round(box.w)); t.height = Math.max(1, Math.round(box.h));
+      const tg = t.getContext("2d")!; tg.drawImage(logoImg, 0, 0, t.width, t.height); tg.globalCompositeOperation = "source-in"; tg.fillStyle = "#ffffff"; tg.fillRect(0, 0, t.width, t.height);
+      g.drawImage(t, x, 60);
+    } else g.drawImage(logoImg, x, 60, box.w, box.h);
+    return c.toDataURL("image/jpeg", 0.93);
+  };
   const foot = (preset.captionFootnote || "").trim();
 
   const patch = (id: string, c: Partial<MPost>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...c } : p)));
@@ -50,6 +74,8 @@ export function NewMonth(props: {
       try {
         const logoBlob = preset.logoUrl ? await fetch(preset.logoUrl).then((r) => (r.ok ? r.blob() : null)).catch(() => null) : null;
         const assets = await buildAssets({ main: brand[0], accent: brand[1], clinicName: preset.name, handle: "", whatsapp: "", logoBlob, photoBlob: null });
+        setLogoImg(assets.logoImg);
+        assets.logoImg = null; // the logo is added afterwards, in one place, so one control moves it on every slide
         const used: Record<string, number> = {};
         for (let k = 0; k < layouts.length; k++) {
           const l = layouts[k];
@@ -87,7 +113,8 @@ export function NewMonth(props: {
   useEffect(() => { if (cur) setWhen(cur.when || ""); }, [cur?.id]);
 
   const send = async (p: MPost, mode: "bank" | "schedule", whenIso?: string) => {
-    const urls = await uploadPngs(p.slides, p.slides.map((_, n) => `new-${p.id}-${n + 1}.jpg`));
+    const finals = await Promise.all(p.slides.map((s) => withLogo(s)));
+    const urls = await uploadPngs(finals, p.slides.map((_, n) => `new-${p.id}-${n + 1}.jpg`));
     const content = { caption: p.caption, title: `${p.treatment} · ${preset.name}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "new-covers" };
     const body = mode === "bank"
       ? { postType: p.slides.length > 1 ? "carousel" : "single", content, status: "draft", presetId: preset.id }
@@ -143,6 +170,14 @@ export function NewMonth(props: {
 
         {making && <div className="flex items-center gap-2 rounded border border-pink-500 p-3"><Loader2 className="w-4 h-4 animate-spin" />{making} ({made} of {layouts.length} done)</div>}
 
+        {logoImg && (
+          <div className="flex items-center gap-3 flex-wrap rounded border p-2">
+            <span className="font-semibold">Logo, top right on every slide of every post</span>
+            <label className="flex items-center gap-2">Size<input type="range" min={40} max={300} value={logoSize} onChange={(e) => setLogoSize(Number(e.target.value))} className="accent-pink-500" /><span className="w-10 text-right">{logoSize}%</span></label>
+            <label className="flex items-center gap-1.5"><input type="checkbox" checked={logoWhite} onChange={(e) => setLogoWhite(e.target.checked)} className="accent-pink-500" />Make it white</label>
+          </div>
+        )}
+
         {posts.length > 0 && (
           <div className="flex gap-1 flex-wrap">
             {posts.map((p, n) => (
@@ -167,7 +202,10 @@ export function NewMonth(props: {
                 <div className="flex gap-3 overflow-x-auto snap-x pb-2">
                   {cur.slides.map((s, n) => (
                     <div key={n} className="snap-start shrink-0">
-                      <img src={s} alt="" className="h-[52vh] w-auto max-w-none rounded border" />
+                      <div className="relative inline-block">
+                        <img src={s} alt="" className="h-[52vh] w-auto max-w-none rounded border block" />
+                        {logoImg && logoBox() && <img src={logoImg.src} alt="" style={{ position: "absolute", top: "4.44%", right: "5.56%", width: `${(logoBox()!.w / 1080) * 100}%`, filter: logoWhite ? "brightness(0) invert(1)" : undefined }} className="max-w-none" />}
+                      </div>
                       <div className="text-center text-xs text-neutral-500 mt-1">Slide {n + 1}</div>
                     </div>
                   ))}
