@@ -174,6 +174,7 @@ import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import SalesDashboard from "@/pages/sales-dashboard";
+import HammeredSales from "@/pages/hammered-sales";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
 import ClubLinks from "@/pages/club-links";
@@ -362,6 +363,7 @@ function AppContent() {
   const [isPrivacy] = useRoute("/privacy");
   const [isPrizes] = useRoute("/prizes");
   const [isSalesDashboard] = useRoute("/salesdashboard");
+  const [isHammeredSales] = useRoute("/hammeredsales");
   const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
@@ -485,6 +487,9 @@ function AppContent() {
   }
   if (isSalesDashboard) {
     return <SalesDashboard />;
+  }
+  if (isHammeredSales) {
+    return <HammeredSales />;
   }
   if (isJoinGroup) {
     return <JoinGroup />;

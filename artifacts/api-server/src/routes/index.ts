@@ -110,6 +110,7 @@ import hammeredCaptionsRouter from "./hammered-captions";
 import clubRouter from "./club";
 import yearpassRouter from "./yearpass";
 import salesDashboardRouter from "./sales-dashboard";
+import hammeredSalesRouter from "./hammered-sales";
 import photoshootRouter from "./photoshoot";
 
 const router: IRouter = Router();
@@ -123,6 +124,7 @@ router.use(hammeredCaptionsRouter);
 router.use(clubRouter);
 router.use(yearpassRouter);
 router.use(salesDashboardRouter);
+router.use(hammeredSalesRouter);
 router.use(photoshootRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
