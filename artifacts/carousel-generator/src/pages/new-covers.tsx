@@ -7,7 +7,7 @@ import { CoverPanel } from "@/components/cover-panel";
 import { renderCoverPost, COVER_LAYOUTS, coverInfo, splitIntoLines, clientHeadFont, type CoverOptions, type CoverLayout } from "@/lib/cover-designs";
 import { COVER_CONTRARIAN, COVER_SETS, COVER_SUBS_TREATMENT, COVER_BET, COVER_STOIC } from "@/lib/cover-banks";
 import { SPLIT_HOOKS } from "@/lib/split-hooks";
-import { fillTreatment, fillName, fillArea } from "@/lib/hook-bank";
+import { fillTreatment, fillName, fillArea, HOOKS } from "@/lib/hook-bank";
 import { usePresets } from "@/lib/use-presets";
 import { useForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
@@ -40,8 +40,11 @@ export default function NewCovers() {
   const [removed, setRemoved] = useState<string[]>([]);
   const [approved, setApproved] = useState<{ id: number; url: string; thumb: string }[] | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
-  const [monthTreats, setMonthTreats] = useState<string[]>([]);
-  const [showTreats, setShowTreats] = useState(false);
+  const SECTIONS = ["Treatment", "Emotional", "Personal", "Nostalgia", "Engagement", "Audience", "Patient", "Injectors", "Seasonal", "Original"];
+  const [plan, setPlan] = useState<{ section: string; code: string; treatment: string }[]>(() => Array.from({ length: 16 }, () => ({ section: "Treatment", code: "", treatment: "" })));
+  const [showPlan, setShowPlan] = useState(true);
+  const setSlot = (n: number, c: Partial<{ section: string; code: string; treatment: string }>) => setPlan((l) => l.map((x, j) => (j === n ? { ...x, ...c } : x)));
+  const fillHook = (code: string, t: string) => { const h = HOOKS.find((x) => x.code === code); return h ? fillName(fillArea(fillTreatment(h.text, t || "your treatment"), area.trim()), name) : ""; };
   const [monthOpen, setMonthOpen] = useState(false);
   const [usedIds, setUsedIds] = useState<number[]>([]);
   const cvRef = useRef<HTMLCanvasElement | null>(null);
@@ -140,7 +143,7 @@ export default function NewCovers() {
   const cutRef = useRef<Map<ImageBitmap, Promise<ImageBitmap | null>>>(new Map());
   const factsKey = facts.join("|");
 
-  const starter = async (layout: CoverLayout, over?: { treatment?: string; heading?: string }): Promise<CoverOptions> => {
+  const starter = async (layout: CoverLayout, over?: { treatment?: string; heading?: string; fontId?: string; bodyId?: string }): Promise<CoverOptions> => {
     const li = coverInfo(layout);
     const t = (over?.treatment || treatment).trim() || "lip filler";
     const fill = (x: string) => fillName(fillArea(fillTreatment(x, t), area.trim() || "your area"), name);
@@ -151,7 +154,7 @@ export default function NewCovers() {
     const heading = over?.heading ? (n > 1 ? splitIntoLines(over.heading, n) : [over.heading]) : n > 1 ? splitIntoLines(fill(`${hook[2]} ${hook[3]}`), n) : [fill(pick(COVER_CONTRARIAN))];
     const o: CoverOptions = {
       layout, photos, colours: { main: brand[0], accent: brand[1] }, lines: heading, sub: li.needs.sub ? fill(pick(COVER_SUBS_TREATMENT)) : "",
-      body: li.needs.body ? fill(pick(COVER_BET)) : "", subs: [], name, fonts: { head: clientHeadFont(fontId), body: "playfair" }, move: {}, size: {}, views: [], deco: true, cutout: null,
+      body: li.needs.body ? fill(pick(COVER_BET)) : "", subs: [], name, fonts: { head: clientHeadFont(over?.fontId || fontId), body: over?.bodyId || "playfair" }, move: {}, size: {}, views: [], deco: true, cutout: null,
     };
     if (li.needs.subs) {
       const max = Math.max(...li.needs.subs);
@@ -189,16 +192,24 @@ export default function NewCovers() {
     return () => { live = false; clearTimeout(timer); };
   }, [value, own.length, treatment, area, name, fontId, brand[0], brand[1], factsKey, seed]);
 
-  const makeCover = async (layout: string, t: string, heading: string) => renderCoverPost(await starter(layout as CoverLayout, { treatment: t, heading }));
+  const makeCover = async (layout: string, t: string, heading: string, fid: string, bid: string) => renderCoverPost(await starter(layout as CoverLayout, { treatment: t, heading, fontId: fid, bodyId: bid }));
   const togglePick = (id: string) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const pick16 = () => { const pool: string[] = COVER_LAYOUTS.filter((l) => !removed.includes(l.id)).map((l) => l.id); const keep = picked.filter((x) => pool.includes(x)); setPicked([...keep, ...pool.filter((x) => !keep.includes(x))].slice(0, 16)); };
   const startMonth = () => {
     if (!preset) { toast.error("I cannot see this client's saved look yet"); return; }
     if (!area.trim()) { toast.error("Type the clinic's area first so the hashtags are local"); return; }
     if (!own.length) { toast.error("Add at least one photo first"); return; }
-    if (!picked.length) { toast.error("Tick the covers you want first"); return; }
-    if (!monthTreats.length && !U_TREATMENTS.some((t) => t.name.toLowerCase() === treatment.trim().toLowerCase())) { toast.error("Choose at least one treatment under Treatments for the month"); return; }
+    if (!plan.some((x) => x.code)) { toast.error("Pick at least one hook first"); return; }
     setMonthOpen(true);
+  };
+  const monthSlots = () => {
+    const order = picked.length ? picked.map((id) => COVER_LAYOUTS.find((l) => l.id === id)!).filter(Boolean) : COVER_LAYOUTS.filter((l) => !removed.includes(l.id));
+    const out: { layout: { id: string; n: number; label: string; statik?: boolean }; treatment: string; hook: string }[] = [];
+    plan.filter((x) => x.code).forEach((x, n) => {
+      const t = x.treatment || treatment.trim() || "lip filler";
+      out.push({ layout: order[n % order.length], treatment: t, hook: fillHook(x.code, t) });
+    });
+    return out;
   };
   const edit = (l: CoverLayout) => { const o = optsRef.current.get(l); if (o) { setMoveSel(""); setValue(o); window.scrollTo({ top: 0, behavior: "smooth" }); } };
   const saveOne = async (l: CoverLayout) => { const o = optsRef.current.get(l); if (!o) return; const cv = await renderCoverPost(o); cv.toBlob((b) => { if (b) saveAs(b, `new-cover-${l}.png`); }, "image/png"); };
@@ -223,10 +234,7 @@ export default function NewCovers() {
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4 text-sm">
       {monthOpen && preset && (
-        <NewMonth preset={preset} area={area} brand={brand} photos={own.map((o) => o.bmp)} makeCover={makeCover}
-          layouts={picked.slice(0, 16).map((id) => COVER_LAYOUTS.find((l) => l.id === id)!).filter(Boolean)}
-          treatments={monthTreats.length ? monthTreats : [U_TREATMENTS.find((t) => t.name.toLowerCase() === treatment.trim().toLowerCase())!.name]}
-          onClose={() => setMonthOpen(false)} />
+        <NewMonth preset={preset} area={area} brand={brand} photos={own.map((o) => o.bmp)} makeCover={makeCover} startFont={fontId || "hatcher"} slots={monthSlots()} onClose={() => setMonthOpen(false)} />
       )}
       <h1 className="text-xl font-semibold">NEW covers</h1>
       <p className="text-white/60">Add the clinician's photos and the treatment, and all 23 new slide 1 covers draw below. Scroll down the list, then tap Edit on any one to change the words, drag and size every piece. Brand colours, font and photo come through on their own.{!preset && " (I cannot see her saved look yet.)"}</p>
@@ -266,17 +274,47 @@ export default function NewCovers() {
       </div>
 
       {!value && (
+        <div className="rounded border border-pink-500 p-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold">Plan the month: pick up to 16 hooks</span>
+            <Button size="sm" variant="outline" onClick={() => setShowPlan((v) => !v)}>{showPlan ? "Hide" : "Show"}</Button>
+            <Button size="sm" onClick={startMonth}><Sparkles className="w-4 h-4 mr-1" />CREATE the month ({plan.filter((x) => x.code).length} hooks)</Button>
+          </div>
+          {showPlan && (
+            <div className="space-y-1.5">
+              {plan.map((x, n) => {
+                const list = HOOKS.filter((h) => (h.theme || "Original") === x.section);
+                const groups = Array.from(new Set(list.map((h) => h.group || x.section)));
+                return (
+                  <div key={n} className="grid gap-1.5 md:grid-cols-[2rem_9rem_1fr_11rem] items-center">
+                    <span className="text-white/50">{n + 1}</span>
+                    <select value={x.section} onChange={(e) => setSlot(n, { section: e.target.value, code: "" })} className="rounded bg-white/10 px-2 py-1">{SECTIONS.map((sc) => <option key={sc} value={sc}>{sc === "Original" ? "My first hooks" : sc}</option>)}</select>
+                    <select value={x.code} onChange={(e) => setSlot(n, { code: e.target.value })} className="rounded bg-white/10 px-2 py-1 min-w-0">
+                      <option value="">Choose a hook...</option>
+                      {groups.map((g) => <optgroup key={g} label={g}>{list.filter((h) => (h.group || x.section) === g).map((h) => <option key={h.code} value={h.code}>{fillHook(h.code, x.treatment || treatment.trim()).slice(0, 110)}</option>)}</optgroup>)}
+                    </select>
+                    <select value={x.treatment} onChange={(e) => setSlot(n, { treatment: e.target.value })} className="rounded bg-white/10 px-2 py-1">
+                      <option value="">{treatment.trim() ? `Same: ${treatment.trim()}` : "Treatment..."}</option>
+                      {U_TREATMENTS.map((t) => <option key={t.id} value={t.name}>{t.name}</option>)}
+                    </select>
+                  </div>
+                );
+              })}
+              <p className="text-white/50 text-xs">Each row is one post. Pick the hook, and change the treatment on any row that is about something different. Then press CREATE.</p>
+            </div>
+          )}
+        </div>
+      )}
+      {!value && (
         <div className="space-y-3">
           <p className="text-white/60">{drawn < COVER_LAYOUTS.length ? `Drawing the covers... ${drawn} of ${COVER_LAYOUTS.length}` : "All 23 are ready. Tap Edit on the one you like."}</p>
           <div className="sticky top-0 z-30 rounded border border-pink-500 bg-black p-2 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold">{picked.length} of 16 covers ticked</span>
+              <span className="font-semibold">{picked.length} covers ticked</span>
               <Button size="sm" variant="outline" onClick={pick16}>Pick 16 for me</Button>
               <Button size="sm" variant="outline" onClick={() => setPicked([])}>Clear</Button>
-              <Button size="sm" variant="outline" onClick={() => setShowTreats((v) => !v)}>Treatments for the month ({monthTreats.length})</Button>
-              <Button size="sm" onClick={startMonth}><Sparkles className="w-4 h-4 mr-1" />CREATE the month</Button>
+              <span className="text-white/50 text-xs">Tick covers to choose which designs the month uses. None ticked uses them all in order.</span>
             </div>
-            {showTreats && <div className="flex gap-1.5 flex-wrap max-h-40 overflow-y-auto">{U_TREATMENTS.map((t) => { const on = monthTreats.includes(t.name); return <button key={t.id} type="button" onClick={() => setMonthTreats((l) => (on ? l.filter((x) => x !== t.name) : [...l, t.name]))} className={`rounded-full border px-2.5 py-1 text-xs ${on ? "bg-pink-500 border-pink-500 text-white" : "border-white/30"}`}>{t.name}</button>; })}</div>}
           </div>
           {removed.length > 0 && <button type="button" className="text-xs underline" onClick={() => setRemoved([])}>Bring back the {removed.length} deleted {removed.length === 1 ? "cover" : "covers"}</button>}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Archive, CalendarCheck, CalendarClock, ChevronLeft, ChevronRight, Loader2, SkipForward, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { buildAssets, renderUniversalPost } from "@/lib/tenfree-engine";
+import { buildAssets, buildTitleFont, renderUniversalPost } from "@/lib/tenfree-engine";
+import { SUITE_FONTS } from "@/lib/suite-fonts";
 import { uploadPngs } from "@/lib/month-engine";
 import { U_TREATMENTS, U_BY_ID, postTypesFor } from "@/lib/universal-treatments";
 import type { ClientPreset } from "@/lib/use-presets";
@@ -17,6 +18,13 @@ type Style = "new" | "gradient" | "block" | "box";
 type MPost = { id: string; label: string; treatment: string; treatmentId: string; layoutId: string; statik: boolean; k: number; angle: number; headline: string; subtitle: string; body: string[]; cta: string; style: Style; slides: string[]; caption: string; status: Status; when?: string; error?: string };
 const STYLES: { id: Style; label: string }[] = [{ id: "new", label: "New cover" }, { id: "gradient", label: "Gradient" }, { id: "block", label: "Colour block" }, { id: "box", label: "Text box" }];
 
+export type MonthSlot = { layout: MonthLayout; treatment: string; hook: string };
+const BODY_OPTS = [
+  { id: "playfair", label: "Playfair Display", family: "Playfair Display" },
+  { id: "roboto", label: "Roboto", family: "Roboto" },
+  { id: "inter", label: "Inter", family: "Inter" },
+  { id: "instrument", label: "Instrument Serif", family: "Instrument Serif" },
+];
 const pad = (n: number) => String(n).padStart(2, "0");
 const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const nice = (iso?: string) => { try { return new Date(iso || "").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); } catch { return ""; } };
@@ -24,14 +32,15 @@ const nice = (iso?: string) => { try { return new Date(iso || "").toLocaleDateSt
 export function NewMonth(props: {
   preset: ClientPreset;
   area: string;
-  layouts: MonthLayout[];
-  treatments: string[];
+  slots: MonthSlot[];
   photos: ImageBitmap[];
   brand: [string, string];
-  makeCover: (layout: string, treatment: string, headline: string) => Promise<HTMLCanvasElement>;
+  startFont: string;
+  makeCover: (layout: string, treatment: string, headline: string, fontId: string, bodyId: string) => Promise<HTMLCanvasElement>;
   onClose: () => void;
 }) {
-  const { preset, area, layouts, treatments, photos, brand, makeCover, onClose } = props;
+  const { preset, area, slots, photos, brand, startFont, makeCover, onClose } = props;
+  const layouts = slots.map((s) => s.layout);
   const [posts, setPosts] = useState<MPost[]>([]);
   const [making, setMaking] = useState("Getting the fonts and logo ready...");
   const [made, setMade] = useState(0);
@@ -43,6 +52,8 @@ export function NewMonth(props: {
   const started = useRef(false);
   const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
   // Settings that apply to every post at once. Press Apply to redraw them all.
+  const [gFont, setGFont] = useState(startFont || "hatcher");
+  const [gBody, setGBody] = useState("playfair");
   const [gScale, setGScale] = useState(100);
   const [gColour, setGColour] = useState("");
   const [gFill, setGFill] = useState(brand[0]);
@@ -79,10 +90,10 @@ export function NewMonth(props: {
   const build = async (p: MPost, over?: Partial<MPost>): Promise<string[]> => {
     const a = assetsRef.current!;
     const q = { ...p, ...over };
-    const common = { treatmentId: q.treatmentId, headline: q.headline, copy: { subtitle: q.subtitle, slides: q.body, cta: q.cta }, photos, offset: q.k, angle: q.angle, textScale: gScale !== 100 ? gScale / 100 : undefined, textColour: gColour || undefined };
+    const common = { treatmentId: q.treatmentId, headline: q.headline, copy: { subtitle: q.subtitle, slides: q.body, cta: q.cta }, photos, offset: q.k, angle: q.angle, bodyFont: BODY_OPTS.find((b) => b.id === gBody)?.family, textScale: gScale !== 100 ? gScale / 100 : undefined, textColour: gColour || undefined };
     let cs: HTMLCanvasElement[];
     if (q.style === "new") {
-      const cover = await makeCover(q.layoutId, q.treatment, q.headline);
+      const cover = await makeCover(q.layoutId, q.treatment, q.headline, gFont, gBody);
       cs = [cover, ...(q.statik ? [] : renderUniversalPost(common, a).slice(1))];
     } else {
       const extra = q.style === "block" ? { block: gFill } : q.style === "box" ? { box: { fill: gFill, x: 0.5, y: 0.5 } } : {};
@@ -95,6 +106,8 @@ export function NewMonth(props: {
     catch (e) { toast.error(e instanceof Error ? e.message : "That one would not redraw"); }
   };
   const redrawAll = async (over?: Partial<MPost>) => {
+    if (assetsRef.current) assetsRef.current.tf = await buildTitleFont(gFont);
+    await Promise.all(BODY_OPTS.map((b) => document.fonts.load(`400 40px "${b.family}"`).catch(() => [])));
     const list = posts.filter((p) => p.status !== "failed");
     for (const [n, p] of list.entries()) { setRedraw(`Redrawing ${n + 1} of ${list.length}...`); await redrawOne(p, over); }
     setRedraw("");
@@ -112,16 +125,16 @@ export function NewMonth(props: {
         assetsRef.current = assets;
         const used: Record<string, number> = {};
         for (let k = 0; k < layouts.length; k++) {
-          const l = layouts[k];
-          const x = U_TREATMENTS.find((t) => t.name === treatments[k % treatments.length]) ?? U_TREATMENTS[0];
+          const l = slots[k].layout;
+          const x = U_TREATMENTS.find((t) => t.name === slots[k].treatment) ?? U_TREATMENTS[0];
           const angle = (used[x.id] = (used[x.id] ?? -1) + 1) % 6;
-          const type = postTypesFor(x)[angle];
+          const type = { ...postTypesFor(x)[angle], headline: slots[k].hook, brief: `Carry on from the hook on slide 1 and make it about ${x.name}.` };
           setMaking(`Writing and drawing post ${k + 1} of ${layouts.length}...`);
           const id = `${l.id}-${k}-${Date.now()}`;
           try {
             const r = await fetch(`${BASE}/api/universal/copy`, {
               method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ client: preset.name, area, treatment: x.name, headline: type.headline, brief: type.brief, intro: angle === 0, note: "" }),
+              body: JSON.stringify({ client: preset.name, area, treatment: x.name, headline: type.headline, brief: type.brief, intro: false, note: "" }),
             });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d?.error || "The words would not write");
@@ -214,11 +227,20 @@ export function NewMonth(props: {
         {posts.length > 0 && (
           <div className="rounded border p-2 space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
+              <span className="font-semibold">Fonts for every post</span>
+              <label className="flex items-center gap-1.5">Headlines<select value={gFont} onChange={(e) => setGFont(e.target.value)} className="rounded border px-2 py-1">{SUITE_FONTS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</select></label>
+              <label className="flex items-center gap-1.5">Subtitles<select value={gBody} onChange={(e) => setGBody(e.target.value)} className="rounded border px-2 py-1">{BODY_OPTS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select></label>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold">Make every post</span>
+              {STYLES.map((st) => <Button key={st.id} size="sm" variant="outline" disabled={!!redraw} onClick={() => void redrawAll({ style: st.id })}>{st.label}</Button>)}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="font-semibold">All headings and subtitles</span>
               <label className="flex items-center gap-2">Writing size<input type="range" min={70} max={140} value={gScale} onChange={(e) => setGScale(Number(e.target.value))} className="accent-pink-500" /><span className="w-10 text-right">{gScale}%</span></label>
               <label className="flex items-center gap-1.5">Writing colour<input type="color" value={gColour || "#ffffff"} onChange={(e) => setGColour(e.target.value)} />{gColour && <button type="button" className="text-xs underline" onClick={() => setGColour("")}>Automatic</button>}</label>
               <label className="flex items-center gap-1.5">Block and box colour<input type="color" value={gFill} onChange={(e) => setGFill(e.target.value)} /></label>
-              <Button size="sm" disabled={!!redraw} onClick={() => void redrawAll()}>Apply to all posts</Button>
+              <Button size="sm" disabled={!!redraw} onClick={() => void redrawAll()}>Apply fonts, size and colour to all posts</Button>
               <Button size="sm" variant="outline" onClick={() => setShowWords((v) => !v)}>{showWords ? "Hide the wording" : "Edit all the wording"}</Button>
               {redraw && <span className="flex items-center gap-1"><Loader2 className="w-4 h-4 animate-spin" />{redraw}</span>}
             </div>
