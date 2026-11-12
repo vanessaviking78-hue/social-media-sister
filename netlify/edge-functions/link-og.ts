@@ -1,4 +1,5 @@
 import { PREVIEWS } from "./lib/previews.ts";
+import { SALES_PREVIEWS } from "./lib/previews-sales.ts";
 
 // Link previews (WhatsApp, Facebook, Instagram DMs, iMessage) do not run the app, so each link's own title and picture have to be in the page itself.
 const match = (path: string, pattern: string) =>
@@ -11,7 +12,7 @@ export default async (request: Request, context: { next: () => Promise<Response>
   const type = res.headers.get("content-type") || "";
   if (!type.includes("text/html")) return res;
   const url = new URL(request.url);
-  const p = PREVIEWS.find((x) => x.paths.some((pat) => match(url.pathname, pat)));
+  const p = [...PREVIEWS, ...SALES_PREVIEWS].find((x) => x.paths.some((pat) => match(url.pathname, pat)));
   if (!p) return res;
   const title = esc(p.title);
   const desc = esc(p.desc);

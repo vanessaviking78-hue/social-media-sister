@@ -216,3 +216,23 @@
 [[edge_functions]]
   path = "/youreinvited"
   function = "link-og"
+
+[[edge_functions]]
+  path = "/hammeredproposal"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/hammeredproposal18"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/hammeredsales"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/salesproposal"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/salesdashboard"
+  function = "link-og"
