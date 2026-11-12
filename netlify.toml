@@ -34,6 +34,10 @@
   function = "hammered-og"
 
 [[edge_functions]]
+  path = "/smashedfreebies"
+  function = "smashed-og"
+
+[[edge_functions]]
   path = "/know-me"
   function = "link-og"
 
@@ -227,6 +231,18 @@
 
 [[edge_functions]]
   path = "/hammeredsales"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/smashedproposal"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/smashedproposal18"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/smashedsales"
   function = "link-og"
 
 [[edge_functions]]

@@ -4,6 +4,7 @@ import { runMigrations } from "./lib/runMigrations";
 import { startSchedulerCron } from "./lib/schedulerEngine";
 import { startInboxSync } from "./routes/inbox";
 import { startHammeredMetricsSync } from "./routes/hammered-performance";
+import { startSmashedMetricsSync } from "./routes/smashed-performance";
 import { startRevenueIdeasCron } from "./lib/revenueIdeasCron";
 
 const rawPort = process.env["PORT"];
@@ -38,6 +39,7 @@ async function start(): Promise<void> {
   startRevenueIdeasCron();
   startInboxSync();
   startHammeredMetricsSync();
+  startSmashedMetricsSync();
 }
 
 start().catch((err) => {

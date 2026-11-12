@@ -179,6 +179,14 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
+import SmashedFreebies from "@/pages/smashed-freebies";
+import SmashedHome from "@/pages/smashed-home";
+import SmashedTool from "@/pages/smashed";
+import SmashedLinks from "@/pages/smashed-links";
+import SmashedPerformance from "@/pages/smashed-performance";
+import SmashedSales from "@/pages/smashed-sales";
+import SmashedProposal18 from "@/pages/smashed-proposal18";
+import SmashedProposal from "@/pages/smashed-proposal";
 import SalesProposal from "@/pages/sales-proposal";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
@@ -239,6 +247,9 @@ function ProtectedRouter() {
       <Route path="/hammeredposts" component={HammeredTool} />
       <Route path="/hammeredlinks" component={HammeredLinks} />
       <Route path="/hammeredperformance" component={HammeredPerformance} />
+      <Route path="/smashedposts" component={SmashedTool} />
+      <Route path="/smashedlinks" component={SmashedLinks} />
+      <Route path="/smashedperformance" component={SmashedPerformance} />
       <Route path="/inbox" component={InboxPage} />
       <Route path="/clare" component={ClarePage} />
       <Route path="/clients" component={ClientsIndexPage} />
@@ -373,6 +384,9 @@ function AppContent() {
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
   const [isHammeredProposal] = useRoute("/hammeredproposal");
+  const [isSmashedSales] = useRoute("/smashedsales");
+  const [isSmashedProposal18] = useRoute("/smashedproposal18");
+  const [isSmashedProposal] = useRoute("/smashedproposal");
   const [isSalesProposal] = useRoute("/salesproposal");
   const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
@@ -408,6 +422,7 @@ function AppContent() {
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isHammeredFreebies] = useRoute("/hammeredfreebies");
   const [isHammeredFreebiesAlt] = useRoute("/hammeredfreeies"); // old spelling still works
+  const [isSmashedFreebies] = useRoute("/smashedfreebies");
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
   const [isKirstyDove] = useRoute("/kirstydove");
@@ -422,6 +437,7 @@ function AppContent() {
   const isSplash = location === "/";
   const isChoose = location === "/choose";
   const isHammered = location === "/hammered";
+  const isSmashed = location === "/smashed";
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -489,6 +505,9 @@ function AppContent() {
   if (isHammered) {
     return <HammeredHome />;
   }
+  if (isSmashed) {
+    return <SmashedHome />;
+  }
   if (isPrivacy) {
     return <Privacy />;
   }
@@ -506,6 +525,15 @@ function AppContent() {
   }
   if (isHammeredProposal) {
     return <HammeredProposal />;
+  }
+  if (isSmashedSales) {
+    return <SmashedSales />;
+  }
+  if (isSmashedProposal18) {
+    return <SmashedProposal18 />;
+  }
+  if (isSmashedProposal) {
+    return <SmashedProposal />;
   }
   if (isSalesProposal) {
     return <SalesProposal />;
@@ -597,6 +625,9 @@ function AppContent() {
   }
   if (isHammeredFreebies || isHammeredFreebiesAlt) {
     return <HammeredFreebies />;
+  }
+  if (isSmashedFreebies) {
+    return <SmashedFreebies />;
   }
   if (isClubBare) {
     return (

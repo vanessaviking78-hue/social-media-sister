@@ -34,3 +34,7 @@ export const HAMMERED_FONTS: { id: string; name: string; family: string }[] = [
   { id: "bordie-unfocus", name: "Bordie Unfocus", family: "SuiteBordieUnfocus" },
   { id: "verstep", name: "Verstep", family: "SuiteVerstep" },
 ];
+
+// The headline fonts a Smashed Socials (pub and bar) freebie can choose from. Bold, loud and friendly, all on the Cyber Suite font shelf.
+const SMASHED_FONT_IDS = ["anton", "bebas-neue", "archivo-black", "bowlby-one", "alfa-slab-one", "permanent-marker", "naleni", "andigo", "stoner-bold", "bordie-unfocus", "verstep"];
+export const SMASHED_FONTS: { id: string; name: string; family: string }[] = HAMMERED_FONTS.filter((f) => SMASHED_FONT_IDS.includes(f.id));
