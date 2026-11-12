@@ -28,6 +28,7 @@ export async function runMigrations(): Promise<void> {
     await createHomeworkTables();
     await addHomeworkExtraQuestionColumns();
     await createBonusContentTable();
+    await retryFailedPostsAtSevenOnce();
     await createBlogPostsTable();
     await createBroadcastTopicsTable();
 await createBroadcastDraftsTable();
@@ -779,4 +780,39 @@ async function createFreeSampleDraftsTable(): Promise<void> {
       updated_at timestamp NOT NULL DEFAULT now()
     )
   `);
+}
+
+
+// One-off, 12 Nov 2026: Vanessa asked for the posts that failed on 11 Nov to be retried at 7am the next morning (GMT, so 07:00 UTC).
+// Runs once only (the marker row stops a later restart doing it again). Failed posts from 11 Nov onwards are put back to pending,
+// staggered a minute apart from 07:00 so Meta is not hit with them all at once. A post that already went out on one platform
+// (its error only names the other platform) is left alone, so nothing gets posted twice.
+async function retryFailedPostsAtSevenOnce(): Promise<void> {
+  try {
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS one_shot_jobs (name TEXT PRIMARY KEY, ran_at TIMESTAMPTZ NOT NULL DEFAULT now(), note TEXT NOT NULL DEFAULT '')`);
+    // Never run once the 7am slot has passed, otherwise the posts would go out straight away at some random restart.
+    if (Date.now() >= Date.parse("2026-11-12T06:50:00Z")) return;
+    const claimed = await db.execute(sql`INSERT INTO one_shot_jobs (name) VALUES ('retry-failed-posts-2026-11-12-0700') ON CONFLICT (name) DO NOTHING RETURNING name`);
+    if (claimed.rows.length === 0) return;
+    const retried = await db.execute(sql`
+      WITH due AS (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY scheduled_at, id) - 1 AS n
+        FROM scheduled_posts
+        WHERE status = 'failed'
+          AND updated_at >= TIMESTAMPTZ '2026-11-11T00:00:00Z'
+          AND (NOT (content->'platforms' IS NULL OR content->'platforms' @> '["instagram"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%IG:%')
+          AND (NOT (content->'platforms' IS NULL OR content->'platforms' @> '["facebook"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%FB:%')
+      )
+      UPDATE scheduled_posts p
+      SET status = 'pending', meta_status = 'pending', meta_result = NULL, meta_posted_at = NULL,
+          scheduled_at = TIMESTAMPTZ '2026-11-12T07:00:00Z' + (due.n * INTERVAL '1 minute'), updated_at = now()
+      FROM due WHERE p.id = due.id
+      RETURNING p.id`);
+    const left = await db.execute(sql`SELECT COUNT(*)::int AS n FROM scheduled_posts WHERE status = 'failed' AND updated_at >= TIMESTAMPTZ '2026-11-11T00:00:00Z'`);
+    const note = `retried ${retried.rows.length} failed post(s) for 07:00 UTC, ${Number((left.rows[0] as { n?: number })?.n ?? 0)} failed post(s) from 11 Nov left alone`;
+    await db.execute(sql`UPDATE one_shot_jobs SET note = ${note} WHERE name = 'retry-failed-posts-2026-11-12-0700'`);
+    logger.warn({ retried: retried.rows.map((r) => (r as { id: number }).id) }, `7am retry: ${note}`);
+  } catch (err) {
+    logger.error({ err }, "7am retry of failed posts did not run");
+  }
 }
