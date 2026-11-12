@@ -802,8 +802,8 @@ async function retryFailedPostsAtSevenOnce(): Promise<void> {
         FROM scheduled_posts
         WHERE status = 'failed'
           AND updated_at >= TIMESTAMPTZ '2026-11-11T00:00:00Z'
-          AND (NOT (content->'platforms' IS NULL OR content->'platforms' @> '["instagram"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%IG:%')
-          AND (NOT (content->'platforms' IS NULL OR content->'platforms' @> '["facebook"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%FB:%')
+          AND (NOT ((content::jsonb)->'platforms' IS NULL OR (content::jsonb)->'platforms' = 'null'::jsonb OR (content::jsonb)->'platforms' @> '["instagram"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%IG:%')
+          AND (NOT ((content::jsonb)->'platforms' IS NULL OR (content::jsonb)->'platforms' = 'null'::jsonb OR (content::jsonb)->'platforms' @> '["facebook"]'::jsonb) OR COALESCE(meta_result->>'error','') LIKE '%FB:%')
       )
       UPDATE scheduled_posts p
       SET status = 'pending', meta_status = 'pending', meta_result = NULL, meta_posted_at = NULL,
