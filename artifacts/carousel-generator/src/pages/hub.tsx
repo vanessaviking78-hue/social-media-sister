@@ -7,6 +7,26 @@ import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
 
+// Cards hidden from the main hub (12 Nov 2026 tidy up). The pages still work by direct link.
+// To bring a tool back, delete its name from this list.
+const HIDDEN_TOOLS = new Set<string>([
+"Halloween Posts",
+"Content Generator",
+"CSV Creator",
+"Content Machine",
+"Bulk Carousel Creator",
+"Sample Showcase",
+"Trial Bundle",
+"Bundle Requests",
+"NO 1 Body Sculpting",
+"NO 1 Sections",
+"Castle Clinic",
+"Dr Kathryn Bell",
+"Dr Lisa Academy",
+"Clare Connolly",
+"The Ryder Clinic",
+]);
+
 const TOOLS = [
 {
 href: "/yet-to-post",
@@ -1267,7 +1287,7 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
 
 {/* Filtered grid */}
 {activeGroup === "clients" ? <ClientsGrid /> : <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup && !HIDDEN_TOOLS.has(tool.name)).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
 </div>}
 </main>
 
