@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, ImagePlus } from "lucide-react";
+import { Download, ImagePlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ export default function NewCovers() {
   const [busy, setBusy] = useState(false);
   const [moveSel, setMoveSel] = useState("");
   const [showApproved, setShowApproved] = useState(false);
+  const [removed, setRemoved] = useState<string[]>([]);
   const [approved, setApproved] = useState<{ id: number; url: string; thumb: string }[] | null>(null);
   const [usedIds, setUsedIds] = useState<number[]>([]);
   const cvRef = useRef<HTMLCanvasElement | null>(null);
@@ -233,15 +234,21 @@ export default function NewCovers() {
           </div>
         )}
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void addPhotos(e.target.files); e.target.value = ""; }} />
-        <div className="flex gap-1 flex-wrap">{own.map((p, i) => <img key={i} src={p.url} alt="" className="w-12 h-16 object-cover rounded max-w-none shrink-0" />)}</div>
+        <div className="flex gap-1 flex-wrap">{own.map((p, i) => (
+          <div key={p.url + i} className="relative">
+            <img src={p.url} alt="" className="w-16 h-20 object-cover rounded max-w-none shrink-0" />
+            <button type="button" aria-label="Delete this photo" onClick={() => setOwn((o) => o.filter((_, j) => j !== i))} className="absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-pink-500 text-white shadow"><Trash2 className="h-3.5 w-3.5" /></button>
+          </div>
+        ))}</div>
         {!own.length && <p className="text-white/50">Add at least one photo of the clinician to start. The photos are shared out down the list, so the more you add the more variety you see.</p>}
       </div>
 
       {!value && (
         <div className="space-y-3">
           <p className="text-white/60">{drawn < COVER_LAYOUTS.length ? `Drawing the covers... ${drawn} of ${COVER_LAYOUTS.length}` : "All 23 are ready. Tap Edit on the one you like."}</p>
+          {removed.length > 0 && <button type="button" className="text-xs underline" onClick={() => setRemoved([])}>Bring back the {removed.length} deleted {removed.length === 1 ? "cover" : "covers"}</button>}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {COVER_LAYOUTS.map((l) => (
+            {COVER_LAYOUTS.filter((l) => !removed.includes(l.id)).map((l) => (
               <div key={l.id} className="space-y-1.5">
                 {thumbs[l.id]
                   ? <img src={thumbs[l.id]} alt="" onClick={() => edit(l.id)} className="w-full h-auto rounded border cursor-pointer" />
@@ -250,6 +257,7 @@ export default function NewCovers() {
                 <div className="flex gap-1.5">
                   <Button size="sm" disabled={!thumbs[l.id]} onClick={() => edit(l.id)}>Edit</Button>
                   <Button size="sm" variant="outline" disabled={!thumbs[l.id]} onClick={() => void saveOne(l.id)}><Download className="w-4 h-4 mr-1" />PNG</Button>
+                  <Button size="sm" variant="outline" aria-label="Delete this cover" onClick={() => setRemoved((r) => [...r, l.id])}><Trash2 className="w-4 h-4" /></Button>
                 </div>
               </div>
             ))}

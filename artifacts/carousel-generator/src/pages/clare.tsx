@@ -995,7 +995,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
             {pool.map((p, i) => (
               <div key={p.id} className="relative">
                 <img src={p.url} alt="" className="w-16 h-20 object-cover rounded" />
-                <button className="absolute -top-1 -right-1 bg-black/70 rounded-full p-0.5" onClick={() => setPool((l) => l.filter((x) => x.id !== p.id))} aria-label={`Remove photo ${i + 1}`}><Trash2 className="w-3 h-3" /></button>
+                <button className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-pink-500 text-white shadow" onClick={() => setPool((l) => l.filter((x) => x.id !== p.id))} aria-label={`Remove photo ${i + 1}`}><Trash2 className="w-3 h-3" /></button>
               </div>
             ))}
           </div>
@@ -1030,7 +1030,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
               {(libBy.get(group) ?? []).map((i) => (
                 <div key={i.id} className="relative">
                   <img src={localUrl(i.url)} alt="" className="w-16 h-20 object-cover rounded" />
-                  <button className="absolute -top-1 -right-1 bg-black/70 rounded-full p-0.5" onClick={() => removeLibImage(i)} aria-label="Remove photo"><Trash2 className="w-3 h-3" /></button>
+                  <button className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-pink-500 text-white shadow" onClick={() => removeLibImage(i)} aria-label="Remove photo"><Trash2 className="w-3 h-3" /></button>
                 </div>
               ))}
             </div>
@@ -1078,7 +1078,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                     <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     {t.feral && <Button size="sm" variant="secondary" onClick={() => downloadStories(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Stories 1080 x 1920</Button>}
-                    <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="outline" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Delete post"><Trash2 className="w-4 h-4 mr-2" />Delete</Button>
                   </div>
                 </div>
                 {post.rejected && (
