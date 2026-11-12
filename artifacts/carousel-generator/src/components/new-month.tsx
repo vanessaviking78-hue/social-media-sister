@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { buildAssets, buildTitleFont, renderUniversalPost } from "@/lib/tenfree-engine";
 import { SUITE_FONTS } from "@/lib/suite-fonts";
+import { loadBitmap } from "@/pages/universal";
 import { uploadPngs } from "@/lib/month-engine";
 import { U_TREATMENTS, U_BY_ID, postTypesFor } from "@/lib/universal-treatments";
 import type { ClientPreset } from "@/lib/use-presets";
@@ -90,16 +91,29 @@ export function NewMonth(props: {
 
   const patch = (id: string, c: Partial<MPost>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...c } : p)));
 
-  const defaultPick = (k: number, n: number) => (photos.length ? (k * 4 + n) % photos.length : null);
-  const pickOf = (q: MPost, n: number) => (q.picks[n] ?? defaultPick(q.k, n));
+  // Slide 1 uses the clinician's own photos. Slides 2 to 4 use the shared library for the post's treatment, a different picture each time, like the other tools.
+  const libsRef = useRef<Record<string, { url: string; bmp: ImageBitmap }[]>>({});
+  const [libTick, setLibTick] = useState(0);
+  const poolFor = (q: MPost, n: number) => {
+    const own = photos.map((b, i) => ({ url: photoUrls[i], bmp: b }));
+    const lib = n >= 1 ? libsRef.current[q.treatmentId] ?? [] : [];
+    return [...lib, ...own];
+  };
+  const defaultPick = (q: MPost, n: number) => {
+    const pool = poolFor(q, n);
+    if (!pool.length) return null;
+    const lib = n >= 1 ? (libsRef.current[q.treatmentId] ?? []).length : 0;
+    return lib > 0 ? (q.k * 3 + (n - 1)) % lib : (q.k * 4 + n) % pool.length;
+  };
+  const pickOf = (q: MPost, n: number) => q.picks[n] ?? defaultPick(q, n);
   const build = async (p: MPost, over?: Partial<MPost>): Promise<string[]> => {
     const a = assetsRef.current!;
     const q = { ...p, ...over };
-    const common = { treatmentId: q.treatmentId, headline: q.headline, copy: { subtitle: q.subtitle, slides: q.body, cta: q.cta }, photos, offset: q.k, angle: q.angle, custom: [0, 1, 2, 3].map((n) => { const i = pickOf(q, n); return i == null ? null : photos[i % photos.length]; }), bodyFont: BODY_OPTS.find((b) => b.id === gBody)?.family, textScale: gScale !== 100 ? gScale / 100 : undefined, textColour: gColour || undefined };
+    const common = { treatmentId: q.treatmentId, headline: q.headline, copy: { subtitle: q.subtitle, slides: q.body, cta: q.cta }, photos, offset: q.k, angle: q.angle, custom: [0, 1, 2, 3].map((n) => { const pool = poolFor(q, n); const i = pickOf(q, n); return i == null || !pool.length ? null : pool[i % pool.length].bmp; }), bodyFont: BODY_OPTS.find((b) => b.id === gBody)?.family, textScale: gScale !== 100 ? gScale / 100 : undefined, textColour: gColour || undefined };
     let cs: HTMLCanvasElement[];
     if (q.style === "new") {
       const c0 = pickOf(q, 0);
-      const cover = await makeCover(q.layoutId, q.treatment, q.headline, gFont, gBody, q.picks[0] != null && c0 != null ? photos[c0 % photos.length] : undefined, { sub: q.subtitle, body: (q.body[0] || "").split(/(?<=[.?])\s/)[0] || q.subtitle, phrases: q.phrases, points: q.points });
+      const cover = await makeCover(q.layoutId, q.treatment, q.headline, gFont, gBody, q.picks[0] != null && c0 != null ? poolFor(q, 0)[c0 % poolFor(q, 0).length].bmp : undefined, { sub: q.subtitle, body: (q.body[0] || "").split(/(?<=[.?])\s/)[0] || q.subtitle, phrases: q.phrases, points: q.points });
       cs = [cover, ...(q.statik ? [] : renderUniversalPost(common, a).slice(1))];
     } else {
       const extra = q.style === "block" ? { block: gFill } : q.style === "box" ? { box: { fill: gFill, x: 0.5, y: 0.5 } } : {};
@@ -137,6 +151,16 @@ export function NewMonth(props: {
         setLogoImg(assets.logoImg);
         assets.logoImg = null; // the logo is added afterwards, in one place, so one control moves it on every slide
         assetsRef.current = assets;
+        try {
+          const all = ((await (await fetch(`${BASE}/api/universal/images`)).json()).images ?? []) as { treatmentId: string; url: string }[];
+          const ids = new Set(slots.map((sl) => U_TREATMENTS.find((t) => t.name === sl.treatment)?.id).filter(Boolean) as string[]);
+          for (const id of ids) {
+            const urls = all.filter((x) => x.treatmentId === id).slice(0, 12);
+            const got = await Promise.all(urls.map((x) => loadBitmap(x.url).then((bmp) => ({ url: x.url, bmp })).catch(() => null)));
+            libsRef.current[id] = got.filter(Boolean) as { url: string; bmp: ImageBitmap }[];
+          }
+          setLibTick((v) => v + 1);
+        } catch { /* the clinician's own photos are used instead */ }
         const used: Record<string, number> = {};
         for (let k = 0; k < layouts.length; k++) {
           const l = slots[k].layout;
@@ -304,7 +328,7 @@ export function NewMonth(props: {
                   {cur.slides.map((s, n) => (
                     <div key={n} className="snap-start shrink-0">
                       <div className="relative inline-block">
-                        <img src={s} alt="" onClick={() => n <= 3 && photoUrls.length > 1 && setSwap(n)} className={`h-[52vh] w-auto max-w-none rounded border block ${n <= 3 && photoUrls.length > 1 ? "cursor-pointer" : ""}`} />
+                        <img src={s} alt="" onClick={() => n <= 3 && poolFor(cur, n).length > 1 && setSwap(n)} className={`h-[52vh] w-auto max-w-none rounded border block ${n <= 3 && poolFor(cur, n).length > 1 ? "cursor-pointer" : ""}`} />
                         {logoImg && logoBox() && <img src={logoImg.src} alt="" style={{ position: "absolute", top: "4.44%", right: "5.56%", width: `${(logoBox()!.w / 1080) * 100}%`, filter: logoWhite ? "brightness(0) invert(1)" : undefined }} className="max-w-none" />}
                       </div>
                       <div className="text-center text-xs text-neutral-500 mt-1">Slide {n + 1}{n <= 3 && !(cur.statik && n > 0) ? " · tap to change the photo" : ""}</div>
@@ -333,7 +357,7 @@ export function NewMonth(props: {
             <div className="bg-white rounded-lg p-3 max-w-xl w-full max-h-[80vh] overflow-y-auto space-y-2" onClick={(e) => e.stopPropagation()}>
               <div className="font-semibold">Choose the photo for slide {swap + 1}</div>
               <div className="flex gap-2 flex-wrap">
-                {photoUrls.map((u, idx) => (
+                {poolFor(cur, swap).map(({ url: u }, idx) => (
                   <button key={u + idx} type="button" onClick={() => { const n = swap; setSwap(null); const picks = [...cur.picks]; picks[n] = idx; void redrawOne(cur, { picks }); }} className={`rounded overflow-hidden border-2 ${pickOf(cur, swap) === idx ? "border-pink-500" : "border-transparent"}`}>
                     <img src={u} alt="" className="w-20 h-24 object-cover max-w-none shrink-0" />
                   </button>
@@ -343,7 +367,7 @@ export function NewMonth(props: {
             </div>
           </div>
         )}
-        {photoUrls.length < 2 && posts.length > 0 && <div className="rounded border border-pink-500 p-2 text-xs">Only one photo is added, so every slide uses it. Close this, add or approve more photos on the NEW tab, and create the month again for different ones.</div>}
+        {cur && libTick >= 0 && poolFor(cur, 1).length < 2 && <div className="rounded border border-pink-500 p-2 text-xs">This treatment has no library photos and only one of {preset.name}'s photos is added, so every slide uses the same picture. Add or approve more photos on the NEW tab and create the month again.</div>}
 
         {posts.length > 0 && (
           <div className="rounded border-2 border-pink-500 p-3 space-y-2">
