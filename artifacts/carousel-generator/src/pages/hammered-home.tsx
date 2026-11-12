@@ -21,6 +21,12 @@ const TILES: { href: string; name: string; description: string; live: boolean }[
     live: true,
   },
   {
+    href: "/hammeredperformance",
+    name: "What is working",
+    description: "Every published post with its likes, comments, saves, shares and reach. The best performers are flagged so you know what to make more of.",
+    live: true,
+  },
+  {
     href: "/hammeredfreebies",
     name: "Free sample",
     description: "The page a tradesperson fills in for their free 5 day trial: logo, colours, fonts, what they do.",

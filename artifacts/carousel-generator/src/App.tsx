@@ -170,6 +170,8 @@ import ChooseBusiness from "@/pages/choose-business";
 import HammeredHome from "@/pages/hammered-home";
 import HammeredTool from "@/pages/hammered";
 import HammeredLinks from "@/pages/hammered-links";
+import HammeredPerformance from "@/pages/hammered-performance";
+import InboxPage from "@/pages/inbox";
 import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
@@ -236,6 +238,8 @@ function ProtectedRouter() {
       <Route path="/ryder" component={RyderPage} />
       <Route path="/hammeredposts" component={HammeredTool} />
       <Route path="/hammeredlinks" component={HammeredLinks} />
+      <Route path="/hammeredperformance" component={HammeredPerformance} />
+      <Route path="/inbox" component={InboxPage} />
       <Route path="/clare" component={ClarePage} />
       <Route path="/clients" component={ClientsIndexPage} />
       <Route path="/client/:id" component={ClientByIdPage} />

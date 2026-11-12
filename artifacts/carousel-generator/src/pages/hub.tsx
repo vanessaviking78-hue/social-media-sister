@@ -69,6 +69,16 @@ border: "hover:border-yellow-500/50",
 iconColor: "text-yellow-400",
 },
 {
+href: "/inbox",
+group: "today",
+icon: Inbox,
+name: "Client Inbox",
+description: "Every Instagram comment and DM across all your clients in one place. Reply from here, see an unread count per client, and get pinged on your phone and by email when something new lands.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
 href: "/scheduler",
 group: "admin",
 icon: CalendarClock,
@@ -1143,6 +1153,7 @@ const [newCount, setNewCount] = useState(0);
 const [hwCount, setHwCount] = useState(0);
 const [reelCaptionCount, setReelCaptionCount] = useState(0);
 const [cqCount, setCqCount] = useState(0);
+const [inboxCount, setInboxCount] = useState(0);
 const [freeWaiting, setFreeWaiting] = useState(0);
 const [creditLow, setCreditLow] = useState(false);
 const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients">("today");
@@ -1197,6 +1208,19 @@ const id2 = setInterval(loadReelCaptions, 60000);
 return () => clearInterval(id2);
 }, []);
 
+useEffect(() => {
+const pw = localStorage.getItem("cybersuite-pw") || "";
+if (!pw) return;
+const loadInbox = () => {
+fetch(`${BASE}/api/inbox/summary`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+.then((r) => (r.ok ? r.json() : { unread: 0 }))
+.then((d) => setInboxCount(Number(d.unread) || 0))
+.catch(() => {});
+};
+loadInbox();
+const idInbox = setInterval(loadInbox, 60000);
+return () => clearInterval(idInbox);
+}, []);
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
 if (!pw) return;
@@ -1297,7 +1321,7 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
 
 {/* Filtered grid */}
 {activeGroup === "clients" ? <ClientsGrid /> : <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup && !HIDDEN_TOOLS.has(tool.name)).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup && !HIDDEN_TOOLS.has(tool.name)).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/inbox" ? inboxCount : tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
 </div>}
 </main>
 

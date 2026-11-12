@@ -66,6 +66,8 @@ router.get("/meta/auth/start", (req: Request, res: Response) => {
       "pages_show_list",
       "pages_manage_posts",
       "pages_manage_metadata",
+      // Inbox (DMs) and Hammered performance need these. Opt in with ?extended=1 so the normal connect cannot break if Meta rejects them.
+      ...(req.query.extended === "1" ? ["instagram_manage_messages", "instagram_manage_insights", "pages_messaging"] : []),
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
@@ -97,6 +99,8 @@ router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
       "pages_show_list",
       "pages_manage_posts",
       "pages_manage_metadata",
+      // Inbox (DMs) and Hammered performance need these. Opt in with ?extended=1 so the normal connect cannot break if Meta rejects them.
+      ...(req.query.extended === "1" ? ["instagram_manage_messages", "instagram_manage_insights", "pages_messaging"] : []),
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +

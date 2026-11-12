@@ -416,3 +416,35 @@ export async function notifyOwner(subject: string, text: string): Promise<void> 
     logger.warn({ err }, "Owner notification email failed");
   }
 }
+
+/**
+ * Digest email for the client inbox: new Instagram comments and DMs, grouped by client.
+ * Fire-and-forget: never throws.
+ */
+export async function notifyInboxDigest(items: { clientName: string; kind: string; author: string; body: string }[]): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to || items.length === 0) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const byClient = new Map<string, typeof items>();
+  for (const it of items) {
+    const key = it.clientName || "A client";
+    byClient.set(key, [...(byClient.get(key) || []), it]);
+  }
+  const lines: string[] = [`You have ${items.length} new ${items.length === 1 ? "message" : "messages"} waiting in your inbox.`, ""];
+  for (const [client, list] of byClient) {
+    lines.push(`${client} (${list.length})`);
+    for (const it of list.slice(0, 8)) {
+      lines.push(`  ${it.kind === "dm" ? "DM" : "Comment"} from ${it.author || "someone"}: ${it.body.slice(0, 140)}`);
+    }
+    if (list.length > 8) lines.push(`  and ${list.length - 8} more`);
+    lines.push("");
+  }
+  lines.push("Open www.thecybersuite.com/inbox to reply.", "", "The CyberSuite");
+  try {
+    await transporter.sendMail({ from, to, subject: `Inbox: ${items.length} new from ${byClient.size} ${byClient.size === 1 ? "client" : "clients"}`, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Inbox digest email failed");
+  }
+}

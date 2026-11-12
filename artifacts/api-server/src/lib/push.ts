@@ -85,3 +85,36 @@ export async function notifyClientByName(clientName: string, payload: PushPayloa
   if (!preset?.token) return;
   await notifyClientByToken(preset.token, payload);
 }
+
+// Admin (Vanessa's own phone or computer) push subscriptions, used by the client inbox.
+export async function ensureAdminPushTable() {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS admin_push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`);
+}
+
+export async function saveAdminSubscription(endpoint: string, p256dh: string, auth: string) {
+  await ensureAdminPushTable();
+  await db.execute(sql`INSERT INTO admin_push_subscriptions (endpoint, p256dh, auth) VALUES (${endpoint}, ${p256dh}, ${auth})
+    ON CONFLICT (endpoint) DO UPDATE SET p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`);
+}
+
+export async function notifyAdmin(payload: PushPayload) {
+  ensureConfigured();
+  if (!configured) return;
+  await ensureAdminPushTable();
+  const rows = await db.execute(sql`SELECT id, endpoint, p256dh, auth FROM admin_push_subscriptions`);
+  const subs = (rows as any).rows ?? rows;
+  await Promise.all((subs as SubscriptionRow[]).map(async (s) => {
+    try {
+      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(payload));
+    } catch (err: any) {
+      if (err?.statusCode === 404 || err?.statusCode === 410) await db.execute(sql`DELETE FROM admin_push_subscriptions WHERE id = ${s.id}`);
+      else console.error("[push] admin push failed", err?.message || err);
+    }
+  }));
+}
