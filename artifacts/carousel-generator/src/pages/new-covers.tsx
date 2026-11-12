@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, ImagePlus, Trash2 } from "lucide-react";
+import { Download, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { fillTreatment, fillName, fillArea } from "@/lib/hook-bank";
 import { usePresets } from "@/lib/use-presets";
 import { useForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
+import { NewMonth } from "@/components/new-month";
 
 // NEW: the 23 new slide 1 cover templates on a client's own page, opened on that client's colours, photo and font.
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -38,6 +39,10 @@ export default function NewCovers() {
   const [showApproved, setShowApproved] = useState(false);
   const [removed, setRemoved] = useState<string[]>([]);
   const [approved, setApproved] = useState<{ id: number; url: string; thumb: string }[] | null>(null);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [monthTreats, setMonthTreats] = useState<string[]>([]);
+  const [showTreats, setShowTreats] = useState(false);
+  const [monthOpen, setMonthOpen] = useState(false);
   const [usedIds, setUsedIds] = useState<number[]>([]);
   const cvRef = useRef<HTMLCanvasElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -135,15 +140,15 @@ export default function NewCovers() {
   const cutRef = useRef<Map<ImageBitmap, Promise<ImageBitmap | null>>>(new Map());
   const factsKey = facts.join("|");
 
-  const starter = async (layout: CoverLayout): Promise<CoverOptions> => {
+  const starter = async (layout: CoverLayout, over?: { treatment?: string; heading?: string }): Promise<CoverOptions> => {
     const li = coverInfo(layout);
-    const t = treatment.trim() || "lip filler";
+    const t = (over?.treatment || treatment).trim() || "lip filler";
     const fill = (x: string) => fillName(fillArea(fillTreatment(x, t), area.trim() || "your area"), name);
     const pick = <T,>(arr: T[], off = 0): T => arr[(seed + li.n + off) % arr.length];
     const photos = Array.from({ length: Math.max(1, li.photos) }, (_, i) => own[(li.n - 1 + i) % Math.max(1, own.length)]?.bmp).filter(Boolean) as ImageBitmap[];
     const n = li.needs.lines ?? 1;
     const hook = pick(SPLIT_HOOKS);
-    const heading = n > 1 ? splitIntoLines(fill(`${hook[2]} ${hook[3]}`), n) : [fill(pick(COVER_CONTRARIAN))];
+    const heading = over?.heading ? (n > 1 ? splitIntoLines(over.heading, n) : [over.heading]) : n > 1 ? splitIntoLines(fill(`${hook[2]} ${hook[3]}`), n) : [fill(pick(COVER_CONTRARIAN))];
     const o: CoverOptions = {
       layout, photos, colours: { main: brand[0], accent: brand[1] }, lines: heading, sub: li.needs.sub ? fill(pick(COVER_SUBS_TREATMENT)) : "",
       body: li.needs.body ? fill(pick(COVER_BET)) : "", subs: [], name, fonts: { head: clientHeadFont(fontId), body: "playfair" }, move: {}, size: {}, views: [], deco: true, cutout: null,
@@ -184,6 +189,17 @@ export default function NewCovers() {
     return () => { live = false; clearTimeout(timer); };
   }, [value, own.length, treatment, area, name, fontId, brand[0], brand[1], factsKey, seed]);
 
+  const makeCover = async (layout: string, t: string, heading: string) => renderCoverPost(await starter(layout as CoverLayout, { treatment: t, heading }));
+  const togglePick = (id: string) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
+  const pick16 = () => { const pool: string[] = COVER_LAYOUTS.filter((l) => !removed.includes(l.id)).map((l) => l.id); const keep = picked.filter((x) => pool.includes(x)); setPicked([...keep, ...pool.filter((x) => !keep.includes(x))].slice(0, 16)); };
+  const startMonth = () => {
+    if (!preset) { toast.error("I cannot see this client's saved look yet"); return; }
+    if (!area.trim()) { toast.error("Type the clinic's area first so the hashtags are local"); return; }
+    if (!own.length) { toast.error("Add at least one photo first"); return; }
+    if (!picked.length) { toast.error("Tick the covers you want first"); return; }
+    if (!monthTreats.length && !U_TREATMENTS.some((t) => t.name.toLowerCase() === treatment.trim().toLowerCase())) { toast.error("Choose at least one treatment under Treatments for the month"); return; }
+    setMonthOpen(true);
+  };
   const edit = (l: CoverLayout) => { const o = optsRef.current.get(l); if (o) { setMoveSel(""); setValue(o); window.scrollTo({ top: 0, behavior: "smooth" }); } };
   const saveOne = async (l: CoverLayout) => { const o = optsRef.current.get(l); if (!o) return; const cv = await renderCoverPost(o); cv.toBlob((b) => { if (b) saveAs(b, `new-cover-${l}.png`); }, "image/png"); };
 
@@ -206,6 +222,12 @@ export default function NewCovers() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4 text-sm">
+      {monthOpen && preset && (
+        <NewMonth preset={preset} area={area} brand={brand} photos={own.map((o) => o.bmp)} makeCover={makeCover}
+          layouts={picked.slice(0, 16).map((id) => COVER_LAYOUTS.find((l) => l.id === id)!).filter(Boolean)}
+          treatments={monthTreats.length ? monthTreats : [U_TREATMENTS.find((t) => t.name.toLowerCase() === treatment.trim().toLowerCase())!.name]}
+          onClose={() => setMonthOpen(false)} />
+      )}
       <h1 className="text-xl font-semibold">NEW covers</h1>
       <p className="text-white/60">Add the clinician's photos and the treatment, and all 23 new slide 1 covers draw below. Scroll down the list, then tap Edit on any one to change the words, drag and size every piece. Brand colours, font and photo come through on their own.{!preset && " (I cannot see her saved look yet.)"}</p>
       <div className="grid grid-cols-3 gap-2 max-w-2xl">
@@ -246,6 +268,16 @@ export default function NewCovers() {
       {!value && (
         <div className="space-y-3">
           <p className="text-white/60">{drawn < COVER_LAYOUTS.length ? `Drawing the covers... ${drawn} of ${COVER_LAYOUTS.length}` : "All 23 are ready. Tap Edit on the one you like."}</p>
+          <div className="sticky top-0 z-30 rounded border border-pink-500 bg-black p-2 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold">{picked.length} of 16 covers ticked</span>
+              <Button size="sm" variant="outline" onClick={pick16}>Pick 16 for me</Button>
+              <Button size="sm" variant="outline" onClick={() => setPicked([])}>Clear</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowTreats((v) => !v)}>Treatments for the month ({monthTreats.length})</Button>
+              <Button size="sm" onClick={startMonth}><Sparkles className="w-4 h-4 mr-1" />CREATE the month</Button>
+            </div>
+            {showTreats && <div className="flex gap-1.5 flex-wrap max-h-40 overflow-y-auto">{U_TREATMENTS.map((t) => { const on = monthTreats.includes(t.name); return <button key={t.id} type="button" onClick={() => setMonthTreats((l) => (on ? l.filter((x) => x !== t.name) : [...l, t.name]))} className={`rounded-full border px-2.5 py-1 text-xs ${on ? "bg-pink-500 border-pink-500 text-white" : "border-white/30"}`}>{t.name}</button>; })}</div>}
+          </div>
           {removed.length > 0 && <button type="button" className="text-xs underline" onClick={() => setRemoved([])}>Bring back the {removed.length} deleted {removed.length === 1 ? "cover" : "covers"}</button>}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {COVER_LAYOUTS.filter((l) => !removed.includes(l.id)).map((l) => (
@@ -253,7 +285,7 @@ export default function NewCovers() {
                 {thumbs[l.id]
                   ? <img src={thumbs[l.id]} alt="" onClick={() => edit(l.id)} className="w-full h-auto rounded border cursor-pointer" />
                   : <div className="w-full aspect-[4/5] rounded border border-dashed flex items-center justify-center text-white/40">Drawing...</div>}
-                <div className="font-semibold">{l.n}. {l.label}{l.statik ? " (static)" : ""}</div>
+                <label className="flex items-center gap-2 font-semibold cursor-pointer"><input type="checkbox" checked={picked.includes(l.id)} onChange={() => togglePick(l.id)} className="h-5 w-5 accent-pink-500" />{l.n}. {l.label}{l.statik ? " (static)" : ""}</label>
                 <div className="flex gap-1.5">
                   <Button size="sm" disabled={!thumbs[l.id]} onClick={() => edit(l.id)}>Edit</Button>
                   <Button size="sm" variant="outline" disabled={!thumbs[l.id]} onClick={() => void saveOne(l.id)}><Download className="w-4 h-4 mr-1" />PNG</Button>
