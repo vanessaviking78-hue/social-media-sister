@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { buildAssets, renderUniversalPost } from "@/lib/tenfree-engine";
 import { uploadPngs } from "@/lib/month-engine";
-import { U_TREATMENTS, postTypesFor } from "@/lib/universal-treatments";
+import { U_TREATMENTS, U_BY_ID, postTypesFor } from "@/lib/universal-treatments";
 import type { ClientPreset } from "@/lib/use-presets";
 
 // NEW month builder: she ticks the covers, presses Create, every post is built with all its slides and caption,
@@ -13,7 +13,9 @@ const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 export type MonthLayout = { id: string; n: number; label: string; statik?: boolean };
 type Status = "waiting" | "banked" | "scheduled" | "skipped" | "failed";
-type MPost = { id: string; label: string; treatment: string; headline: string; slides: string[]; caption: string; status: Status; when?: string; error?: string };
+type Style = "new" | "gradient" | "block" | "box";
+type MPost = { id: string; label: string; treatment: string; treatmentId: string; layoutId: string; statik: boolean; k: number; angle: number; headline: string; subtitle: string; body: string[]; cta: string; style: Style; slides: string[]; caption: string; status: Status; when?: string; error?: string };
+const STYLES: { id: Style; label: string }[] = [{ id: "new", label: "New cover" }, { id: "gradient", label: "Gradient" }, { id: "block", label: "Colour block" }, { id: "box", label: "Text box" }];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const dayKey = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -39,6 +41,13 @@ export function NewMonth(props: {
   const [days, setDays] = useState<string[]>([]);
   const [time, setTime] = useState(preset.defaultPostTime || "18:00");
   const started = useRef(false);
+  const assetsRef = useRef<Awaited<ReturnType<typeof buildAssets>> | null>(null);
+  // Settings that apply to every post at once. Press Apply to redraw them all.
+  const [gScale, setGScale] = useState(100);
+  const [gColour, setGColour] = useState("");
+  const [gFill, setGFill] = useState(brand[0]);
+  const [showWords, setShowWords] = useState(false);
+  const [redraw, setRedraw] = useState("");
   // One logo for the whole month: top right, drawn over every slide of every post, so the size and colour here change them all.
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [logoSize, setLogoSize] = useState(130);
@@ -67,6 +76,30 @@ export function NewMonth(props: {
 
   const patch = (id: string, c: Partial<MPost>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...c } : p)));
 
+  const build = async (p: MPost, over?: Partial<MPost>): Promise<string[]> => {
+    const a = assetsRef.current!;
+    const q = { ...p, ...over };
+    const common = { treatmentId: q.treatmentId, headline: q.headline, copy: { subtitle: q.subtitle, slides: q.body, cta: q.cta }, photos, offset: q.k, angle: q.angle, textScale: gScale !== 100 ? gScale / 100 : undefined, textColour: gColour || undefined };
+    let cs: HTMLCanvasElement[];
+    if (q.style === "new") {
+      const cover = await makeCover(q.layoutId, q.treatment, q.headline);
+      cs = [cover, ...(q.statik ? [] : renderUniversalPost(common, a).slice(1))];
+    } else {
+      const extra = q.style === "block" ? { block: gFill } : q.style === "box" ? { box: { fill: gFill, x: 0.5, y: 0.5 } } : {};
+      cs = renderUniversalPost({ ...common, ...extra }, a);
+    }
+    return cs.map((c) => c.toDataURL("image/jpeg", 0.93));
+  };
+  const redrawOne = async (p: MPost, over?: Partial<MPost>) => {
+    try { const slides = await build(p, over); patch(p.id, { ...over, slides }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "That one would not redraw"); }
+  };
+  const redrawAll = async (over?: Partial<MPost>) => {
+    const list = posts.filter((p) => p.status !== "failed");
+    for (const [n, p] of list.entries()) { setRedraw(`Redrawing ${n + 1} of ${list.length}...`); await redrawOne(p, over); }
+    setRedraw("");
+  };
+
   useEffect(() => {
     if (started.current) return;
     started.current = true;
@@ -76,6 +109,7 @@ export function NewMonth(props: {
         const assets = await buildAssets({ main: brand[0], accent: brand[1], clinicName: preset.name, handle: "", whatsapp: "", logoBlob, photoBlob: null });
         setLogoImg(assets.logoImg);
         assets.logoImg = null; // the logo is added afterwards, in one place, so one control moves it on every slide
+        assetsRef.current = assets;
         const used: Record<string, number> = {};
         for (let k = 0; k < layouts.length; k++) {
           const l = layouts[k];
@@ -91,13 +125,12 @@ export function NewMonth(props: {
             });
             const d = await r.json().catch(() => ({}));
             if (!r.ok) throw new Error(d?.error || "The words would not write");
-            const cover = await makeCover(l.id, x.name, type.headline);
-            const rest = l.statik ? [] : renderUniversalPost({ treatmentId: x.id, headline: type.headline, copy: { subtitle: d.subtitle, slides: d.slides, cta: d.cta }, photos, offset: k, angle }, assets).slice(1);
-            const slides = [cover, ...rest].map((c) => c.toDataURL("image/jpeg", 0.93));
-            const caption = [String(d.caption || "").replace(foot, "").trim(), (d.hashtags || []).join(" "), foot].filter(Boolean).join("\n\n");
-            setPosts((cur) => [...cur, { id, label: `${l.n}. ${l.label}`, treatment: x.name, headline: type.headline, slides, caption, status: "waiting" }]);
+            const caption = [String(d.caption || "").replace(foot, "").trim(), (d.hashtags || []).join(" ")].filter(Boolean).join("\n\n");
+            const np: MPost = { id, label: `${l.n}. ${l.label}`, treatment: x.name, treatmentId: x.id, layoutId: l.id, statik: !!l.statik, k, angle, headline: type.headline, subtitle: d.subtitle, body: d.slides, cta: d.cta, style: "new", slides: [], caption, status: "waiting" };
+            np.slides = await build(np);
+            setPosts((cur) => [...cur, np]);
           } catch (e) {
-            setPosts((cur) => [...cur, { id, label: `${l.n}. ${l.label}`, treatment: x.name, headline: type.headline, slides: [], caption: "", status: "failed", error: e instanceof Error ? e.message : "Failed" }]);
+            setPosts((cur) => [...cur, { id, label: `${l.n}. ${l.label}`, treatment: x.name, headline: type.headline, treatmentId: x.id, layoutId: l.id, statik: !!l.statik, k, angle, subtitle: "", body: [], cta: "", style: "new", slides: [], caption: "", status: "failed", error: e instanceof Error ? e.message : "Failed" }]);
           }
           setMade(k + 1);
         }
@@ -115,7 +148,7 @@ export function NewMonth(props: {
   const send = async (p: MPost, mode: "bank" | "schedule", whenIso?: string) => {
     const finals = await Promise.all(p.slides.map((s) => withLogo(s)));
     const urls = await uploadPngs(finals, p.slides.map((_, n) => `new-${p.id}-${n + 1}.jpg`));
-    const content = { caption: p.caption, title: `${p.treatment} · ${preset.name}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "new-covers" };
+    const content = { caption: [p.caption.trim(), foot].filter(Boolean).join("\n\n"), title: `${p.treatment} · ${preset.name}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "new-covers" };
     const body = mode === "bank"
       ? { postType: p.slides.length > 1 ? "carousel" : "single", content, status: "draft", presetId: preset.id }
       : { postType: p.slides.length > 1 ? "carousel" : "single", content, scheduledAt: new Date(whenIso!).toISOString(), isTrial: false, notes: "", presetId: preset.id };
@@ -179,6 +212,32 @@ export function NewMonth(props: {
         )}
 
         {posts.length > 0 && (
+          <div className="rounded border p-2 space-y-2">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="font-semibold">All headings and subtitles</span>
+              <label className="flex items-center gap-2">Writing size<input type="range" min={70} max={140} value={gScale} onChange={(e) => setGScale(Number(e.target.value))} className="accent-pink-500" /><span className="w-10 text-right">{gScale}%</span></label>
+              <label className="flex items-center gap-1.5">Writing colour<input type="color" value={gColour || "#ffffff"} onChange={(e) => setGColour(e.target.value)} />{gColour && <button type="button" className="text-xs underline" onClick={() => setGColour("")}>Automatic</button>}</label>
+              <label className="flex items-center gap-1.5">Block and box colour<input type="color" value={gFill} onChange={(e) => setGFill(e.target.value)} /></label>
+              <Button size="sm" disabled={!!redraw} onClick={() => void redrawAll()}>Apply to all posts</Button>
+              <Button size="sm" variant="outline" onClick={() => setShowWords((v) => !v)}>{showWords ? "Hide the wording" : "Edit all the wording"}</Button>
+              {redraw && <span className="flex items-center gap-1"><Loader2 className="w-4 h-4 animate-spin" />{redraw}</span>}
+            </div>
+            <div className="text-xs text-neutral-500">Size and colour change the writing on the gradient, block and box covers and every slide after the cover. The New cover designs keep their own designed text.</div>
+            {showWords && (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {posts.filter((p) => p.status !== "failed").map((p, n) => (
+                  <div key={p.id} className="grid gap-1 md:grid-cols-2">
+                    <input value={p.headline} onChange={(e) => patch(p.id, { headline: e.target.value })} className="rounded border px-2 py-1" aria-label={`Heading ${n + 1}`} />
+                    <input value={p.subtitle} onChange={(e) => patch(p.id, { subtitle: e.target.value })} className="rounded border px-2 py-1" aria-label={`Subtitle ${n + 1}`} />
+                  </div>
+                ))}
+                <div className="text-xs text-neutral-500">Change any heading or subtitle, then press Apply to all posts to redraw.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {posts.length > 0 && (
           <div className="flex gap-1 flex-wrap">
             {posts.map((p, n) => (
               <button key={p.id} type="button" onClick={() => setI(n)} className={`h-7 w-7 rounded-full text-xs font-semibold border ${n === i ? "ring-2 ring-pink-500" : ""} ${p.status === "scheduled" ? "bg-pink-500 text-white" : p.status === "banked" ? "bg-black text-white" : p.status === "skipped" ? "bg-neutral-200 text-neutral-400 line-through" : p.status === "failed" ? "bg-red-100 text-red-600" : "bg-white"}`}>{n + 1}</button>
@@ -200,6 +259,12 @@ export function NewMonth(props: {
             {cur.status === "failed" ? <div className="rounded border border-red-400 p-3 text-red-600">This one would not build: {cur.error}</div> : (
               <>
                 <div className="flex gap-3 overflow-x-auto snap-x pb-2">
+                  <div className="snap-start shrink-0 order-last w-[min(80vw,26rem)] space-y-1">
+                    <div className="font-semibold">Caption</div>
+                    <textarea value={cur.caption} onChange={(e) => patch(cur.id, { caption: e.target.value })} rows={12} className="w-full rounded border p-2" />
+                    <div className="text-xs text-neutral-500">Footnote from {preset.name}'s preset, added when it goes out:</div>
+                    <div className="rounded border bg-neutral-50 p-2 text-xs whitespace-pre-wrap">{foot || "None set on this client's preset."}</div>
+                  </div>
                   {cur.slides.map((s, n) => (
                     <div key={n} className="snap-start shrink-0">
                       <div className="relative inline-block">
@@ -210,8 +275,11 @@ export function NewMonth(props: {
                     </div>
                   ))}
                 </div>
-                <label className="block space-y-1"><span className="font-semibold">Caption</span>
-                  <textarea value={cur.caption} onChange={(e) => patch(cur.id, { caption: e.target.value })} rows={8} className="w-full rounded border p-2" /></label>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="font-semibold">Style for this post</span>
+                  {STYLES.map((st) => <button key={st.id} type="button" disabled={!!redraw} onClick={() => void redrawOne(cur, { style: st.id })} className={`rounded-full border px-3 py-1 ${cur.style === st.id ? "bg-pink-500 border-pink-500 text-white" : ""}`}>{st.label}</button>)}
+                  <Button size="sm" variant="outline" disabled={!!redraw} onClick={() => void redrawAll({ style: cur.style })}>Use this style on all posts</Button>
+                </div>
                 <div className="flex gap-2 flex-wrap items-end">
                   <Button disabled={busy || cur.status === "banked" || cur.status === "scheduled"} onClick={() => void doOne("bank")}><Archive className="w-4 h-4 mr-1" />Send to Client Bank</Button>
                   <label className="space-y-1"><span className="block text-xs text-neutral-500">Or pick a date and time</span>
