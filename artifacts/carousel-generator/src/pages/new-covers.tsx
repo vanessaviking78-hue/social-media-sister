@@ -143,12 +143,13 @@ export default function NewCovers() {
   const cutRef = useRef<Map<ImageBitmap, Promise<ImageBitmap | null>>>(new Map());
   const factsKey = facts.join("|");
 
-  const starter = async (layout: CoverLayout, over?: { treatment?: string; heading?: string; fontId?: string; bodyId?: string }): Promise<CoverOptions> => {
+  const starter = async (layout: CoverLayout, over?: { treatment?: string; heading?: string; fontId?: string; bodyId?: string; photo?: ImageBitmap }): Promise<CoverOptions> => {
     const li = coverInfo(layout);
     const t = (over?.treatment || treatment).trim() || "lip filler";
     const fill = (x: string) => fillName(fillArea(fillTreatment(x, t), area.trim() || "your area"), name);
     const pick = <T,>(arr: T[], off = 0): T => arr[(seed + li.n + off) % arr.length];
     const photos = Array.from({ length: Math.max(1, li.photos) }, (_, i) => own[(li.n - 1 + i) % Math.max(1, own.length)]?.bmp).filter(Boolean) as ImageBitmap[];
+    if (over?.photo && photos.length) photos[0] = over.photo;
     const n = li.needs.lines ?? 1;
     const hook = pick(SPLIT_HOOKS);
     const heading = over?.heading ? (n > 1 ? splitIntoLines(over.heading, n) : [over.heading]) : n > 1 ? splitIntoLines(fill(`${hook[2]} ${hook[3]}`), n) : [fill(pick(COVER_CONTRARIAN))];
@@ -192,7 +193,7 @@ export default function NewCovers() {
     return () => { live = false; clearTimeout(timer); };
   }, [value, own.length, treatment, area, name, fontId, brand[0], brand[1], factsKey, seed]);
 
-  const makeCover = async (layout: string, t: string, heading: string, fid: string, bid: string) => renderCoverPost(await starter(layout as CoverLayout, { treatment: t, heading, fontId: fid, bodyId: bid }));
+  const makeCover = async (layout: string, t: string, heading: string, fid: string, bid: string, photo?: ImageBitmap) => renderCoverPost(await starter(layout as CoverLayout, { treatment: t, heading, fontId: fid, bodyId: bid, photo }));
   const togglePick = (id: string) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]));
   const pick16 = () => { const pool: string[] = COVER_LAYOUTS.filter((l) => !removed.includes(l.id)).map((l) => l.id); const keep = picked.filter((x) => pool.includes(x)); setPicked([...keep, ...pool.filter((x) => !keep.includes(x))].slice(0, 16)); };
   const startMonth = () => {
@@ -234,7 +235,7 @@ export default function NewCovers() {
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4 text-sm">
       {monthOpen && preset && (
-        <NewMonth preset={preset} area={area} brand={brand} photos={own.map((o) => o.bmp)} makeCover={makeCover} startFont={fontId || "hatcher"} slots={monthSlots()} onClose={() => setMonthOpen(false)} />
+        <NewMonth preset={preset} area={area} brand={brand} photos={own.map((o) => o.bmp)} photoUrls={own.map((o) => o.url)} makeCover={makeCover} startFont={fontId || "hatcher"} slots={monthSlots()} allLayouts={COVER_LAYOUTS.filter((l) => !removed.includes(l.id))} onClose={() => setMonthOpen(false)} />
       )}
       <h1 className="text-xl font-semibold">NEW covers</h1>
       <p className="text-white/60">Add the clinician's photos and the treatment, and all 23 new slide 1 covers draw below. Scroll down the list, then tap Edit on any one to change the words, drag and size every piece. Brand colours, font and photo come through on their own.{!preset && " (I cannot see her saved look yet.)"}</p>

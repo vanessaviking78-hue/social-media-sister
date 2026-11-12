@@ -48,7 +48,7 @@ function fiveTags(raw: unknown, area: string): string[] {
   return out.map((t) => `#${t}`);
 }
 
-function systemPrompt(client: string, area: string, treatment: string, headline: string, brief: string, intro: boolean): string {
+function systemPrompt(client: string, area: string, treatment: string, headline: string, brief: string, intro: boolean, fromHook = false): string {
   return `${HOUSE_VOICE}
 
 ${HOUSE_RULES}
@@ -60,7 +60,15 @@ You write as ${client}${area ? ` in ${area}` : ""}, in the first person ("I", "m
 THIS IS A FIVE SLIDE CAROUSEL ABOUT ${treatment.toUpperCase()}.
 THE HEADLINE (set, do not change it): "${headline}"
 THE BRIEF: ${brief}
-
+${fromHook ? `
+THE HEADLINE IS A HOOK THE CLINIC CHOSE, AND IT SETS THE WHOLE POST. The slides must read as one continuous thought with it, never a generic explainer about ${treatment}.
+- slide2 picks up the exact moment, feeling or detail in the headline (its place, age, memory or situation) and says more about it, in the same voice.
+- slide3 turns that into how it feels for her now, in her own skin and her own confidence, still referring back to the headline's detail.
+- slide4 brings ${treatment} in gently as one option many people find helpful, tied back to the same thought, ending on a warm line that echoes the headline.
+- "phrases": exactly 6 short lines of at most 5 words each, that sit on the cover around the headline. Each one is a small observation, feeling or wry aside that belongs to the headline's own world, never advice, never a generic tip like "sun cream" or "aftercare matters".
+- "points": exactly 3 items, each { "t": at most 4 words, "b": one short sentence of at most 14 words } that carry the headline's thought forward.
+- The subtitle and the caption must also stay inside the headline's world. If the headline is not about ${treatment}, do not turn the slides into a treatment explainer.
+` : ""}
 THE WRITING
 - "subtitle": the line under the headline on slide 1. ${intro ? "ONE short sentence, maximum 14 words, quirky and warm, that explains what the treatment is in plain words." : "ONE short sentence, maximum 14 words, quirky and warm, that adds a wink to the headline."} It should make a woman over 35 smile and keep reading. Never a question. Never a pun on someone's looks or age.
 - "slide2", "slide3", "slide4": each is EXACTLY three short sentences, friendly but informative, each carrying on from the one before. Plain everyday words, a little humour where it fits.
@@ -79,7 +87,7 @@ WRITING RULES (non-negotiable)
 - Never invent a patient, a story, a quote, a name, a qualification or a number. Speak only in general terms that this clinician could truthfully say.
 
 Return JSON only, in exactly this shape:
-{ "subtitle": "...", "slide2": "...", "slide3": "...", "slide4": "...", "caption": "...", "hashtags": ["5 tags"] }`;
+{ "subtitle": "...", "slide2": "...", "slide3": "...", "slide4": "...", "caption": "...", "hashtags": ["5 tags"]${fromHook ? `, "phrases": ["6 short lines"], "points": [{ "t": "...", "b": "..." }]` : ""} }`;
 }
 
 router.post("/universal/copy", async (req: Request, res: Response) => {
@@ -93,6 +101,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     const brief = str(b.brief, 1500);
     const note = str(b.note, 900);
     const intro = b.intro === true;
+    const fromHook = b.fromHook === true;
     if (!client || !treatment || !headline || !brief) {
       res.status(400).json({ error: "Pick a client and a post first" });
       return;
@@ -100,7 +109,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(client, area, treatment, headline, brief, intro) + (await clientProfileContext(client)) },
+        { role: "system", content: systemPrompt(client, area, treatment, headline, brief, intro, fromHook) + (await clientProfileContext(client)) },
         { role: "user", content: `Write the carousel "${headline}" for ${client}.${note ? ` Extra from them: ${note}` : ""}` },
       ],
       temperature: 0.85,
@@ -118,6 +127,10 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
       cta,
       caption: withCta(clean(j.caption, 900), cta),
       hashtags: fiveTags(j.hashtags, area),
+      ...(fromHook ? {
+        phrases: (Array.isArray(j.phrases) ? j.phrases : []).map((x: unknown) => clean(x, 60)).filter(Boolean).slice(0, 6),
+        points: (Array.isArray(j.points) ? j.points : []).map((x: { t?: unknown; b?: unknown }) => ({ t: clean(x?.t, 50), b: clean(x?.b, 140) })).filter((x: { t: string }) => x.t).slice(0, 3),
+      } : {}),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "The words would not write, try again";
