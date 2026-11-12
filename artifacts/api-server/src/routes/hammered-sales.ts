@@ -13,8 +13,8 @@ const SLOTS = [1, 2, 3, 4];
 
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
-// The dashboard has its own password, kept in the SALES_DASHBOARD_PASSWORD variable on Railway (never in the code). Her tools password also works.
-const salesPassword = () => (process.env.SALES_DASHBOARD_PASSWORD || "").trim().toLowerCase();
+// The dashboard has its own password, kept in the HAMMERED_SALES_PASSWORD variable on Railway (never in the code). Her tools password also works.
+const salesPassword = () => (process.env.HAMMERED_SALES_PASSWORD || "").trim().toLowerCase();
 
 function passwordOk(req: Request): boolean {
   const mine = (req.headers["x-sales-password"] as string | undefined)?.trim().toLowerCase();
