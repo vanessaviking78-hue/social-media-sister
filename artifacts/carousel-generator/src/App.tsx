@@ -173,6 +173,7 @@ import HammeredLinks from "@/pages/hammered-links";
 import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
+import SalesDashboard from "@/pages/sales-dashboard";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
 import ClubLinks from "@/pages/club-links";
@@ -214,6 +215,7 @@ function ProtectedRouter() {
       <Route path="/club-links" component={ClubLinks} />
       <Route path="/club-builder" component={ClubBuilder} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
+      <Route path="/salesdashboard" component={SalesDashboard} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
