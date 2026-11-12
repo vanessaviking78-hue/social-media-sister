@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
 
 // /salesdashboard : the commission only sales partners, every lead they log, where each one is, and the 25% commission.
 // Room for 5 partners. A 6 month package is the price of 4 months, a 12 month package is the price of 6 months.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const PINK = "#ff1f8e";
-const authHeaders = () => {
-  let pw = "";
-  try { pw = localStorage.getItem("cybersuite-pw") || ""; } catch { /* ignore */ }
-  return { "x-app-password": pw, Authorization: "Bearer " + pw, "Content-Type": "application/json" };
-};
+// The dashboard has its own password. It is remembered in this browser tab until it is closed.
+let PW = "";
+const authHeaders = () => ({ "x-sales-password": PW, "Content-Type": "application/json" });
+const PW_KEY = "sales-dashboard-pw";
 
 const STAGES = ["Chatting", "Freebies sent", "Followed up", "Call booked", "Signed"];
 const SHORT = ["Chat", "Free", "Follow", "Call", "Signed"];
@@ -30,7 +28,7 @@ const shortDate = (iso: string) => {
   return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 };
 
-export default function SalesDashboard() {
+function Dashboard() {
   const [partners, setPartners] = useState<Partner[]>(SLOTS.map((slot) => ({ slot, name: "" })));
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -122,7 +120,6 @@ export default function SalesDashboard() {
   return (
     <div className="min-h-screen bg-white text-black p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-4 mb-2">
-        <Link href="/hub" className="underline">Hub</Link>
         <h1 className="text-3xl font-black uppercase" style={{ color: PINK }}>Sales Dashboard</h1>
       </div>
       <p className="text-neutral-600 mb-3">Every lead, every stage and every pound of commission, per partner.</p>
@@ -277,6 +274,58 @@ export default function SalesDashboard() {
         </table>
       </div>
       {tableMsg && <div className="mt-2 text-sm" style={{ color: "#b3261e" }} role="status">{tableMsg}</div>}
+    </div>
+  );
+}
+
+export default function SalesDashboardGate() {
+  const [ok, setOk] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+
+  const verify = async (candidate: string) => {
+    try {
+      const r = await fetch(`${BASE}/api/sales/auth`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: candidate }) });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    (async () => {
+      let saved = "";
+      try { saved = sessionStorage.getItem(PW_KEY) || localStorage.getItem("cybersuite-pw") || ""; } catch { /* ignore */ }
+      if (saved && (await verify(saved))) { PW = saved; setOk(true); }
+      setChecking(false);
+    })();
+  }, []);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (await verify(pw)) {
+      PW = pw.trim();
+      try { sessionStorage.setItem(PW_KEY, PW); } catch { /* ignore */ }
+      setOk(true);
+    } else {
+      setErr("That password is not right. Try again.");
+    }
+  };
+
+  if (ok) return <Dashboard />;
+  if (checking) return <div className="min-h-screen bg-white" />;
+  return (
+    <div className="min-h-screen bg-white text-black flex items-center justify-center p-6">
+      <form onSubmit={submit} className="w-full max-w-sm flex flex-col gap-4 border-2 border-black p-6">
+        <h1 className="text-3xl font-black uppercase" style={{ color: PINK }}>Sales Dashboard</h1>
+        <label className="flex flex-col gap-1 text-sm text-neutral-600" htmlFor="sales-pw">
+          Password
+          <input id="sales-pw" type="password" autoFocus className="border-2 border-black p-2 bg-white text-black" value={pw} onChange={(e) => { setPw(e.target.value); setErr(""); }} />
+        </label>
+        {err && <div className="text-sm" style={{ color: "#b3261e" }} role="alert">{err}</div>}
+        <button type="submit" className="px-4 py-2 text-white font-bold" style={{ background: PINK, minHeight: 42 }}>Open dashboard</button>
+      </form>
     </div>
   );
 }

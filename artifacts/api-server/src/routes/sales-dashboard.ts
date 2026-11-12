@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
 // SALES DASHBOARD. Vanessa's own page at /salesdashboard: up to 5 commission only sales partners, the leads each one
-// brings in, where every lead is, and the 25% commission earned and paid. Everything here needs her tools password.
+// brings in, where every lead is, and the 25% commission earned and paid. Everything here needs the dashboard password.
 
 const router: IRouter = Router();
 
@@ -13,16 +13,35 @@ const SLOTS = [1, 2, 3, 4, 5];
 
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
-function requireAuth(req: Request, res: Response, next: NextFunction) {
+// The dashboard has its own password, kept in the SALES_DASHBOARD_PASSWORD variable on Railway (never in the code). Her tools password also works.
+const salesPassword = () => (process.env.SALES_DASHBOARD_PASSWORD || "").trim().toLowerCase();
+
+function passwordOk(req: Request): boolean {
+  const mine = (req.headers["x-sales-password"] as string | undefined)?.trim().toLowerCase();
+  if (mine && salesPassword() && mine === salesPassword()) return true;
   const appPassword = process.env.APP_PASSWORD;
-  if (!appPassword) return next();
+  if (!appPassword) return false;
   const expected = appPassword.trim().toLowerCase();
   const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
-  if (provided === expected) return next();
+  if (provided && provided === expected) return true;
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected) return next();
+  return !!(authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected);
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (passwordOk(req)) return next();
   res.status(401).json({ error: "Unauthorized" });
 }
+
+router.post("/sales/auth", (req: Request, res: Response) => {
+  const submitted = String(req.body?.password ?? "").trim().toLowerCase();
+  const appPassword = (process.env.APP_PASSWORD || "").trim().toLowerCase();
+  if (submitted && ((salesPassword() && submitted === salesPassword()) || (appPassword && submitted === appPassword))) {
+    res.json({ valid: true });
+    return;
+  }
+  res.status(401).json({ valid: false, error: "Incorrect password" });
+});
 
 let ready: Promise<void> | null = null;
 function ensureTables(): Promise<void> {

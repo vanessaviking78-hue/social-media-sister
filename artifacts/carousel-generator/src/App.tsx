@@ -215,7 +215,6 @@ function ProtectedRouter() {
       <Route path="/club-links" component={ClubLinks} />
       <Route path="/club-builder" component={ClubBuilder} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
-      <Route path="/salesdashboard" component={SalesDashboard} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
@@ -362,6 +361,7 @@ function AppContent() {
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
   const [isPrivacy] = useRoute("/privacy");
   const [isPrizes] = useRoute("/prizes");
+  const [isSalesDashboard] = useRoute("/salesdashboard");
   const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
@@ -482,6 +482,9 @@ function AppContent() {
   }
   if (isPrizes) {
     return <Prizes />;
+  }
+  if (isSalesDashboard) {
+    return <SalesDashboard />;
   }
   if (isJoinGroup) {
     return <JoinGroup />;
