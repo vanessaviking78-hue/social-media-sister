@@ -177,6 +177,7 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
+import SalesProposal from "@/pages/sales-proposal";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
 import ClubLinks from "@/pages/club-links";
@@ -368,6 +369,7 @@ function AppContent() {
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
   const [isHammeredProposal] = useRoute("/hammeredproposal");
+  const [isSalesProposal] = useRoute("/salesproposal");
   const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
@@ -500,6 +502,9 @@ function AppContent() {
   }
   if (isHammeredProposal) {
     return <HammeredProposal />;
+  }
+  if (isSalesProposal) {
+    return <SalesProposal />;
   }
   if (isJoinGroup) {
     return <JoinGroup />;
