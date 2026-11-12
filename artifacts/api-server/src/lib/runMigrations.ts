@@ -792,7 +792,9 @@ async function retryFailedPostsAtSevenOnce(): Promise<void> {
     await db.execute(sql`CREATE TABLE IF NOT EXISTS one_shot_jobs (name TEXT PRIMARY KEY, ran_at TIMESTAMPTZ NOT NULL DEFAULT now(), note TEXT NOT NULL DEFAULT '')`);
     // Never run once the 7am slot has passed, otherwise the posts would go out straight away at some random restart.
     if (Date.now() >= Date.parse("2026-11-12T06:50:00Z")) return;
-    const claimed = await db.execute(sql`INSERT INTO one_shot_jobs (name) VALUES ('retry-failed-posts-2026-11-12-0700') ON CONFLICT (name) DO NOTHING RETURNING name`);
+    // A job that claimed its row but never finished (note still empty) is allowed to try again on the next start.
+    const claimed = await db.execute(sql`INSERT INTO one_shot_jobs (name) VALUES ('retry-failed-posts-2026-11-12-0700')
+      ON CONFLICT (name) DO UPDATE SET ran_at = now() WHERE one_shot_jobs.note = '' RETURNING name`);
     if (claimed.rows.length === 0) return;
     const retried = await db.execute(sql`
       WITH due AS (
@@ -813,6 +815,6 @@ async function retryFailedPostsAtSevenOnce(): Promise<void> {
     await db.execute(sql`UPDATE one_shot_jobs SET note = ${note} WHERE name = 'retry-failed-posts-2026-11-12-0700'`);
     logger.warn({ retried: retried.rows.map((r) => (r as { id: number }).id) }, `7am retry: ${note}`);
   } catch (err) {
-    logger.error({ err }, "7am retry of failed posts did not run");
+    logger.error({ err }, `7am retry of failed posts did not run: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
