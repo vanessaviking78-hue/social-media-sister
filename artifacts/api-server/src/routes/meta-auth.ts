@@ -89,7 +89,7 @@ router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/api/meta/auth/callback`;
     const state = Buffer.from(
-      JSON.stringify({ mode: "bulk", nonce: randomBytes(8).toString("hex") })
+      JSON.stringify({ mode: "bulk", business: req.query.business === "1", nonce: randomBytes(8).toString("hex") })
     ).toString("base64url");
     const scopes = [
       "instagram_basic",
@@ -99,6 +99,8 @@ router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
       "pages_show_list",
       "pages_manage_posts",
       "pages_manage_metadata",
+      // Pages that live inside a Business portfolio (task access only) do not appear in /me/accounts. Opt in with ?business=1.
+      ...(req.query.business === "1" ? ["business_management"] : []),
       // Inbox (DMs) and Hammered performance need these. Opt in with ?extended=1 so the normal connect cannot break if Meta rejects them.
       ...(req.query.extended === "1" ? ["instagram_manage_messages", "instagram_manage_insights", "pages_messaging"] : []),
     ].join(",");
@@ -140,7 +142,7 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
   }, "meta/auth/callback hit");
 
   // Parse state early so every error branch can route to the right destination
-  let stateObj: { presetId?: unknown; mode?: string; nonce?: string; token?: string } = {};
+  let stateObj: { presetId?: unknown; mode?: string; nonce?: string; token?: string; business?: boolean } = {};
   let isOnboarding = false;
   let onboardingPresetToken: string | undefined;
   let onboardFront = "";
@@ -266,6 +268,41 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
 
       // Follow cursor-based next page if present
       nextUrl = pagesData.paging?.next ?? null;
+    }
+
+    // Optional: also pull Pages that sit inside Business portfolios (owned or client pages).
+    if (stateObj.business) {
+      try {
+        const known = new Set(allRawPages.map((p) => p.id));
+        const bizRes = await fetch(`${GRAPH}/me/businesses?fields=id,name&limit=100&access_token=${longToken}`);
+        const bizData = (await bizRes.json()) as { data?: { id: string; name: string }[]; error?: { message: string } };
+        req.log.info({ status: bizRes.status, count: bizData.data?.length ?? 0, apiError: bizData.error ?? null }, "Business portfolios fetched");
+        for (const biz of bizData.data ?? []) {
+          for (const edge of ["owned_pages", "client_pages"]) {
+            let url: string | null = `${GRAPH}/${biz.id}/${edge}?fields=id,name,access_token&limit=100&access_token=${longToken}`;
+            let guard = 0;
+            while (url && guard < 10) {
+              guard += 1;
+              const r = await fetch(url);
+              const d = (await r.json()) as PagesResponse;
+              if (!r.ok || !d.data) {
+                req.log.warn({ biz: biz.name, edge, apiError: d.error ?? null }, "Business pages fetch failed");
+                break;
+              }
+              for (const p of d.data) {
+                if (p.access_token && !known.has(p.id)) {
+                  known.add(p.id);
+                  allRawPages.push(p);
+                }
+              }
+              url = d.paging?.next ?? null;
+            }
+          }
+        }
+        req.log.info({ totalAfterBusiness: allRawPages.length }, "Pages after adding Business portfolio pages");
+      } catch (bizErr) {
+        req.log.warn({ err: bizErr instanceof Error ? bizErr.message : String(bizErr) }, "Business pages fetch threw; continuing with /me/accounts only");
+      }
     }
 
     req.log.info({
