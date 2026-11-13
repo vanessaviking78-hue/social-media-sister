@@ -277,25 +277,35 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
         const bizRes = await fetch(`${GRAPH}/me/businesses?fields=id,name&limit=100&access_token=${longToken}`);
         const bizData = (await bizRes.json()) as { data?: { id: string; name: string }[]; error?: { message: string } };
         req.log.info({ status: bizRes.status, count: bizData.data?.length ?? 0, apiError: bizData.error ?? null }, "Business portfolios fetched");
+        const edgeJobs: Promise<RawPage[]>[] = [];
         for (const biz of bizData.data ?? []) {
           for (const edge of ["owned_pages", "client_pages"]) {
-            let url: string | null = `${GRAPH}/${biz.id}/${edge}?fields=id,name,access_token&limit=100&access_token=${longToken}`;
-            let guard = 0;
-            while (url && guard < 10) {
-              guard += 1;
-              const r = await fetch(url);
-              const d = (await r.json()) as PagesResponse;
-              if (!r.ok || !d.data) {
-                req.log.warn({ biz: biz.name, edge, apiError: d.error ?? null }, "Business pages fetch failed");
-                break;
-              }
-              for (const p of d.data) {
-                if (p.access_token && !known.has(p.id)) {
-                  known.add(p.id);
-                  allRawPages.push(p);
+            edgeJobs.push((async () => {
+              const found: RawPage[] = [];
+              let url: string | null = `${GRAPH}/${biz.id}/${edge}?fields=id,name,access_token&limit=100&access_token=${longToken}`;
+              let guard = 0;
+              while (url && guard < 10) {
+                guard += 1;
+                const r = await fetch(url);
+                const d = (await r.json()) as PagesResponse;
+                if (!r.ok || !d.data) {
+                  req.log.warn({ biz: biz.name, edge, apiError: d.error ?? null }, "Business pages fetch failed");
+                  break;
                 }
+                found.push(...d.data);
+                url = d.paging?.next ?? null;
               }
-              url = d.paging?.next ?? null;
+              return found;
+            })().catch(() => [] as RawPage[]));
+          }
+        }
+        // Run every portfolio in parallel so the callback stays well inside the proxy timeout.
+        const results = await Promise.all(edgeJobs);
+        for (const list of results) {
+          for (const p of list) {
+            if (p.access_token && !known.has(p.id)) {
+              known.add(p.id);
+              allRawPages.push(p);
             }
           }
         }
