@@ -1,5 +1,5 @@
 // /freehouseproposal : the full Freehouse Socials sales partner proposal, public so it can be sent as a link.
-const YEL = "#1ad1c4";
+const YEL = "#00e5ff";
 
 const steps = [
   { t: "Spot them.", d: "Find a pub, bar, social club or brewery tap through the Freehouse Socials Instagram page, your own contacts or your local on a Friday night. Anyone who serves people and has a page that has gone quiet is a lead." },

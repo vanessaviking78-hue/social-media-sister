@@ -5,7 +5,7 @@ import { usePresets } from "@/lib/use-presets";
 // cybersuite.com/freehouse : the home of Freehouse Socials, her social media business for pubs and bars. Black and electric blue.
 // Tools get added to TILES as they are built. Live today: the free sample page for new pubs and bars.
 
-const BLUE = "#1ad1c4";
+const BLUE = "#00e5ff";
 
 const TILES: { href: string; name: string; description: string; live: boolean }[] = [
   {

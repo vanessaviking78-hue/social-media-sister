@@ -58,7 +58,7 @@ const CSS = `
 .hm input[type=text], .hm input[type=datetime-local], .hm textarea, .hm select { width:100%; border:2px solid ${INK}; padding:8px 10px; font:inherit; font-size:14px; background:#fff; color:${INK}; border-radius:0; }
 .hm textarea { resize:vertical; line-height:1.35; }
 .hm button.b { border:2px solid ${INK}; background:#fff; color:${INK}; padding:7px 12px; font:inherit; font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; }
-.hm button.b:hover { background:#e2faf8; }
+.hm button.b:hover { background:#e0fbff; }
 .hm button.b.on { background:${FREEHOUSE_BLUE}; }
 .hm button.b.go { background:${FREEHOUSE_BLUE}; box-shadow:4px 4px 0 ${INK}; }
 .hm button.b:disabled { opacity:.4; cursor:default; }
@@ -321,7 +321,7 @@ export default function FreehousePage() {
 
 function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily"> | SlideLook; onChange: (o: Override) => void }) {
   // electric blues first so the brand blue never drifts to navy
-  const swatches = ["#000000", FREEHOUSE_BLUE, "#0fa89e", "#7a1fff", "#ffffff", "#1d3557", "#c1121f"];
+  const swatches = ["#000000", FREEHOUSE_BLUE, "#00b8d4", "#7a1fff", "#ffffff", "#1d3557", "#c1121f"];
   return (
     <div>
       <label className="l">Layout</label>

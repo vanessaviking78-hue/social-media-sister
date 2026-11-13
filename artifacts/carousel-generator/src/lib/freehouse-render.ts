@@ -3,8 +3,8 @@
 
 export const HW = 1080;
 export const HH = 1350;
-export const FREEHOUSE_BLUE = "#1ad1c4";
-export const FREEHOUSE_HIVIS = "#1ad1c4";
+export const FREEHOUSE_BLUE = "#00e5ff";
+export const FREEHOUSE_HIVIS = "#00e5ff";
 
 export type FreehouseStyle = "gradient" | "box" | "block";
 export type SlideKind = "hook" | "body" | "cta";

@@ -7,7 +7,7 @@ import { shrinkPhoto } from "@/lib/shrink-photo";
 
 // cybersuite.com/freehousefreebies : the Freehouse Socials (pubs and bars) freebies form. A copy of the premium freebies page: same fonts and layout, electric blue in place of hot pink.
 
-const PINK = "#1ad1c4"; // Freehouse Socials electric blue. Named PINK only so the copied CSS below stays identical.
+const PINK = "#00e5ff"; // Freehouse Socials electric blue. Named PINK only so the copied CSS below stays identical.
 const INK = "#111111";
 
 const CSS = `
@@ -40,7 +40,7 @@ ${FREEHOUSE_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-famil
 .tf-ta { min-height: 84px; resize: vertical; line-height:1.3; }
 .tf-in:focus, .tf-ta:focus { border-bottom-color:${PINK}; box-shadow: 0 3px 0 0 ${PINK}; }
 .tf-drop { border: 2px dashed ${INK}; padding: 26px; display:flex; align-items:center; gap: 22px; cursor:pointer; transition: border-color .2s, background .2s; }
-.tf-drop:hover { border-color:${INK}; background:#e2faf8; }
+.tf-drop:hover { border-color:${INK}; background:#e0fbff; }
 .tf-chk { width: 150px; height: 110px; flex: none; background-image: linear-gradient(45deg,#e9e9e9 25%,transparent 25%),linear-gradient(-45deg,#e9e9e9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e9e9 75%),linear-gradient(-45deg,transparent 75%,#e9e9e9 75%); background-size: 16px 16px; background-position: 0 0,0 8px,8px -8px,-8px 0; display:flex; align-items:center; justify-content:center; border:1px solid #ddd; }
 .tf-chk img { max-width: 88%; max-height: 88%; }
 .tf-note { font-size: 13px; letter-spacing:.06em; color:#777; margin-top:8px; text-transform: uppercase; }
@@ -52,7 +52,7 @@ ${FREEHOUSE_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-famil
 .tf-grp h3 { font-size: 13px; letter-spacing:.28em; text-transform: uppercase; color:${INK}; background:${PINK}; display:inline-block; padding:3px 9px; margin: 0 0 12px; }
 .tf-chips { display:flex; flex-wrap:wrap; gap: 10px; }
 .tf-chip { border: 2px solid ${INK}; padding: 10px 16px; font-size: 14px; letter-spacing:.06em; text-transform: uppercase; background:#fff; cursor:pointer; transition: all .15s; color:${INK}; }
-.tf-chip:hover { background:#e2faf8; }
+.tf-chip:hover { background:#e0fbff; }
 .tf-chip.on { background:${PINK}; border-color:${INK}; color:${INK}; }
 .tf-mum { display:flex; gap:10px; flex-wrap:wrap; }
 .tf-consent { display:flex; gap:14px; align-items:flex-start; margin-top: 40px; font-size: 15px; line-height:1.35; cursor:pointer; }
@@ -146,7 +146,7 @@ export default function FreehouseFreebies() {
     fetch("/api/freehouse/hit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, ref, visitor: visitorId() }) }).catch(() => undefined);
   };
   useEffect(() => { track("open"); }, []);
-  const [cols, setCols] = useState<Colours>({ main: "#1ad1c4", accent: "#111111" });
+  const [cols, setCols] = useState<Colours>({ main: "#00e5ff", accent: "#111111" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
   const [logoPreview, setLogoPreview] = useState("");
@@ -291,7 +291,7 @@ export default function FreehouseFreebies() {
               </div>
             </div>
 
-            <div style={{ border: "3px solid #111", borderRadius: 12, padding: "16px 18px", margin: "0 0 22px", background: "rgba(26,209,196,.18)" }}>
+            <div style={{ border: "3px solid #111", borderRadius: 12, padding: "16px 18px", margin: "0 0 22px", background: "rgba(0,229,255,.18)" }}>
               <div style={{ fontWeight: 800, fontSize: 20, textTransform: "uppercase", letterSpacing: ".03em", color: "#111" }}>The more you tell me, the better your posts get</div>
               <p style={{ margin: "8px 0 0", fontSize: 16, lineHeight: 1.5 }}>The more detail you give me, the more personal your posts will be. Chatty answers, little stories and daft facts all help. Take your time with the boxes below.</p>
             </div>

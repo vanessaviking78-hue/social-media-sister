@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 // Commission is 20% of the first 3 months' fee at the price agreed (£49 a month, no discount).
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-const YEL = "#1ad1c4";
+const YEL = "#00e5ff";
 // The dashboard has its own password. It is remembered in this browser tab until it is closed.
 let PW = "";
 const authHeaders = () => ({ "x-sales-password": PW, "Content-Type": "application/json" });

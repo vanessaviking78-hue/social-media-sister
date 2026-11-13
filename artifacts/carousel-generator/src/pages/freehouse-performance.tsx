@@ -4,7 +4,7 @@ import { Link } from "wouter";
 // cybersuite.com/freehouseperformance : which Freehouse posts are performing. Pulls likes, comments, saves, shares and reach from Instagram,
 // scores each post and flags the top quarter as high performing. Black and yellow, same as the Freehouse home.
 
-const BLUE = "#1ad1c4";
+const BLUE = "#00e5ff";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Post = {

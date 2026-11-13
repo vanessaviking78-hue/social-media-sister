@@ -4,7 +4,7 @@ import { Link } from "wouter";
 // cybersuite.com/freehouselinks : the Freehouse Socials links dashboard. One tracking link per person (rob, isaac, vanessa, and any she adds),
 // with opens, people who started the form, and finished entries. Black and yellow, same as the Freehouse home.
 
-const BLUE = "#1ad1c4";
+const BLUE = "#00e5ff";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const SITE = "https://www.thecybersuite.com/freehousefreebies";
 const DEFAULT_NAMES = ["rob", "isaac", "vanessa"];

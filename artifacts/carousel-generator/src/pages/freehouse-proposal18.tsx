@@ -1,5 +1,5 @@
 // /freehouseproposal18 : the plain English Freehouse Socials sales partner proposal, public so it can be sent as a link.
-const YEL = "#1ad1c4";
+const YEL = "#00e5ff";
 
 const steps = [
   { t: "Find a pub or bar.", d: "Look on the Freehouse Socials Instagram page, ask people you know, or pop into your local and ask who does their posts. Any pub, bar, social club or brewery tap counts." },

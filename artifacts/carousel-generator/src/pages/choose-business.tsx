@@ -5,7 +5,7 @@ import { Link } from "wouter";
 
 const PINK = "#ff1493";
 const YELLOW = "#ffd60a";
-const BLUE = "#1ad1c4";
+const BLUE = "#00e5ff";
 
 export default function ChooseBusiness() {
   return (
