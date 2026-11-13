@@ -654,6 +654,30 @@ router.post("/meta/auth/system-user-start", async (req: Request, res: Response) 
   }
 });
 
+// A plain paste page for the system user token, so it can be copied straight from Meta without passing through anyone else.
+router.get("/meta/auth/system-user", (_req: Request, res: Response) => {
+  res.type("html").send(`<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connect pages</title>
+<style>body{font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 16px;color:#111}input,button{font-size:16px;padding:12px;width:100%;box-sizing:border-box;margin-top:10px}button{background:#e6007e;color:#fff;border:0;border-radius:8px;cursor:pointer}#msg{margin-top:16px;line-height:1.5}</style></head>
+<body><h2>Connect pages</h2><p>Paste the system user token from Meta, then press the button. It is checked and used once, and it is not shown back to you.</p>
+<input id="t" type="password" placeholder="Paste token here" autocomplete="off"><button id="go">Read my pages</button><div id="msg"></div>
+<script>
+var pw=""; try{pw=localStorage.getItem("cybersuite-pw")||"";}catch(e){}
+document.getElementById("go").onclick=async function(){
+  var m=document.getElementById("msg"); var t=document.getElementById("t").value.trim();
+  if(!t){m.textContent="Please paste the token first.";return;}
+  m.textContent="Checking with Meta...";
+  try{
+    var r=await fetch("/api/meta/auth/system-user-start",{method:"POST",headers:{"Content-Type":"application/json","x-app-password":pw},body:JSON.stringify({token:t})});
+    var d=await r.json();
+    document.getElementById("t").value="";
+    if(!r.ok){m.textContent=d.error||"Something went wrong.";return;}
+    m.textContent="Found "+d.count+" page(s). Opening the review screen...";
+    location.href=d.reviewPath;
+  }catch(e){m.textContent="Could not reach the server.";}
+};
+</script></body></html>`);
+});
+
 router.get("/meta/auth/bulk-pending", async (req: Request, res: Response) => {
   const key = req.query["key"] as string | undefined;
   if (!key) {
