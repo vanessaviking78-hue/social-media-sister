@@ -572,6 +572,10 @@ function No1StaticsPage() {
 
   const write = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
+    if (t.fixed) {
+      patch(post.id, { busy: false, hook: t.fixed.hook, line: t.fixed.line, caption: t.fixed.caption, hashtags: t.fixed.hashtags });
+      return;
+    }
     patch(post.id, { busy: true });
     try {
       const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: post.note }) });
@@ -758,6 +762,10 @@ function No1StaticsPage() {
     setPosts((l) => [...fresh.slice().reverse(), ...l]);
     for (const post of fresh) {
       const t = TYPE_BY_ID.get(post.typeId)!;
+      if (t.fixed) {
+        patch(post.id, { busy: false, hook: t.fixed.hook, line: t.fixed.line, caption: t.fixed.caption, hashtags: t.fixed.hashtags });
+        continue;
+      }
       try {
         const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: "" }) });
         const data = await r.json().catch(() => ({}));

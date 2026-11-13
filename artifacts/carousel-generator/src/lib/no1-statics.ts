@@ -13,6 +13,7 @@ export type StaticPostType = {
   label: string;
   brief: string;
   word: string; // comment word for the closing line, or "" for a friendly closing question
+  fixed?: { hook: string; line: string; caption: string; hashtags: string[] }; // her own approved words, used as written
 };
 
 const T = (id: string) => NO1_TREATMENTS.find((t) => t.id === id)!;
@@ -128,6 +129,28 @@ const uniqueTypes: StaticPostType[] = UNIQUE.map((d) => ({
 }));
 export const uniDesignId = (typeId: string): string | null => (typeId.startsWith("st-uni-") ? typeId.slice(7) : null);
 
+
+// Black Friday 2026, offer 2: her own approved offer, written as the clinic owner. Used exactly as written, no AI rewrite.
+const TAGS_BF = ["#birminghamskincare", "#birminghamaesthetics", "#birminghamglow", "#birminghamblackfriday", "#birminghambeauty"];
+const bf = (n: number, label: string, hook: string, line: string, caption: string): StaticPostType => ({
+  id: `st-bf-${n}`,
+  group: "bf",
+  label,
+  brief: "Black Friday Luxury Skin Package, £299",
+  word: "SKIN GLOW",
+  fixed: { hook, line, caption, hashtags: TAGS_BF },
+});
+const bfTypes: StaticPostType[] = [
+  bf(1, "Black Friday: the package", "Three treatments for £299, and your skin sorted before Christmas.", "My Black Friday Luxury Skin Package, with limited places.",
+    "Black Friday, but make it skin.\n\nFor £299 you get two sessions of skin boosters plus one treatment of your choice. That is three treatments for roughly the price of one handbag you will carry twice.\n\nThe boosters combine polynucleotides and hyaluronic acid, which is a long way of saying a proper drink for tired skin.\n\nI only have a limited number of packages at No 1 Body Sculpting in Bournville, Birmingham, so if your skin has had a long year, now is a lovely time to book.\n\nComment SKIN GLOW and I will send you the details."),
+  bf(2, "Black Friday: the skin boosters", "Skin that has had a long year deserves two proper drinks.", "Two sessions of polynucleotide and hyaluronic acid skin boosters.",
+    "Two sessions of skin boosters are the heart of my Black Friday Luxury Skin Package.\n\nPolynucleotides are designed to support your skin's own repair and collagen production. Hyaluronic acid holds water, so skin can feel more hydrated and comfortable. Together they are the skin equivalent of a very good lie down.\n\nI always start with a consultation, so we can check it suits you before anything else happens.\n\nThe whole package is £299 and places are limited.\n\nComment SKIN GLOW and I will send you the details."),
+  bf(3, "Black Friday: choose your third", "Pick your third treatment. They are all lovely, honestly.", "Microneedling, Biorepeel or under-eye polynucleotides.",
+    "Every Luxury Skin Package comes with one treatment of your choice on top of the two skin booster sessions.\n\nOption one is microneedling, to help refine texture and bring back some glow.\n\nOption two is Biorepeel, an advanced peel for skin that looks a little dull and tired.\n\nOption three is under-eye polynucleotides, a targeted treatment to support skin quality and hydration around the delicate eye area.\n\nDifficult choice, I know. We will talk it through at your consultation.\n\nComment SKIN GLOW and I will send you the details."),
+  bf(4, "Black Friday: limited places", "A limited number of packages, and Christmas is closer than you think.", "£299 for the full Luxury Skin Package in Bournville, Birmingham.",
+    "The Christmas party photos are coming whether we like it or not.\n\nMy Black Friday Luxury Skin Package is £299 for three treatments: two skin booster sessions plus your choice of microneedling, Biorepeel or under-eye polynucleotides.\n\nStart now and your skin has time to enjoy it before the festive season arrives.\n\nI only have a limited number of packages at No 1 Body Sculpting in Bournville, Birmingham, and once they are gone, they are gone.\n\nComment SKIN GLOW and I will send you the details."),
+];
+
 const safetyTypes: StaticPostType[] = [
   { id: "st-safety-sf1", group: "safety", label: "Safety first, what to check before you book anything", brief: "A calm, clear post on what to check before booking any treatment anywhere: who is treating you, their training and insurance, a proper consultation first and no pressure on the day. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
   { id: "st-safety-sf2", group: "safety", label: "Why I always say no sometimes", brief: "A warm, honest post on why a good practitioner will sometimes say not today or not this, and why that is a sign you are in safe hands. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
@@ -142,10 +165,11 @@ export const STATIC_GROUPS: StaticGroup[] = [
   { id: "tweets", label: "Weight loss tweets" },
   { id: "about", label: "About Lizzie" },
   { id: "fit", label: "Keeping fit at 40" },
+  { id: "bf", label: "Black Friday" },
   { id: "safety", label: "Safety" },
   { id: "unique", label: "Unique" },
 ];
 
-export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...safetyTypes, ...uniqueTypes];
+export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...bfTypes, ...safetyTypes, ...uniqueTypes];
 
 export const STATIC_CLINIC = "NO 1 BODY SCULPTING";
