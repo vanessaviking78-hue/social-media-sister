@@ -580,6 +580,80 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
   });
 });
 
+// System user route: reads every page the business system user can see (clinic pages shared to the business
+// portfolio) using its never-expiring token, then opens the same review screen as the Facebook login route.
+// It never touches a saved preset until the review screen is saved, and the token is never sent back to the browser.
+router.post("/meta/auth/system-user-start", async (req: Request, res: Response) => {
+  const appPassword = process.env["APP_PASSWORD"];
+  if (appPassword) {
+    const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
+    if (provided !== appPassword.trim().toLowerCase()) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+  }
+
+  const bodyToken = (req.body as { token?: string } | undefined)?.token;
+  const token = (bodyToken || process.env["META_SYSTEM_USER_TOKEN"] || "").trim();
+  if (!token) {
+    res.status(400).json({ error: "No system user token supplied. Paste it in, or set META_SYSTEM_USER_TOKEN." });
+    return;
+  }
+
+  try {
+    const pages: PageEntry[] = [];
+    let url: string | null =
+      `${GRAPH}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${encodeURIComponent(token)}`;
+    let guard = 0;
+    while (url && guard < 10) {
+      guard++;
+      const r = await fetch(url);
+      const data = (await r.json()) as {
+        data?: Array<{
+          id: string;
+          name: string;
+          access_token?: string;
+          instagram_business_account?: { id: string; username?: string };
+        }>;
+        paging?: { next?: string };
+        error?: { message?: string };
+      };
+      if (data.error) {
+        res.status(400).json({ error: `Meta said: ${data.error.message ?? "unknown error"}` });
+        return;
+      }
+      for (const p of data.data ?? []) {
+        if (!p.access_token) continue;
+        pages.push({
+          id: p.id,
+          name: p.name,
+          accessToken: p.access_token,
+          instagramAccountId: p.instagram_business_account?.id ?? null,
+          instagramUsername: p.instagram_business_account?.username ?? null,
+        });
+      }
+      url = data.paging?.next ?? null;
+    }
+
+    if (pages.length === 0) {
+      res.status(404).json({ error: "The system user can not see any pages yet. Share a page to the portfolio and assign it to the system user." });
+      return;
+    }
+
+    const key = randomBytes(16).toString("hex");
+    pendingPageSelections.set(key, { mode: "bulk", pages, expiresAt: Date.now() + 10 * 60 * 1000 });
+    res.json({
+      key,
+      count: pages.length,
+      pages: pages.map((p) => ({ id: p.id, name: p.name, hasInstagram: !!p.instagramAccountId, instagramUsername: p.instagramUsername })),
+      reviewPath: `/presets/bulk-connect/review?key=${key}`,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: msg });
+  }
+});
+
 router.get("/meta/auth/bulk-pending", async (req: Request, res: Response) => {
   const key = req.query["key"] as string | undefined;
   if (!key) {
