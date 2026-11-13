@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 
-// cybersuite.com/smashedlinks : the Smashed Socials links dashboard. One tracking link per person (rob, isaac, vanessa, and any she adds),
-// with opens, people who started the form, and finished entries. Black and yellow, same as the Smashed home.
+// cybersuite.com/freehouselinks : the Freehouse Socials links dashboard. One tracking link per person (rob, isaac, vanessa, and any she adds),
+// with opens, people who started the form, and finished entries. Black and yellow, same as the Freehouse home.
 
-const BLUE = "#00b4ff";
+const BLUE = "#1ad1c4";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-const SITE = "https://www.thecybersuite.com/smashedfreebies";
+const SITE = "https://www.thecybersuite.com/freehousefreebies";
 const DEFAULT_NAMES = ["rob", "isaac", "vanessa"];
-const EXTRA_KEY = "smashed-link-names";
+const EXTRA_KEY = "freehouse-link-names";
 
 type LinkRow = { ref: string; opens: number; started: number; entries: number; lastOpen: string | null; lastEntry: string | null };
 type Recent = { id: string; business: string; name: string; trade: string; ref: string; status: string; at: string };
@@ -31,7 +31,7 @@ function ago(iso: string | null): string {
 
 const cleanName = (v: string) => v.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
 
-export default function SmashedLinks() {
+export default function FreehouseLinks() {
   const [rows, setRows] = useState<LinkRow[]>([]);
   const [recent, setRecent] = useState<Recent[]>([]);
   const [err, setErr] = useState("");
@@ -44,7 +44,7 @@ export default function SmashedLinks() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/smashed/links`, { headers: authHeaders() });
+      const r = await fetch(`${BASE}/api/freehouse/links`, { headers: authHeaders() });
       if (!r.ok) throw new Error("bad");
       const d = await r.json();
       setRows(d.links || []);
@@ -58,7 +58,7 @@ export default function SmashedLinks() {
   }, []);
 
   useEffect(() => {
-    document.title = "Smashed links";
+    document.title = "Freehouse links";
     load();
     const t = setInterval(load, 30000);
     return () => clearInterval(t);
@@ -123,10 +123,10 @@ export default function SmashedLinks() {
         @media (max-width: 700px) { .hl td, .hl th { padding: 10px 6px; } .hl td.num { font-size: 22px; } .hl td.who { font-size: 19px; } }
       `}</style>
       <div className="top">
-        <Link href="/smashed">Back to Smashed</Link>
+        <Link href="/freehouse">Back to Freehouse</Link>
         <button onClick={load}>Refresh</button>
       </div>
-      <h1>Smashed links</h1>
+      <h1>Freehouse links</h1>
       <div className="sub">One link each. Opens count each person once per link. Started means they typed into the form. Entries are finished requests for a free trial.</div>
       {err && <div className="err">{err}</div>}
       <div className="stats">

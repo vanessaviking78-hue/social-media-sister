@@ -4,7 +4,7 @@ import { runMigrations } from "./lib/runMigrations";
 import { startSchedulerCron } from "./lib/schedulerEngine";
 import { startInboxSync } from "./routes/inbox";
 import { startHammeredMetricsSync } from "./routes/hammered-performance";
-import { startSmashedMetricsSync } from "./routes/smashed-performance";
+import { startFreehouseMetricsSync } from "./routes/freehouse-performance";
 import { startSmsMetricsSync } from "./routes/sms-performance";
 import { startRevenueIdeasCron } from "./lib/revenueIdeasCron";
 
@@ -40,7 +40,7 @@ async function start(): Promise<void> {
   startRevenueIdeasCron();
   startInboxSync();
   startHammeredMetricsSync();
-  startSmashedMetricsSync();
+  startFreehouseMetricsSync();
   startSmsMetricsSync();
 }
 

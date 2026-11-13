@@ -39,15 +39,15 @@ const HAMMERED_TABS: { id: string; label: string; Comp: React.ComponentType }[] 
   { id: "hammered", label: "Hammered posts", Comp: lazyTab(() => import("./hammered")) },
 ];
 
-// Smashed Socials (the pub and bar business) also has one tool only: the Smashed Socials posts page.
-const SMASHED_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
-  { id: "smashed", label: "Smashed Socials posts", Comp: lazyTab(() => import("./smashed")) },
+// Freehouse Socials (the pub and bar business) also has one tool only: the Freehouse Socials posts page.
+const FREEHOUSE_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "freehouse", label: "Freehouse Socials posts", Comp: lazyTab(() => import("./freehouse")) },
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }) {
-  const [tab, setTab] = useState(/hammered/i.test(label) ? "hammered" : /smashed/i.test(label) ? "smashed" : "new");
+  const [tab, setTab] = useState(/hammered/i.test(label) ? "hammered" : /freehouse/i.test(label) ? "freehouse" : "new");
   const [ids, setIds] = useState<string[] | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -84,8 +84,8 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
   const forced: ForcedClient = { pattern, treatmentIds: ids };
   const isSms = /social\s*media\s*sis|very\s*vanessa|vanessa|^sms$/i.test(label);
   const isHammered = /hammered/i.test(label);
-  const isSmashed = /smashed/i.test(label);
-  const tabs = isHammered ? HAMMERED_TABS : isSmashed ? SMASHED_TABS : isSms ? SMS_TABS : TABS;
+  const isFreehouse = /freehouse/i.test(label);
+  const tabs = isHammered ? HAMMERED_TABS : isFreehouse ? FREEHOUSE_TABS : isSms ? SMS_TABS : TABS;
   const current = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (
     <div className="min-h-screen bg-[#161616] text-white">
@@ -97,7 +97,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
           ))}
         </div>
       </div>
-      {!isSms && !isHammered && !isSmashed && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
+      {!isSms && !isHammered && !isFreehouse && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
       <ForcedClientContext.Provider value={forced}>
         <div className="[&_a[href='/hub']]:hidden">
           <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>

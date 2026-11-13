@@ -1,21 +1,21 @@
-// Slide 2 (body) and slide 3 (closing line) for each Smashed Socials hook in smashed-hooks.ts (12 Nov 2026).
-// Every Smashed post is a 3 slide carousel: the hook on slide 1, three friendly sentences on slide 2, a strong and cheeky closing line on slide 3.
+// Slide 2 (body) and slide 3 (closing line) for each Freehouse Socials hook in freehouse-hooks.ts (12 Nov 2026).
+// Every Freehouse post is a 3 slide carousel: the hook on slide 1, three friendly sentences on slide 2, a strong and cheeky closing line on slide 3.
 // Written as Vanessa, a social media strategist, talking to pubs and bars. No website is ever mentioned, so people comment or send a message instead.
 
-export type SmashedCopy = { body: string; cta: string };
+export type FreehouseCopy = { body: string; cta: string };
 
-export const SMASHED_COPY: Record<string, SmashedCopy> = {
+export const FREEHOUSE_COPY: Record<string, FreehouseCopy> = {
   SA1: {
     body: "I have worked with over 500 businesses and spent 30 years behind a camera, so I know a good photo from a dodgy one. Every post I make for you uses your own real photos of your own pub, your own team and your own food.",
-    cta: "Fancy a free sample? Comment SMASHED and I will show you what your pub could look like.",
+    cta: "Fancy a free sample? Comment FREEHOUSE and I will show you what your pub could look like.",
   },
   SA2: {
     body: "Those shiny computer made pictures have glasses that bend, froth that floats and sausages with a mind of their own. Your regulars can spot one from the other side of the bar. I use real photos of your actual pub, so people see what they will really get when they walk in.",
-    cta: "Want real photos doing the talking? Comment SMASHED and I will send you a free sample.",
+    cta: "Want real photos doing the talking? Comment FREEHOUSE and I will send you a free sample.",
   },
   SA3: {
     body: "People decide where to go on a Friday night by scrolling, and they decide fast. I build your page from your food, your team and your nights, three posts at a time, while you get on with pulling pints. It costs £49 a month and it never has a day off.",
-    cta: "Want a free 5 day trial? Comment SMASHED and I will get started.",
+    cta: "Want a free 5 day trial? Comment FREEHOUSE and I will get started.",
   },
   SB1: {
     body: "Your locals are the best content you have got. A photo of them laughing at the bar, with their blessing, says more about your pub than any poster. Real faces make people want to join in.",
@@ -87,7 +87,7 @@ export const SMASHED_COPY: Record<string, SmashedCopy> = {
   },
   SW18: {
     body: "You list what you want to post, you send me photos of your pub, your team and your food, and I build the posts with my own tools. You can download them yourself or leave it to me. It costs £49 a month.",
-    cta: "Comment SMASHED and I will send you a free 5 day trial.",
+    cta: "Comment FREEHOUSE and I will send you a free 5 day trial.",
   },
   SW19: {
     body: "People go where people are having fun. A real laugh from a real person does more than a hundred stock photos. I take your own photos and make them look as good as the pub feels.",

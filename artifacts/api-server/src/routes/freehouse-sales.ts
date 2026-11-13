@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
-// SMASHED SALES DASHBOARD. Vanessa's own page at /smashedsales: up to 4 commission only sales partners selling Smashed, the leads each one
+// FREEHOUSE SALES DASHBOARD. Vanessa's own page at /freehousesales: up to 4 commission only sales partners selling Freehouse, the leads each one
 // brings in, where every lead is, and the 20% commission earned and paid. Everything here needs the dashboard password.
 
 const router: IRouter = Router();
@@ -13,8 +13,8 @@ const SLOTS = [1, 2, 3, 4];
 
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
-// The dashboard has its own password, kept in the SMASHED_SALES_PASSWORD variable on Railway (never in the code). Her tools password also works.
-const salesPassword = () => (process.env.SMASHED_SALES_PASSWORD || "").trim().toLowerCase();
+// The dashboard has its own password, kept in the FREEHOUSE_SALES_PASSWORD variable on Railway (never in the code). Her tools password also works.
+const salesPassword = () => (process.env.FREEHOUSE_SALES_PASSWORD || "").trim().toLowerCase();
 
 function passwordOk(req: Request): boolean {
   const mine = (req.headers["x-sales-password"] as string | undefined)?.trim().toLowerCase();
@@ -33,7 +33,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   res.status(401).json({ error: "Unauthorized" });
 }
 
-router.post("/smashedsales/auth", (req: Request, res: Response) => {
+router.post("/freehousesales/auth", (req: Request, res: Response) => {
   const submitted = String(req.body?.password ?? "").trim().toLowerCase();
   const appPassword = (process.env.APP_PASSWORD || "").trim().toLowerCase();
   if (submitted && ((salesPassword() && submitted === salesPassword()) || (appPassword && submitted === appPassword))) {
@@ -89,7 +89,7 @@ const shape = (r: LeadRow) => ({
 });
 const normHandle = (s: string) => s.trim().toLowerCase().replace(/^@/, "");
 
-router.get("/smashedsales/admin/data", requireAuth, async (_req: Request, res: Response) => {
+router.get("/freehousesales/admin/data", requireAuth, async (_req: Request, res: Response) => {
   try {
     await ensureTables();
     const p = await db.execute(sql`SELECT slot, name FROM smashed_partners ORDER BY slot`);
@@ -100,7 +100,7 @@ router.get("/smashedsales/admin/data", requireAuth, async (_req: Request, res: R
   }
 });
 
-router.put("/smashedsales/admin/partners/:slot", requireAuth, async (req: Request, res: Response) => {
+router.put("/freehousesales/admin/partners/:slot", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
     const slot = Number(req.params.slot);
@@ -113,7 +113,7 @@ router.put("/smashedsales/admin/partners/:slot", requireAuth, async (req: Reques
   }
 });
 
-router.post("/smashedsales/admin/leads", requireAuth, async (req: Request, res: Response) => {
+router.post("/freehousesales/admin/leads", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
     const slot = Number(req.body?.partner);
@@ -149,7 +149,7 @@ router.post("/smashedsales/admin/leads", requireAuth, async (req: Request, res: 
   }
 });
 
-router.patch("/smashedsales/admin/leads/:id", requireAuth, async (req: Request, res: Response) => {
+router.patch("/freehousesales/admin/leads/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
     const id = str(req.params.id, 40);
@@ -168,7 +168,7 @@ router.patch("/smashedsales/admin/leads/:id", requireAuth, async (req: Request, 
   }
 });
 
-router.delete("/smashedsales/admin/leads/:id", requireAuth, async (req: Request, res: Response) => {
+router.delete("/freehousesales/admin/leads/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
     await db.execute(sql`DELETE FROM smashed_leads WHERE id = ${str(req.params.id, 40)}`);

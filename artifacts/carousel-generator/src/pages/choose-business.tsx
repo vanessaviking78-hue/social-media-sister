@@ -1,11 +1,11 @@
 import { Link } from "wouter";
 
 // cybersuite.com/choose : where she picks which leg of the business she is working in today.
-// Social Media Sister (white, black and hot pink) goes to the hub. Hammered (black and yellow) goes to its own home. Smashed Socials (blue) is just a small link at the bottom.
+// Social Media Sister (white, black and hot pink) goes to the hub. Hammered (black and yellow) goes to its own home. Freehouse Socials (blue) is just a small link at the bottom.
 
 const PINK = "#ff1493";
 const YELLOW = "#ffd60a";
-const BLUE = "#00b4ff";
+const BLUE = "#1ad1c4";
 
 export default function ChooseBusiness() {
   return (
@@ -30,8 +30,8 @@ export default function ChooseBusiness() {
         .cb .ham h2 { color: ${YELLOW}; }
         .cb .ham .line { background: ${YELLOW}; }
         .cb .ham .go { background: ${YELLOW}; color: #000; border-color: ${YELLOW}; }
-        .cb .smashlink { position: absolute; bottom: 2.2vh; left: 50%; transform: translateX(-50%); z-index: 5; background: #000; color: ${BLUE}; padding: 7px 14px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; text-decoration: none; border: 2px solid ${BLUE}; white-space: nowrap; }
-        .cb .smashlink:hover { background: ${BLUE}; color: #000; }
+        .cb .freehouselink { position: absolute; bottom: 2.2vh; left: 50%; transform: translateX(-50%); z-index: 5; background: #000; color: ${BLUE}; padding: 7px 14px; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; text-decoration: none; border: 2px solid ${BLUE}; white-space: nowrap; }
+        .cb .freehouselink:hover { background: ${BLUE}; color: #000; }
         .cb .back { position: absolute; top: 2.4vh; left: 50%; transform: translateX(-50%); z-index: 5; background: #000; color: #fff; padding: 8px 16px; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; text-decoration: none; border: 2px solid #fff; }
         .cb .back:hover { background: ${PINK}; color: #000; }
         @media (max-width: 760px) { .cb { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } .cb h2 { font-size: min(15vw, 12vh); } .cb .back { top: auto; bottom: 2vh; } }
@@ -49,7 +49,7 @@ export default function ChooseBusiness() {
         <div className="line" />
         <span className="go">Go to Hammered</span>
       </Link>
-      <Link href="/smashed" className="smashlink">Smashed Socials (pubs and bars)</Link>
+      <Link href="/freehouse" className="freehouselink">Freehouse Socials (pubs and bars)</Link>
     </div>
   );
 }

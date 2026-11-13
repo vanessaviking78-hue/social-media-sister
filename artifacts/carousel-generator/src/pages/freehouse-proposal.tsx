@@ -1,55 +1,55 @@
-// /smashedproposal : the full Smashed Socials sales partner proposal, public so it can be sent as a link.
-const YEL = "#00b4ff";
+// /freehouseproposal : the full Freehouse Socials sales partner proposal, public so it can be sent as a link.
+const YEL = "#1ad1c4";
 
 const steps = [
-  { t: "Spot them.", d: "Find a pub, bar, social club or brewery tap through the Smashed Socials Instagram page, your own contacts or your local on a Friday night. Anyone who serves people and has a page that has gone quiet is a lead." },
+  { t: "Spot them.", d: "Find a pub, bar, social club or brewery tap through the Freehouse Socials Instagram page, your own contacts or your local on a Friday night. Anyone who serves people and has a page that has gone quiet is a lead." },
   { t: "Have a proper chat.", d: "Message them, or pick up the phone. Calling is welcome and often works best with landlords, ideally mid afternoon before the evening rush. Ask about their best night of the week and whether anyone is looking after their socials. Landlords like being asked what the pub is famous for." },
-  { t: "Send the free trial.", d: "Send your own tracked link to the Smashed Socials free trial page. They get a 5 day bundle of free posts. Your name is on the link, so the sign up is credited to you." },
+  { t: "Send the free trial.", d: "Send your own tracked link to the Freehouse Socials free trial page. They get a 5 day bundle of free posts. Your name is on the link, so the sign up is credited to you." },
   { t: "Follow up.", d: "After the 5 days I tweak their sample and send it back. That is your cue to ring or message them: \"Did you see what they did with your photos?\"" },
-  { t: "Sign them up.", d: "Smashed Socials is £49 a month. Tell me they are in and I take it from there. I handle the contract and take the payment. You log the lead on the dashboard at each stage." },
+  { t: "Sign them up.", d: "Freehouse Socials is £49 a month. Tell me they are in and I take it from there. I handle the contract and take the payment. You log the lead on the dashboard at each stage." },
 ];
 
 const messages = [
   { t: "The opener", m: "Hi Dave, I saw your Sunday roast on your page and it looks cracking. Do you get time to post regularly, or is it all barrels, bookings and bed?" },
   { t: "Sending the free trial", m: "No pressure at all. There is a free 5 day trial that gets you some ready made posts for your page, using your own photos. Have a look here and tell me what you think: [your tracked link]" },
-  { t: "The follow up", m: "Hi Dave, did you get a look at the posts? Smashed Socials does 4 posts and stories a week for £49 a month, so the page keeps working while you are busy pulling pints. Fancy a quick call to talk it through?" },
+  { t: "The follow up", m: "Hi Dave, did you get a look at the posts? Freehouse Socials does 4 posts and stories a week for £49 a month, so the page keeps working while you are busy pulling pints. Fancy a quick call to talk it through?" },
 ];
 
 const gives = [
-  ["Your own tracked link.", "It is the free trial page with your name on the end, for example www.thecybersuite.com/smashedfreebies?ref=yourname. Every sign up that comes through it is credited to you."],
+  ["Your own tracked link.", "It is the free trial page with your name on the end, for example www.thecybersuite.com/freehousefreebies?ref=yourname. Every sign up that comes through it is credited to you."],
   ["The free trial itself.", "A bundle of ready made posts they can look at before they spend a penny."],
-  ["The Smashed Socials page.", "Real posts you can point people to, so they can see what a month looks like."],
+  ["The Freehouse Socials page.", "Real posts you can point people to, so they can see what a month looks like."],
   ["Leads from me.", "I will load the dashboard with leads for you as well, so you have people to ring and message from day one. They are logged against your name."],
   ["Me.", "If a client has a question you cannot answer, send it to me and I will sort it. You do not need to know social media. You need to be good at chatting."],
 ];
 
 const rules = [
   "Quote £49 a month. Any other price needs me to say yes first.",
-  "Be honest about what Smashed Socials is. I do the posting and the results depend on the pub, so please promise nothing about bookings or footfall.",
+  "Be honest about what Freehouse Socials is. I do the posting and the results depend on the pub, so please promise nothing about bookings or footfall.",
   "Be kind and professional. You are representing me and the pub trade.",
   "You are self employed. Nothing here is a job offer, and there is no minimum number of hours.",
 ];
 
 const deal: Array<[string, string]> = [
-  ["What you sell", "Smashed Socials, done for you social media for pubs, bars and social clubs, using their own real photos"],
+  ["What you sell", "Freehouse Socials, done for you social media for pubs, bars and social clubs, using their own real photos"],
   ["Price", "£49 a month for 4 posts and stories a week"],
   ["Your commission", "20% of the first 3 months' fee, at the price you agreed"],
   ["When you are paid", "The same day I receive the client's payment"],
   ["Your hours", "As many or as few as you like. You are self employed and in charge of your own diary"],
-  ["How I see your work", "Your own tracked link and the Smashed Socials sales dashboard"],
+  ["How I see your work", "Your own tracked link and the Freehouse Socials sales dashboard"],
 ];
 
 const H2 = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-2xl font-black uppercase mt-12 mb-3"><span className="px-2 py-1" style={{ background: YEL }}>{children}</span></h2>
 );
 
-export default function SmashedProposal() {
+export default function FreehouseProposal() {
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="max-w-2xl mx-auto px-5 py-10 text-lg leading-relaxed">
-        <div className="text-sm font-bold uppercase tracking-widest mb-2">Smashed Socials</div>
+        <div className="text-sm font-bold uppercase tracking-widest mb-2">Freehouse Socials</div>
         <h1 className="text-4xl md:text-5xl font-black uppercase leading-tight">Sales partner proposal</h1>
-        <p className="mt-5">I am inviting you to sell Smashed Socials, the social media service I built for pubs and bars. You bring me landlords and venues who want a busy, believable page full of their own real photos, and you earn 20% of what they sign up for, paid the same day I am paid.</p>
+        <p className="mt-5">I am inviting you to sell Freehouse Socials, the social media service I built for pubs and bars. You bring me landlords and venues who want a busy, believable page full of their own real photos, and you earn 20% of what they sign up for, paid the same day I am paid.</p>
 
         <H2>The deal at a glance</H2>
         <div className="border-2 border-black text-base">
@@ -102,7 +102,7 @@ export default function SmashedProposal() {
         </ul>
 
         <H2>The dashboard and getting paid</H2>
-        <p className="mb-3">I keep a Smashed Socials sales dashboard where every lead is logged against the person who brought it in. It shows each lead, where they are (chatting, trial sent, followed up, call booked, signed), the price agreed and the commission earned. Log your leads as you go. The first person to log a business keeps that lead, so log early.</p>
+        <p className="mb-3">I keep a Freehouse Socials sales dashboard where every lead is logged against the person who brought it in. It shows each lead, where they are (chatting, trial sent, followed up, call booked, signed), the price agreed and the commission earned. Log your leads as you go. The first person to log a business keeps that lead, so log early.</p>
         <p>You are paid the same day I receive the client's payment. I tick the lead as paid on the dashboard so we can both see it.</p>
 
         <H2>Ground rules</H2>

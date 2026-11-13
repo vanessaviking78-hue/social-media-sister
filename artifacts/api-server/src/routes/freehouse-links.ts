@@ -3,9 +3,9 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 
-// Smashed tracking links. Each person promoting Smashed gets a link ending ?ref=name. The free sample page reports when the link is
+// Freehouse tracking links. Each person promoting Freehouse gets a link ending ?ref=name. The free sample page reports when the link is
 // opened ("open") and when the visitor first types into the form ("start"). Entries come from the tenfree_requests table, where the
-// intake saves the ref inside answers. The dashboard at /smashedlinks reads the totals from here.
+// intake saves the ref inside answers. The dashboard at /freehouselinks reads the totals from here.
 
 const router: IRouter = Router();
 
@@ -42,7 +42,7 @@ function ensureTable(): Promise<void> {
 }
 
 // Public: called by the free sample page. Never fails loudly, a tracking hiccup must not get in the way of a tradesperson.
-router.post("/smashed/hit", async (req: Request, res: Response) => {
+router.post("/freehouse/hit", async (req: Request, res: Response) => {
   try {
     const kind = req.body?.kind === "start" ? "start" : "open";
     const ref = cleanRef(req.body?.ref);
@@ -53,12 +53,12 @@ router.post("/smashed/hit", async (req: Request, res: Response) => {
     const seen = await db.execute(sql`SELECT 1 FROM smashed_link_events WHERE ref = ${ref} AND visitor = ${visitor} AND kind = ${kind} LIMIT 1`);
     if (seen.rows.length === 0) await db.execute(sql`INSERT INTO smashed_link_events (ref, visitor, kind) VALUES (${ref}, ${visitor}, ${kind})`);
   } catch (err) {
-    req.log?.warn({ err }, "smashed hit failed");
+    req.log?.warn({ err }, "freehouse hit failed");
   }
   res.json({ ok: true });
 });
 
-router.get("/smashed/links", requireAuth, async (_req: Request, res: Response) => {
+router.get("/freehouse/links", requireAuth, async (_req: Request, res: Response) => {
   try {
     await ensureTable();
     await ensureTenFreeTable();
@@ -70,10 +70,10 @@ router.get("/smashed/links", requireAuth, async (_req: Request, res: Response) =
       FROM smashed_link_events GROUP BY ref`);
     const entries = await db.execute(sql`
       SELECT COALESCE(answers->>'ref', '') AS ref, COUNT(*)::int AS entries, MAX(created_at) AS last_entry
-      FROM tenfree_requests WHERE kind = 'smashed' GROUP BY 1`);
+      FROM tenfree_requests WHERE kind = 'freehouse' GROUP BY 1`);
     const recent = await db.execute(sql`
       SELECT id, clinic_name, clinician_name, COALESCE(answers->>'bizType', '') AS trade, COALESCE(answers->>'ref', '') AS ref, status, created_at
-      FROM tenfree_requests WHERE kind = 'smashed' ORDER BY created_at DESC LIMIT 30`);
+      FROM tenfree_requests WHERE kind = 'freehouse' ORDER BY created_at DESC LIMIT 30`);
     const map = new Map<string, { ref: string; opens: number; started: number; entries: number; lastOpen: string | null; lastEntry: string | null }>();
     const row = (ref: string) => {
       if (!map.has(ref)) map.set(ref, { ref, opens: 0, started: 0, entries: 0, lastOpen: null, lastEntry: null });
@@ -95,7 +95,7 @@ router.get("/smashed/links", requireAuth, async (_req: Request, res: Response) =
     });
   } catch (err) {
     res.status(500).json({ error: "Could not load the links" });
-    console.error("smashed links failed", err);
+    console.error("freehouse links failed", err);
   }
 });
 

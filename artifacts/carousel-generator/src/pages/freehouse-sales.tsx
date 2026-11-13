@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
-// /smashedsales : the 4 commission only Smashed sales partners, every lead they log, where each one is, and the 20% commission.
+// /freehousesales : the 4 commission only Freehouse sales partners, every lead they log, where each one is, and the 20% commission.
 // Commission is 20% of the first 3 months' fee at the price agreed (£49 a month, no discount).
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-const YEL = "#00b4ff";
+const YEL = "#1ad1c4";
 // The dashboard has its own password. It is remembered in this browser tab until it is closed.
 let PW = "";
 const authHeaders = () => ({ "x-sales-password": PW, "Content-Type": "application/json" });
-const PW_KEY = "smashed-sales-pw";
+const PW_KEY = "freehouse-sales-pw";
 
 const STAGES = ["Chatting", "Trial sent", "Followed up", "Call booked", "Signed"];
 const SHORT = ["Chat", "Trial", "Follow", "Call", "Signed"];
@@ -16,7 +16,7 @@ const MONTHS = 3;
 const RATE = 0.2;
 const FLOOR = 49;
 const SLOTS = [1, 2, 3, 4];
-const LINK = "https://www.thecybersuite.com/smashedfreebies?ref=";
+const LINK = "https://www.thecybersuite.com/freehousefreebies?ref=";
 const slug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 type Partner = { slot: number; name: string };
@@ -45,7 +45,7 @@ function Dashboard() {
   const [copied, setCopied] = useState(0);
 
   const load = async () => {
-    const r = await fetch(`${BASE}/api/smashedsales/admin/data`, { headers: authHeaders() });
+    const r = await fetch(`${BASE}/api/freehousesales/admin/data`, { headers: authHeaders() });
     if (!r.ok) { setTableMsg(r.status === 401 ? "Please log in to your tools first." : "Could not load."); setLoaded(true); return; }
     const d = (await r.json()) as { partners: Partner[]; leads: Lead[] };
     const full = SLOTS.map((slot) => d.partners.find((p) => p.slot === slot) || { slot, name: "" });
@@ -80,7 +80,7 @@ function Dashboard() {
   const saveName = async (slot: number) => {
     const name = (names[slot] || "").trim();
     if (name === nameOf(slot)) return;
-    const r = await fetch(`${BASE}/api/smashedsales/admin/partners/${slot}`, { method: "PUT", headers: authHeaders(), body: JSON.stringify({ name }) });
+    const r = await fetch(`${BASE}/api/freehousesales/admin/partners/${slot}`, { method: "PUT", headers: authHeaders(), body: JSON.stringify({ name }) });
     if (!r.ok) setTableMsg("That did not save."); else void load();
   };
 
@@ -89,7 +89,7 @@ function Dashboard() {
     if (!form.partner) { setMsg({ text: "Add a partner name in the cards above first.", bad: true }); return; }
     if (!form.lead.trim() || !form.business.trim()) { setMsg({ text: "Add their name and their business.", bad: true }); return; }
     if (!(Number(form.price) > 0)) { setMsg({ text: "Add the price a month.", bad: true }); return; }
-    const r = await fetch(`${BASE}/api/smashedsales/admin/leads`, {
+    const r = await fetch(`${BASE}/api/freehousesales/admin/leads`, {
       method: "POST", headers: authHeaders(),
       body: JSON.stringify({ partner: Number(form.partner), lead: form.lead, business: form.business, handle: form.handle, months: MONTHS, price: Number(form.price), stage: form.stage }),
     });
@@ -102,14 +102,14 @@ function Dashboard() {
   };
 
   const patch = async (id: string, body: object) => {
-    const r = await fetch(`${BASE}/api/smashedsales/admin/leads/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(body) });
+    const r = await fetch(`${BASE}/api/freehousesales/admin/leads/${id}`, { method: "PATCH", headers: authHeaders(), body: JSON.stringify(body) });
     if (!r.ok) setTableMsg("That did not save.");
     void load();
   };
   const remove = async (id: string) => {
     if (confirmId !== id) { setConfirmId(id); return; }
     setConfirmId("");
-    await fetch(`${BASE}/api/smashedsales/admin/leads/${id}`, { method: "DELETE", headers: authHeaders() });
+    await fetch(`${BASE}/api/freehousesales/admin/leads/${id}`, { method: "DELETE", headers: authHeaders() });
     void load();
   };
   const copyLink = async (slot: number, name: string) => {
@@ -122,7 +122,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-white text-black p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-4 mb-2">
-        <h1 className="text-3xl font-black uppercase px-3 py-1" style={{ background: YEL }}>Smashed Socials Sales</h1>
+        <h1 className="text-3xl font-black uppercase px-3 py-1" style={{ background: YEL }}>Freehouse Socials Sales</h1>
       </div>
       <p className="text-neutral-600 mb-3">Every lead, every stage and every pound of commission, per partner.</p>
       <div className="flex flex-wrap gap-2 mb-6 text-sm">
@@ -181,7 +181,7 @@ function Dashboard() {
                   <button type="button" className="px-2 py-1 border-2 border-black text-xs font-bold" style={{ background: copied === slot ? YEL : "#fff" }} onClick={() => void copyLink(slot, name)}>
                     {copied === slot ? "Link copied" : "Copy their trial link"}
                   </button>
-                  <div className="text-xs text-neutral-500 break-all">...smashedfreebies?ref={slug(name)}</div>
+                  <div className="text-xs text-neutral-500 break-all">...freehousefreebies?ref={slug(name)}</div>
                 </>
               )}
             </div>
@@ -276,7 +276,7 @@ function Dashboard() {
   );
 }
 
-export default function SmashedSalesGate() {
+export default function FreehouseSalesGate() {
   const [ok, setOk] = useState(false);
   const [checking, setChecking] = useState(true);
   const [pw, setPw] = useState("");
@@ -284,7 +284,7 @@ export default function SmashedSalesGate() {
 
   const verify = async (candidate: string) => {
     try {
-      const r = await fetch(`${BASE}/api/smashedsales/auth`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: candidate }) });
+      const r = await fetch(`${BASE}/api/freehousesales/auth`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: candidate }) });
       return r.ok;
     } catch {
       return false;
@@ -316,10 +316,10 @@ export default function SmashedSalesGate() {
   return (
     <div className="min-h-screen bg-white text-black flex items-center justify-center p-6">
       <form onSubmit={submit} className="w-full max-w-sm flex flex-col gap-4 border-2 border-black p-6">
-        <h1 className="text-3xl font-black uppercase px-3 py-1 self-start" style={{ background: YEL }}>Smashed Socials Sales</h1>
-        <label className="flex flex-col gap-1 text-sm text-neutral-600" htmlFor="smashed-pw">
+        <h1 className="text-3xl font-black uppercase px-3 py-1 self-start" style={{ background: YEL }}>Freehouse Socials Sales</h1>
+        <label className="flex flex-col gap-1 text-sm text-neutral-600" htmlFor="freehouse-pw">
           Password
-          <input id="smashed-pw" type="password" autoFocus className="border-2 border-black p-2 bg-white text-black" value={pw} onChange={(e) => { setPw(e.target.value); setErr(""); }} />
+          <input id="freehouse-pw" type="password" autoFocus className="border-2 border-black p-2 bg-white text-black" value={pw} onChange={(e) => { setPw(e.target.value); setErr(""); }} />
         </label>
         {err && <div className="text-sm" style={{ color: "#b3261e" }} role="alert">{err}</div>}
         <button type="submit" className="px-4 py-2 font-bold border-2 border-black" style={{ background: YEL, minHeight: 42 }}>Open dashboard</button>

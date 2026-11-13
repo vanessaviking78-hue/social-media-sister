@@ -1,12 +1,12 @@
-// /smashedproposal18 : the plain English Smashed Socials sales partner proposal, public so it can be sent as a link.
-const YEL = "#00b4ff";
+// /freehouseproposal18 : the plain English Freehouse Socials sales partner proposal, public so it can be sent as a link.
+const YEL = "#1ad1c4";
 
 const steps = [
-  { t: "Find a pub or bar.", d: "Look on the Smashed Socials Instagram page, ask people you know, or pop into your local and ask who does their posts. Any pub, bar, social club or brewery tap counts." },
+  { t: "Find a pub or bar.", d: "Look on the Freehouse Socials Instagram page, ask people you know, or pop into your local and ask who does their posts. Any pub, bar, social club or brewery tap counts." },
   { t: "Say hello.", d: "Send a message, give them a ring or have a word with whoever is behind the bar. Ask about their best night and who does their social media." },
   { t: "Send them your link.", d: "I give you a personal link to a free 5 day trial. It has your name on it, so I know they came from you." },
   { t: "Check in after the trial.", d: "Once I have sent their free posts back, ask what they thought. A quick call works best." },
-  { t: "Get a yes.", d: "Smashed Socials is £49 a month. Tell me they are in and I do the rest, including the contract and taking the payment." },
+  { t: "Get a yes.", d: "Freehouse Socials is £49 a month. Tell me they are in and I do the rest, including the contract and taking the payment." },
 ];
 
 const messages = [
@@ -26,21 +26,21 @@ const H2 = ({ children }: { children: React.ReactNode }) => (
   <h2 className="text-2xl font-black uppercase mt-12 mb-3"><span className="px-2 py-1" style={{ background: YEL }}>{children}</span></h2>
 );
 
-export default function SmashedProposal18() {
+export default function FreehouseProposal18() {
   return (
     <div className="min-h-screen bg-white text-black">
       <div className="max-w-2xl mx-auto px-5 py-10 text-lg leading-relaxed">
-        <div className="text-sm font-bold uppercase tracking-widest mb-2">Smashed Socials</div>
+        <div className="text-sm font-bold uppercase tracking-widest mb-2">Freehouse Socials</div>
         <h1 className="text-4xl md:text-5xl font-black uppercase leading-tight">Sales partner: the plain English version</h1>
 
         <H2>The job in one minute</H2>
-        <p className="mb-3">I run Smashed Socials. It looks after social media for pubs, bars and social clubs, using their own real photos. Most of them are far too busy to post anything, so their pages sit empty.</p>
+        <p className="mb-3">I run Freehouse Socials. It looks after social media for pubs, bars and social clubs, using their own real photos. Most of them are far too busy to post anything, so their pages sit empty.</p>
         <p className="mb-3">Your job is to find pubs and bars who want that sorted and introduce them to me. If they sign up, you get paid.</p>
         <p>You can work whenever you like and for as long as you like. You choose your own hours.</p>
 
         <H2>What you earn</H2>
         <p className="mb-3">You get 20% of the first 3 months of what the customer pays me.</p>
-        <p className="mb-3">Smashed Socials costs £49 a month. That is £147 over 3 months, so you earn <b>£29.40</b> for every pub you sign up.</p>
+        <p className="mb-3">Freehouse Socials costs £49 a month. That is £147 over 3 months, so you earn <b>£29.40</b> for every pub you sign up.</p>
         <p className="mb-5">The price stays at £49 a month. If you ever want to offer something different, ask me first.</p>
         <div className="border-2 border-black overflow-hidden">
           <table className="w-full text-base">

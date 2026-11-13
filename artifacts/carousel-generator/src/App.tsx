@@ -180,14 +180,14 @@ import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
 import SmsPerformance from "@/pages/sms-performance";
-import SmashedFreebies from "@/pages/smashed-freebies";
-import SmashedHome from "@/pages/smashed-home";
-import SmashedTool from "@/pages/smashed";
-import SmashedLinks from "@/pages/smashed-links";
-import SmashedPerformance from "@/pages/smashed-performance";
-import SmashedSales from "@/pages/smashed-sales";
-import SmashedProposal18 from "@/pages/smashed-proposal18";
-import SmashedProposal from "@/pages/smashed-proposal";
+import FreehouseFreebies from "@/pages/freehouse-freebies";
+import FreehouseHome from "@/pages/freehouse-home";
+import FreehouseTool from "@/pages/freehouse";
+import FreehouseLinks from "@/pages/freehouse-links";
+import FreehousePerformance from "@/pages/freehouse-performance";
+import FreehouseSales from "@/pages/freehouse-sales";
+import FreehouseProposal18 from "@/pages/freehouse-proposal18";
+import FreehouseProposal from "@/pages/freehouse-proposal";
 import SalesProposal from "@/pages/sales-proposal";
 import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
@@ -249,9 +249,9 @@ function ProtectedRouter() {
       <Route path="/hammeredlinks" component={HammeredLinks} />
       <Route path="/hammeredperformance" component={HammeredPerformance} />
       <Route path="/smsperformance" component={SmsPerformance} />
-      <Route path="/smashedposts" component={SmashedTool} />
-      <Route path="/smashedlinks" component={SmashedLinks} />
-      <Route path="/smashedperformance" component={SmashedPerformance} />
+      <Route path="/freehouseposts" component={FreehouseTool} />
+      <Route path="/freehouselinks" component={FreehouseLinks} />
+      <Route path="/freehouseperformance" component={FreehousePerformance} />
       <Route path="/inbox" component={InboxPage} />
       <Route path="/clare" component={ClarePage} />
       <Route path="/clients" component={ClientsIndexPage} />
@@ -386,9 +386,9 @@ function AppContent() {
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
   const [isHammeredProposal] = useRoute("/hammeredproposal");
-  const [isSmashedSales] = useRoute("/smashedsales");
-  const [isSmashedProposal18] = useRoute("/smashedproposal18");
-  const [isSmashedProposal] = useRoute("/smashedproposal");
+  const [isFreehouseSales] = useRoute("/freehousesales");
+  const [isFreehouseProposal18] = useRoute("/freehouseproposal18");
+  const [isFreehouseProposal] = useRoute("/freehouseproposal");
   const [isSalesProposal] = useRoute("/salesproposal");
   const [isJoinGroup] = useRoute("/joingroup");
   const [isTerms] = useRoute("/terms");
@@ -424,7 +424,7 @@ function AppContent() {
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isHammeredFreebies] = useRoute("/hammeredfreebies");
   const [isHammeredFreebiesAlt] = useRoute("/hammeredfreeies"); // old spelling still works
-  const [isSmashedFreebies] = useRoute("/smashedfreebies");
+  const [isFreehouseFreebies] = useRoute("/freehousefreebies");
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
   const [isKirstyDove] = useRoute("/kirstydove");
@@ -439,7 +439,7 @@ function AppContent() {
   const isSplash = location === "/";
   const isChoose = location === "/choose";
   const isHammered = location === "/hammered";
-  const isSmashed = location === "/smashed";
+  const isFreehouse = location === "/freehouse";
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -507,8 +507,8 @@ function AppContent() {
   if (isHammered) {
     return <HammeredHome />;
   }
-  if (isSmashed) {
-    return <SmashedHome />;
+  if (isFreehouse) {
+    return <FreehouseHome />;
   }
   if (isPrivacy) {
     return <Privacy />;
@@ -528,14 +528,14 @@ function AppContent() {
   if (isHammeredProposal) {
     return <HammeredProposal />;
   }
-  if (isSmashedSales) {
-    return <SmashedSales />;
+  if (isFreehouseSales) {
+    return <FreehouseSales />;
   }
-  if (isSmashedProposal18) {
-    return <SmashedProposal18 />;
+  if (isFreehouseProposal18) {
+    return <FreehouseProposal18 />;
   }
-  if (isSmashedProposal) {
-    return <SmashedProposal />;
+  if (isFreehouseProposal) {
+    return <FreehouseProposal />;
   }
   if (isSalesProposal) {
     return <SalesProposal />;
@@ -628,8 +628,8 @@ function AppContent() {
   if (isHammeredFreebies || isHammeredFreebiesAlt) {
     return <HammeredFreebies />;
   }
-  if (isSmashedFreebies) {
-    return <SmashedFreebies />;
+  if (isFreehouseFreebies) {
+    return <FreehouseFreebies />;
   }
   if (isClubBare) {
     return (

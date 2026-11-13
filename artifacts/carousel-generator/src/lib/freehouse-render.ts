@@ -1,16 +1,16 @@
-// Draws one Smashed slide. Smashed (the page and every Smashed client) uses a single layout: a full bleed photo
+// Draws one Freehouse slide. Freehouse (the page and every Freehouse client) uses a single layout: a full bleed photo
 // with the writing on a gradient, in a text box or on a block. Nothing else.
 
 export const HW = 1080;
 export const HH = 1350;
-export const SMASHED_BLUE = "#00b4ff";
-export const SMASHED_HIVIS = "#00b4ff";
+export const FREEHOUSE_BLUE = "#1ad1c4";
+export const FREEHOUSE_HIVIS = "#1ad1c4";
 
-export type SmashedStyle = "gradient" | "box" | "block";
+export type FreehouseStyle = "gradient" | "box" | "block";
 export type SlideKind = "hook" | "body" | "cta";
 
 export type SlideLook = {
-  style: SmashedStyle;
+  style: FreehouseStyle;
   colour: string; // block or box fill, or the gradient colour
   textColour: "hivis" | "auto" | "white" | "black";
   headFamily: string; // canvas font family for hooks and closing lines
@@ -81,7 +81,7 @@ function fit(ctx: CanvasRenderingContext2D, text: string, family: string, weight
   }
 }
 
-export function drawSmashedSlide(canvas: HTMLCanvasElement, kind: SlideKind, text: string, photo: SlidePhoto, look: SlideLook, logo: ImageBitmap | null, handle: string) {
+export function drawFreehouseSlide(canvas: HTMLCanvasElement, kind: SlideKind, text: string, photo: SlidePhoto, look: SlideLook, logo: ImageBitmap | null, handle: string) {
   canvas.width = HW;
   canvas.height = HH;
   const ctx = canvas.getContext("2d")!;
@@ -101,7 +101,7 @@ export function drawSmashedSlide(canvas: HTMLCanvasElement, kind: SlideKind, tex
   const fillForText = look.style === "gradient" ? look.colour : look.colour;
   const autoText = look.style === "gradient" ? (lum(fillForText) > 0.5 ? "#111111" : "#ffffff") : lum(fillForText) > 0.4 ? "#111111" : "#ffffff";
   // high vis yellow writing, but on a pale or yellow fill it would vanish, so it drops to black there
-  const hiVis = lum(fillForText) > 0.4 ? "#111111" : SMASHED_HIVIS;
+  const hiVis = lum(fillForText) > 0.4 ? "#111111" : FREEHOUSE_HIVIS;
   const textCol = look.textColour === "hivis" ? hiVis : look.textColour === "white" ? "#ffffff" : look.textColour === "black" ? "#111111" : autoText;
 
   ctx.textBaseline = "top";

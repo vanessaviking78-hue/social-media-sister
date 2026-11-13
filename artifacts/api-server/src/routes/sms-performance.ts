@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "../lib/logger";
 
-// Social Media Sister performance tracker (all clients). Pulls likes, comments, saves, shares and reach for every published post for every Social Media Sister client (all clinics, hairdressers and so on, never Hammered or Smashed Socials, which are separate businesses) straight from Instagram
+// Social Media Sister performance tracker (all clients). Pulls likes, comments, saves, shares and reach for every published post for every Social Media Sister client (all clinics, hairdressers and so on, never Hammered or Freehouse Socials, which are separate businesses) straight from Instagram
 // (needs instagram_manage_insights, added to the connect scopes in meta-auth.ts, so each client has to be reconnected once). Scores each post and
 // marks the top quarter as high performing. The page is /smsperformance.
 
@@ -65,7 +65,7 @@ export async function syncSmsMetrics(maxPosts = 60): Promise<{ checked: number; 
   try {
     await ensureTable();
     const presets = rowsOf(await db.execute(sql`SELECT id, name, meta_page_access_token FROM client_presets
-      WHERE meta_page_access_token IS NOT NULL AND name NOT ILIKE '%hammered%' AND name NOT ILIKE '%smashed%' ORDER BY id`));
+      WHERE meta_page_access_token IS NOT NULL AND name NOT ILIKE '%hammered%' AND name NOT ILIKE '%freehouse%' ORDER BY id`));
     if (!presets.length) return { checked: 0, error: "No client is connected to Instagram yet" };
     for (const preset of presets) {
     const token = preset.meta_page_access_token as string;
@@ -132,7 +132,7 @@ router.get("/sms/performance", requireAuth, async (_req, res) => {
     const r = rowsOf(await db.execute(sql`SELECT sp.id, cp.name AS client, sp.scheduled_at, sp.content->>'title' AS title, sp.content->>'caption' AS caption, sp.post_type,
         m.permalink, m.likes, m.comments, m.saved, m.shares, m.reach, m.insights_error, m.fetched_at
       FROM scheduled_posts sp
-      JOIN client_presets cp ON cp.id = sp.preset_id AND cp.name NOT ILIKE '%hammered%' AND cp.name NOT ILIKE '%smashed%'
+      JOIN client_presets cp ON cp.id = sp.preset_id AND cp.name NOT ILIKE '%hammered%' AND cp.name NOT ILIKE '%freehouse%'
       LEFT JOIN post_metrics m ON m.scheduled_post_id = sp.id
       WHERE sp.status = 'published' AND sp.post_type NOT ILIKE '%story%'
       ORDER BY sp.scheduled_at DESC LIMIT 600`));

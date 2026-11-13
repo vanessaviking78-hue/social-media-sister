@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 
-// cybersuite.com/smashedperformance : which Smashed posts are performing. Pulls likes, comments, saves, shares and reach from Instagram,
-// scores each post and flags the top quarter as high performing. Black and yellow, same as the Smashed home.
+// cybersuite.com/freehouseperformance : which Freehouse posts are performing. Pulls likes, comments, saves, shares and reach from Instagram,
+// scores each post and flags the top quarter as high performing. Black and yellow, same as the Freehouse home.
 
-const BLUE = "#00b4ff";
+const BLUE = "#1ad1c4";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Post = {
@@ -26,7 +26,7 @@ const authHeaders = (): Record<string, string> => {
 const num = (v: number | null) => (v == null ? "-" : v.toLocaleString("en-GB"));
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
-export default function SmashedPerformance() {
+export default function FreehousePerformance() {
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,7 +34,7 @@ export default function SmashedPerformance() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/smashed/performance`, { headers: authHeaders() });
+      const r = await fetch(`${BASE}/api/freehouse/performance`, { headers: authHeaders() });
       if (!r.ok) throw new Error("bad");
       setData(await r.json());
       setErr("");
@@ -53,7 +53,7 @@ export default function SmashedPerformance() {
     setBusy(true);
     setErr("");
     try {
-      const r = await fetch(`${BASE}/api/smashed/performance/sync`, { method: "POST", headers: authHeaders() });
+      const r = await fetch(`${BASE}/api/freehouse/performance/sync`, { method: "POST", headers: authHeaders() });
       const d = await r.json().catch(() => ({}));
       if (d.error) setErr(`Instagram said: ${d.error}`);
       await load();
@@ -96,7 +96,7 @@ export default function SmashedPerformance() {
       `}</style>
 
       <div className="top">
-        <Link href="/smashed" className="back">Smashed</Link>
+        <Link href="/freehouse" className="back">Freehouse</Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className={`ghost${filter === "all" ? " on" : ""}`} onClick={() => setFilter("all")}>All posts</button>
           <button className={`ghost${filter === "high" ? " on" : ""}`} onClick={() => setFilter("high")}>High performing</button>
@@ -108,7 +108,7 @@ export default function SmashedPerformance() {
       {err && <p className="note">{err}</p>}
       {insightsMissing && (
         <p className="note">
-          Likes and comments are coming through. Saves, shares and reach are not, because Smashed was connected without the insights permission.{" "}
+          Likes and comments are coming through. Saves, shares and reach are not, because Freehouse was connected without the insights permission.{" "}
           <a href={`${BASE}/api/meta/auth/bulk-start?extended=1`}>Reconnect with insights</a> and they will fill in.
         </p>
       )}
@@ -124,7 +124,7 @@ export default function SmashedPerformance() {
             <div className="stat"><b>{num(data.totals.reach)}</b><span>Reach</span></div>
           </div>
 
-          {data.totals.published === 0 && <p className="note">No Smashed posts have gone out yet. Once they are published they appear here.</p>}
+          {data.totals.published === 0 && <p className="note">No Freehouse posts have gone out yet. Once they are published they appear here.</p>}
           {data.totals.published > 0 && data.totals.tracked === 0 && <p className="note">Posts are published but the numbers have not been fetched yet. Press Refresh numbers.</p>}
 
           <div className="tablewrap">

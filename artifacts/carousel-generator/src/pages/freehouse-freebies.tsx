@@ -1,19 +1,19 @@
-import { SMASHED_FONTS } from "@/lib/tenfree-fonts";
+import { FREEHOUSE_FONTS } from "@/lib/tenfree-fonts";
 import { injectSuiteFontCss } from "@/lib/suite-fonts";
 import { useEffect, useRef, useState } from "react";
 import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 import { canvasToPng, makeClearLogo } from "@/lib/logo-clear";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// cybersuite.com/smashedfreebies : the Smashed Socials (pubs and bars) freebies form. A copy of the premium freebies page: same fonts and layout, electric blue in place of hot pink.
+// cybersuite.com/freehousefreebies : the Freehouse Socials (pubs and bars) freebies form. A copy of the premium freebies page: same fonts and layout, electric blue in place of hot pink.
 
-const PINK = "#00b4ff"; // Smashed Socials electric blue. Named PINK only so the copied CSS below stays identical.
+const PINK = "#1ad1c4"; // Freehouse Socials electric blue. Named PINK only so the copied CSS below stays identical.
 const INK = "#111111";
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@900&display=swap');
 .tf, .tf * { font-family: 'League Spartan', sans-serif !important; font-weight: 900 !important; box-sizing: border-box; }
-${SMASHED_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; }`).join("\n")}
+${FREEHOUSE_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family: "${ft.family}", serif !important; font-weight: 400 !important; }`).join("\n")}
 .tf { background: #fff; color: ${INK}; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 .tf ::placeholder { color: #b9b9b9; font-weight: 900; }
 .tf-wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
@@ -40,7 +40,7 @@ ${SMASHED_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family:
 .tf-ta { min-height: 84px; resize: vertical; line-height:1.3; }
 .tf-in:focus, .tf-ta:focus { border-bottom-color:${PINK}; box-shadow: 0 3px 0 0 ${PINK}; }
 .tf-drop { border: 2px dashed ${INK}; padding: 26px; display:flex; align-items:center; gap: 22px; cursor:pointer; transition: border-color .2s, background .2s; }
-.tf-drop:hover { border-color:${INK}; background:#e6f7ff; }
+.tf-drop:hover { border-color:${INK}; background:#e2faf8; }
 .tf-chk { width: 150px; height: 110px; flex: none; background-image: linear-gradient(45deg,#e9e9e9 25%,transparent 25%),linear-gradient(-45deg,#e9e9e9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e9e9e9 75%),linear-gradient(-45deg,transparent 75%,#e9e9e9 75%); background-size: 16px 16px; background-position: 0 0,0 8px,8px -8px,-8px 0; display:flex; align-items:center; justify-content:center; border:1px solid #ddd; }
 .tf-chk img { max-width: 88%; max-height: 88%; }
 .tf-note { font-size: 13px; letter-spacing:.06em; color:#777; margin-top:8px; text-transform: uppercase; }
@@ -52,7 +52,7 @@ ${SMASHED_FONTS.map((ft) => `.tf .ff-${ft.id}, .tf .ff-${ft.id} * { font-family:
 .tf-grp h3 { font-size: 13px; letter-spacing:.28em; text-transform: uppercase; color:${INK}; background:${PINK}; display:inline-block; padding:3px 9px; margin: 0 0 12px; }
 .tf-chips { display:flex; flex-wrap:wrap; gap: 10px; }
 .tf-chip { border: 2px solid ${INK}; padding: 10px 16px; font-size: 14px; letter-spacing:.06em; text-transform: uppercase; background:#fff; cursor:pointer; transition: all .15s; color:${INK}; }
-.tf-chip:hover { background:#e6f7ff; }
+.tf-chip:hover { background:#e2faf8; }
 .tf-chip.on { background:${PINK}; border-color:${INK}; color:${INK}; }
 .tf-mum { display:flex; gap:10px; flex-wrap:wrap; }
 .tf-consent { display:flex; gap:14px; align-items:flex-start; margin-top: 40px; font-size: 15px; line-height:1.35; cursor:pointer; }
@@ -125,28 +125,28 @@ const JOB_GROUPS: { id: string; label: string; items: string[] }[] = [
 
 try {
   const r0 = new URLSearchParams(window.location.search).get("ref");
-  if (r0) sessionStorage.setItem("smashed-ref", r0);
+  if (r0) sessionStorage.setItem("freehouse-ref", r0);
 } catch { /* ignore */ }
 
-export default function SmashedFreebies() {
+export default function FreehouseFreebies() {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "anton", passion: "", funny: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
-  // Tell the Smashed links dashboard this link was opened, and (once) that they started filling it in.
+  // Tell the Freehouse links dashboard this link was opened, and (once) that they started filling it in.
   const startedRef = useRef(false);
   const visitorId = () => {
     try {
-      let v = localStorage.getItem("smashed-visitor");
-      if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem("smashed-visitor", v); }
+      let v = localStorage.getItem("freehouse-visitor");
+      if (!v) { v = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)); localStorage.setItem("freehouse-visitor", v); }
       return v;
     } catch { return ""; }
   };
   const track = (kind: "open" | "start") => {
     let ref = "";
-    try { ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("smashed-ref") || ""; } catch { /* ignore */ }
-    fetch("/api/smashed/hit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, ref, visitor: visitorId() }) }).catch(() => undefined);
+    try { ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("freehouse-ref") || ""; } catch { /* ignore */ }
+    fetch("/api/freehouse/hit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, ref, visitor: visitorId() }) }).catch(() => undefined);
   };
   useEffect(() => { track("open"); }, []);
-  const [cols, setCols] = useState<Colours>({ main: "#00b4ff", accent: "#111111" });
+  const [cols, setCols] = useState<Colours>({ main: "#1ad1c4", accent: "#111111" });
   const [ticked, setTicked] = useState<string[]>([]);
   const [logoBlob, setLogoBlob] = useState<Blob | null>(null);
   const [logoPreview, setLogoPreview] = useState("");
@@ -161,7 +161,7 @@ export default function SmashedFreebies() {
   const logoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    document.title = "Smashed Socials freebies";
+    document.title = "Freehouse Socials freebies";
     const m = document.createElement("meta");
     m.name = "robots";
     m.content = "noindex";
@@ -223,11 +223,11 @@ export default function SmashedFreebies() {
       fd.append("accentHex", cols.accent);
       fd.append("treatments", JSON.stringify(ticked));
       fd.append("consent", "yes");
-      fd.append("kind", "smashed");
+      fd.append("kind", "freehouse");
       // Tracking name from the link (?ref=dave). Kept for the visit so it survives if they wander off and come back.
       let ref = "";
       try {
-        ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("smashed-ref") || "";
+        ref = new URLSearchParams(window.location.search).get("ref") || sessionStorage.getItem("freehouse-ref") || "";
       } catch { /* ignore */ }
       if (ref) fd.append("ref", ref);
       if (logoBlob) fd.append("logo", new File([logoBlob], "logo.png", { type: "image/png" }));
@@ -257,8 +257,8 @@ export default function SmashedFreebies() {
       <style>{CSS}</style>
       <div className="tf-wrap">
         <div className="tf-top">
-          {/* The Smashed logo goes here once it is supplied. */}
-          <span>Smashed</span>
+          {/* The Freehouse logo goes here once it is supplied. */}
+          <span>Freehouse</span>
           <i />
         </div>
 
@@ -271,14 +271,14 @@ export default function SmashedFreebies() {
             </h1>
             <p className="tf-lede">I will get your posts made and over to you as soon as I can. I will send you a WhatsApp and an email. Have a look, and tell me what to change. Thanks for giving it a go.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another pub or bar that could do with some decent posts? Send them this.</p>
-            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Smashed for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/smashedfreebies")}`}>Share with another pub or bar</a>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Freehouse for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/freehousefreebies")}`}>Share with another pub or bar</a>
           </div>
         ) : (
           <>
             <div className="tf-hero">
               <div className="tf-kicker">Free 5 day trial</div>
               <h1 className="tf-h1">
-                Smashed <span>Socials</span>
+                Freehouse <span>Socials</span>
               </h1>
               <p className="tf-lede">Proper posts that make people want to come through your door tonight. Tell me a little about you and your work. I build your posts in your colours with your logo and your own real photos, no strange AI pints, plus matching stories and reel scripts, and you tell me what to tweak.</p>
               <div className="tf-list">
@@ -291,7 +291,7 @@ export default function SmashedFreebies() {
               </div>
             </div>
 
-            <div style={{ border: "3px solid #111", borderRadius: 12, padding: "16px 18px", margin: "0 0 22px", background: "rgba(0,180,255,.18)" }}>
+            <div style={{ border: "3px solid #111", borderRadius: 12, padding: "16px 18px", margin: "0 0 22px", background: "rgba(26,209,196,.18)" }}>
               <div style={{ fontWeight: 800, fontSize: 20, textTransform: "uppercase", letterSpacing: ".03em", color: "#111" }}>The more you tell me, the better your posts get</div>
               <p style={{ margin: "8px 0 0", fontSize: 16, lineHeight: 1.5 }}>The more detail you give me, the more personal your posts will be. Chatty answers, little stories and daft facts all help. Take your time with the boxes below.</p>
             </div>
@@ -396,7 +396,7 @@ export default function SmashedFreebies() {
                 <div className="tf-f full">
                   <span className="tf-l">Pick the font for your headlines</span>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {SMASHED_FONTS.map((ft) => (
+                    {FREEHOUSE_FONTS.map((ft) => (
                       <button type="button" key={ft.id} onClick={() => setF((x) => ({ ...x, font: ft.id }))} className={`tf-in ff-${ft.id}`} style={{ width: "auto", cursor: "pointer", fontSize: 26, outline: f.font === ft.id ? `3px solid ${PINK}` : "none" }}>{ft.name}</button>
                     ))}
                   </div>
@@ -412,17 +412,17 @@ export default function SmashedFreebies() {
 
             <label className="tf-consent">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              <span>I am happy for Smashed to use my logo, photos and details to build my free trial posts and to contact me about them.</span>
+              <span>I am happy for Freehouse to use my logo, photos and details to build my free trial posts and to contact me about them.</span>
             </label>
             {err && <div className="tf-err">{err}</div>}
-            {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I have had my Smashed Socials trial and would like to hear about the special rate")}`}>Ask about the special rate on WhatsApp</a>}
+            {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I have had my Freehouse Socials trial and would like to hear about the special rate")}`}>Ask about the special rate on WhatsApp</a>}
             <button className="tf-go" disabled={busy || logoBusy} onClick={submit}>
               {busy ? "Sending..." : "Send me my free trial posts"}
             </button>
             <div className="tf-note">I look at every request by hand. After your 5 days you can post them yourself, or I can post for you at a special rate.</div>
           </>
         )}
-        <div className="tf-foot">Smashed</div>
+        <div className="tf-foot">Freehouse</div>
       </div>
     </div>
   );

@@ -1,18 +1,18 @@
-// The Smashed Socials Hook Bank: slide 1 hooks for the pub and bar posts (12 Nov 2026), copied from the Hammered set up.
+// The Freehouse Socials Hook Bank: slide 1 hooks for the pub and bar posts (12 Nov 2026), copied from the Hammered set up.
 // Kept apart from the clinic Hook Bank (hook-bank.ts) and the Hammered hooks so none of these show up in other tools.
-// To add a hook, add a line to SMASHED_HOOKS. The group says what the hook is for.
+// To add a hook, add a line to FREEHOUSE_HOOKS. The group says what the hook is for.
 
-export type SmashedHookGroup = "About me" | "Pub banter" | "Their marketing" | "What Smashed Socials can do";
-export type SmashedHook = { code: string; group: SmashedHookGroup; text: string };
+export type FreehouseHookGroup = "About me" | "Pub banter" | "Their marketing" | "What Freehouse Socials can do";
+export type FreehouseHook = { code: string; group: FreehouseHookGroup; text: string };
 
-export const SMASHED_HOOK_GROUPS: { group: SmashedHookGroup; label: string }[] = [
+export const FREEHOUSE_HOOK_GROUPS: { group: FreehouseHookGroup; label: string }[] = [
   { group: "About me", label: "The first three posts: who Vanessa is and what she does" },
   { group: "Pub banter", label: "Pub banter people will send to the group chat" },
   { group: "Their marketing", label: "Gently take the mick out of their marketing" },
-  { group: "What Smashed Socials can do", label: "Show what Smashed Socials can do" },
+  { group: "What Freehouse Socials can do", label: "Show what Freehouse Socials can do" },
 ];
 
-export const SMASHED_HOOKS: SmashedHook[] = [
+export const FREEHOUSE_HOOKS: FreehouseHook[] = [
   { code: "SA1", group: "About me", text: "Hello, I’m Vanessa and I make pubs look as good as the pint you pull." },
   { code: "SA2", group: "About me", text: "Yes, I know the pint on your poster was made by a robot. Everybody winces." },
   { code: "SA3", group: "About me", text: "Your pub is brilliant. Your Facebook page is still last year’s Christmas menu." },
@@ -33,14 +33,14 @@ export const SMASHED_HOOKS: SmashedHook[] = [
   { code: "SM15", group: "Their marketing", text: "Your pub has stood in the village since 1820. Your last post is from the bank holiday before last." },
   { code: "SM16", group: "Their marketing", text: "You have a gorgeous beer garden and one photo of it, taken in November, with the bins in shot." },
   { code: "SM17", group: "Their marketing", text: "Posting “see you tonight” with no picture is like opening the door and hiding behind it." },
-  { code: "SW18", group: "What Smashed Socials can do", text: "Tell me what’s on each day and I’ll turn it into a week of posts. Dominoes Monday and free curry Thursday welcome." },
-  { code: "SW19", group: "What Smashed Socials can do", text: "Send me a photo of your landlady laughing and I’ll show you your best performing post." },
-  { code: "SW20", group: "What Smashed Socials can do", text: "I would open your Sunday roast post with the gravy pour. People eat with their eyes." },
-  { code: "SW21", group: "What Smashed Socials can do", text: "Your quiz night deserves a post that makes people book a table before they have finished scrolling." },
-  { code: "SW22", group: "What Smashed Socials can do", text: "Show me your regulars, with their permission, and I’ll show you why people come back." },
-  { code: "SW23", group: "What Smashed Socials can do", text: "I would turn one afternoon in your pub into a month of posts. Here is what I would photograph." },
-  { code: "SW24", group: "What Smashed Socials can do", text: "Your new menu deserves better than a screenshot of a Word document." },
-  { code: "SW25", group: "What Smashed Socials can do", text: "Christmas party bookings go to the pub that posts first. Here is the post I would put up." },
-  { code: "SW26", group: "What Smashed Socials can do", text: "Your team is your best advert. Let me show you how I would introduce them." },
-  { code: "SW27", group: "What Smashed Socials can do", text: "Tell me your pub’s name and your town and I will give you a post idea for your next quiet Tuesday." },
+  { code: "SW18", group: "What Freehouse Socials can do", text: "Tell me what’s on each day and I’ll turn it into a week of posts. Dominoes Monday and free curry Thursday welcome." },
+  { code: "SW19", group: "What Freehouse Socials can do", text: "Send me a photo of your landlady laughing and I’ll show you your best performing post." },
+  { code: "SW20", group: "What Freehouse Socials can do", text: "I would open your Sunday roast post with the gravy pour. People eat with their eyes." },
+  { code: "SW21", group: "What Freehouse Socials can do", text: "Your quiz night deserves a post that makes people book a table before they have finished scrolling." },
+  { code: "SW22", group: "What Freehouse Socials can do", text: "Show me your regulars, with their permission, and I’ll show you why people come back." },
+  { code: "SW23", group: "What Freehouse Socials can do", text: "I would turn one afternoon in your pub into a month of posts. Here is what I would photograph." },
+  { code: "SW24", group: "What Freehouse Socials can do", text: "Your new menu deserves better than a screenshot of a Word document." },
+  { code: "SW25", group: "What Freehouse Socials can do", text: "Christmas party bookings go to the pub that posts first. Here is the post I would put up." },
+  { code: "SW26", group: "What Freehouse Socials can do", text: "Your team is your best advert. Let me show you how I would introduce them." },
+  { code: "SW27", group: "What Freehouse Socials can do", text: "Tell me your pub’s name and your town and I will give you a post idea for your next quiet Tuesday." },
 ];
