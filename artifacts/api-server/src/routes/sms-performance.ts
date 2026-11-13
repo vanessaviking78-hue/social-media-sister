@@ -3,8 +3,8 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "../lib/logger";
 
-// Social Media Sister performance tracker. Pulls likes, comments, saves, shares and reach for every published Social Media Sister post straight from Instagram
-// (needs instagram_manage_insights, added to the connect scopes in meta-auth.ts, so Social Media Sister has to be reconnected once). Scores each post and
+// Social Media Sister performance tracker (all clients). Pulls likes, comments, saves, shares and reach for every published post for every Social Media Sister client (all clinics, hairdressers and so on, never Hammered or Smashed Socials, which are separate businesses) straight from Instagram
+// (needs instagram_manage_insights, added to the connect scopes in meta-auth.ts, so each client has to be reconnected once). Scores each post and
 // marks the top quarter as high performing. The page is /smsperformance.
 
 const router: IRouter = Router();
@@ -64,10 +64,11 @@ export async function syncSmsMetrics(maxPosts = 60): Promise<{ checked: number; 
   let checked = 0;
   try {
     await ensureTable();
-    const preset = rowsOf(await db.execute(sql`SELECT id, meta_page_access_token FROM client_presets WHERE name ILIKE '%social media sister%' ORDER BY id LIMIT 1`))[0];
-    if (!preset) return { checked: 0, error: "I could not find a client called Social Media Sister" };
-    const token = preset.meta_page_access_token as string | null;
-    if (!token) return { checked: 0, error: "Social Media Sister is not connected to Instagram yet" };
+    const presets = rowsOf(await db.execute(sql`SELECT id, name, meta_page_access_token FROM client_presets
+      WHERE meta_page_access_token IS NOT NULL AND name NOT ILIKE '%hammered%' AND name NOT ILIKE '%smashed%' ORDER BY id`));
+    if (!presets.length) return { checked: 0, error: "No client is connected to Instagram yet" };
+    for (const preset of presets) {
+    const token = preset.meta_page_access_token as string;
     const posts = rowsOf(await db.execute(sql`SELECT id, meta_result->>'igPostId' AS ig_id FROM scheduled_posts
       WHERE preset_id = ${preset.id} AND status = 'published' AND post_type NOT ILIKE '%story%' AND meta_result->>'igPostId' IS NOT NULL
       ORDER BY scheduled_at DESC LIMIT ${maxPosts}`));
@@ -81,7 +82,7 @@ export async function syncSmsMetrics(maxPosts = 60): Promise<{ checked: number; 
         comments = typeof m.comments_count === "number" ? m.comments_count : null;
         permalink = m.permalink || null;
       } catch (e) {
-        error = e instanceof Error ? e.message : String(e);
+        error = `${preset.name}: ${e instanceof Error ? e.message : String(e)}`;
         continue;
       }
       try {
@@ -101,6 +102,7 @@ export async function syncSmsMetrics(maxPosts = 60): Promise<{ checked: number; 
           saved = EXCLUDED.saved, shares = EXCLUDED.shares, reach = EXCLUDED.reach, insights_error = EXCLUDED.insights_error, fetched_at = now()`);
       checked++;
     }
+    }
     return { checked, error };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -115,25 +117,25 @@ export async function syncSmsMetrics(maxPosts = 60): Promise<{ checked: number; 
 let timer: NodeJS.Timeout | null = null;
 export function startSmsMetricsSync(): void {
   if (timer) return;
-  setTimeout(() => { syncSmsMetrics(30).catch(() => undefined); }, 90_000);
-  timer = setInterval(() => { syncSmsMetrics(30).catch(() => undefined); }, 60 * 60 * 1000);
+  setTimeout(() => { syncSmsMetrics(12).catch(() => undefined); }, 90_000);
+  timer = setInterval(() => { syncSmsMetrics(12).catch(() => undefined); }, 60 * 60 * 1000);
 }
 
 router.post("/sms/performance/sync", requireAuth, async (_req, res) => {
-  const r = await syncSmsMetrics(60);
+  const r = await syncSmsMetrics(25);
   res.json(r);
 });
 
 router.get("/sms/performance", requireAuth, async (_req, res) => {
   try {
     await ensureTable();
-    const r = rowsOf(await db.execute(sql`SELECT sp.id, sp.scheduled_at, sp.content->>'title' AS title, sp.content->>'caption' AS caption, sp.post_type,
+    const r = rowsOf(await db.execute(sql`SELECT sp.id, cp.name AS client, sp.scheduled_at, sp.content->>'title' AS title, sp.content->>'caption' AS caption, sp.post_type,
         m.permalink, m.likes, m.comments, m.saved, m.shares, m.reach, m.insights_error, m.fetched_at
       FROM scheduled_posts sp
-      JOIN client_presets cp ON cp.id = sp.preset_id AND cp.name ILIKE '%social media sister%'
+      JOIN client_presets cp ON cp.id = sp.preset_id AND cp.name NOT ILIKE '%hammered%' AND cp.name NOT ILIKE '%smashed%'
       LEFT JOIN post_metrics m ON m.scheduled_post_id = sp.id
       WHERE sp.status = 'published' AND sp.post_type NOT ILIKE '%story%'
-      ORDER BY sp.scheduled_at DESC LIMIT 120`));
+      ORDER BY sp.scheduled_at DESC LIMIT 600`));
     const posts = r.map((x) => {
       const likes = x.likes == null ? null : Number(x.likes);
       const comments = x.comments == null ? null : Number(x.comments);
@@ -144,16 +146,21 @@ router.get("/sms/performance", requireAuth, async (_req, res) => {
       const score = hasData ? (likes ?? 0) + 2 * (comments ?? 0) + 3 * (saved ?? 0) + 4 * (shares ?? 0) : null;
       const rate = score != null && reach ? Math.round((score / reach) * 1000) / 10 : null;
       return {
-        id: Number(x.id), title: String(x.title || ""), caption: String(x.caption || "").slice(0, 160), postedAt: x.scheduled_at, permalink: x.permalink,
+        id: Number(x.id), client: String(x.client || ""), type: String(x.post_type || ""), title: String(x.title || ""), caption: String(x.caption || "").slice(0, 160), postedAt: x.scheduled_at, permalink: x.permalink,
         likes, comments, saved, shares, reach, score, rate, insightsError: String(x.insights_error || ""), hasData, tier: "none" as "high" | "steady" | "slow" | "none",
       };
     });
-    // Rank by engagement rate where reach is known, otherwise by raw score. Top quarter (at least one) are high performing.
-    const rankable = posts.filter((p) => p.hasData && (p.score ?? 0) > 0);
+    // Rank by engagement rate where reach is known, otherwise by raw score. Each client is ranked against its own posts, so a small clinic is not
+    // judged against a big one. The top quarter of a client's posts (at least one) are high performing.
     const key = (p: (typeof posts)[number]) => (p.rate != null ? p.rate : (p.score ?? 0));
-    rankable.sort((a, b) => key(b) - key(a));
-    const topN = rankable.length >= 4 ? Math.ceil(rankable.length / 4) : rankable.length >= 1 ? 1 : 0;
-    rankable.forEach((p, i) => { p.tier = i < topN ? "high" : i >= rankable.length - Math.floor(rankable.length / 4) && rankable.length >= 4 ? "slow" : "steady"; });
+    const byClient = new Map<string, typeof posts>();
+    for (const p of posts) byClient.set(p.client, [...(byClient.get(p.client) || []), p]);
+    for (const list of byClient.values()) {
+      const rankable = list.filter((p) => p.hasData && (p.score ?? 0) > 0);
+      rankable.sort((a, b) => key(b) - key(a));
+      const topN = rankable.length >= 4 ? Math.ceil(rankable.length / 4) : rankable.length >= 1 ? 1 : 0;
+      rankable.forEach((p, i) => { p.tier = i < topN ? "high" : i >= rankable.length - Math.floor(rankable.length / 4) && rankable.length >= 4 ? "slow" : "steady"; });
+    }
     for (const p of posts) if (p.hasData && p.tier === "none") p.tier = "slow";
     const withData = posts.filter((p) => p.hasData);
     res.json({

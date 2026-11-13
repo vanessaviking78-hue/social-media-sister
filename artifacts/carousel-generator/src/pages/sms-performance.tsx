@@ -8,7 +8,7 @@ const YELLOW = "#ff1f8e";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Post = {
-  id: number; title: string; caption: string; postedAt: string; permalink: string | null;
+  id: number; client: string; type: string; title: string; caption: string; postedAt: string; permalink: string | null;
   likes: number | null; comments: number | null; saved: number | null; shares: number | null; reach: number | null;
   score: number | null; rate: number | null; insightsError: string; hasData: boolean; tier: "high" | "steady" | "slow" | "none";
 };
@@ -31,6 +31,7 @@ export default function SmsPerformance() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState<"all" | "high">("all");
+  const [client, setClient] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -62,7 +63,19 @@ export default function SmsPerformance() {
     }
   };
 
-  const posts = (data?.posts || []).filter((p) => filter === "all" || p.tier === "high");
+  const clients = Array.from(new Set((data?.posts || []).map((p) => p.client))).sort((a, b) => a.localeCompare(b));
+  const inClient = (data?.posts || []).filter((p) => !client || p.client === client);
+  const posts = inClient.filter((p) => filter === "all" || p.tier === "high");
+  const withData = inClient.filter((p) => p.hasData);
+  // One row per client: who has had what, and how it is doing.
+  const perClient = clients.map((c) => {
+    const list = (data?.posts || []).filter((p) => p.client === c);
+    const tracked = list.filter((p) => p.hasData);
+    const add = (k: "likes" | "comments" | "saved" | "shares") => tracked.reduce((a, p) => a + (p[k] ?? 0), 0);
+    const last = list.reduce((m, p) => (p.postedAt > m ? p.postedAt : m), "");
+    return { name: c, posts: list.length, last, likes: add("likes"), comments: add("comments"), saved: add("saved"), shares: add("shares"), high: list.filter((p) => p.tier === "high").length };
+  }).sort((a, b) => b.high - a.high || b.posts - a.posts);
+  const sum = (k: "likes" | "comments" | "saved" | "shares" | "reach") => withData.reduce((a, p) => a + (p[k] ?? 0), 0);
   const insightsMissing = (data?.posts || []).some((p) => p.hasData && p.insightsError);
 
   return (
@@ -100,6 +113,10 @@ export default function SmsPerformance() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className={`ghost${filter === "all" ? " on" : ""}`} onClick={() => setFilter("all")}>All posts</button>
           <button className={`ghost${filter === "high" ? " on" : ""}`} onClick={() => setFilter("high")}>High performing</button>
+          <select value={client} onChange={(e) => setClient(e.target.value)} style={{ fontFamily: "inherit", fontWeight: 900, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", padding: "9px 12px", border: "2px solid #000", background: "#fff", color: "#000" }}>
+            <option value="">All clients</option>
+            {clients.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
           <button onClick={refresh} disabled={busy}>{busy ? "Checking Instagram..." : "Refresh numbers"}</button>
         </div>
       </div>
@@ -108,7 +125,7 @@ export default function SmsPerformance() {
       {err && <p className="note">{err}</p>}
       {insightsMissing && (
         <p className="note">
-          Likes and comments are coming through. Saves, shares and reach are not, because Social Media Sister was connected without the insights permission.{" "}
+          Likes and comments are coming through. Saves, shares and reach are not, because some clients were connected without the insights permission.{" "}
           <a href={`${BASE}/api/meta/auth/bulk-start?extended=1`}>Reconnect with insights</a> and they will fill in.
         </p>
       )}
@@ -116,30 +133,54 @@ export default function SmsPerformance() {
       {data && (
         <>
           <div className="stats">
-            <div className="stat"><b>{data.totals.tracked}/{data.totals.published}</b><span>Posts tracked</span></div>
-            <div className="stat"><b>{num(data.totals.likes)}</b><span>Likes</span></div>
-            <div className="stat"><b>{num(data.totals.comments)}</b><span>Comments</span></div>
-            <div className="stat"><b>{num(data.totals.saved)}</b><span>Saves</span></div>
-            <div className="stat"><b>{num(data.totals.shares)}</b><span>Shares</span></div>
-            <div className="stat"><b>{num(data.totals.reach)}</b><span>Reach</span></div>
+            <div className="stat"><b>{withData.length}/{inClient.length}</b><span>Posts tracked</span></div>
+            <div className="stat"><b>{num(sum("likes"))}</b><span>Likes</span></div>
+            <div className="stat"><b>{num(sum("comments"))}</b><span>Comments</span></div>
+            <div className="stat"><b>{num(sum("saved"))}</b><span>Saves</span></div>
+            <div className="stat"><b>{num(sum("shares"))}</b><span>Shares</span></div>
+            <div className="stat"><b>{num(sum("reach"))}</b><span>Reach</span></div>
           </div>
 
-          {data.totals.published === 0 && <p className="note">No Social Media Sister posts have gone out yet. Once they are published they appear here.</p>}
+          {data.totals.published === 0 && <p className="note">No client posts have gone out yet. Once they are published they appear here.</p>}
           {data.totals.published > 0 && data.totals.tracked === 0 && <p className="note">Posts are published but the numbers have not been fetched yet. Press Refresh numbers.</p>}
+
+          <div className="tablewrap" style={{ marginBottom: "4vh" }}>
+            <table>
+              <thead>
+                <tr><th>Client</th><th>Posts out</th><th>Last posted</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Shares</th><th>High performing</th></tr>
+              </thead>
+              <tbody>
+                {perClient.map((c) => (
+                  <tr key={c.name} onClick={() => setClient(client === c.name ? "" : c.name)} style={{ cursor: "pointer", background: client === c.name ? "#ffe3f1" : undefined }}>
+                    <td className="t">{c.name}</td>
+                    <td>{c.posts}</td>
+                    <td>{c.last ? day(c.last) : "-"}</td>
+                    <td>{c.likes}</td>
+                    <td>{c.comments}</td>
+                    <td>{c.saved}</td>
+                    <td>{c.shares}</td>
+                    <td>{c.high}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="tablewrap">
             <table>
               <thead>
-                <tr><th>Rank</th><th>Post</th><th>Posted</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Shares</th><th>Reach</th><th>Score</th><th></th></tr>
+                <tr><th>Rank</th><th>Client</th><th>Post</th><th>Type</th><th>Posted</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Shares</th><th>Reach</th><th>Score</th><th></th></tr>
               </thead>
               <tbody>
                 {posts.map((p, i) => (
                   <tr key={p.id}>
                     <td>{p.hasData ? i + 1 : "-"}</td>
+                    <td className="t">{p.client}</td>
                     <td className="t">
                       {p.permalink ? <a href={p.permalink} target="_blank" rel="noopener noreferrer">{p.title || p.caption.slice(0, 80)}</a> : (p.title || p.caption.slice(0, 80))}
                       <small>{p.caption.slice(0, 90)}</small>
                     </td>
+                    <td>{p.type}</td>
                     <td>{day(p.postedAt)}</td>
                     <td>{num(p.likes)}</td>
                     <td>{num(p.comments)}</td>
@@ -154,7 +195,7 @@ export default function SmsPerformance() {
             </table>
           </div>
           <p style={{ fontSize: 12, marginTop: 18, textTransform: "none", fontWeight: 600, color: "#aaa", lineHeight: 1.3 }}>
-            Score = likes + 2 x comments + 3 x saves + 4 x shares. Where reach is known, posts are ranked by score as a share of reach, so a post is not judged on luck alone. The top quarter are marked high performing.
+            Score = likes + 2 x comments + 3 x saves + 4 x shares. Where reach is known, posts are ranked by score as a share of reach, so a post is not judged on luck alone. The top quarter of each client's posts are marked high performing.
             {data.lastSync ? ` Last checked ${new Date(data.lastSync.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.` : ""}
           </p>
         </>
