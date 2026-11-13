@@ -301,14 +301,29 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
         }
         // Run every portfolio in parallel so the callback stays well inside the proxy timeout.
         const results = await Promise.all(edgeJobs);
+        const needToken: RawPage[] = [];
         for (const list of results) {
           for (const p of list) {
-            if (p.access_token && !known.has(p.id)) {
-              known.add(p.id);
-              allRawPages.push(p);
-            }
+            if (known.has(p.id)) continue;
+            known.add(p.id);
+            if (p.access_token) allRawPages.push(p);
+            else needToken.push(p);
           }
         }
+        // Business-owned Pages usually come back without a token on the portfolio edge; ask for it on the Page itself.
+        const resolved = await Promise.all(
+          needToken.map(async (p) => {
+            try {
+              const r = await fetch(`${GRAPH}/${p.id}?fields=id,name,access_token&access_token=${longToken}`);
+              const d = (await r.json()) as { id?: string; name?: string; access_token?: string };
+              return d.access_token ? ({ id: p.id, name: d.name ?? p.name, access_token: d.access_token } as RawPage) : null;
+            } catch {
+              return null;
+            }
+          })
+        );
+        for (const p of resolved) if (p) allRawPages.push(p);
+        req.log.info({ businessPagesWithoutToken: needToken.length, tokenResolved: resolved.filter(Boolean).length }, "Business page tokens resolved");
         req.log.info({ totalAfterBusiness: allRawPages.length }, "Pages after adding Business portfolio pages");
       } catch (bizErr) {
         req.log.warn({ err: bizErr instanceof Error ? bizErr.message : String(bizErr) }, "Business pages fetch threw; continuing with /me/accounts only");
