@@ -5,6 +5,7 @@ import { startSchedulerCron } from "./lib/schedulerEngine";
 import { startInboxSync } from "./routes/inbox";
 import { startHammeredMetricsSync } from "./routes/hammered-performance";
 import { startSmashedMetricsSync } from "./routes/smashed-performance";
+import { startSmsMetricsSync } from "./routes/sms-performance";
 import { startRevenueIdeasCron } from "./lib/revenueIdeasCron";
 
 const rawPort = process.env["PORT"];
@@ -40,6 +41,7 @@ async function start(): Promise<void> {
   startInboxSync();
   startHammeredMetricsSync();
   startSmashedMetricsSync();
+  startSmsMetricsSync();
 }
 
 start().catch((err) => {

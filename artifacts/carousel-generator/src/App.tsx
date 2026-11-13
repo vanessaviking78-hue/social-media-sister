@@ -179,6 +179,7 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
+import SmsPerformance from "@/pages/sms-performance";
 import SmashedFreebies from "@/pages/smashed-freebies";
 import SmashedHome from "@/pages/smashed-home";
 import SmashedTool from "@/pages/smashed";
@@ -247,6 +248,7 @@ function ProtectedRouter() {
       <Route path="/hammeredposts" component={HammeredTool} />
       <Route path="/hammeredlinks" component={HammeredLinks} />
       <Route path="/hammeredperformance" component={HammeredPerformance} />
+      <Route path="/smsperformance" component={SmsPerformance} />
       <Route path="/smashedposts" component={SmashedTool} />
       <Route path="/smashedlinks" component={SmashedLinks} />
       <Route path="/smashedperformance" component={SmashedPerformance} />

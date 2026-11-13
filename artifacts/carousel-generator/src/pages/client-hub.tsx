@@ -31,6 +31,7 @@ const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./smxmas-tab")) },
   { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
   { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },
+  { id: "performance", label: "Performance", Comp: lazyTab(() => import("./sms-performance-tab")) },
 ];
 
 // Hammered (the construction business) has one tool only: the Hammered posts page. None of the clinic tabs belong there.
