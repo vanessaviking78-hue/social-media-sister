@@ -26,7 +26,9 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 const rowsOf = (r: unknown): any[] => ((r as any)?.rows ?? r ?? []) as any[];
 
 // What a healthy week looks like for The Ryder Clinic. Each measure is scored against its target, scaled to the length of the period.
-export const WEEKLY_TARGETS = { comments: 10, dms: 10, newFollowers: 15, storyResponses: 5 };
+export type Goals = { comments: number; dms: number; newFollowers: number; storyResponses: number; bookings: number };
+// Monthly goals for the clinic (30 days). They can be changed on the page and are scaled to whatever period is being looked at.
+export const DEFAULT_GOALS: Goals = { comments: 40, dms: 40, newFollowers: 60, storyResponses: 20, bookings: 8 };
 const WEIGHTS = { replyRate: 30, conversations: 20, comments: 15, followers: 20, stories: 15 };
 
 let ready: Promise<void> | null = null;
@@ -55,11 +57,18 @@ function ensureTables(): Promise<void> {
       id SERIAL PRIMARY KEY, preset_id INTEGER NOT NULL, day DATE NOT NULL, minutes INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_timer (preset_id INTEGER PRIMARY KEY, started_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_goals (
+      preset_id INTEGER PRIMARY KEY, dms INTEGER NOT NULL, comments INTEGER NOT NULL, new_followers INTEGER NOT NULL,
+      story_responses INTEGER NOT NULL, bookings INTEGER NOT NULL)`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS post_metrics (
+      scheduled_post_id INTEGER PRIMARY KEY, preset_id INTEGER NOT NULL, ig_media_id TEXT NOT NULL, permalink TEXT, likes INTEGER, comments INTEGER,
+      saved INTEGER, shares INTEGER, reach INTEGER, insights_error TEXT NOT NULL DEFAULT '', fetched_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_story_views (
       preset_id INTEGER NOT NULL, handle TEXT NOT NULL, day DATE NOT NULL, PRIMARY KEY (preset_id, handle, day))`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_lead_status (
       preset_id INTEGER NOT NULL, handle TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (preset_id, handle))`);
+    await db.execute(sql`ALTER TABLE ryder_lead_status ADD COLUMN IF NOT EXISTS value INTEGER`);
     // inbox_items is created by the inbox route; make sure it exists so the dashboard works even if it loads first.
     await db.execute(sql`CREATE TABLE IF NOT EXISTS inbox_items (
       id SERIAL PRIMARY KEY, preset_id INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL, direction TEXT NOT NULL DEFAULT 'in',
@@ -123,8 +132,9 @@ export async function snapshotRyderFollowers(): Promise<{ error: string }> {
 let timer: NodeJS.Timeout | null = null;
 export function startRyderSnapshotSync(): void {
   if (timer) return;
-  setTimeout(() => { snapshotRyderFollowers().catch(() => undefined); }, 120_000);
-  timer = setInterval(() => { snapshotRyderFollowers().catch(() => undefined); }, 3 * 60 * 60 * 1000);
+  const run = () => { snapshotRyderFollowers().then(() => syncRyderPostMetrics()).catch(() => undefined); };
+  setTimeout(run, 120_000);
+  timer = setInterval(run, 3 * 60 * 60 * 1000);
 }
 
 // ---------- the numbers ----------
@@ -210,8 +220,8 @@ async function dmReplyShare(presetId: number, from: string, to: string): Promise
   return { total: Number(r?.total ?? 0), answered: Number(r?.answered ?? 0) };
 }
 
-function scoreOf(t: Totals, days: number, dm: { answered: number; total: number }) {
-  const weeks = days / 7;
+function scoreOf(t: Totals, days: number, dm: { answered: number; total: number }, goals: Goals) {
+  const scale = days / 30;
   const parts: { key: string; label: string; weight: number; value: number | null; target: number | null; points: number | null; detail: string }[] = [];
   const cap = (v: number) => Math.max(0, Math.min(1, v));
 
@@ -226,22 +236,22 @@ function scoreOf(t: Totals, days: number, dm: { answered: number; total: number 
     detail: replyRate == null ? "Nothing to reply to yet" : `${dm.answered} of ${dm.total} DM conversations answered, ${t.commentsOut} replies to ${t.commentsIn} comments`,
   });
 
-  const dmTarget = WEEKLY_TARGETS.dms * weeks;
+  const dmTarget = goals.dms * scale;
   const dmTotal = t.dmsIn + t.dmsOut;
   parts.push({ key: "conversations", label: "DM conversations", weight: WEIGHTS.conversations, value: dmTotal, target: Math.round(dmTarget),
     points: cap(dmTotal / dmTarget) * WEIGHTS.conversations, detail: `${t.dmsIn} in, ${t.dmsOut} out` });
 
-  const cTarget = WEEKLY_TARGETS.comments * weeks;
+  const cTarget = goals.comments * scale;
   const cTotal = t.commentsIn + t.commentsOut;
   parts.push({ key: "comments", label: "Comments", weight: WEIGHTS.comments, value: cTotal, target: Math.round(cTarget),
     points: cap(cTotal / cTarget) * WEIGHTS.comments, detail: `${t.commentsIn} received, ${t.commentsOut} replied` });
 
-  const fTarget = WEEKLY_TARGETS.newFollowers * weeks;
+  const fTarget = goals.newFollowers * scale;
   parts.push({ key: "followers", label: "New followers", weight: WEIGHTS.followers, value: t.newFollowers, target: Math.round(fTarget),
     points: t.newFollowers == null ? null : cap(t.newFollowers / fTarget) * WEIGHTS.followers,
     detail: t.newFollowers == null ? "No follower numbers yet" : `${t.newFollowers} new, ${t.newFollowing ?? 0} followed` });
 
-  const sTarget = WEEKLY_TARGETS.storyResponses * weeks;
+  const sTarget = goals.storyResponses * scale;
   parts.push({ key: "stories", label: "Story responses", weight: WEIGHTS.stories, value: t.storyResponses, target: Math.round(sTarget),
     points: t.storyResponses == null ? null : cap(t.storyResponses / sTarget) * WEIGHTS.stories,
     detail: t.storyResponses == null ? "Not logged yet" : `${t.storyResponses} logged` });
@@ -252,6 +262,117 @@ function scoreOf(t: Totals, days: number, dm: { answered: number; total: number 
   const score = possible === 0 ? null : Math.round((earned / possible) * 100);
   const band = score == null ? "none" : score >= 80 ? "thriving" : score >= 60 ? "healthy" : score >= 40 ? "building" : "needs love";
   return { score, band, measured: measured.length, of: parts.length, parts };
+}
+
+
+async function loadGoals(presetId: number): Promise<Goals> {
+  const r = rowsOf(await db.execute(sql`SELECT dms, comments, new_followers, story_responses, bookings FROM ryder_goals WHERE preset_id = ${presetId}`))[0];
+  return r ? { dms: Number(r.dms), comments: Number(r.comments), newFollowers: Number(r.new_followers), storyResponses: Number(r.story_responses), bookings: Number(r.bookings) } : { ...DEFAULT_GOALS };
+}
+
+// How quickly DMs are answered: for each conversation that started in the period, the time from the first incoming message to the first reply.
+async function replySpeed(presetId: number, from: string, to: string) {
+  const r = rowsOf(await db.execute(sql`WITH inbound AS (
+      SELECT thread_id, MIN(created_at_meta) AS first_in FROM inbox_items
+      WHERE preset_id = ${presetId} AND kind = 'dm' AND direction = 'in'
+        AND (created_at_meta AT TIME ZONE ${TZ})::date BETWEEN ${from}::date AND ${to}::date GROUP BY thread_id),
+      replied AS (SELECT i.first_in, (SELECT MIN(o.created_at_meta) FROM inbox_items o WHERE o.preset_id = ${presetId} AND o.kind = 'dm'
+        AND o.direction = 'out' AND o.thread_id = i.thread_id AND o.created_at_meta >= i.first_in) AS first_out FROM inbound i)
+    SELECT COUNT(*) AS total, COUNT(first_out) AS answered,
+      percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (first_out - first_in)) / 60) FILTER (WHERE first_out IS NOT NULL) AS median_min,
+      COUNT(*) FILTER (WHERE first_out IS NOT NULL AND first_out - first_in <= interval '1 hour') AS within_hour
+    FROM replied`))[0];
+  const total = Number(r?.total ?? 0), answered = Number(r?.answered ?? 0);
+  return {
+    conversations: total, answered,
+    medianMinutes: r?.median_min == null ? null : Math.round(Number(r.median_min)),
+    withinHourPct: answered > 0 ? Math.round((Number(r.within_hour) / answered) * 100) : null,
+  };
+}
+
+async function bookingsIn(presetId: number, from: string, to: string): Promise<{ booked: number; value: number }> {
+  const r = rowsOf(await db.execute(sql`SELECT COUNT(*) AS n, COALESCE(SUM(value), 0) AS v FROM ryder_lead_status
+    WHERE preset_id = ${presetId} AND status = 'booked' AND (updated_at AT TIME ZONE ${TZ})::date BETWEEN ${from}::date AND ${to}::date`))[0];
+  return { booked: Number(r?.n ?? 0), value: Number(r?.v ?? 0) };
+}
+
+async function topPosts(presetId: number, from: string, to: string) {
+  const rows = rowsOf(await db.execute(sql`SELECT sp.id, sp.scheduled_at, sp.content->>'title' AS title, sp.content->>'caption' AS caption,
+      m.permalink, m.likes, m.comments, m.saved, m.shares, m.reach, m.insights_error, m.fetched_at
+    FROM scheduled_posts sp LEFT JOIN post_metrics m ON m.scheduled_post_id = sp.id
+    WHERE sp.preset_id = ${presetId} AND sp.status = 'published' AND sp.post_type NOT ILIKE '%story%'
+      AND (sp.scheduled_at AT TIME ZONE ${TZ})::date BETWEEN ${from}::date AND ${to}::date`));
+  const n = (v: unknown) => (v == null ? null : Number(v));
+  const posts = rows.map((x) => {
+    const likes = n(x.likes), comments = n(x.comments), saved = n(x.saved), shares = n(x.shares), reach = n(x.reach);
+    const hasData = x.fetched_at != null;
+    return {
+      id: Number(x.id), title: String(x.title || ""), caption: String(x.caption || "").slice(0, 140), postedAt: x.scheduled_at, permalink: x.permalink as string | null,
+      likes, comments, saved, shares, reach, hasData, insightsMissing: hasData && !!x.insights_error,
+      score: hasData ? (likes ?? 0) + 2 * (comments ?? 0) + 3 * (saved ?? 0) + 4 * (shares ?? 0) : null,
+    };
+  });
+  const tracked = posts.filter((x) => x.hasData);
+  tracked.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  return { published: posts.length, tracked: tracked.length, top: tracked.slice(0, 5) };
+}
+
+// Likes, comments, saves, shares and reach for the clinic's published posts, read from Instagram (saves, shares and reach need the insights permission).
+export async function syncRyderPostMetrics(): Promise<{ checked: number; error: string }> {
+  let checked = 0, error = "";
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p || !p.token) return { checked, error: p ? "The Ryder Clinic is not connected to Instagram yet" : "I could not find a client called Ryder" };
+    const posts = rowsOf(await db.execute(sql`SELECT id, meta_result->>'igPostId' AS ig_id FROM scheduled_posts
+      WHERE preset_id = ${p.id} AND status = 'published' AND post_type NOT ILIKE '%story%' AND meta_result->>'igPostId' IS NOT NULL
+      ORDER BY scheduled_at DESC LIMIT 60`));
+    const get = async (path: string, params: Record<string, string>) => {
+      const qs = new URLSearchParams({ ...params, access_token: p.token as string }).toString();
+      const res = await fetch(`${GRAPH}/${path}?${qs}`, { signal: AbortSignal.timeout(25000) });
+      const d: any = await res.json().catch(() => ({}));
+      if (!res.ok || d?.error) throw new Error(String(d?.error?.message || `Meta said ${res.status}`));
+      return d;
+    };
+    for (const post of posts) {
+      const mediaId = String(post.ig_id);
+      let likes: number | null = null, comments: number | null = null, permalink: string | null = null;
+      let saved: number | null = null, shares: number | null = null, reach: number | null = null, insightsError = "";
+      try {
+        const m = await get(mediaId, { fields: "like_count,comments_count,permalink" });
+        likes = typeof m.like_count === "number" ? m.like_count : null;
+        comments = typeof m.comments_count === "number" ? m.comments_count : null;
+        permalink = m.permalink || null;
+      } catch (e) { error = e instanceof Error ? e.message : String(e); continue; }
+      try {
+        const ins = await get(`${mediaId}/insights`, { metric: "reach,saved,shares" });
+        for (const row of ins.data || []) {
+          const v = row.values?.[0]?.value ?? row.total_value?.value;
+          if (row.name === "reach") reach = Number(v);
+          if (row.name === "saved") saved = Number(v);
+          if (row.name === "shares") shares = Number(v);
+        }
+      } catch (e) { insightsError = e instanceof Error ? e.message : String(e); }
+      await db.execute(sql`INSERT INTO post_metrics (scheduled_post_id, preset_id, ig_media_id, permalink, likes, comments, saved, shares, reach, insights_error, fetched_at)
+        VALUES (${post.id}, ${p.id}, ${mediaId}, ${permalink}, ${likes}, ${comments}, ${saved}, ${shares}, ${reach}, ${insightsError}, now())
+        ON CONFLICT (scheduled_post_id) DO UPDATE SET permalink = EXCLUDED.permalink, likes = EXCLUDED.likes, comments = EXCLUDED.comments,
+          saved = EXCLUDED.saved, shares = EXCLUDED.shares, reach = EXCLUDED.reach, insights_error = EXCLUDED.insights_error, fetched_at = now()`);
+      checked++;
+    }
+    return { checked, error };
+  } catch (err) {
+    return { checked, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+const monthStartOf = (iso: string): string => iso.slice(0, 7) + "-01";
+function previousMonthRange(to: string): { from: string; to: string } {
+  const start = monthStartOf(to);
+  const prevEnd = addDays(start, -1);
+  const prevStart = monthStartOf(prevEnd);
+  const elapsed = Number(to.slice(8, 10));
+  const same = addDays(prevStart, elapsed - 1);
+  return { from: prevStart, to: same > prevEnd ? prevEnd : same };
 }
 
 router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) => {
@@ -269,8 +390,16 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
     const totals = totalsOf(series);
     const prevTotals = totalsOf(prevSeries);
     const prevDm = await dmReplyShare(p.id, prevFrom, prevTo);
-    const health = scoreOf(totals, days, dm);
-    const prevHealth = scoreOf(prevTotals, days, prevDm);
+    const goals = await loadGoals(p.id);
+    const health = scoreOf(totals, days, dm, goals);
+    const prevHealth = scoreOf(prevTotals, days, prevDm, goals);
+
+    const mFrom = monthStartOf(to);
+    const prevMonth = previousMonthRange(to);
+    const [speed, prevSpeed, booked, prevBooked, posts, monthSeries, prevMonthSeries, monthBooked, prevMonthBooked] = await Promise.all([
+      replySpeed(p.id, from, to), replySpeed(p.id, prevFrom, prevTo), bookingsIn(p.id, from, to), bookingsIn(p.id, prevFrom, prevTo), topPosts(p.id, from, to),
+      loadDays(p.id, mFrom, to), loadDays(p.id, prevMonth.from, prevMonth.to), bookingsIn(p.id, mFrom, to), bookingsIn(p.id, prevMonth.from, prevMonth.to),
+    ]);
 
     const snap = rowsOf(await db.execute(sql`SELECT day::text AS day, followers, following FROM follower_snapshots WHERE preset_id = ${p.id} ORDER BY day DESC LIMIT 1`))[0];
     const first = rowsOf(await db.execute(sql`SELECT day::text AS day, followers FROM follower_snapshots WHERE preset_id = ${p.id} ORDER BY day ASC LIMIT 1`))[0];
@@ -279,9 +408,16 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
 
     res.json({
       clinic: p.name, connected: !!(p.ig_id && p.token), username: p.username, days, from, to,
-      totals, prevTotals, health: { ...health, previous: prevHealth.score }, targets: WEEKLY_TARGETS,
+      totals, prevTotals, health: { ...health, previous: prevHealth.score }, goals,
       series, followers: snap ? { now: Number(snap.followers), following: Number(snap.following), asOf: snap.day, since: first ? { day: first.day, count: Number(first.followers) } : null } : null,
       unanswered: Number(backlog?.n ?? 0), lastSnapshot,
+      replySpeed: { ...speed, previousMedianMinutes: prevSpeed.medianMinutes },
+      bookings: { enquiries: speed.conversations, booked: booked.booked, value: booked.value, previousBooked: prevBooked.booked, previousValue: prevBooked.value },
+      topPosts: posts,
+      month: {
+        from: mFrom, to, label: new Date(mFrom + "T12:00:00Z").toLocaleDateString("en-GB", { month: "long", year: "numeric" }),
+        totals: totalsOf(monthSeries), prevTotals: totalsOf(prevMonthSeries), booked: monthBooked.booked, prevBooked: prevMonthBooked.booked,
+      },
       timer: timerRow ? { startedAt: new Date(timerRow.started_at).toISOString() } : null,
     });
   } catch (err) {
@@ -317,13 +453,16 @@ router.post("/ryder/dashboard/log", requireAuth, async (req: Request, res: Respo
 
 router.post("/ryder/dashboard/refresh", requireAuth, async (_req: Request, res: Response) => {
   const r = await snapshotRyderFollowers();
-  res.json(r);
+  const m = await syncRyderPostMetrics();
+  res.json({ error: r.error || m.error, postsChecked: m.checked });
 });
 
 // ---------- leads ----------
 // Instagram does not give anyone the list of who viewed a story, so story viewers are pasted in from the app (the viewer list shows for 48 hours).
 // Everyone who comments or messages comes from the inbox by themselves. Both are merged into one list, warmest first.
 
+// Words that suggest someone is ready to book. Anyone using them is flagged as an enquiry and floats to the top of the leads list.
+const ENQUIRY_RE = "(\\y(price|prices|pricing|cost|costs|how much|book|booking|booked|consultation|consult|appointment|availability|available|enquire|enquiry|interested|quote|deposit|offer|offers)\\y|£)";
 const STATUSES = ["new", "contacted", "booked", "not interested"];
 const cleanHandle = (h: string): string => h.trim().replace(/^@/, "").toLowerCase();
 const validHandle = (h: string): boolean => /^[a-z0-9._]{1,30}$/.test(h);
@@ -336,13 +475,14 @@ router.get("/ryder/leads", requireAuth, async (_req: Request, res: Response) => 
     const own = (p.username || "").toLowerCase();
     const inbox = rowsOf(await db.execute(sql`SELECT lower(author_name) AS handle,
         COUNT(*) FILTER (WHERE kind = 'comment') AS comments, COUNT(*) FILTER (WHERE kind = 'dm') AS dms,
-        MAX(created_at_meta) AS last_at FROM inbox_items
+        MAX(created_at_meta) AS last_at, bool_or(body ~* ${ENQUIRY_RE}) AS enquiry,
+        (array_agg(body ORDER BY created_at_meta DESC) FILTER (WHERE body ~* ${ENQUIRY_RE}))[1] AS enquiry_text FROM inbox_items
       WHERE preset_id = ${p.id} AND direction = 'in' AND author_name <> '' GROUP BY 1`));
     const views = rowsOf(await db.execute(sql`SELECT handle, COUNT(*) AS views, MAX(day)::text AS last_day FROM ryder_story_views WHERE preset_id = ${p.id} GROUP BY handle`));
-    const status = rowsOf(await db.execute(sql`SELECT handle, status, note FROM ryder_lead_status WHERE preset_id = ${p.id}`));
+    const status = rowsOf(await db.execute(sql`SELECT handle, status, note, value FROM ryder_lead_status WHERE preset_id = ${p.id}`));
     const by = new Map<string, any>();
     const get = (h: string) => {
-      if (!by.has(h)) by.set(h, { handle: h, comments: 0, dms: 0, storyViews: 0, lastAt: null as string | null, status: "new", note: "" });
+      if (!by.has(h)) by.set(h, { handle: h, comments: 0, dms: 0, storyViews: 0, lastAt: null as string | null, status: "new", note: "", value: null as number | null, enquiry: false, enquiryText: "" });
       return by.get(h);
     };
     for (const r of inbox) {
@@ -350,6 +490,7 @@ router.get("/ryder/leads", requireAuth, async (_req: Request, res: Response) => 
       if (!h || h === own) continue;
       const l = get(h);
       l.comments = Number(r.comments); l.dms = Number(r.dms);
+      l.enquiry = !!r.enquiry; l.enquiryText = r.enquiry_text ? String(r.enquiry_text).slice(0, 140) : "";
       l.lastAt = r.last_at ? new Date(r.last_at).toISOString() : l.lastAt;
     }
     for (const r of views) {
@@ -362,12 +503,13 @@ router.get("/ryder/leads", requireAuth, async (_req: Request, res: Response) => 
     }
     for (const r of status) {
       const l = by.get(cleanHandle(String(r.handle)));
-      if (l) { l.status = String(r.status); l.note = String(r.note || ""); }
+      if (l) { l.status = String(r.status); l.note = String(r.note || ""); l.value = r.value == null ? null : Number(r.value); }
     }
     const leads = [...by.values()].map((l) => {
       const warmth = l.storyViews + 2 * l.comments + 4 * l.dms;
-      return { ...l, warmth, heat: warmth >= 6 ? "hot" : warmth >= 3 ? "warm" : "new" };
-    }).sort((a, b) => b.warmth - a.warmth || String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
+      const open = l.status === "new" || l.status === "contacted";
+      return { ...l, warmth, rank: warmth + (l.enquiry && open ? 1000 : 0), heat: l.enquiry || warmth >= 6 ? "hot" : warmth >= 3 ? "warm" : "new" };
+    }).sort((a, b) => b.rank - a.rank || String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
     res.json({ leads, statuses: STATUSES });
   } catch (err) {
     logger.error({ err }, `Ryder leads failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -405,8 +547,12 @@ router.post("/ryder/leads/status", requireAuth, async (req: Request, res: Respon
     const status = String(req.body?.status ?? "new");
     if (!validHandle(handle) || !STATUSES.includes(status)) { res.status(400).json({ error: "That did not look right" }); return; }
     const note = String(req.body?.note ?? "").slice(0, 300);
-    await db.execute(sql`INSERT INTO ryder_lead_status (preset_id, handle, status, note, updated_at) VALUES (${p.id}, ${handle}, ${status}, ${note}, now())
-      ON CONFLICT (preset_id, handle) DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, updated_at = now()`);
+    const v = req.body?.value === "" || req.body?.value == null ? null : Math.round(Number(req.body.value));
+    const value = v != null && Number.isFinite(v) && v >= 0 && v < 1000000 ? v : null;
+    // Moving a lead to booked stamps the date, so bookings count in the period they happened. Re-saving the same status keeps the original date.
+    await db.execute(sql`INSERT INTO ryder_lead_status (preset_id, handle, status, note, value, updated_at) VALUES (${p.id}, ${handle}, ${status}, ${note}, ${value}, now())
+      ON CONFLICT (preset_id, handle) DO UPDATE SET note = EXCLUDED.note, value = EXCLUDED.value,
+        updated_at = CASE WHEN ryder_lead_status.status = EXCLUDED.status THEN ryder_lead_status.updated_at ELSE now() END, status = EXCLUDED.status`);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "Could not save that" });
@@ -468,6 +614,28 @@ router.post("/ryder/time/cancel", requireAuth, async (_req: Request, res: Respon
   const p = await ryderPreset();
   if (p) await db.execute(sql`DELETE FROM ryder_timer WHERE preset_id = ${p.id}`);
   res.json({ ok: true });
+});
+
+router.post("/ryder/goals", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const cur = await loadGoals(p.id);
+    const n = (v: unknown, fallback: number): number => {
+      const x = Math.round(Number(v));
+      return Number.isFinite(x) && x >= 1 && x <= 100000 ? x : fallback;
+    };
+    const g: Goals = { dms: n(req.body?.dms, cur.dms), comments: n(req.body?.comments, cur.comments), newFollowers: n(req.body?.newFollowers, cur.newFollowers),
+      storyResponses: n(req.body?.storyResponses, cur.storyResponses), bookings: n(req.body?.bookings, cur.bookings) };
+    await db.execute(sql`INSERT INTO ryder_goals (preset_id, dms, comments, new_followers, story_responses, bookings)
+      VALUES (${p.id}, ${g.dms}, ${g.comments}, ${g.newFollowers}, ${g.storyResponses}, ${g.bookings})
+      ON CONFLICT (preset_id) DO UPDATE SET dms = EXCLUDED.dms, comments = EXCLUDED.comments, new_followers = EXCLUDED.new_followers,
+        story_responses = EXCLUDED.story_responses, bookings = EXCLUDED.bookings`);
+    res.json({ ok: true, goals: g });
+  } catch (err) {
+    res.status(500).json({ error: "Could not save the goals" });
+  }
 });
 
 export default router;

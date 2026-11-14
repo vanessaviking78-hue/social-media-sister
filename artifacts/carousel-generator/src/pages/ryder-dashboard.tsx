@@ -22,12 +22,18 @@ type Data = {
   clinic: string; connected: boolean; username: string | null; days: number; from: string; to: string;
   totals: Totals; prevTotals: Totals;
   health: { score: number | null; band: string; measured: number; of: number; parts: Part[]; previous: number | null };
-  series: Day[]; unanswered: number; timer: { startedAt: string } | null; targets: { comments: number; dms: number; newFollowers: number; storyResponses: number };
+  series: Day[]; unanswered: number; timer: { startedAt: string } | null; goals: Goals;
+  replySpeed: { conversations: number; answered: number; medianMinutes: number | null; withinHourPct: number | null; previousMedianMinutes: number | null };
+  bookings: { enquiries: number; booked: number; value: number; previousBooked: number; previousValue: number };
+  topPosts: { published: number; tracked: number; top: TopPost[] };
+  month: { from: string; to: string; label: string; totals: Totals; prevTotals: Totals; booked: number; prevBooked: number };
   followers: { now: number; following: number; asOf: string; since: { day: string; count: number } | null } | null;
   lastSnapshot: { at: string; error: string } | null;
 };
 
-type Lead = { handle: string; comments: number; dms: number; storyViews: number; lastAt: string | null; status: string; note: string; warmth: number; heat: "hot" | "warm" | "new" };
+type Goals = { dms: number; comments: number; newFollowers: number; storyResponses: number; bookings: number };
+type TopPost = { id: number; title: string; caption: string; postedAt: string; permalink: string | null; likes: number | null; comments: number | null; saved: number | null; shares: number | null; reach: number | null; insightsMissing: boolean; score: number | null };
+type Lead = { handle: string; comments: number; dms: number; storyViews: number; lastAt: string | null; status: string; note: string; warmth: number; heat: "hot" | "warm" | "new"; value: number | null; enquiry: boolean; enquiryText: string };
 
 const authHeaders = (): Record<string, string> => {
   const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -39,6 +45,7 @@ const clock = (ms: number) => {
   const t = Math.max(0, Math.floor(ms / 1000));
   return `${String(Math.floor(t / 3600)).padStart(2, "0")}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 };
+const money = (n: number) => `£${Math.round(n).toLocaleString("en-GB")}`;
 const num = (v: number | null | undefined) => (v == null ? "-" : v.toLocaleString("en-GB"));
 const niceDay = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const longDay = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -105,7 +112,10 @@ export default function RyderDashboard() {
   const [saved, setSaved] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [statuses, setStatuses] = useState<string[]>(["new", "contacted", "booked", "not interested"]);
-  const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "open">("all");
+  const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "open" | "enquiry">("all");
+  const [goalsForm, setGoalsForm] = useState<Record<keyof Goals, string>>({ dms: "", comments: "", newFollowers: "", storyResponses: "", bookings: "" });
+  const [goalsMsg, setGoalsMsg] = useState("");
+  const [reportNote, setReportNote] = useState(() => { try { return localStorage.getItem("ryder-report-note") || ""; } catch { return ""; } });
   const [viewers, setViewers] = useState({ day: "", handles: "" });
   const [viewerMsg, setViewerMsg] = useState("");
   const [now, setNow] = useState(Date.now());
@@ -170,6 +180,23 @@ export default function RyderDashboard() {
     if (data && !form.day) setForm((f) => ({ ...f, day: data.to }));
   }, [data, form.day]);
 
+  const goalsLoaded = !!data?.goals;
+  useEffect(() => {
+    if (data?.goals) setGoalsForm({ dms: String(data.goals.dms), comments: String(data.goals.comments), newFollowers: String(data.goals.newFollowers), storyResponses: String(data.goals.storyResponses), bookings: String(data.goals.bookings) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalsLoaded]);
+
+  const saveGoals = async () => {
+    setGoalsMsg("");
+    const r = await fetch(`${BASE}/api/ryder/goals`, { method: "POST", headers: authHeaders(), body: JSON.stringify(goalsForm) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setGoalsMsg(d?.error || "Could not save the goals"); return; }
+    setGoalsMsg("Goals saved");
+    await load();
+  };
+
+  const saveNote = (v: string) => { setReportNote(v); try { localStorage.setItem("ryder-report-note", v); } catch { /* the note just is not kept */ } };
+
   const refresh = async () => {
     setBusy(true);
     setErr("");
@@ -206,12 +233,19 @@ export default function RyderDashboard() {
 
   const setStatus = async (l: Lead, status: string) => {
     setLeads((all) => all.map((x) => (x.handle === l.handle ? { ...x, status } : x)));
-    await fetch(`${BASE}/api/ryder/leads/status`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ handle: l.handle, status, note: l.note }) });
+    await fetch(`${BASE}/api/ryder/leads/status`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ handle: l.handle, status, note: l.note, value: l.value }) });
+    if (status === "booked") await load();
+  };
+  const setValue = async (l: Lead, value: string) => {
+    const v = value === "" ? null : Math.max(0, Math.round(Number(value)));
+    setLeads((all) => all.map((x) => (x.handle === l.handle ? { ...x, value: v } : x)));
+    await fetch(`${BASE}/api/ryder/leads/status`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ handle: l.handle, status: l.status, note: l.note, value: v }) });
+    await load();
   };
 
   const exportCsv = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const rows = [["Username", "Heat", "Story views", "Comments", "DMs", "Status", "Last seen"], ...visibleLeads.map((l) => [l.handle, l.heat, l.storyViews, l.comments, l.dms, l.status, l.lastAt ? l.lastAt.slice(0, 10) : ""])];
+    const rows = [["Username", "Heat", "Story views", "Comments", "DMs", "Status", "Last seen", "Enquiry", "Booking value"], ...visibleLeads.map((l) => [l.handle, l.heat, l.storyViews, l.comments, l.dms, l.status, l.lastAt ? l.lastAt.slice(0, 10) : "", l.enquiry ? "yes" : "", l.value ?? ""])];
     const blob = new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -219,7 +253,7 @@ export default function RyderDashboard() {
     a.click();
   };
 
-  const visibleLeads = useMemo(() => leads.filter((l) => leadFilter === "all" || (leadFilter === "hot" ? l.heat === "hot" : l.status === "new" || l.status === "contacted")), [leads, leadFilter]);
+  const visibleLeads = useMemo(() => leads.filter((l) => leadFilter === "all" || (leadFilter === "hot" ? l.heat === "hot" : leadFilter === "enquiry" ? l.enquiry : l.status === "new" || l.status === "contacted")), [leads, leadFilter]);
 
   const pick = (d: Day) => setForm({
     day: d.day, newFollowers: d.followersAuto || d.newFollowers == null ? "" : String(d.newFollowers),
@@ -231,7 +265,7 @@ export default function RyderDashboard() {
   const t = data?.totals;
   const p = data?.prevTotals;
 
-  const tiles: { label: string; now: number | null; before: number | null; sub?: string; text?: string }[] = t && p ? [
+  const tiles: { label: string; now: number | null; before: number | null; sub?: string; text?: string; note?: string }[] = t && p ? [
     { label: "New followers", now: t.newFollowers, before: p.newFollowers },
     { label: "New following", now: t.newFollowing, before: p.newFollowing },
     { label: "Comments received", now: t.commentsIn, before: p.commentsIn, sub: `${t.commentsOut} replies sent` },
@@ -239,7 +273,30 @@ export default function RyderDashboard() {
     { label: "DMs outgoing", now: t.dmsOut, before: p.dmsOut },
     { label: "Story responses", now: t.storyResponses, before: p.storyResponses },
     { label: "Time engaging", now: t.minutes, before: p.minutes, text: hm(t.minutes) },
+    ...(data ? [
+      {
+        label: "Median reply time", now: data.replySpeed.medianMinutes, before: data.replySpeed.previousMedianMinutes,
+        text: data.replySpeed.medianMinutes == null ? "-" : hm(data.replySpeed.medianMinutes),
+        note: data.replySpeed.medianMinutes == null ? "No answered conversations yet"
+          : `${data.replySpeed.withinHourPct ?? 0}% answered within an hour. ${data.replySpeed.answered} of ${data.replySpeed.conversations} conversations answered`,
+      },
+      {
+        label: "Bookings", now: data.bookings.booked, before: data.bookings.previousBooked, text: String(data.bookings.booked),
+        note: `${money(data.bookings.value)} booked from ${data.bookings.enquiries} DM conversations`,
+      },
+    ] : []),
   ] : [];
+
+  const summary = data && t ? [
+    `Over the last ${data.days} days I handled ${t.dmsIn} incoming DMs and sent ${t.dmsOut} replies.`,
+    `${t.commentsIn} comments came in and I replied to ${t.commentsOut}.`,
+    data.replySpeed.medianMinutes != null ? `Conversations were answered in a median of ${hm(data.replySpeed.medianMinutes)}, with ${data.replySpeed.withinHourPct ?? 0}% answered within the hour.` : "",
+    t.newFollowers != null ? `The page gained ${t.newFollowers} new followers.` : "",
+    t.storyResponses != null ? `${t.storyResponses} people responded to stories.` : "",
+    t.minutes > 0 ? `I spent ${hm(t.minutes)} engaging on your page.` : "",
+    data.bookings.enquiries > 0 ? `${data.bookings.enquiries} DM conversations started and ${data.bookings.booked} became bookings${data.bookings.value > 0 ? `, worth ${money(data.bookings.value)}` : ""}.` : "",
+    data.health.score != null ? `The page health score is ${data.health.score} out of 100.` : "",
+  ].filter(Boolean).join(" ") : "";
 
   return (
     <div className={`rd${clinicView ? " clinic" : ""}`}>
@@ -290,11 +347,20 @@ export default function RyderDashboard() {
         .rd .tag.warm { background: #000; color: #fff; }
         .rd select { font-size: 14px; padding: 5px 6px; border: 2px solid #000; background: #fff; color: #000; }
         .rd textarea { width: 100%; margin-top: 5px; padding: 9px 10px; border: 3px solid #000; font-size: 16px; min-height: 90px; font-family: inherit; font-weight: 700; }
+        .rd .reportonly { display: none; border: 4px solid ${PINK}; padding: 18px 20px; margin-bottom: 3vh; font-size: 17px; line-height: 1.35; font-weight: 700; }
+        .rd.clinic .reportonly { display: block; }
+        .rd .bar2 { height: 16px; background: #eee; margin: 6px 0 4px; position: relative; }
+        .rd .bar2 i { position: absolute; inset: 0 auto 0 0; background: ${PINK}; }
+        .rd .goal { border: 3px solid #000; padding: 12px 14px; }
+        .rd .goal b { font-size: 30px; }
+        .rd .goal small { font-size: 12px; font-weight: 700; }
+        .rd .goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
         .rd .foot { font-size: 12px; font-weight: 600; line-height: 1.35; margin-top: 18px; }
         .rd.clinic .noclinic { display: none; }
         @media print {
           .rd { position: static; overflow: visible; padding: 0; }
           .rd .noprint, .rd .noclinic { display: none !important; }
+          .rd .reportonly { display: block; }
           .rd .tile, .rd .hero, .rd .chart { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
@@ -306,6 +372,7 @@ export default function RyderDashboard() {
             <button key={n} className={`ghost${days === n ? " on" : ""}`} onClick={() => setDays(n)}>{n} days</button>
           ))}
           <button className={`ghost${clinicView ? " on" : ""}`} onClick={() => setClinicView((v) => !v)}>{clinicView ? "Exit clinic view" : "Clinic view"}</button>
+          <button className="ghost" onClick={() => { setDays(30); setClinicView(true); setTimeout(() => window.print(), 1500); }}>Monthly report</button>
           <button className="ghost" onClick={() => window.print()}>Print or save PDF</button>
           <button onClick={refresh} disabled={busy}>{busy ? "Checking..." : "Refresh numbers"}</button>
         </div>
@@ -323,6 +390,12 @@ export default function RyderDashboard() {
 
       {data && t && p && (
         <>
+          <div className="reportonly">
+            <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Engagement report, {niceDay(data.from)} to {niceDay(data.to)}</div>
+            {summary}
+            {reportNote.trim() && <div style={{ marginTop: 12, borderTop: "3px solid #000", paddingTop: 10, whiteSpace: "pre-wrap" }}>{reportNote}</div>}
+          </div>
+
           <div className="hero">
             <Ring score={data.health.score} band={data.health.band} />
             <div>
@@ -350,7 +423,7 @@ export default function RyderDashboard() {
               <div className="tile" key={x.label}>
                 <b>{x.text ?? num(x.now)}</b>
                 <span>{x.label}</span>
-                <small>{x.text && x.before != null ? `${hm(x.before)} in the previous ${data.days} days` : change(x.now, x.before, data.days)}{x.sub ? `. ${x.sub}` : ""}</small>
+                <small>{x.note ?? (x.text && x.before != null ? `${hm(x.before)} in the previous ${data.days} days` : change(x.now, x.before, data.days))}{x.sub ? `. ${x.sub}` : ""}</small>
               </div>
             ))}
           </div>
@@ -366,6 +439,64 @@ export default function RyderDashboard() {
           {data.unanswered > 0 && (
             <p className="note noprint">{data.unanswered} unread {data.unanswered === 1 ? "message is" : "messages are"} waiting in the <Link href="/inbox">inbox</Link>.</p>
           )}
+
+          <h2>{data.month.label} so far</h2>
+          <div className="goals">
+            {([
+              ["DMs", data.month.totals.dmsIn + data.month.totals.dmsOut, data.month.prevTotals.dmsIn + data.month.prevTotals.dmsOut, data.goals.dms],
+              ["Comments", data.month.totals.commentsIn + data.month.totals.commentsOut, data.month.prevTotals.commentsIn + data.month.prevTotals.commentsOut, data.goals.comments],
+              ["New followers", data.month.totals.newFollowers, data.month.prevTotals.newFollowers, data.goals.newFollowers],
+              ["Story responses", data.month.totals.storyResponses, data.month.prevTotals.storyResponses, data.goals.storyResponses],
+              ["Bookings", data.month.booked, data.month.prevBooked, data.goals.bookings],
+            ] as [string, number | null, number | null, number][]).map(([label, now, before, goal]) => (
+              <div className="goal" key={label}>
+                <span style={{ fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase" }}>{label}</span><br />
+                <b>{num(now)}</b> <small>of {goal}</small>
+                <div className="bar2"><i style={{ width: `${now == null ? 0 : Math.min(100, Math.round((now / goal) * 100))}%` }} /></div>
+                <small>{before == null || now == null ? "No earlier month to compare" : now === before ? "Level with last month at this point" : `${now > before ? "Up" : "Down"} ${Math.abs(now - before)} on last month at this point (${before})`}</small>
+              </div>
+            ))}
+          </div>
+          <div className="noclinic noprint">
+            <div className="form" style={{ marginTop: 12, borderColor: "#000" }}>
+              {([["dms", "DMs a month"], ["comments", "Comments a month"], ["newFollowers", "New followers a month"], ["storyResponses", "Story responses a month"], ["bookings", "Bookings a month"]] as [keyof Goals, string][]).map(([k, label]) => (
+                <label key={k}>{label}<input inputMode="numeric" value={goalsForm[k]} onChange={(e) => setGoalsForm({ ...goalsForm, [k]: e.target.value })} /></label>
+              ))}
+              <div><button onClick={saveGoals}>Save goals</button> {goalsMsg && <span style={{ marginLeft: 10, fontSize: 13 }}>{goalsMsg}</span>}</div>
+            </div>
+          </div>
+
+          <h2>Top posts</h2>
+          {data.topPosts.tracked === 0 ? (
+            <p className="note">{data.topPosts.published === 0 ? "No posts were published in this period." : "Posts are published but their numbers have not been fetched yet. Press Refresh numbers."}</p>
+          ) : (
+            <div className="tablewrap">
+              <table>
+                <thead><tr><th>Post</th><th>Posted</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Shares</th><th>Reach</th></tr></thead>
+                <tbody>
+                  {data.topPosts.top.map((x) => (
+                    <tr key={x.id}>
+                      <td style={{ maxWidth: 360, fontWeight: 700 }}>{x.permalink ? <a href={x.permalink} target="_blank" rel="noopener noreferrer" style={{ color: "#000" }}>{x.title || x.caption.slice(0, 80)}</a> : (x.title || x.caption.slice(0, 80))}</td>
+                      <td>{niceDay(String(x.postedAt).slice(0, 10))}</td><td>{num(x.likes)}</td><td>{num(x.comments)}</td><td>{num(x.saved)}</td><td>{num(x.shares)}</td><td>{num(x.reach)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {data.topPosts.top.some((x) => x.insightsMissing) && (
+            <p className="note noprint">Likes and comments are coming through. Saves, shares and reach are not, because the clinic was connected without the insights permission. <a href={`${BASE}/api/meta/auth/bulk-start?extended=1`}>Reconnect with insights</a> and they will fill in.</p>
+          )}
+          <p className="foot">Ranked by likes + 2 x comments + 3 x saves + 4 x shares, from the posts published in this period.</p>
+
+          <div className="noclinic noprint">
+            <h2>Note for the clinic report</h2>
+            <div className="form" style={{ borderColor: "#000" }}>
+              <label style={{ gridColumn: "1 / -1" }}>Added to the bottom of the monthly report (kept on this device)
+                <textarea value={reportNote} onChange={(e) => saveNote(e.target.value)} placeholder="For example: three of the enquiries this month asked about consultations. I would like to follow these up on Monday." />
+              </label>
+            </div>
+          </div>
 
           <h2>Day by day</h2>
           <div className="charts">
@@ -464,23 +595,24 @@ export default function RyderDashboard() {
               <div><button onClick={addViewers} disabled={!viewers.handles.trim()}>Add viewers</button> {viewerMsg && <span style={{ marginLeft: 10, fontSize: 13 }}>{viewerMsg}</span>}</div>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0 0" }}>
-              {([["all", "Everyone"], ["hot", "Hot leads"], ["open", "To follow up"]] as const).map(([k, label]) => (
+              {([["all", "Everyone"], ["enquiry", "Enquiries"], ["hot", "Hot leads"], ["open", "To follow up"]] as const).map(([k, label]) => (
                 <button key={k} className={`ghost${leadFilter === k ? " on" : ""}`} onClick={() => setLeadFilter(k)}>{label}</button>
               ))}
               <button onClick={exportCsv} disabled={visibleLeads.length === 0}>Download CSV</button>
             </div>
             <div className="tablewrap">
               <table>
-                <thead><tr><th>Username</th><th>Heat</th><th>Story views</th><th>Comments</th><th>DMs</th><th>Last seen</th><th>Status</th></tr></thead>
+                <thead><tr><th>Username</th><th>Heat</th><th>Story views</th><th>Comments</th><th>DMs</th><th>Last seen</th><th>Status</th><th>Booking value</th></tr></thead>
                 <tbody>
-                  {visibleLeads.length === 0 && <tr><td colSpan={7} style={{ fontWeight: 600 }}>No leads yet. They appear as people comment, message or are pasted in from a story.</td></tr>}
+                  {visibleLeads.length === 0 && <tr><td colSpan={8} style={{ fontWeight: 600 }}>No leads yet. They appear as people comment, message or are pasted in from a story.</td></tr>}
                   {visibleLeads.slice(0, 300).map((l) => (
                     <tr key={l.handle}>
-                      <td><a href={`https://www.instagram.com/${l.handle}/`} target="_blank" rel="noopener noreferrer" style={{ color: "#000" }}>@{l.handle}</a></td>
+                      <td><a href={`https://www.instagram.com/${l.handle}/`} target="_blank" rel="noopener noreferrer" style={{ color: "#000" }}>@{l.handle}</a>{l.enquiry && <> <span className="tag hot">enquiry</span><small style={{ display: "block", fontWeight: 600, maxWidth: 320 }}>{l.enquiryText}</small></>}</td>
                       <td><span className={`tag ${l.heat}`}>{l.heat}</span></td>
                       <td>{l.storyViews}</td><td>{l.comments}</td><td>{l.dms}</td>
                       <td>{l.lastAt ? niceDay(l.lastAt.slice(0, 10)) : "-"}</td>
                       <td><select value={l.status} onChange={(e) => setStatus(l, e.target.value)}>{statuses.map((x) => <option key={x} value={x}>{x}</option>)}</select></td>
+                      <td>{l.status === "booked" ? <input inputMode="numeric" style={{ width: 100 }} defaultValue={l.value ?? ""} placeholder="£" onBlur={(e) => { if (e.target.value !== String(l.value ?? "")) setValue(l, e.target.value); }} /> : "-"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -491,7 +623,7 @@ export default function RyderDashboard() {
 
           <p className="foot">
             How the score works: out of 100, from reply rate (30), DM conversations (20), new followers (20), comments (15) and story responses (15).
-            Each is measured against a target of {data.targets.dms} DMs, {data.targets.comments} comments, {data.targets.newFollowers} new followers and {data.targets.storyResponses} story responses a week.
+            Each is measured against the clinic's monthly goals ({data.goals.dms} DMs, {data.goals.comments} comments, {data.goals.newFollowers} new followers and {data.goals.storyResponses} story responses), scaled to the period shown.
             A measure with no numbers yet is left out rather than counted as zero.
             {data.lastSnapshot ? ` Followers last checked ${new Date(data.lastSnapshot.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}.` : ""}
           </p>
