@@ -51,6 +51,10 @@ function ensureTables(): Promise<void> {
       taken_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (preset_id, day)
     )`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_time_log (
+      id SERIAL PRIMARY KEY, preset_id INTEGER NOT NULL, day DATE NOT NULL, minutes INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_timer (preset_id INTEGER PRIMARY KEY, started_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_story_views (
       preset_id INTEGER NOT NULL, handle TEXT NOT NULL, day DATE NOT NULL, PRIMARY KEY (preset_id, handle, day))`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_lead_status (
@@ -127,7 +131,7 @@ export function startRyderSnapshotSync(): void {
 
 type Day = {
   day: string; newFollowers: number | null; newFollowing: number | null; commentsIn: number; commentsOut: number;
-  dmsIn: number; dmsOut: number; storyResponses: number | null; note: string; followersAuto: boolean;
+  dmsIn: number; dmsOut: number; storyResponses: number | null; note: string; followersAuto: boolean; minutes: number;
 };
 
 async function loadDays(presetId: number, from: string, to: string): Promise<Day[]> {
@@ -144,6 +148,9 @@ async function loadDays(presetId: number, from: string, to: string): Promise<Day
     WHERE preset_id = ${presetId} AND day BETWEEN ${from}::date AND ${to}::date`));
   const snaps = rowsOf(await db.execute(sql`SELECT day::text AS day, followers, following FROM follower_snapshots
     WHERE preset_id = ${presetId} AND day BETWEEN ${before}::date AND ${to}::date ORDER BY day`));
+  const time = rowsOf(await db.execute(sql`SELECT day::text AS day, SUM(minutes) AS minutes FROM ryder_time_log
+    WHERE preset_id = ${presetId} AND day BETWEEN ${from}::date AND ${to}::date GROUP BY day`));
+  const timeBy = new Map(time.map((r) => [String(r.day), Number(r.minutes)]));
   const inboxBy = new Map(inbox.map((r) => [String(r.day), r]));
   const logBy = new Map(log.map((r) => [String(r.day), r]));
   const snapBy = new Map(snaps.map((r) => [String(r.day), r]));
@@ -165,6 +172,7 @@ async function loadDays(presetId: number, from: string, to: string): Promise<Day
       dmsIn: Number(i?.dms_in ?? 0), dmsOut: Number(i?.dms_out ?? 0),
       storyResponses: l?.story_responses == null ? null : Number(l.story_responses),
       note: String(l?.note ?? ""),
+      minutes: timeBy.get(day) ?? 0,
     };
   });
 }
@@ -184,6 +192,7 @@ function totalsOf(days: Day[]) {
     dmsIn: sum(days, "dmsIn"),
     dmsOut: sum(days, "dmsOut"),
     storyResponses: sumNullable(days, "storyResponses"),
+    minutes: days.reduce((a, d) => a + d.minutes, 0),
   };
 }
 
@@ -265,6 +274,7 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
 
     const snap = rowsOf(await db.execute(sql`SELECT day::text AS day, followers, following FROM follower_snapshots WHERE preset_id = ${p.id} ORDER BY day DESC LIMIT 1`))[0];
     const first = rowsOf(await db.execute(sql`SELECT day::text AS day, followers FROM follower_snapshots WHERE preset_id = ${p.id} ORDER BY day ASC LIMIT 1`))[0];
+    const timerRow = rowsOf(await db.execute(sql`SELECT started_at FROM ryder_timer WHERE preset_id = ${p.id}`))[0];
     const backlog = rowsOf(await db.execute(sql`SELECT COUNT(*) AS n FROM inbox_items WHERE preset_id = ${p.id} AND direction = 'in' AND is_read = false`))[0];
 
     res.json({
@@ -272,6 +282,7 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
       totals, prevTotals, health: { ...health, previous: prevHealth.score }, targets: WEEKLY_TARGETS,
       series, followers: snap ? { now: Number(snap.followers), following: Number(snap.following), asOf: snap.day, since: first ? { day: first.day, count: Number(first.followers) } : null } : null,
       unanswered: Number(backlog?.n ?? 0), lastSnapshot,
+      timer: timerRow ? { startedAt: new Date(timerRow.started_at).toISOString() } : null,
     });
   } catch (err) {
     logger.error({ err }, `Ryder dashboard failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -400,6 +411,63 @@ router.post("/ryder/leads/status", requireAuth, async (req: Request, res: Respon
   } catch (err) {
     res.status(500).json({ error: "Could not save that" });
   }
+});
+
+// ---------- time spent engaging ----------
+// Instagram does not report how long anyone spends in the app, so time is logged here: a timer that keeps running on the server (closing the page
+// does not lose it), or minutes typed in for time that was not timed.
+
+router.post("/ryder/time/start", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    await db.execute(sql`INSERT INTO ryder_timer (preset_id, started_at) VALUES (${p.id}, now()) ON CONFLICT (preset_id) DO NOTHING`);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Could not start the timer" });
+  }
+});
+
+router.post("/ryder/time/stop", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const t = rowsOf(await db.execute(sql`SELECT started_at, (started_at AT TIME ZONE ${TZ})::date::text AS day,
+      CEIL(EXTRACT(EPOCH FROM (now() - started_at)) / 60) AS mins FROM ryder_timer WHERE preset_id = ${p.id}`))[0];
+    if (!t) { res.status(400).json({ error: "The timer is not running" }); return; }
+    // The minutes can be corrected when stopping, for the day the timer was left running.
+    const typed = Math.round(Number(req.body?.minutes));
+    const minutes = Number.isFinite(typed) && typed > 0 && typed <= 1440 ? typed : Math.max(1, Math.min(1440, Number(t.mins)));
+    const note = String(req.body?.note ?? "").slice(0, 300);
+    await db.execute(sql`INSERT INTO ryder_time_log (preset_id, day, minutes, note) VALUES (${p.id}, ${String(t.day)}::date, ${minutes}, ${note})`);
+    await db.execute(sql`DELETE FROM ryder_timer WHERE preset_id = ${p.id}`);
+    res.json({ ok: true, minutes });
+  } catch (err) {
+    res.status(500).json({ error: "Could not stop the timer" });
+  }
+});
+
+router.post("/ryder/time/add", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const day = String(req.body?.day || londonToday());
+    const minutes = Math.round(Number(req.body?.minutes));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(minutes) || minutes < 1 || minutes > 1440) { res.status(400).json({ error: "Put in a number of minutes between 1 and 1440" }); return; }
+    await db.execute(sql`INSERT INTO ryder_time_log (preset_id, day, minutes, note) VALUES (${p.id}, ${day}::date, ${minutes}, ${String(req.body?.note ?? "").slice(0, 300)})`);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Could not save that" });
+  }
+});
+
+router.post("/ryder/time/cancel", requireAuth, async (_req: Request, res: Response) => {
+  const p = await ryderPreset();
+  if (p) await db.execute(sql`DELETE FROM ryder_timer WHERE preset_id = ${p.id}`);
+  res.json({ ok: true });
 });
 
 export default router;

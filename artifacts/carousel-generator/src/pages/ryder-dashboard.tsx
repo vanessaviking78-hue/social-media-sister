@@ -11,18 +11,18 @@ const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
 type Day = {
   day: string; newFollowers: number | null; newFollowing: number | null; commentsIn: number; commentsOut: number;
-  dmsIn: number; dmsOut: number; storyResponses: number | null; note: string; followersAuto: boolean;
+  dmsIn: number; dmsOut: number; storyResponses: number | null; note: string; followersAuto: boolean; minutes: number;
 };
 type Totals = {
   newFollowers: number | null; newFollowing: number | null; commentsIn: number; commentsOut: number;
-  dmsIn: number; dmsOut: number; storyResponses: number | null;
+  dmsIn: number; dmsOut: number; storyResponses: number | null; minutes: number;
 };
 type Part = { key: string; label: string; weight: number; value: number | null; target: number | null; points: number | null; detail: string };
 type Data = {
   clinic: string; connected: boolean; username: string | null; days: number; from: string; to: string;
   totals: Totals; prevTotals: Totals;
   health: { score: number | null; band: string; measured: number; of: number; parts: Part[]; previous: number | null };
-  series: Day[]; unanswered: number; targets: { comments: number; dms: number; newFollowers: number; storyResponses: number };
+  series: Day[]; unanswered: number; timer: { startedAt: string } | null; targets: { comments: number; dms: number; newFollowers: number; storyResponses: number };
   followers: { now: number; following: number; asOf: string; since: { day: string; count: number } | null } | null;
   lastSnapshot: { at: string; error: string } | null;
 };
@@ -34,6 +34,11 @@ const authHeaders = (): Record<string, string> => {
   return { "x-app-password": pw, Authorization: "Bearer " + pw, "Content-Type": "application/json" };
 };
 
+const hm = (m: number) => (m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${m % 60}m`);
+const clock = (ms: number) => {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  return `${String(Math.floor(t / 3600)).padStart(2, "0")}:${String(Math.floor((t % 3600) / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+};
 const num = (v: number | null | undefined) => (v == null ? "-" : v.toLocaleString("en-GB"));
 const niceDay = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const longDay = (iso: string) => new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -103,6 +108,35 @@ export default function RyderDashboard() {
   const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "open">("all");
   const [viewers, setViewers] = useState({ day: "", handles: "" });
   const [viewerMsg, setViewerMsg] = useState("");
+  const [now, setNow] = useState(Date.now());
+  const [timeForm, setTimeForm] = useState({ day: "", minutes: "", note: "" });
+  const [timeMsg, setTimeMsg] = useState("");
+  const [stopMinutes, setStopMinutes] = useState("");
+  const [stopNote, setStopNote] = useState("");
+
+  const timerStart = data?.timer ? new Date(data.timer.startedAt).getTime() : null;
+  useEffect(() => {
+    if (!timerStart) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [timerStart]);
+
+  const timeCall = async (path: string, body: object = {}) => {
+    setTimeMsg("");
+    const r = await fetch(`${BASE}/api/ryder/time/${path}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setTimeMsg(d?.error || "Could not save that"); return null; }
+    await load();
+    return d;
+  };
+  const stopTimer = async () => {
+    const d = await timeCall("stop", { minutes: stopMinutes, note: stopNote });
+    if (d) { setTimeMsg(`Logged ${hm(d.minutes)}`); setStopMinutes(""); setStopNote(""); }
+  };
+  const addTime = async () => {
+    const d = await timeCall("add", { day: timeForm.day || data?.to, minutes: timeForm.minutes, note: timeForm.note });
+    if (d) { setTimeMsg(`Logged ${hm(Number(timeForm.minutes))}`); setTimeForm({ ...timeForm, minutes: "", note: "" }); }
+  };
 
   const loadLeads = useCallback(async () => {
     try {
@@ -197,13 +231,14 @@ export default function RyderDashboard() {
   const t = data?.totals;
   const p = data?.prevTotals;
 
-  const tiles: { label: string; now: number | null; before: number | null; sub?: string }[] = t && p ? [
+  const tiles: { label: string; now: number | null; before: number | null; sub?: string; text?: string }[] = t && p ? [
     { label: "New followers", now: t.newFollowers, before: p.newFollowers },
     { label: "New following", now: t.newFollowing, before: p.newFollowing },
     { label: "Comments received", now: t.commentsIn, before: p.commentsIn, sub: `${t.commentsOut} replies sent` },
     { label: "DMs incoming", now: t.dmsIn, before: p.dmsIn },
     { label: "DMs outgoing", now: t.dmsOut, before: p.dmsOut },
     { label: "Story responses", now: t.storyResponses, before: p.storyResponses },
+    { label: "Time engaging", now: t.minutes, before: p.minutes, text: hm(t.minutes) },
   ] : [];
 
   return (
@@ -313,9 +348,9 @@ export default function RyderDashboard() {
           <div className="tiles">
             {tiles.map((x) => (
               <div className="tile" key={x.label}>
-                <b>{num(x.now)}</b>
+                <b>{x.text ?? num(x.now)}</b>
                 <span>{x.label}</span>
-                <small>{change(x.now, x.before, data.days)}{x.sub ? `. ${x.sub}` : ""}</small>
+                <small>{x.text && x.before != null ? `${hm(x.before)} in the previous ${data.days} days` : change(x.now, x.before, data.days)}{x.sub ? `. ${x.sub}` : ""}</small>
               </div>
             ))}
           </div>
@@ -346,6 +381,9 @@ export default function RyderDashboard() {
               { name: "New followers", get: (d) => d.newFollowers, colour: PINK },
               { name: "New following", get: (d) => d.newFollowing, colour: "#000" },
             ]} />
+            <Bars title="Minutes engaging" days={data.series} series={[
+              { name: "Minutes", get: (d) => d.minutes, colour: PINK },
+            ]} />
             <Bars title="Story responses" days={data.series} series={[
               { name: "Responses", get: (d) => d.storyResponses, colour: PINK },
             ]} />
@@ -367,11 +405,38 @@ export default function RyderDashboard() {
             </p>
           </div>
 
+          <div className="noclinic noprint">
+            <h2>Time engaging</h2>
+            <div className="form">
+              {timerStart ? (
+                <>
+                  <div style={{ gridColumn: "1 / -1", fontSize: 44, lineHeight: 1 }}>{clock(now - timerStart)}</div>
+                  <label>Correct the minutes (only if you forgot to stop it)<input inputMode="numeric" value={stopMinutes} onChange={(e) => setStopMinutes(e.target.value)} placeholder="leave blank to use the timer" /></label>
+                  <label style={{ gridColumn: "span 2" }}>What I did<input value={stopNote} maxLength={300} onChange={(e) => setStopNote(e.target.value)} placeholder="Optional, for example: replied to enquiries and commented on local posts" /></label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={stopTimer}>Stop and log</button>
+                    <button className="ghost" onClick={() => timeCall("cancel")}>Discard</button>
+                  </div>
+                </>
+              ) : (
+                <div><button onClick={() => timeCall("start")}>Start timer</button></div>
+              )}
+            </div>
+            <div className="form" style={{ marginTop: 12, borderColor: "#000" }}>
+              <label>Day<input type="date" value={timeForm.day || data.to} max={data.to} onChange={(e) => setTimeForm({ ...timeForm, day: e.target.value })} /></label>
+              <label>Minutes<input inputMode="numeric" value={timeForm.minutes} onChange={(e) => setTimeForm({ ...timeForm, minutes: e.target.value })} placeholder="e.g. 25" /></label>
+              <label style={{ gridColumn: "span 2" }}>What I did<input value={timeForm.note} maxLength={300} onChange={(e) => setTimeForm({ ...timeForm, note: e.target.value })} /></label>
+              <div><button onClick={addTime} disabled={!timeForm.minutes}>Add time</button></div>
+            </div>
+            {timeMsg && <p className="foot">{timeMsg}</p>}
+            <p className="foot">The timer keeps running if you close the page. Instagram does not report time spent in the app, so this is the time you log.</p>
+          </div>
+
           <h2>The last 14 days</h2>
           <div className="tablewrap">
             <table>
               <thead>
-                <tr><th>Day</th><th>New followers</th><th>New following</th><th>Comments in</th><th>Replies</th><th>DMs in</th><th>DMs out</th><th>Story responses</th><th>What I did</th></tr>
+                <tr><th>Day</th><th>New followers</th><th>New following</th><th>Comments in</th><th>Replies</th><th>DMs in</th><th>DMs out</th><th>Story responses</th><th>Time</th><th>What I did</th></tr>
               </thead>
               <tbody>
                 {recent.map((d) => (
@@ -380,6 +445,7 @@ export default function RyderDashboard() {
                     <td>{num(d.newFollowers)}</td><td>{num(d.newFollowing)}</td>
                     <td>{d.commentsIn}</td><td>{d.commentsOut}</td><td>{d.dmsIn}</td><td>{d.dmsOut}</td>
                     <td>{num(d.storyResponses)}</td>
+                    <td>{d.minutes ? hm(d.minutes) : "-"}</td>
                     <td style={{ fontWeight: 600, maxWidth: 320 }}>{d.note}</td>
                   </tr>
                 ))}
