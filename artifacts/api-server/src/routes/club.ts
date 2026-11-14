@@ -316,6 +316,31 @@ const detailsUpload = (req: Request, res: Response, next: NextFunction) =>
 const DETAIL_TEXT = ["scrubs", "clinicName", "clinicianName", "handle", "area", "howStarted", "hobbies", "pets", "why", "threeWords", "personality", "passion", "mum", "age", "bizType"];
 
 // Details are filled in once. More photos can be added later (up to 20 in all), and Vanessa can reopen the form for a member.
+// Monzo cannot tell the site when someone pays, so the member taps "I have paid" and Vanessa gets an email to check her Monzo feed.
+const paidHits = new Map<string, number>();
+router.post("/club/me/:token/paid", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = await memberByToken(String(req.params.token));
+    if (!m || (m.status !== "active" && m.status !== "pending")) { res.status(404).json({ error: "That link does not look right." }); return; }
+    const last = paidHits.get(m.id) ?? 0;
+    if (Date.now() - last < 60_000) { res.json({ ok: true }); return; }
+    paidHits.set(m.id, Date.now());
+    void emailVanessa(`Club: ${m.name} says she has paid`, [
+      `${m.name} has pressed "I have paid" for the £${m.plan === "69" ? "69" : "275"} club.`,
+      `Please check your Monzo Business feed for a payment with her name (${m.name}) as the reference.`,
+      `Email: ${m.email}`,
+      `WhatsApp: ${m.phone ?? ""}`,
+      `Details form filled in: ${m.details_done ? "yes" : "not yet"}`,
+      "",
+      appLink("/club-admin"),
+    ]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Something went wrong, please try again" });
+  }
+});
+
 router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: Response) => {
   try {
     await ensureTables();
