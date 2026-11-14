@@ -90,7 +90,7 @@ function PayBox({ name, day, token }: { name: string; day?: number; token: strin
   return (
     <div className="cp-box" style={{ borderColor: PINK, background: "#fff5fa" }}>
       <b>Pay your first month: £69</b>
-      <p className="cp-sub" style={{ marginTop: 8 }}>Your place is held. Please pay your first month by card or bank transfer with the button below. Please use your full name ({name}) as the payment reference so I know it is you.</p>
+      <p className="cp-sub" style={{ marginTop: 8 }}>Your place is held. Please pay your first month by bank transfer with the button below. Please use your full name ({name}) as the payment reference so I know it is you.</p>
       <a className="cp-btn" href={MONZO_PAY_URL} target="_blank" rel="noopener noreferrer" style={{ marginTop: 6 }}>Pay £69 on Monzo</a>
       <button className="cp-btn k" type="button" onClick={tell} disabled={paid} style={{ marginTop: 6 }}>{paid ? "Thank you, I will check" : "I have paid"}</button>
       <p className="cp-sub">After that, I will send you a payment link on the {ordinalDay(day || 1)} of every month. You can cancel any time.</p>
