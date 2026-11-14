@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { runMigrations } from "./lib/runMigrations";
 import { startSchedulerCron } from "./lib/schedulerEngine";
 import { startInboxSync } from "./routes/inbox";
+import { startRyderSnapshotSync } from "./routes/ryder-dashboard";
 import { startHammeredMetricsSync } from "./routes/hammered-performance";
 import { startFreehouseMetricsSync } from "./routes/freehouse-performance";
 import { startSmsMetricsSync } from "./routes/sms-performance";
@@ -39,6 +40,7 @@ async function start(): Promise<void> {
   startSchedulerCron();
   startRevenueIdeasCron();
   startInboxSync();
+  startRyderSnapshotSync();
   startHammeredMetricsSync();
   startFreehouseMetricsSync();
   startSmsMetricsSync();
