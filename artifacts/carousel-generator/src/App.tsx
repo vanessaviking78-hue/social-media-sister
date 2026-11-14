@@ -24,6 +24,7 @@ import Treatments from "@/pages/treatments";
 import No1Page from "@/pages/no1";
 import No1StaticsPage from "@/pages/no1-statics";
 import RyderPage from "@/pages/ryder";
+import RyderDashboard from "@/pages/ryder-dashboard";
 import ClarePage from "@/pages/clare";
 import { DrVPage, PuraPage, AnnorlundaPage, TeviotPage, ClientByIdPage, ClientsIndexPage } from "@/pages/client-hub";
 import UniversalPage from "@/pages/universal";
@@ -245,6 +246,7 @@ function ProtectedRouter() {
       <Route path="/no1" component={No1Page} />
       <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
+      <Route path="/ryderdashboard" component={RyderDashboard} />
       <Route path="/hammeredposts" component={HammeredTool} />
       <Route path="/hammeredlinks" component={HammeredLinks} />
       <Route path="/hammeredperformance" component={HammeredPerformance} />
