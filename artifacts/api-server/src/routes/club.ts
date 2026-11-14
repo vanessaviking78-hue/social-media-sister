@@ -178,6 +178,7 @@ const publicMember = (m: Member) => ({
   photoUrls: m.photo_urls,
   clinicPhotoUrl: m.clinic_photo_url,
   welcomePhotoUrl: m.welcome_photo_url ?? "",
+  billingDay: m.billing_day,
 });
 
 async function memberByToken(token: string): Promise<Member | null> {
@@ -213,7 +214,7 @@ router.post("/club/invite/69", async (req: Request, res: Response) => {
     const recent = (inviteHits.get(ip) ?? []).filter((t) => Date.now() - t < 3600_000);
     if (recent.length >= 6) { res.status(429).json({ error: "That is a lot of tries. Please message me and I will sort it." }); return; }
     inviteHits.set(ip, [...recent, Date.now()]);
-    const b = req.body as { name?: string; email?: string; phone?: string; agreed?: boolean; agreedName?: string; website?: string };
+    const b = req.body as { name?: string; email?: string; phone?: string; agreed?: boolean; agreedName?: string; website?: string; billingDay?: number };
     if (b.website) { res.json({ ok: true, token: "" }); return; } // hidden field only a bot fills in
     const name = str(b.name, 100);
     const email = str(b.email, 160).toLowerCase();
@@ -227,7 +228,9 @@ router.post("/club/invite/69", async (req: Request, res: Response) => {
     if (dup) { res.status(409).json({ error: "It looks like you have already accepted. I have your details and will be in touch, or message me if you need anything." }); return; }
     const id = uuid();
     const token = randomBytes(18).toString("base64url");
-    const billingDay = Math.min(28, new Date().getUTCDate());
+    // She chooses the day of the month she would like her payment link sent (1 to 28); today's date if she did not pick one.
+    const picked = Math.round(Number(b.billingDay));
+    const billingDay = picked >= 1 && picked <= 28 ? picked : Math.min(28, new Date().getUTCDate());
     const ins = await db.execute(sql`INSERT INTO club_members (id, token, plan, status, name, email, billing_day, phone, agreed_name, agreed_at)
       SELECT ${id}::text, ${token}::text, '69', 'pending', ${name}::text, ${email}::text, ${billingDay}::int, ${phone}::text, ${agreedName}::text, now()
       WHERE (SELECT count(*) FROM club_members WHERE plan = '69' AND status IN ('active', 'pending')) < ${PLACES["69"]}::int
@@ -313,6 +316,31 @@ const detailsUpload = (req: Request, res: Response, next: NextFunction) =>
 const DETAIL_TEXT = ["scrubs", "clinicName", "clinicianName", "handle", "area", "howStarted", "hobbies", "pets", "why", "threeWords", "personality", "passion", "mum", "age", "bizType"];
 
 // Details are filled in once. More photos can be added later (up to 20 in all), and Vanessa can reopen the form for a member.
+// Monzo cannot tell the site when someone pays, so the member taps "I have paid" and Vanessa gets an email to check her Monzo feed.
+const paidHits = new Map<string, number>();
+router.post("/club/me/:token/paid", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = await memberByToken(String(req.params.token));
+    if (!m || (m.status !== "active" && m.status !== "pending")) { res.status(404).json({ error: "That link does not look right." }); return; }
+    const last = paidHits.get(m.id) ?? 0;
+    if (Date.now() - last < 60_000) { res.json({ ok: true }); return; }
+    paidHits.set(m.id, Date.now());
+    void emailVanessa(`Club: ${m.name} says she has paid`, [
+      `${m.name} has pressed "I have paid" for the £${m.plan === "69" ? "69" : "275"} club.`,
+      `Please check your Monzo Business feed for a payment with her name (${m.name}) as the reference.`,
+      `Email: ${m.email}`,
+      `WhatsApp: ${m.phone ?? ""}`,
+      `Details form filled in: ${m.details_done ? "yes" : "not yet"}`,
+      "",
+      appLink("/club-admin"),
+    ]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "Something went wrong, please try again" });
+  }
+});
+
 router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: Response) => {
   try {
     await ensureTables();

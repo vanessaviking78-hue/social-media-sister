@@ -71,11 +71,32 @@ type Story = { n: number; text: string; poll: { question: string; a: string; b: 
 type MonthContent = { stories?: Story[]; posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
   pending?: boolean;
-  member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string };
+  member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
 };
+
+const MONZO_PAY_URL = "https://monzo.com/pay/r/the-cyber-suite_EaAvaKNRRDB14P";
+const ordinalDay = (n: number) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10 > 3 ? 0 : n % 10]}`;
+
+// Shown to a member who has accepted the invitation: how to pay the first month, and when the monthly link will arrive.
+function PayBox({ name, day, token }: { name: string; day?: number; token: string }) {
+  const [paid, setPaid] = useState(false);
+  const tell = async () => {
+    setPaid(true);
+    try { await fetch(`${API}/club/me/${token}/paid`, { method: "POST" }); } catch { /* she can still check Monzo */ }
+  };
+  return (
+    <div className="cp-box" style={{ borderColor: PINK, background: "#fff5fa" }}>
+      <b>Pay your first month: £69</b>
+      <p className="cp-sub" style={{ marginTop: 8 }}>Your place is held. Please pay your first month by card or bank transfer with the button below. Please use your full name ({name}) as the payment reference so I know it is you.</p>
+      <a className="cp-btn" href={MONZO_PAY_URL} target="_blank" rel="noopener noreferrer" style={{ marginTop: 6 }}>Pay £69 on Monzo</a>
+      <button className="cp-btn k" type="button" onClick={tell} disabled={paid} style={{ marginTop: 6 }}>{paid ? "Thank you, I will check" : "I have paid"}</button>
+      <p className="cp-sub">After that, I will send you a payment link on the {ordinalDay(day || 1)} of every month. You can cancel any time.</p>
+    </div>
+  );
+}
 
 const monthName = (ym: string) => {
   const [y, m] = ym.split("-").map(Number);
@@ -432,12 +453,14 @@ export default function ClubPortal({ token }: { token: string }) {
           <>
             <h1>Welcome, <span>{data.member.name.split(" ")[0]}</span></h1>
             <p className="cp-sub">{data.pending ? "Your place is being held for you. Fill in your details once, as chatty as you like, and I will take it from here." : "Fill in your details once and I will do the rest, every single month."}</p>
+            {data.pending && <PayBox name={data.member.name} day={data.member.billingDay} token={token} />}
             <Details token={token} onDone={() => { setDetailsSent(true); setTab("choose"); window.scrollTo({ top: 0 }); if (data.pending) fireConfetti(); load(); }} existing={data.member.details} />
           </>
         )}
         {data && data.pending && data.member.detailsDone && (
           <>
             <h1>Thank you, <span>{data.member.name.split(" ")[0]}</span></h1>
+            <PayBox name={data.member.name} day={data.member.billingDay} token={token} />
             <div className="cp-box" style={{ borderColor: PINK, background: "#fff5fa" }}>
               <b>Your place is being held and your details are with me.</b>
               <p className="cp-sub" style={{ marginTop: 8 }}>I will message you on WhatsApp very soon to say hello and get you started. Until then, you can pop back to this page any time with the same link. Keep it somewhere safe.</p>
