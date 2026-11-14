@@ -50,6 +50,8 @@ const CSS = `
 .ci-sm { font-size:15px !important; color:#555; }
 `;
 
+const ordinal = (n: number) => `${n}${[11, 12, 13].includes(n % 100) ? "th" : ["th", "st", "nd", "rd"][n % 10 > 3 ? 0 : n % 10]}`;
+
 type Info = { total: number; left: number; open: boolean };
 
 export default function ClubInvite() {
@@ -60,6 +62,7 @@ export default function ClubInvite() {
   const [phone, setPhone] = useState("");
   const [signed, setSigned] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [day, setDay] = useState("1");
   const [website, setWebsite] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -83,7 +86,7 @@ export default function ClubInvite() {
       const r = await fetch(`${API}/club/invite/69`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, agreed, agreedName: signed, website }),
+        body: JSON.stringify({ name, email, phone, agreed, agreedName: signed, website, billingDay: Number(day) }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
@@ -160,6 +163,12 @@ export default function ClubInvite() {
             <label className="ci-field"><span>Your name</span><input type="text" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required /></label>
             <label className="ci-field"><span>Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></label>
             <label className="ci-field"><span>Your WhatsApp number</span><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required /></label>
+            <label className="ci-field"><span>Which day of the month would you like your payment link sent?</span>
+              <select value={day} onChange={(e) => setDay(e.target.value)} style={{ width: "100%", border: `2px solid ${INK}`, padding: 12, fontSize: 17, fontFamily: "inherit", background: "#fff", color: INK, borderRadius: 0 }}>
+                {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{ordinal(d)} of the month</option>)}
+              </select>
+            </label>
+            <p className="ci-sm" style={{ marginTop: -4 }}>I will send you a payment link on that day, every month. Many people pick a day just after payday.</p>
             <div style={{ position: "absolute", left: "-9999px" }} aria-hidden="true"><input type="text" tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></div>
 
             <label className="ci-tick"><input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} /><span>Yes, I make this promise.</span></label>
@@ -170,7 +179,7 @@ export default function ClubInvite() {
 
             {err && <div className="ci-err">{err}</div>}
             <button className="ci-btn" type="submit" disabled={busy || !agreed}>{busy ? "Saving your place..." : "Accept my invitation"}</button>
-            <p className="ci-sm" style={{ marginTop: 14 }}>Next you will fill in the questionnaire. Your place is held while I check everything over, and I will message you on WhatsApp once you are in.</p>
+            <p className="ci-sm" style={{ marginTop: 14 }}>Next you will see how to pay for your first month, then fill in the questionnaire. Your place is held while I check everything over, and I will message you on WhatsApp once you are in.</p>
           </form>
         ) : (
           <>
