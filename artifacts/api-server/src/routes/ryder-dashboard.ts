@@ -51,6 +51,11 @@ function ensureTables(): Promise<void> {
       taken_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (preset_id, day)
     )`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_story_views (
+      preset_id INTEGER NOT NULL, handle TEXT NOT NULL, day DATE NOT NULL, PRIMARY KEY (preset_id, handle, day))`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_lead_status (
+      preset_id INTEGER NOT NULL, handle TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new', note TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (preset_id, handle))`);
     // inbox_items is created by the inbox route; make sure it exists so the dashboard works even if it loads first.
     await db.execute(sql`CREATE TABLE IF NOT EXISTS inbox_items (
       id SERIAL PRIMARY KEY, preset_id INTEGER NOT NULL, client_name TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL, direction TEXT NOT NULL DEFAULT 'in',
@@ -302,6 +307,99 @@ router.post("/ryder/dashboard/log", requireAuth, async (req: Request, res: Respo
 router.post("/ryder/dashboard/refresh", requireAuth, async (_req: Request, res: Response) => {
   const r = await snapshotRyderFollowers();
   res.json(r);
+});
+
+// ---------- leads ----------
+// Instagram does not give anyone the list of who viewed a story, so story viewers are pasted in from the app (the viewer list shows for 48 hours).
+// Everyone who comments or messages comes from the inbox by themselves. Both are merged into one list, warmest first.
+
+const STATUSES = ["new", "contacted", "booked", "not interested"];
+const cleanHandle = (h: string): string => h.trim().replace(/^@/, "").toLowerCase();
+const validHandle = (h: string): boolean => /^[a-z0-9._]{1,30}$/.test(h);
+
+router.get("/ryder/leads", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const own = (p.username || "").toLowerCase();
+    const inbox = rowsOf(await db.execute(sql`SELECT lower(author_name) AS handle,
+        COUNT(*) FILTER (WHERE kind = 'comment') AS comments, COUNT(*) FILTER (WHERE kind = 'dm') AS dms,
+        MAX(created_at_meta) AS last_at FROM inbox_items
+      WHERE preset_id = ${p.id} AND direction = 'in' AND author_name <> '' GROUP BY 1`));
+    const views = rowsOf(await db.execute(sql`SELECT handle, COUNT(*) AS views, MAX(day)::text AS last_day FROM ryder_story_views WHERE preset_id = ${p.id} GROUP BY handle`));
+    const status = rowsOf(await db.execute(sql`SELECT handle, status, note FROM ryder_lead_status WHERE preset_id = ${p.id}`));
+    const by = new Map<string, any>();
+    const get = (h: string) => {
+      if (!by.has(h)) by.set(h, { handle: h, comments: 0, dms: 0, storyViews: 0, lastAt: null as string | null, status: "new", note: "" });
+      return by.get(h);
+    };
+    for (const r of inbox) {
+      const h = cleanHandle(String(r.handle));
+      if (!h || h === own) continue;
+      const l = get(h);
+      l.comments = Number(r.comments); l.dms = Number(r.dms);
+      l.lastAt = r.last_at ? new Date(r.last_at).toISOString() : l.lastAt;
+    }
+    for (const r of views) {
+      const h = cleanHandle(String(r.handle));
+      if (!h || h === own) continue;
+      const l = get(h);
+      l.storyViews = Number(r.views);
+      const d = r.last_day ? new Date(r.last_day + "T12:00:00Z").toISOString() : null;
+      if (d && (!l.lastAt || d > l.lastAt)) l.lastAt = d;
+    }
+    for (const r of status) {
+      const l = by.get(cleanHandle(String(r.handle)));
+      if (l) { l.status = String(r.status); l.note = String(r.note || ""); }
+    }
+    const leads = [...by.values()].map((l) => {
+      const warmth = l.storyViews + 2 * l.comments + 4 * l.dms;
+      return { ...l, warmth, heat: warmth >= 6 ? "hot" : warmth >= 3 ? "warm" : "new" };
+    }).sort((a, b) => b.warmth - a.warmth || String(b.lastAt || "").localeCompare(String(a.lastAt || "")));
+    res.json({ leads, statuses: STATUSES });
+  } catch (err) {
+    logger.error({ err }, `Ryder leads failed: ${err instanceof Error ? err.message : String(err)}`);
+    res.status(500).json({ error: "Could not load the leads" });
+  }
+});
+
+router.post("/ryder/leads/story-viewers", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const day = String(req.body?.day || londonToday());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { res.status(400).json({ error: "That date does not look right" }); return; }
+    const handles = [...new Set(String(req.body?.handles ?? "").split(/[\s,;]+/).map(cleanHandle).filter(validHandle))].slice(0, 2000);
+    if (handles.length === 0) { res.status(400).json({ error: "I could not find any usernames in that. Paste them one per line." }); return; }
+    let added = 0;
+    for (const h of handles) {
+      const r = await db.execute(sql`INSERT INTO ryder_story_views (preset_id, handle, day) VALUES (${p.id}, ${h}, ${day}::date) ON CONFLICT DO NOTHING RETURNING handle`);
+      added += rowsOf(r).length;
+    }
+    res.json({ ok: true, found: handles.length, added });
+  } catch (err) {
+    logger.error({ err }, `Ryder story viewers failed: ${err instanceof Error ? err.message : String(err)}`);
+    res.status(500).json({ error: "Could not save those" });
+  }
+});
+
+router.post("/ryder/leads/status", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const handle = cleanHandle(String(req.body?.handle ?? ""));
+    const status = String(req.body?.status ?? "new");
+    if (!validHandle(handle) || !STATUSES.includes(status)) { res.status(400).json({ error: "That did not look right" }); return; }
+    const note = String(req.body?.note ?? "").slice(0, 300);
+    await db.execute(sql`INSERT INTO ryder_lead_status (preset_id, handle, status, note, updated_at) VALUES (${p.id}, ${handle}, ${status}, ${note}, now())
+      ON CONFLICT (preset_id, handle) DO UPDATE SET status = EXCLUDED.status, note = EXCLUDED.note, updated_at = now()`);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: "Could not save that" });
+  }
 });
 
 export default router;

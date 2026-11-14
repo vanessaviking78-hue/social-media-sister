@@ -27,6 +27,8 @@ type Data = {
   lastSnapshot: { at: string; error: string } | null;
 };
 
+type Lead = { handle: string; comments: number; dms: number; storyViews: number; lastAt: string | null; status: string; note: string; warmth: number; heat: "hot" | "warm" | "new" };
+
 const authHeaders = (): Record<string, string> => {
   const pw = localStorage.getItem("cybersuite-pw") || "";
   return { "x-app-password": pw, Authorization: "Bearer " + pw, "Content-Type": "application/json" };
@@ -96,6 +98,19 @@ export default function RyderDashboard() {
   const [clinicView, setClinicView] = useState(false);
   const [form, setForm] = useState({ day: "", newFollowers: "", newFollowing: "", storyResponses: "", note: "" });
   const [saved, setSaved] = useState("");
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [statuses, setStatuses] = useState<string[]>(["new", "contacted", "booked", "not interested"]);
+  const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "open">("all");
+  const [viewers, setViewers] = useState({ day: "", handles: "" });
+  const [viewerMsg, setViewerMsg] = useState("");
+
+  const loadLeads = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/ryder/leads`, { headers: authHeaders() });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) { setLeads(d.leads || []); if (d.statuses) setStatuses(d.statuses); }
+    } catch { /* the leads list just stays as it was */ }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -114,6 +129,8 @@ export default function RyderDashboard() {
     const id = setInterval(load, 60000);
     return () => clearInterval(id);
   }, [load]);
+
+  useEffect(() => { loadLeads(); }, [loadLeads]);
 
   useEffect(() => {
     if (data && !form.day) setForm((f) => ({ ...f, day: data.to }));
@@ -142,6 +159,33 @@ export default function RyderDashboard() {
     setForm((f) => ({ ...f, newFollowers: "", newFollowing: "", storyResponses: "", note: "" }));
     await load();
   };
+
+  const addViewers = async () => {
+    setViewerMsg("");
+    const r = await fetch(`${BASE}/api/ryder/leads/story-viewers`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ day: viewers.day || data?.to, handles: viewers.handles }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { setViewerMsg(d?.error || "Could not save those"); return; }
+    setViewerMsg(`${d.found} usernames found, ${d.added} new for that day`);
+    setViewers((v) => ({ ...v, handles: "" }));
+    await loadLeads();
+  };
+
+  const setStatus = async (l: Lead, status: string) => {
+    setLeads((all) => all.map((x) => (x.handle === l.handle ? { ...x, status } : x)));
+    await fetch(`${BASE}/api/ryder/leads/status`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ handle: l.handle, status, note: l.note }) });
+  };
+
+  const exportCsv = () => {
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const rows = [["Username", "Heat", "Story views", "Comments", "DMs", "Status", "Last seen"], ...visibleLeads.map((l) => [l.handle, l.heat, l.storyViews, l.comments, l.dms, l.status, l.lastAt ? l.lastAt.slice(0, 10) : ""])];
+    const blob = new Blob([rows.map((r) => r.map(esc).join(",")).join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ryder-leads.csv";
+    a.click();
+  };
+
+  const visibleLeads = useMemo(() => leads.filter((l) => leadFilter === "all" || (leadFilter === "hot" ? l.heat === "hot" : l.status === "new" || l.status === "contacted")), [leads, leadFilter]);
 
   const pick = (d: Day) => setForm({
     day: d.day, newFollowers: d.followersAuto || d.newFollowers == null ? "" : String(d.newFollowers),
@@ -206,6 +250,11 @@ export default function RyderDashboard() {
         .rd td { padding: 9px 10px; border-bottom: 1px solid #ccc; font-size: 15px; }
         .rd tr.click { cursor: pointer; }
         .rd tr.click:hover td { background: #fff0f7; }
+        .rd .tag { display: inline-block; padding: 3px 9px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; border: 2px solid #000; }
+        .rd .tag.hot { background: ${PINK}; border-color: ${PINK}; }
+        .rd .tag.warm { background: #000; color: #fff; }
+        .rd select { font-size: 14px; padding: 5px 6px; border: 2px solid #000; background: #fff; color: #000; }
+        .rd textarea { width: 100%; margin-top: 5px; padding: 9px 10px; border: 3px solid #000; font-size: 16px; min-height: 90px; font-family: inherit; font-weight: 700; }
         .rd .foot { font-size: 12px; font-weight: 600; line-height: 1.35; margin-top: 18px; }
         .rd.clinic .noclinic { display: none; }
         @media print {
@@ -336,6 +385,42 @@ export default function RyderDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="noclinic noprint">
+            <h2>Leads</h2>
+            <p className="sub">Everyone who has commented, messaged or viewed a story, warmest first. Heat score: 1 for each story view, 2 for each comment, 4 for each DM. Hot is 6 or more, warm is 3 or more.</p>
+            <div className="form">
+              <label>Story day<input type="date" value={viewers.day || data.to} max={data.to} onChange={(e) => setViewers({ ...viewers, day: e.target.value })} /></label>
+              <label style={{ gridColumn: "1 / -1" }}>Paste story viewers (one username per line)
+                <textarea value={viewers.handles} onChange={(e) => setViewers({ ...viewers, handles: e.target.value })} placeholder={"Open the story in Instagram, swipe up for the viewer list, copy the usernames and paste them here.\nInstagram only keeps the list for 48 hours."} />
+              </label>
+              <div><button onClick={addViewers} disabled={!viewers.handles.trim()}>Add viewers</button> {viewerMsg && <span style={{ marginLeft: 10, fontSize: 13 }}>{viewerMsg}</span>}</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "16px 0 0" }}>
+              {([["all", "Everyone"], ["hot", "Hot leads"], ["open", "To follow up"]] as const).map(([k, label]) => (
+                <button key={k} className={`ghost${leadFilter === k ? " on" : ""}`} onClick={() => setLeadFilter(k)}>{label}</button>
+              ))}
+              <button onClick={exportCsv} disabled={visibleLeads.length === 0}>Download CSV</button>
+            </div>
+            <div className="tablewrap">
+              <table>
+                <thead><tr><th>Username</th><th>Heat</th><th>Story views</th><th>Comments</th><th>DMs</th><th>Last seen</th><th>Status</th></tr></thead>
+                <tbody>
+                  {visibleLeads.length === 0 && <tr><td colSpan={7} style={{ fontWeight: 600 }}>No leads yet. They appear as people comment, message or are pasted in from a story.</td></tr>}
+                  {visibleLeads.slice(0, 300).map((l) => (
+                    <tr key={l.handle}>
+                      <td><a href={`https://www.instagram.com/${l.handle}/`} target="_blank" rel="noopener noreferrer" style={{ color: "#000" }}>@{l.handle}</a></td>
+                      <td><span className={`tag ${l.heat}`}>{l.heat}</span></td>
+                      <td>{l.storyViews}</td><td>{l.comments}</td><td>{l.dms}</td>
+                      <td>{l.lastAt ? niceDay(l.lastAt.slice(0, 10)) : "-"}</td>
+                      <td><select value={l.status} onChange={(e) => setStatus(l, e.target.value)}>{statuses.map((x) => <option key={x} value={x}>{x}</option>)}</select></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {visibleLeads.length > 300 && <p className="foot">Showing the warmest 300 of {visibleLeads.length}. The CSV has them all.</p>}
           </div>
 
           <p className="foot">
