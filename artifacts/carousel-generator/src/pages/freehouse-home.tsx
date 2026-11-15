@@ -27,7 +27,7 @@ const TILES: { href: string; name: string; description: string; live: boolean }[
     live: true,
   },
   {
-    href: "/freehousefreebies",
+    href: "/freeholdfreebies",
     name: "Free sample",
     description: "The page a pub or bar fills in for their free 5 day trial: logo, colours, fonts, what's on each week.",
     live: true,

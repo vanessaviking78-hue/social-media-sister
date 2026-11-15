@@ -271,7 +271,7 @@ export default function FreehouseFreebies() {
             </h1>
             <p className="tf-lede">I will get your posts made and over to you as soon as I can. I will send you a WhatsApp and an email. Have a look, and tell me what to change. Thanks for giving it a go.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another pub or bar that could do with some decent posts? Send them this.</p>
-            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Freehouse for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/freehousefreebies")}`}>Share with another pub or bar</a>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Freehouse for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/freeholdfreebies")}`}>Share with another pub or bar</a>
           </div>
         ) : (
           <>

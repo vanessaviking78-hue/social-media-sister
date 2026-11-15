@@ -16,7 +16,7 @@ const messages = [
 ];
 
 const gives = [
-  ["Your own tracked link.", "It is the free trial page with your name on the end, for example www.thecybersuite.com/freehousefreebies?ref=yourname. Every sign up that comes through it is credited to you."],
+  ["Your own tracked link.", "It is the free trial page with your name on the end, for example www.thecybersuite.com/freeholdfreebies?ref=yourname. Every sign up that comes through it is credited to you."],
   ["The free trial itself.", "A bundle of ready made posts they can look at before they spend a penny."],
   ["The Freehouse Socials page.", "Real posts you can point people to, so they can see what a month looks like."],
   ["Leads from me.", "I will load the dashboard with leads for you as well, so you have people to ring and message from day one. They are logged against your name."],

@@ -16,7 +16,7 @@ const MONTHS = 3;
 const RATE = 0.2;
 const FLOOR = 49;
 const SLOTS = [1, 2, 3, 4];
-const LINK = "https://www.thecybersuite.com/freehousefreebies?ref=";
+const LINK = "https://www.thecybersuite.com/freeholdfreebies?ref=";
 const slug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, "");
 
 type Partner = { slot: number; name: string };
@@ -181,7 +181,7 @@ function Dashboard() {
                   <button type="button" className="px-2 py-1 border-2 border-black text-xs font-bold" style={{ background: copied === slot ? YEL : "#fff" }} onClick={() => void copyLink(slot, name)}>
                     {copied === slot ? "Link copied" : "Copy their trial link"}
                   </button>
-                  <div className="text-xs text-neutral-500 break-all">...freehousefreebies?ref={slug(name)}</div>
+                  <div className="text-xs text-neutral-500 break-all">...freeholdfreebies?ref={slug(name)}</div>
                 </>
               )}
             </div>

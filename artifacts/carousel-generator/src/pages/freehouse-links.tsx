@@ -6,7 +6,7 @@ import { Link } from "wouter";
 
 const BLUE = "#00e5ff";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-const SITE = "https://www.thecybersuite.com/freehousefreebies";
+const SITE = "https://www.thecybersuite.com/freeholdfreebies";
 const DEFAULT_NAMES = ["rob", "isaac", "vanessa"];
 const EXTRA_KEY = "freehouse-link-names";
 

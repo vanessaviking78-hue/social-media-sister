@@ -426,7 +426,9 @@ function AppContent() {
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
   const [isHammeredFreebies] = useRoute("/hammeredfreebies");
   const [isHammeredFreebiesAlt] = useRoute("/hammeredfreeies"); // old spelling still works
-  const [isFreehouseFreebies] = useRoute("/freehousefreebies");
+  const [isFreehouseFreebiesOld] = useRoute("/freehousefreebies");
+  const [isFreeholdFreebies] = useRoute("/freeholdfreebies");
+  const isFreehouseFreebies = isFreehouseFreebiesOld || isFreeholdFreebies;
   const [isClubPortal, clubParams] = useRoute("/club/:token");
   const [isClubBare] = useRoute("/club");
   const [isKirstyDove] = useRoute("/kirstydove");
