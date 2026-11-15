@@ -3,8 +3,8 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "../lib/logger";
 
-// Freehouse performance tracker. Pulls likes, comments, saves, shares and reach for every published Freehouse post straight from Instagram
-// (needs instagram_manage_insights, added to the connect scopes in meta-auth.ts, so Freehouse has to be reconnected once). Scores each post and
+// Freehold performance tracker. Pulls likes, comments, saves, shares and reach for every published Freehold post straight from Instagram
+// (needs instagram_manage_insights, added to the connect scopes in meta-auth.ts, so Freehold has to be reconnected once). Scores each post and
 // marks the top quarter as high performing. The page is /freehouseperformance.
 
 const router: IRouter = Router();
@@ -64,10 +64,10 @@ export async function syncFreehouseMetrics(maxPosts = 60): Promise<{ checked: nu
   let checked = 0;
   try {
     await ensureTable();
-    const preset = rowsOf(await db.execute(sql`SELECT id, meta_page_access_token FROM client_presets WHERE name ILIKE '%freehouse%' ORDER BY id LIMIT 1`))[0];
-    if (!preset) return { checked: 0, error: "I could not find a client called Freehouse" };
+    const preset = rowsOf(await db.execute(sql`SELECT id, meta_page_access_token FROM client_presets WHERE (name ILIKE '%freehouse%' OR name ILIKE '%freehold%') ORDER BY id LIMIT 1`))[0];
+    if (!preset) return { checked: 0, error: "I could not find a client called Freehold" };
     const token = preset.meta_page_access_token as string | null;
-    if (!token) return { checked: 0, error: "Freehouse is not connected to Instagram yet" };
+    if (!token) return { checked: 0, error: "Freehold is not connected to Instagram yet" };
     const posts = rowsOf(await db.execute(sql`SELECT id, meta_result->>'igPostId' AS ig_id FROM scheduled_posts
       WHERE preset_id = ${preset.id} AND status = 'published' AND post_type NOT ILIKE '%story%' AND meta_result->>'igPostId' IS NOT NULL
       ORDER BY scheduled_at DESC LIMIT ${maxPosts}`));
@@ -104,7 +104,7 @@ export async function syncFreehouseMetrics(maxPosts = 60): Promise<{ checked: nu
     return { checked, error };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.error({ err }, `Freehouse metrics sync failed: ${msg}`);
+    logger.error({ err }, `Freehold metrics sync failed: ${msg}`);
     return { checked, error: msg };
   } finally {
     syncing = false;
@@ -130,7 +130,7 @@ router.get("/freehouse/performance", requireAuth, async (_req, res) => {
     const r = rowsOf(await db.execute(sql`SELECT sp.id, sp.scheduled_at, sp.content->>'title' AS title, sp.content->>'caption' AS caption, sp.post_type,
         m.permalink, m.likes, m.comments, m.saved, m.shares, m.reach, m.insights_error, m.fetched_at
       FROM scheduled_posts sp
-      JOIN client_presets cp ON cp.id = sp.preset_id AND cp.name ILIKE '%freehouse%'
+      JOIN client_presets cp ON cp.id = sp.preset_id AND (cp.name ILIKE '%freehouse%' OR cp.name ILIKE '%freehold%')
       LEFT JOIN post_metrics m ON m.scheduled_post_id = sp.id
       WHERE sp.status = 'published' AND sp.post_type NOT ILIKE '%story%'
       ORDER BY sp.scheduled_at DESC LIMIT 120`));
@@ -170,7 +170,7 @@ router.get("/freehouse/performance", requireAuth, async (_req, res) => {
       lastSync,
     });
   } catch (err) {
-    logger.error({ err }, `Freehouse performance failed: ${err instanceof Error ? err.message : String(err)}`);
+    logger.error({ err }, `Freehold performance failed: ${err instanceof Error ? err.message : String(err)}`);
     res.status(500).json({ error: "Could not load the numbers" });
   }
 });

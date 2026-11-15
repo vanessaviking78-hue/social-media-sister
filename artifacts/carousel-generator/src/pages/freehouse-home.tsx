@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Beer } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
 
-// cybersuite.com/freehouse : the home of Freehouse Socials, her social media business for pubs and bars. Black and electric blue.
+// cybersuite.com/freehouse : the home of Freehold Socials, her social media business for pubs and bars. Black and electric blue.
 // Tools get added to TILES as they are built. Live today: the free sample page for new pubs and bars.
 
 const BLUE = "#00e5ff";
@@ -35,9 +35,9 @@ const TILES: { href: string; name: string; description: string; live: boolean }[
 ];
 
 export default function FreehouseHome() {
-  // The Freehouse icon opens the client page for the preset named Freehouse (same page every client preset gets).
+  // The Freehold icon opens the client page for the preset named Freehold (same page every client preset gets).
   const { presets, loading } = usePresets();
-  const preset = presets.find((p) => /freehouse/i.test(p.name));
+  const preset = presets.find((p) => /free(house|hold)/i.test(p.name));
   return (
     <div className="hm">
       <style>{`
@@ -64,18 +64,18 @@ export default function FreehouseHome() {
         <Link href="/choose">Switch business</Link>
         <Link href="/hub">Social Media Sister hub</Link>
       </div>
-      <h1>Freehouse Socials</h1>
+      <h1>Freehold Socials</h1>
       <div className="stripe" />
       <div className="tag">Real pubs, real photos, posting like they mean it.</div>
       <div className="grid">
         {preset ? (
           <Link href={`/client/${preset.id}`} className="tile icon">
             <span className="ico"><Beer size={46} strokeWidth={2.6} /></span>
-            <h3>Freehouse Socials</h3>
-            <p>Open the Freehouse Socials tools and posts.</p>
+            <h3>Freehold Socials</h3>
+            <p>Open the Freehold Socials tools and posts.</p>
           </Link>
         ) : (
-          <div className="soon">{loading ? "Loading Freehouse Socials..." : "I cannot find a preset called Freehouse Socials"}</div>
+          <div className="soon">{loading ? "Loading Freehold Socials..." : "I cannot find a preset called Freehold Socials"}</div>
         )}
         {TILES.map((t) => (
           <Link key={t.href} href={t.href} className="tile">
@@ -83,7 +83,7 @@ export default function FreehouseHome() {
             <p>{t.description}</p>
           </Link>
         ))}
-        <div className="soon">More Freehouse Socials tools land here</div>
+        <div className="soon">More Freehold Socials tools land here</div>
       </div>
     </div>
   );

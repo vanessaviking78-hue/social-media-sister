@@ -167,7 +167,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     const premium = b.kind === "premium";
     // Hammered (the construction industry freebies at /hammeredfreebies) has its own list, its own questions and no AI Studio portraits.
     const hammered = b.kind === "hammered";
-    // Freehouse Socials (pubs and bars at /freehousefreebies) is the same form with its own venue list and no AI Studio portraits.
+    // Freehold Socials (pubs and bars at /freehousefreebies) is the same form with its own venue list and no AI Studio portraits.
     const freehouse = b.kind === "freehouse";
     const ownForm = hammered || freehouse;
     const extraPhotos = files.photos ?? [];
@@ -288,7 +288,7 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       throw err;
     }
     if (photoKey && !ownForm) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
-    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : freehouse ? `FREEHOUSE SOCIALS${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
+    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : freehouse ? `FREEHOLD SOCIALS${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free intake failed");

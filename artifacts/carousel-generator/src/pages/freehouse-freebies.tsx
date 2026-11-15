@@ -5,9 +5,9 @@ import { TENFREE_WHATSAPP } from "@/lib/tenfree-config";
 import { canvasToPng, makeClearLogo } from "@/lib/logo-clear";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// cybersuite.com/freehousefreebies : the Freehouse Socials (pubs and bars) freebies form. A copy of the premium freebies page: same fonts and layout, electric blue in place of hot pink.
+// cybersuite.com/freehousefreebies : the Freehold Socials (pubs and bars) freebies form. A copy of the premium freebies page: same fonts and layout, electric blue in place of hot pink.
 
-const PINK = "#00e5ff"; // Freehouse Socials electric blue. Named PINK only so the copied CSS below stays identical.
+const PINK = "#00e5ff"; // Freehold Socials electric blue. Named PINK only so the copied CSS below stays identical.
 const INK = "#111111";
 
 const CSS = `
@@ -131,7 +131,7 @@ try {
 export default function FreehouseFreebies() {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", years: "", hobbies: "", pets: "", why: "", threeWords: "", personality: "", font: "anton", passion: "", funny: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
-  // Tell the Freehouse links dashboard this link was opened, and (once) that they started filling it in.
+  // Tell the Freehold links dashboard this link was opened, and (once) that they started filling it in.
   const startedRef = useRef(false);
   const visitorId = () => {
     try {
@@ -161,7 +161,7 @@ export default function FreehouseFreebies() {
   const logoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    document.title = "Freehouse Socials freebies";
+    document.title = "Freehold Socials freebies";
     const m = document.createElement("meta");
     m.name = "robots";
     m.content = "noindex";
@@ -257,8 +257,8 @@ export default function FreehouseFreebies() {
       <style>{CSS}</style>
       <div className="tf-wrap">
         <div className="tf-top">
-          {/* The Freehouse logo goes here once it is supplied. */}
-          <span>Freehouse</span>
+          {/* The Freehold logo goes here once it is supplied. */}
+          <span>Freehold</span>
           <i />
         </div>
 
@@ -271,14 +271,14 @@ export default function FreehouseFreebies() {
             </h1>
             <p className="tf-lede">I will get your posts made and over to you as soon as I can. I will send you a WhatsApp and an email. Have a look, and tell me what to change. Thanks for giving it a go.</p>
             <p className="tf-lede" style={{ marginTop: 28 }}>Know another pub or bar that could do with some decent posts? Send them this.</p>
-            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Freehouse for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/freeholdfreebies")}`}>Share with another pub or bar</a>
+            <a className="tf-go" style={{ display: "inline-block", textDecoration: "none" }} href={`https://wa.me/?text=${encodeURIComponent("I have just asked Freehold for a free 5 day trial of posts made from my own pub and photos. Grab yours here: https://www.thecybersuite.com/freeholdfreebies")}`}>Share with another pub or bar</a>
           </div>
         ) : (
           <>
             <div className="tf-hero">
               <div className="tf-kicker">Free 5 day trial</div>
               <h1 className="tf-h1">
-                Freehouse <span>Socials</span>
+                Freehold <span>Socials</span>
               </h1>
               <p className="tf-lede">Proper posts that make people want to come through your door tonight. Tell me a little about you and your work. I build your posts in your colours with your logo and your own real photos, no strange AI pints, plus matching stories and reel scripts, and you tell me what to tweak.</p>
               <div className="tf-list">
@@ -412,17 +412,17 @@ export default function FreehouseFreebies() {
 
             <label className="tf-consent">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              <span>I am happy for Freehouse to use my logo, photos and details to build my free trial posts and to contact me about them.</span>
+              <span>I am happy for Freehold to use my logo, photos and details to build my free trial posts and to contact me about them.</span>
             </label>
             {err && <div className="tf-err">{err}</div>}
-            {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I have had my Freehouse Socials trial and would like to hear about the special rate")}`}>Ask about the special rate on WhatsApp</a>}
+            {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I have had my Freehold Socials trial and would like to hear about the special rate")}`}>Ask about the special rate on WhatsApp</a>}
             <button className="tf-go" disabled={busy || logoBusy} onClick={submit}>
               {busy ? "Sending..." : "Send me my free trial posts"}
             </button>
             <div className="tf-note">I look at every request by hand. After your 5 days you can post them yourself, or I can post for you at a special rate.</div>
           </>
         )}
-        <div className="tf-foot">Freehouse</div>
+        <div className="tf-foot">Freehold</div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 
 // cybersuite.com/choose : where she picks which leg of the business she is working in today.
-// Social Media Sister (white, black and hot pink) goes to the hub. Hammered (black and yellow) goes to its own home. Freehouse Socials (blue) is just a small link at the bottom.
+// Social Media Sister (white, black and hot pink) goes to the hub. Hammered (black and yellow) goes to its own home. Freehold Socials (blue) is just a small link at the bottom.
 
 const PINK = "#ff1493";
 const YELLOW = "#ffd60a";
@@ -49,7 +49,7 @@ export default function ChooseBusiness() {
         <div className="line" />
         <span className="go">Go to Hammered</span>
       </Link>
-      <Link href="/freehouse" className="freehouselink">Freehouse Socials (pubs and bars)</Link>
+      <Link href="/freehouse" className="freehouselink">Freehold Socials (pubs and bars)</Link>
     </div>
   );
 }

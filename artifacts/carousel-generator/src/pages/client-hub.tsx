@@ -39,15 +39,15 @@ const HAMMERED_TABS: { id: string; label: string; Comp: React.ComponentType }[] 
   { id: "hammered", label: "Hammered posts", Comp: lazyTab(() => import("./hammered")) },
 ];
 
-// Freehouse Socials (the pub and bar business) also has one tool only: the Freehouse Socials posts page.
+// Freehold Socials (the pub and bar business) also has one tool only: the Freehold Socials posts page.
 const FREEHOUSE_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
-  { id: "freehouse", label: "Freehouse Socials posts", Comp: lazyTab(() => import("./freehouse")) },
+  { id: "freehouse", label: "Freehold Socials posts", Comp: lazyTab(() => import("./freehouse")) },
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }) {
-  const [tab, setTab] = useState(/hammered/i.test(label) ? "hammered" : /freehouse/i.test(label) ? "freehouse" : "new");
+  const [tab, setTab] = useState(/hammered/i.test(label) ? "hammered" : /free(house|hold)/i.test(label) ? "freehouse" : "new");
   const [ids, setIds] = useState<string[] | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -84,7 +84,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
   const forced: ForcedClient = { pattern, treatmentIds: ids };
   const isSms = /social\s*media\s*sis|very\s*vanessa|vanessa|^sms$/i.test(label);
   const isHammered = /hammered/i.test(label);
-  const isFreehouse = /freehouse/i.test(label);
+  const isFreehouse = /free(house|hold)/i.test(label);
   const tabs = isHammered ? HAMMERED_TABS : isFreehouse ? FREEHOUSE_TABS : isSms ? SMS_TABS : TABS;
   const current = tabs.find((t) => t.id === tab) ?? tabs[0];
   return (

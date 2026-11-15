@@ -1,4 +1,4 @@
-// Draws one Freehouse slide. Freehouse (the page and every Freehouse client) uses a single layout: a full bleed photo
+// Draws one Freehold slide. Freehold (the page and every Freehold client) uses a single layout: a full bleed photo
 // with the writing on a gradient, in a text box or on a block. Nothing else.
 
 export const HW = 1080;

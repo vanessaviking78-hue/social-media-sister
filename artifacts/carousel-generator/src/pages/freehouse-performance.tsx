@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 
-// cybersuite.com/freehouseperformance : which Freehouse posts are performing. Pulls likes, comments, saves, shares and reach from Instagram,
-// scores each post and flags the top quarter as high performing. Black and yellow, same as the Freehouse home.
+// cybersuite.com/freehouseperformance : which Freehold posts are performing. Pulls likes, comments, saves, shares and reach from Instagram,
+// scores each post and flags the top quarter as high performing. Black and yellow, same as the Freehold home.
 
 const BLUE = "#00e5ff";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -96,7 +96,7 @@ export default function FreehousePerformance() {
       `}</style>
 
       <div className="top">
-        <Link href="/freehouse" className="back">Freehouse</Link>
+        <Link href="/freehouse" className="back">Freehold</Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button className={`ghost${filter === "all" ? " on" : ""}`} onClick={() => setFilter("all")}>All posts</button>
           <button className={`ghost${filter === "high" ? " on" : ""}`} onClick={() => setFilter("high")}>High performing</button>
@@ -108,7 +108,7 @@ export default function FreehousePerformance() {
       {err && <p className="note">{err}</p>}
       {insightsMissing && (
         <p className="note">
-          Likes and comments are coming through. Saves, shares and reach are not, because Freehouse was connected without the insights permission.{" "}
+          Likes and comments are coming through. Saves, shares and reach are not, because Freehold was connected without the insights permission.{" "}
           <a href={`${BASE}/api/meta/auth/bulk-start?extended=1`}>Reconnect with insights</a> and they will fill in.
         </p>
       )}
@@ -124,7 +124,7 @@ export default function FreehousePerformance() {
             <div className="stat"><b>{num(data.totals.reach)}</b><span>Reach</span></div>
           </div>
 
-          {data.totals.published === 0 && <p className="note">No Freehouse posts have gone out yet. Once they are published they appear here.</p>}
+          {data.totals.published === 0 && <p className="note">No Freehold posts have gone out yet. Once they are published they appear here.</p>}
           {data.totals.published > 0 && data.totals.tracked === 0 && <p className="note">Posts are published but the numbers have not been fetched yet. Press Refresh numbers.</p>}
 
           <div className="tablewrap">

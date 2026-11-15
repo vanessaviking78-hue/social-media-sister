@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
-// FREEHOUSE SALES DASHBOARD. Vanessa's own page at /freehousesales: up to 4 commission only sales partners selling Freehouse, the leads each one
+// FREEHOLD SALES DASHBOARD. Vanessa's own page at /freehousesales: up to 4 commission only sales partners selling Freehold, the leads each one
 // brings in, where every lead is, and the 20% commission earned and paid. Everything here needs the dashboard password.
 
 const router: IRouter = Router();

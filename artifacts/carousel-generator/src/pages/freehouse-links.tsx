@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 
-// cybersuite.com/freehouselinks : the Freehouse Socials links dashboard. One tracking link per person (rob, isaac, vanessa, and any she adds),
-// with opens, people who started the form, and finished entries. Black and yellow, same as the Freehouse home.
+// cybersuite.com/freehouselinks : the Freehold Socials links dashboard. One tracking link per person (rob, isaac, vanessa, and any she adds),
+// with opens, people who started the form, and finished entries. Black and yellow, same as the Freehold home.
 
 const BLUE = "#00e5ff";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -58,7 +58,7 @@ export default function FreehouseLinks() {
   }, []);
 
   useEffect(() => {
-    document.title = "Freehouse links";
+    document.title = "Freehold links";
     load();
     const t = setInterval(load, 30000);
     return () => clearInterval(t);
@@ -123,10 +123,10 @@ export default function FreehouseLinks() {
         @media (max-width: 700px) { .hl td, .hl th { padding: 10px 6px; } .hl td.num { font-size: 22px; } .hl td.who { font-size: 19px; } }
       `}</style>
       <div className="top">
-        <Link href="/freehouse">Back to Freehouse</Link>
+        <Link href="/freehouse">Back to Freehold</Link>
         <button onClick={load}>Refresh</button>
       </div>
-      <h1>Freehouse links</h1>
+      <h1>Freehold links</h1>
       <div className="sub">One link each. Opens count each person once per link. Started means they typed into the form. Entries are finished requests for a free trial.</div>
       {err && <div className="err">{err}</div>}
       <div className="stats">

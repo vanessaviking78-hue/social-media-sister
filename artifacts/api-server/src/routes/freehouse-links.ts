@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 
-// Freehouse tracking links. Each person promoting Freehouse gets a link ending ?ref=name. The free sample page reports when the link is
+// Freehold tracking links. Each person promoting Freehold gets a link ending ?ref=name. The free sample page reports when the link is
 // opened ("open") and when the visitor first types into the form ("start"). Entries come from the tenfree_requests table, where the
 // intake saves the ref inside answers. The dashboard at /freehouselinks reads the totals from here.
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-// /freehousesales : the 4 commission only Freehouse sales partners, every lead they log, where each one is, and the 20% commission.
+// /freehousesales : the 4 commission only Freehold sales partners, every lead they log, where each one is, and the 20% commission.
 // Commission is 20% of the first 3 months' fee at the price agreed (£49 a month, no discount).
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -122,7 +122,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-white text-black p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-4 mb-2">
-        <h1 className="text-3xl font-black uppercase px-3 py-1" style={{ background: YEL }}>Freehouse Socials Sales</h1>
+        <h1 className="text-3xl font-black uppercase px-3 py-1" style={{ background: YEL }}>Freehold Socials Sales</h1>
       </div>
       <p className="text-neutral-600 mb-3">Every lead, every stage and every pound of commission, per partner.</p>
       <div className="flex flex-wrap gap-2 mb-6 text-sm">
@@ -316,7 +316,7 @@ export default function FreehouseSalesGate() {
   return (
     <div className="min-h-screen bg-white text-black flex items-center justify-center p-6">
       <form onSubmit={submit} className="w-full max-w-sm flex flex-col gap-4 border-2 border-black p-6">
-        <h1 className="text-3xl font-black uppercase px-3 py-1 self-start" style={{ background: YEL }}>Freehouse Socials Sales</h1>
+        <h1 className="text-3xl font-black uppercase px-3 py-1 self-start" style={{ background: YEL }}>Freehold Socials Sales</h1>
         <label className="flex flex-col gap-1 text-sm text-neutral-600" htmlFor="freehouse-pw">
           Password
           <input id="freehouse-pw" type="password" autoFocus className="border-2 border-black p-2 bg-white text-black" value={pw} onChange={(e) => { setPw(e.target.value); setErr(""); }} />

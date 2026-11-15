@@ -12,7 +12,7 @@ import { usePresets } from "@/lib/use-presets";
 import { POST_TIME } from "@/lib/schedule";
 import { drawFreehouseSlide, FREEHOUSE_BLUE, type FreehouseStyle, type SlideKind, type SlideLook } from "@/lib/freehouse-render";
 
-// cybersuite.com/freehouseposts : the Freehouse Socials tool, for the Freehouse Socials page and every pub or bar client.
+// cybersuite.com/freehouseposts : the Freehold Socials tool, for the Freehold Socials page and every pub or bar client.
 // One layout only: a full bleed photo with the writing on a gradient, in a text box or on a block.
 // Every post is a 3 slide carousel: the hook, the body, then a strong and cheeky closing line.
 
@@ -78,7 +78,7 @@ function loadBitmap(file: File): Promise<ImageBitmap> {
 }
 
 export default function FreehousePage() {
-  const [clientName, setClientName] = useState("Freehouse Socials");
+  const [clientName, setClientName] = useState("Freehold Socials");
   const [handle, setHandle] = useState("");
   const [logo, setLogo] = useState<ImageBitmap | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -91,7 +91,7 @@ export default function FreehousePage() {
   const logoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { injectSuiteFontCss(); }, []);
-  // The signed in site flips every colour to build its white theme, which turns blue grey. Freehouse Socials is drawn in true colours, so switch the flip off here (same switch the hub uses).
+  // The signed in site flips every colour to build its white theme, which turns blue grey. Freehold Socials is drawn in true colours, so switch the flip off here (same switch the hub uses).
   useEffect(() => {
     document.documentElement.classList.add("cs-hub");
     return () => document.documentElement.classList.remove("cs-hub");
@@ -169,13 +169,13 @@ export default function FreehousePage() {
     saveAs(await zip.generateAsync({ type: "blob" }), `${zipName}.zip`);
   }
 
-  // The Freehouse Socials client preset is the page the posts go out on.
+  // The Freehold Socials client preset is the page the posts go out on.
   const { presets } = usePresets();
-  const freehousePreset = presets.find((x) => /freehouse/i.test(x.name));
+  const freehousePreset = presets.find((x) => /free(house|hold)/i.test(x.name));
 
-  /** Draws the three slides, uploads them and queues the post for the Freehouse page at the time she picked. */
+  /** Draws the three slides, uploads them and queues the post for the Freehold page at the time she picked. */
   async function scheduleToFreehouse(p: Post, whenLocal: string): Promise<void> {
-    if (!freehousePreset) throw new Error("I cannot find the Freehouse Socials client. Add a client called Freehouse Socials first.");
+    if (!freehousePreset) throw new Error("I cannot find the Freehold Socials client. Add a client called Freehold Socials first.");
     if (!photos.length) throw new Error("Add your photos first so the slides are not blank.");
     if (!p.caption.trim()) throw new Error("Press Write it first so the post has a caption.");
     const when = new Date(whenLocal);
@@ -199,7 +199,7 @@ export default function FreehousePage() {
       body: JSON.stringify({
         presetId: freehousePreset.id,
         postType: "carousel",
-        content: { imageUrls, caption: p.caption, title: p.texts[0].slice(0, 80), platforms: ["instagram", "facebook"], sourceTool: "Freehouse Socials" },
+        content: { imageUrls, caption: p.caption, title: p.texts[0].slice(0, 80), platforms: ["instagram", "facebook"], sourceTool: "Freehold Socials" },
         scheduledAt: when.toISOString(),
       }),
     });
@@ -217,12 +217,12 @@ export default function FreehousePage() {
       <div className="hm-wrap">
         <div className="hm-bar">
           <div>
-            <span className="hm-tag">Freehouse Socials</span>
+            <span className="hm-tag">Freehold Socials</span>
             <h1 style={{ fontSize: 34, marginTop: 8 }}>Make a 3 slide post</h1>
             <div className="hm-small">Hook, body, then a closing line that gets them through the door. One photo layout, three ways to dress it.</div>
           </div>
           <div className="hm-row">
-            <Link href="/freehouse"><button className="b">Back to Freehouse Socials</button></Link>
+            <Link href="/freehouse"><button className="b">Back to Freehold Socials</button></Link>
             <button className="b go" disabled={!posts.length} onClick={() => downloadPosts(posts, `freehouse-${clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "posts"}`)}>Download all {posts.length ? `(${posts.length})` : ""}</button>
           </div>
         </div>
@@ -377,7 +377,7 @@ function PostCard(props: {
       await props.onSchedule(when);
       const label = new Date(when).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
       setScheduledFor(label);
-      toast.success(`Scheduled to Freehouse Socials for ${label}.`);
+      toast.success(`Scheduled to Freehold Socials for ${label}.`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Scheduling failed. Try again.");
     } finally {
@@ -453,7 +453,7 @@ function PostCard(props: {
         <textarea rows={7} value={post.caption} onChange={(e) => onPatch((p) => ({ ...p, caption: noDashes(e.target.value) }))} placeholder="Press Write it, or write your own here." />
         <div className="hm-row" style={{ marginTop: 10, alignItems: "center" }}>
           <input type="datetime-local" value={when} onChange={(e) => { setWhen(e.target.value); setScheduledFor(""); }} style={{ width: "auto" }} aria-label="When to post" />
-          <button className="b go" disabled={scheduling} onClick={scheduleIt}>{scheduling ? "Scheduling..." : "Schedule to Freehouse Socials"}</button>
+          <button className="b go" disabled={scheduling} onClick={scheduleIt}>{scheduling ? "Scheduling..." : "Schedule to Freehold Socials"}</button>
         </div>
         {scheduledFor && <div className="hm-small" style={{ marginTop: 6 }}>Scheduled for {scheduledFor}. Change the time and press again to add another.</div>}
       </div>
