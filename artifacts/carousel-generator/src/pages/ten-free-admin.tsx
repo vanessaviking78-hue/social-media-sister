@@ -930,7 +930,7 @@ export function Builder({ id }: { id: string }) {
                   const shown = pickedHookPayload([h.code], chosenT.length ? chosenT : req.treatments, req.area.split(",")[0].trim(), req.clinicianName)[0]?.text ?? h.text;
                   return (
                     <label key={h.code} className={`flex gap-3 items-start text-sm p-2 rounded cursor-pointer ${on ? "bg-pink-50" : ""}`}>
-                      <input type="checkbox" checked={on} disabled={!on && pickedHooks.length >= nH} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : [...p, h.code]))} />
+                      <input type="checkbox" checked={on} onChange={() => setPickedHooks((p) => (p.includes(h.code) ? p.filter((x) => x !== h.code) : p.length >= nH ? [...p.slice(0, nH - 1), h.code] : [...p, h.code]))} />
                       <span>{shown}{h.season && <span className="ml-2 text-xs text-muted-foreground">({h.season})</span>}</span>
                     </label>
                   );
