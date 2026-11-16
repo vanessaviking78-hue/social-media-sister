@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { HOOKS, hookFits, type Hook } from "@/lib/hook-bank";
 import { shrinkPhoto } from "@/lib/shrink-photo";
 
-// Vanessa's side of the £69 club (10 places) and the £275 club (7 places): members, their private links, the monthly prep, and the approval queue.
+// Vanessa's side of the £69 club (5 places) and the £275 club (7 places): members, their private links, the monthly prep, and the approval queue.
 // Nothing reaches a member's portal until she presses Approve here.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -24,7 +24,7 @@ type Member = {
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
-const LIMITS = { "69": 10, "222": 7 } as const;
+const LIMITS = { "69": 5, "222": 7 } as const;
 // Two of the places are the About me posts she chooses in the builder, so the rest are picked here.
 const PICK_CAP = { "69": 4, "222": 14 } as const;
 const TOOLS: { id: string; name: string }[] = [

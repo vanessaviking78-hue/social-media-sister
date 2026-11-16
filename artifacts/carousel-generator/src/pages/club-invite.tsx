@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
 // cybersuite.com/youreinvited: the invitation Vanessa hands to the people she wants in the £69 club.
-// The price is deliberately never shown here. Accepting makes a pending member, who lands on her private portal link to fill in the details form.
+// The £69 price is shown up front so people trust it before they sign. Accepting makes a pending member, who lands on her private portal link to fill in the details form.
 
 const PINK = "#ff1f8e";
 const INK = "#111";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const API = `${BASE}/api`;
 const KEY = "sms-club-invite-token";
+const MONZO_PAY_URL = "https://monzo.com/pay/r/the-cyber-suite_EaAvaKNRRDB14P";
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700;900&display=swap');
@@ -124,6 +125,13 @@ export default function ClubInvite() {
         )}
         {loadErr && <div className="ci-err">I could not check the places just now. You can still say yes below.</div>}
 
+        <div className="ci-places" style={{ marginTop: 14 }}>
+          <b><span>£69</span> a month</b>
+          <span className="ci-sm" style={{ margin: 0 }}>Cancel any time. No contract.</span>
+        </div>
+        <a className="ci-btn" href={MONZO_PAY_URL} target="_blank" rel="noopener noreferrer" style={{ marginTop: 12, display: "block", textAlign: "center" }}>Pay the first month</a>
+        <p className="ci-sm" style={{ marginTop: 8 }}>Please use your full name as the payment reference so I know it is you.</p>
+
         <h2>What lands in your portal every month</h2>
         <ul className="ci-list">
           <li><b>12 posts</b> written and designed for your clinic, in your voice</li>
@@ -152,7 +160,7 @@ export default function ClubInvite() {
             <h2>Say yes</h2>
             <p>This club is a little bit special, and so is the rate I am offering you. The one thing I ask in return is below.</p>
             <div className="ci-promise">
-              <p style={{ marginTop: 6 }}>I am joining Vanessa's monthly content club at a special introductory rate. In return, I promise to:</p>
+              <p style={{ marginTop: 6 }}>I am joining Vanessa's monthly content club at the special introductory rate of £69 a month. In return, I promise to:</p>
               <ol>
                 <li>Keep the price of the club between me and Vanessa.</li>
                 <li>Keep any message or link that shows the price to myself, so no forwarding, screenshots or posting.</li>
@@ -179,7 +187,7 @@ export default function ClubInvite() {
 
             {err && <div className="ci-err">{err}</div>}
             <button className="ci-btn" type="submit" disabled={busy || !agreed}>{busy ? "Saving your place..." : "Accept my invitation"}</button>
-            <p className="ci-sm" style={{ marginTop: 14 }}>Next you will see how to pay for your first month, then fill in the questionnaire. Your place is held while I check everything over, and I will message you on WhatsApp once you are in.</p>
+            <p className="ci-sm" style={{ marginTop: 14 }}>Next you will see how to pay your first month (£69), then fill in the questionnaire. Your place is held while I check everything over, and I will message you on WhatsApp once you are in.</p>
           </form>
         ) : (
           <>
