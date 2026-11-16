@@ -427,8 +427,9 @@ export function Builder({ id }: { id: string }) {
           continue;
         }
         if (slot.source === "hook") {
-          const text = hookTexts[hi] || "";
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
+          // Fill the hook with the same treatment the slides are written about, so the cover and the slides always match.
+          const text = (pickedHooks[hi] ? pickedHookPayload([pickedHooks[hi]], [tr.name], req.area.split(",")[0].trim(), req.clinicianName)[0]?.text : "") || hookTexts[hi] || "";
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
           const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
           const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
@@ -1103,6 +1104,24 @@ export function Builder({ id }: { id: string }) {
                       ))}
                     </div>
                   )}
+                  {(() => {
+                    const trName = U_TREATMENTS.find((t) => t.id === it.uniArgs!.treatmentId)?.name || [...chosenT, ...req.treatments][0] || "";
+                    const area1 = req.area.split(",")[0].trim();
+                    const opts = HOOK_BANK.filter((h: Hook) => (h.theme === "Treatment" || h.theme === "Emotional" || h.theme === "Engagement") && hookFits(h, [trName])).slice(0, 80);
+                    return (
+                      <div className="space-y-1">
+                        <div className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Cover hook</span>
+                          <select className="border rounded p-1 flex-1 min-w-[12rem]" value="" onChange={(e) => { const h = HOOK_BANK.find((x: Hook) => x.code === e.target.value); if (h) upd({ headline: pickedHookPayload([h.code], [trName], area1, req.clinicianName)[0]?.text || h.text }); }}>
+                            <option value="">Pick a different hook{trName ? ` (filled with ${trName})` : ""}</option>
+                            {opts.map((h: Hook) => <option key={h.code} value={h.code}>{pickedHookPayload([h.code], [trName], area1, req.clinicianName)[0]?.text || h.text}</option>)}
+                          </select>
+                        </div>
+                        <div className={row}><span className="w-56 shrink-0 text-sm">Or type your own</span>
+                          <input className="border rounded p-1 flex-1 min-w-[12rem]" defaultValue={it.uniArgs!.headline} key={it.uniArgs!.headline} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== it.uniArgs!.headline) upd({ headline: v }); }} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Headline and writing position</span>
                     <input type="range" min={-600} max={120} step={10} className="flex-1" value={it.uniArgs.blockY ?? 0} onChange={(e) => upd({ blockY: Number(e.target.value) })} /></label>
                   <label className={row}><span className="w-56 shrink-0 inline-block border-2 border-current rounded-md px-2 py-1 text-sm font-extrabold uppercase tracking-wide">Cover text position</span>
