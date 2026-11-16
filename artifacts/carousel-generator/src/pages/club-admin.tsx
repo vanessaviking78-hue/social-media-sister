@@ -316,7 +316,7 @@ function ExtraForm({ month, kind, name, hint }: { month: string; kind: string; n
 function WelcomeEditor() {
   const [month, setMonth] = useState(thisMonth());
   return (
-    <div className="border-2 border-black rounded-lg p-4 space-y-3">
+    <div id="welcome" className="border-2 border-black rounded-lg p-4 space-y-3 scroll-mt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-bold uppercase">The welcome page, the personal bit</h2>
         <label className="text-sm flex items-center gap-2">Month <input type="month" className="border rounded px-2 py-1" value={month} onChange={(e) => setMonth(e.target.value || thisMonth())} /></label>
@@ -343,6 +343,8 @@ export default function ClubAdmin() {
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+  // Opened from the CLUB tab's "Welcome Page" card: jump straight to that section once the page has drawn.
+  useEffect(() => { if (window.location.hash === "#welcome") setTimeout(() => document.getElementById("welcome")?.scrollIntoView(), 400); }, []);
 
   const add = async () => {
     const r = await fetch(`${API}/club/members`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify({ name, email, plan, billingDay: Number(day), overrideLimit: over }) });

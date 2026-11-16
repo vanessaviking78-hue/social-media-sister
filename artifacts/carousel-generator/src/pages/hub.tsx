@@ -1042,21 +1042,51 @@ border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 },
 {
+href: "/club-build",
+group: "club",
+icon: Wand2,
+name: "Club Build",
+description: "Pick a member who has sent their form, see everything they gave you, build their month and approve it.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
 href: "/club-admin",
-group: "admin",
+group: "club",
 icon: Crown,
-name: "Club Admin",
-description: "The £69 club (5 places) and £275 club (7 places). Add members, build each month, edit the welcome page and approve everything before it reaches a portal.",
+name: "Members and Billing",
+description: "Add a member, copy their link, change a billing day, cancel or remove someone. £69 club has 5 places, £275 club has 7.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
+href: "/club-admin#welcome",
+group: "club",
+icon: Gem,
+name: "Welcome Page",
+description: "The personal bit every member sees on their front page each month: Rants, Recipes and Reading List.",
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 },
 {
 href: "/club-links",
-group: "admin",
-icon: Gem,
-name: "Club",
+group: "club",
+icon: Users,
+name: "Member Portals",
 description: "The club as members see it. Open any member's portal or copy their private link to send them.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
+href: "/youreinvited",
+group: "club",
+icon: Gift,
+name: "Invitation Page",
+description: "The £69 club invitation people sign and pay on. Open it to check it, or copy the link to send.",
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
@@ -1156,7 +1186,9 @@ const [cqCount, setCqCount] = useState(0);
 const [inboxCount, setInboxCount] = useState(0);
 const [freeWaiting, setFreeWaiting] = useState(0);
 const [creditLow, setCreditLow] = useState(false);
-const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients">("today");
+const [query, setQuery] = useState("");
+const [showTucked, setShowTucked] = useState(false);
+const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients" | "club">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
 if (!pw) return;
@@ -1293,14 +1325,15 @@ Your Google AI Studio credits look empty, so Studio portraits are failing. Top u
 <p className="mb-10" style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "clamp(2rem,5vw,3.6rem)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.02em", color: "#000" }}>Pick a tool. <span className="" style={{ color: "#ff1f8e", display: "inline-block", transform: "rotate(-2deg)" }}>Make it loud.</span></p>
 
 {/* Group tabs */}
-<div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-8">
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
 {[
 { key: "today", label: "Today & Clients" },
 { key: "admin", label: "Admin" },
 { key: "content", label: "Content Creation", icon: Wand2 },
 { key: "carousel", label: "Carousel" },
 { key: "clients", label: "Clients", icon: Users },
-].map((tab, ti) => {
+{ key: "club", label: "Club", icon: Crown },
+].map((tab) => {
 const on = activeGroup === tab.key;
 return (
 <button
@@ -1308,7 +1341,7 @@ key={tab.key}
 type="button"
 onClick={() => setActiveGroup(tab.key as typeof activeGroup)}
 className="p-5 text-left transition-all duration-200 hover:-translate-y-1"
-style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", border: "4px solid #000", borderRadius: 4, boxShadow: on ? "6px 6px 0 #000" : "6px 6px 0 #ff1f8e", fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", fontSize: "1.2rem", transform: `rotate(${ti % 2 ? 1 : -1}deg)` }}
+style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", border: "4px solid #000", borderRadius: 4, boxShadow: on ? "6px 6px 0 #000" : "6px 6px 0 #ff1f8e", fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", fontSize: "1.2rem", }}
 >
 <span className="flex items-center gap-2">
 {"icon" in tab && tab.icon ? <tab.icon className="w-5 h-5 shrink-0" /> : null}
@@ -1319,10 +1352,39 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
 })}
 </div>
 
+{/* Search */}
+<input
+  value={query}
+  onChange={(e) => setQuery(e.target.value)}
+  placeholder="Search every tool..."
+  className="w-full mb-8 px-4 py-3 outline-none"
+  style={{ border: "4px solid #000", borderRadius: 4, fontFamily: "'League Spartan', sans-serif", fontWeight: 800, fontSize: "1.1rem", textTransform: "uppercase" }}
+/>
+
 {/* Filtered grid */}
-{activeGroup === "clients" ? <ClientsGrid /> : <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup && !HIDDEN_TOOLS.has(tool.name)).map((tool, i) => <ToolCard key={tool.href} idx={i} tool={tool} badge={tool.href === "/inbox" ? inboxCount : tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0} />)}
-</div>}
+{(() => {
+  const q = query.trim().toLowerCase();
+  const badgeFor = (tool: Tool) => tool.href === "/inbox" ? inboxCount : tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : tool.href === "/10free-admin" || tool.href === "/10free-tracker" ? freeWaiting : 0;
+  if (q) {
+    const found = TOOLS.filter((t) => !HIDDEN_TOOLS.has(t.name) && (t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q)));
+    return found.length ? <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">{found.map((tool, i) => <ToolCard key={tool.href + tool.name} idx={i} tool={tool} badge={badgeFor(tool)} />)}</div> : <p style={{ fontWeight: 800 }}>Nothing matches that.</p>;
+  }
+  if (activeGroup === "clients") return <ClientsGrid />;
+  const inGroup = TOOLS.filter((tool) => tool.group === activeGroup);
+  const live = inGroup.filter((tool) => !HIDDEN_TOOLS.has(tool.name));
+  const tucked = inGroup.filter((tool) => HIDDEN_TOOLS.has(tool.name));
+  return (
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">{live.map((tool, i) => <ToolCard key={tool.href + tool.name} idx={i} tool={tool} badge={badgeFor(tool)} />)}</div>
+      {tucked.length > 0 && (
+        <div className="mt-10">
+          <button type="button" onClick={() => setShowTucked((v) => !v)} className="px-4 py-2" style={{ border: "3px solid #000", borderRadius: 4, fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase" }}>{showTucked ? "Hide" : "Show"} tucked away ({tucked.length})</button>
+          {showTucked && <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mt-5">{tucked.map((tool, i) => <ToolCard key={tool.href + tool.name} idx={i} tool={tool} badge={badgeFor(tool)} />)}</div>}
+        </div>
+      )}
+    </>
+  );
+})()}
 </main>
 
 <footer className="mt-8 px-8 py-5 flex justify-center gap-6 text-xs" style={{ color: "#000", borderTop: "4px solid #ff1f8e" }}>
@@ -1339,11 +1401,11 @@ type Tool = typeof TOOLS[number];
 
 function ToolCard({ tool, badge = 0, idx = 0 }: { tool: Tool; badge?: number; idx?: number }) {
 const Icon = tool.icon;
-const dark = (Math.floor(idx / 4) + idx) % 2 === 0;
+const dark = idx % 2 === 0;
 const bg = dark ? "#000" : "#ff1f8e";
 const fg = dark ? "#ff1f8e" : "#000";
 const cardBody = (
-<div className="group relative p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 h-full" style={{ background: bg, color: fg, border: "4px solid #000", borderRadius: 4, boxShadow: `6px 6px 0 ${dark ? "#ff1f8e" : "#000"}`, transform: `rotate(${idx % 3 === 0 ? -0.8 : idx % 3 === 1 ? 0.6 : 0}deg)` }}>
+<div className="group relative p-5 cursor-pointer transition-all duration-200 hover:-translate-y-1 h-full" style={{ background: bg, color: fg, border: "4px solid #000", borderRadius: 4, boxShadow: `6px 6px 0 ${dark ? "#ff1f8e" : "#000"}`, }}>
 {badge > 0 && (
 <span className="absolute -top-3 -right-3 z-10 min-w-[26px] h-[26px] px-1.5 flex items-center justify-center rounded-full text-xs font-black" style={{ background: "#fff", color: "#000", border: "3px solid #000" }}>
 {badge > 99 ? "99+" : badge}
@@ -1353,7 +1415,7 @@ const cardBody = (
 <Icon className="w-8 h-8" strokeWidth={2.5} />
 </div>
 <h2 style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "1.5rem", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.01em", color: fg, marginBottom: 6 }}>{tool.name}</h2>
-<p style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.15, color: dark ? "#fff" : "#000" }}>{tool.description}</p>
+<p style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 600, fontSize: "0.9rem", lineHeight: 1.15, color: dark ? "#fff" : "#000", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{tool.description}</p>
 </div>
 );
 if ((tool as any).external) {

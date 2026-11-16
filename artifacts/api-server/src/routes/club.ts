@@ -646,7 +646,7 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
         const { date, month } = nextBilling(m.billing_day);
         return {
           id: m.id, name: m.name, email: m.email, phone: m.phone ?? "", agreedName: m.agreed_name ?? "", agreedAt: m.agreed_at ?? null, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, canBuild: canBuild(m), details: m.details,
-          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
+          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], logoUrl: m.logo_url ?? "", clinicPhotoUrl: m.clinic_photo_url ?? "", refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,

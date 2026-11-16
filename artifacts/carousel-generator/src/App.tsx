@@ -194,6 +194,7 @@ import TenFreeAdmin from "@/pages/ten-free-admin";
 import ClubAdmin from "@/pages/club-admin";
 import ClubLinks from "@/pages/club-links";
 import ClubBuilder from "@/pages/club-builder";
+import ClubBuild from "@/pages/club-build";
 import ClubPortal from "@/pages/club-portal";
 import ClubInvite from "@/pages/club-invite";
 import TenFreeTracker from "@/pages/ten-free-tracker";
@@ -230,6 +231,7 @@ function ProtectedRouter() {
       <Route path="/club-admin" component={ClubAdmin} />
       <Route path="/club-links" component={ClubLinks} />
       <Route path="/club-builder" component={ClubBuilder} />
+      <Route path="/club-build" component={ClubBuild} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
