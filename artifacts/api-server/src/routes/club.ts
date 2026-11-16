@@ -842,6 +842,26 @@ router.put("/club/members/:id/welcome-photo", requireAuth, upload.single("image"
   }
 });
 
+// Vanessa adds photos of a member herself, for someone who has not uploaded any. They join the member's own photos (up to 20 in all).
+router.post("/club/members/:id/photos", requireAuth, upload.array("images", 20), async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as Member | undefined;
+    if (!m) { res.status(404).json({ error: "Member not found" }); return; }
+    const files = ((req.files ?? []) as Express.Multer.File[]).filter((f) => IMAGE_MIMES.includes(f.mimetype));
+    if (!files.length) { res.status(400).json({ error: "Please choose JPG, PNG or WebP images" }); return; }
+    const room = Math.max(0, MAX_PHOTOS - (m.photo_urls?.length ?? 0));
+    if (!room) { res.status(400).json({ error: `She already has ${MAX_PHOTOS} photos, remove one first` }); return; }
+    const added: string[] = [];
+    for (const f of files.slice(0, room)) added.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
+    const photoUrls = [...(m.photo_urls ?? []), ...added];
+    await db.execute(sql`UPDATE club_members SET photo_urls = ${JSON.stringify(photoUrls)}::jsonb WHERE id = ${m.id}`);
+    res.json({ ok: true, added: added.length, total: photoUrls.length, skipped: files.length - added.length });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save the photos" });
+  }
+});
+
 // Makes the four studio photos for a month on its own, with the reference photo chosen for that member.
 router.post("/club/months/:id/studio", requireAuth, async (req: Request, res: Response) => {
   try {

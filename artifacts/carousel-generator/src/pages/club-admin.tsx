@@ -267,6 +267,36 @@ export function WelcomePhoto({ member, reload }: { member: Member; reload: () =>
   );
 }
 
+// Photos of her that Vanessa adds herself, for a member who has not uploaded any. They are used for her studio photos and her posts.
+function MemberPhotos({ member, reload }: { member: Member; reload: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const send = async (files: File[]) => {
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      for (const f of files.slice(0, 20)) fd.append("images", await shrinkPhoto(f, 1600, 0.9));
+      const r = await fetch(`${API}/club/members/${member.id}/photos`, { method: "POST", headers: authOnly(), body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Could not save the photos");
+      toast.success(`${j.added} photo${j.added === 1 ? "" : "s"} added${j.skipped ? `, ${j.skipped} left out (20 is the most)` : ""}`);
+      reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save the photos");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const urls = member.photoUrls ?? [];
+  return (
+    <div className="space-y-2 text-sm border rounded-lg p-2">
+      <div className="font-semibold">Photos of {member.name.split(" ")[0]} ({urls.length} of 20){urls.length === 0 ? " - she has not uploaded any" : ""}</div>
+      <input type="file" accept="image/*" multiple disabled={busy} onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) void send(fs); }} />
+      {busy && <div className="text-xs text-muted-foreground">Uploading...</div>}
+      {urls.length > 0 && <div className="flex gap-2 overflow-x-auto">{urls.map((u) => <img key={u} src={u} className="h-16 w-16 rounded object-cover shrink-0" />)}</div>}
+    </div>
+  );
+}
+
 function ExtraForm({ month, kind, name, hint }: { month: string; kind: string; name: string; hint: string }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -415,6 +445,7 @@ export default function ClubAdmin() {
                   </div>
                 </div>
                 <WelcomePhoto member={m} reload={load} />
+                <MemberPhotos member={m} reload={load} />
                 {m.months.filter((x) => x.status !== "pending_approval").slice(0, 3).map((x) => <MonthPanel key={x.id} member={m} month={x} reload={load} />)}
                 {m.months.length === 0 && (m.canBuild ?? m.detailsDone) && (
                   <button className="px-3 py-1 rounded border text-sm" onClick={async () => { await fetch(`${API}/club/members/${m.id}/prepare`, { method: "POST", headers: jsonHeaders(), body: "{}" }); toast.success("Started. Refresh in a few minutes."); load(); }}>Start their first month now</button>
