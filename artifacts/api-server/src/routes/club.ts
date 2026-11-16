@@ -677,6 +677,22 @@ router.patch("/club/members/:id", requireAuth, async (req: Request, res: Respons
   }
 });
 
+// Remove a cancelled member for good, with all their months. Active or pending members must be cancelled first.
+router.delete("/club/members/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const id = String(req.params.id);
+    const m = (await db.execute(sql`SELECT id, status FROM club_members WHERE id = ${id}`)).rows[0] as unknown as { id: string; status: string } | undefined;
+    if (!m) { res.status(404).json({ error: "Member not found" }); return; }
+    if (m.status !== "cancelled") { res.status(409).json({ error: "Cancel them first, then you can remove them for good" }); return; }
+    await db.execute(sql`DELETE FROM club_months WHERE member_id = ${id}`);
+    await db.execute(sql`DELETE FROM club_members WHERE id = ${id}`);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not remove" });
+  }
+});
+
 // Start a month now (reel hooks, scripts and AI photos), without waiting for the five day mark.
 router.put("/club/members/:id/reference", requireAuth, async (req: Request, res: Response) => {
   try {

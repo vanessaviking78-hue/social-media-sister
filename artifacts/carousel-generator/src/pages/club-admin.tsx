@@ -406,7 +406,10 @@ export default function ClubAdmin() {
                     {m.status === "pending" && <button className="px-3 py-1 rounded bg-pink-500 text-white" onClick={() => { patch(m.id, { status: "active", billingDay: Math.min(28, new Date().getDate()) }); toast.success(`${m.name} approved. Her billing day is today's date, change it if you like.`); }}>Approve</button>}
                     {m.status === "pending" || m.status === "active"
                       ? <button className="px-3 py-1 rounded border text-red-600" onClick={() => confirm(`${m.status === "pending" ? "Decline" : "Cancel"} ${m.name}? Their link closes straight away.`) && patch(m.id, { status: "cancelled" })}>{m.status === "pending" ? "Decline" : "Cancel"}</button>
-                      : <button className="px-3 py-1 rounded border" onClick={() => patch(m.id, { status: "active" })}>Reactivate</button>}
+                      : <>
+                          <button className="px-3 py-1 rounded border" onClick={() => patch(m.id, { status: "active" })}>Reactivate</button>
+                          <button className="px-3 py-1 rounded border text-red-600" onClick={async () => { if (!confirm(`Remove ${m.name} for good? Their link, photos and every month of content are deleted and this cannot be undone.`)) return; const r = await fetch(`${API}/club/members/${m.id}`, { method: "DELETE", headers: jsonHeaders() }); if (r.ok) { toast.success(`${m.name} removed`); load(); } else toast.error("Could not remove them"); }}>Remove for good</button>
+                        </>}
                   </div>
                 </div>
                 <WelcomePhoto member={m} reload={load} />
