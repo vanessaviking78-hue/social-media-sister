@@ -24,7 +24,7 @@ type Member = {
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
-const LIMITS = { "69": 10, "222": 7 } as const;
+const LIMITS = { "69": 5, "222": 7 } as const;
 // Two of the places are the About me posts she chooses in the builder, so the rest are picked here.
 const PICK_CAP = { "69": 4, "222": 14 } as const;
 const TOOLS: { id: string; name: string }[] = [
