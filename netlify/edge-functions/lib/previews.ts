@@ -200,8 +200,8 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
    "/club",
    "/club/*"
   ],
-  "title": "Your club portal",
-  "desc": "Your monthly content lives here."
+  "title": "Your month's content is here",
+  "desc": "Tap your link to see it, pick your posts and download."
  },
  {
   "id": "youreinvited",
