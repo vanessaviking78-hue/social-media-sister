@@ -81,12 +81,16 @@ export default function ClubBuild() {
     }
   };
 
+  // Ticked-off months (kept on this device). Approved months count as done automatically, and a new month is a new id so it starts fresh.
+  const [done, setDone] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("club-build-done") || "[]"); } catch { return []; } });
+  const toggleDone = (id: string) => setDone((d) => { const n = d.includes(id) ? d.filter((i) => i !== id) : [...d, id]; try { localStorage.setItem("club-build-done", JSON.stringify(n)); } catch {} return n; });
   const latest = (m: Member) => [...m.months].sort((a, b) => b.month.localeCompare(a.month))[0];
   const rows = members
     .filter((m) => showCancelled || m.status === "active" || m.status === "pending")
     .map((m) => ({ m, x: latest(m) }))
     .map((r) => ({ ...r, s: stage(r.m, r.x) }))
-    .sort((a, b) => a.s.rank - b.s.rank || a.m.name.localeCompare(b.m.name));
+    .map((r) => ({ ...r, isDone: !!r.x && (r.s.key === "live" || done.includes(r.x.id)) }))
+    .sort((a, b) => Number(a.isDone) - Number(b.isDone) || a.s.rank - b.s.rank || a.m.name.localeCompare(b.m.name));
 
   const build = async (m: Member, x?: Month) => {
     let month = x;
@@ -116,17 +120,19 @@ export default function ClubBuild() {
         {!loading && rows.length === 0 && <p className="text-sm">No members yet.</p>}
 
         <div className="space-y-3">
-          {rows.map(({ m, x, s }) => {
+          {rows.map(({ m, x, s, isDone }) => {
             const ready = m.canBuild ?? m.detailsDone;
             return (
-              <div key={m.id} className={`border-2 rounded-lg p-4 space-y-2 ${s.rank === 0 ? "border-pink-500" : ""} ${m.status === "cancelled" ? "opacity-60" : ""}`}>
+              <div key={m.id} className={`border-2 rounded-lg p-4 space-y-2 ${s.rank === 0 && !isDone ? "border-pink-500" : ""} ${isDone ? "opacity-60" : ""} ${m.status === "cancelled" ? "opacity-60" : ""}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="text-xl font-extrabold uppercase">{m.name} <span className="text-xs text-pink-500">{m.plan === "69" ? "£69 club" : "£275 club"}</span></div>
-                    <div className="text-sm"><span className="uppercase font-bold text-pink-500">{s.label}</span>{x ? ` · ${monthName(x.month)}` : ""}</div>
+                    <div className={`text-xl font-extrabold uppercase ${isDone ? "line-through decoration-2" : ""}`}>{m.name} <span className="text-xs text-pink-500">{m.plan === "69" ? "£69 club" : "£275 club"}</span></div>
+                    <div className="text-sm"><span className="uppercase font-bold text-pink-500">{isDone ? "Done" : s.label}</span>{x ? ` · ${monthName(x.month)}` : ""}</div>
                     {x && <div className="text-xs text-gray-600">Treatments: {(x.choices.treatments ?? []).join(", ") || "not chosen yet (starts from their favourites)"} · Posts {x.postCount} · Reels {x.reelCount} · Studio photos {x.aiUrls.length}{x.aiStatus === "working" ? " (making them now)" : ""}</div>}
+                    {(() => { const old = [...new Set(m.months.filter((o) => o !== x).flatMap((o) => o.choices.treatments ?? []))]; return old.length ? <div className="text-xs text-gray-600">Already done in earlier months: {old.join(", ")}</div> : null; })()}
                   </div>
                   <div className="flex gap-2 flex-wrap text-sm">
+                    {x && <label className="px-3 py-1.5 rounded border flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={isDone} disabled={s.key === "live"} onChange={() => toggleDone(x.id)} /> Month done</label>}
                     <button className="px-3 py-1.5 rounded border" onClick={() => setOpen(open === m.id ? "" : m.id)}>{open === m.id ? "Hide their details" : "Their details"}</button>
                     {ready && s.key !== "live" && <button disabled={!!busy} className="px-4 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={() => build(m, x)}>{!x ? "Start their month" : x.postCount ? "Open the builder" : "Build"}</button>}
                     {ready && s.key === "live" && x && <button disabled={!!busy} className="px-3 py-1.5 rounded border" onClick={() => build(m, x)}>Open the builder</button>}
