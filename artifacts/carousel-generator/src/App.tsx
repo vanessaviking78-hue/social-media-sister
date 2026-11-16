@@ -178,6 +178,8 @@ import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import SalesDashboard from "@/pages/sales-dashboard";
 import CrmPage from "@/pages/crm-page";
+import BlackFriday26 from "@/pages/blackfriday26";
+import BlackFriday26Stats from "@/pages/blackfriday26-stats";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
@@ -229,6 +231,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/crmpage" component={CrmPage} />
+      <Route path="/blackfriday26/stats" component={BlackFriday26Stats} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
       <Route path="/club-admin" component={ClubAdmin} />
       <Route path="/club-links" component={ClubLinks} />
@@ -412,6 +415,7 @@ function AppContent() {
     const [isCoffee] = useRoute("/coffee");
     const [isFreeCall] = useRoute("/freecall");
     const [isLanding] = useRoute("/landing");
+    const [isBf26] = useRoute("/blackfriday26");
     const [isDailyFive] = useRoute("/dailytasks");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
@@ -586,6 +590,9 @@ function AppContent() {
     }
     if (isLanding) {
           return <Landing />;
+    }
+    if (isBf26) {
+          return <BlackFriday26 />;
     }
     if (isDailyFive) {
           return <DailyFive />;
