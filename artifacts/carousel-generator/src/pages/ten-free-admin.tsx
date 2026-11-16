@@ -352,7 +352,17 @@ export function Builder({ id }: { id: string }) {
       };
       clientRef.current = client;
 
-      const dm = `If you are from ${req.area.split(",")[0].trim()} and want a safe caring practitioner meet me in the DMs`;
+      const area1 = req.area.split(",")[0].trim();
+      const dm = `If you are from ${area1} and want a safe caring practitioner meet me in the DMs`;
+      // Twelve different last slide lines so no two posts in a set end the same way. Treatment posts ask for a comment of the treatment name.
+      const ctaFor = (n: number, treatment?: string) => {
+        const k = ((n - 1) % 12 + 12) % 12;
+        if (treatment) {
+          const t = treatment.trim(), T = t.toUpperCase(), l = t.toLowerCase();
+          return [`Comment ${T} and I will send you the details`, `Fancy knowing more? Comment ${T} below`, `Comment ${T} and I will pop you a message`, `Thinking about ${l}? Comment ${T} and let's chat`, `Comment ${T} for more info`, `Curious about ${l}? Comment ${T} and ask me anything`, `Comment ${T} and I will tell you what to expect`, `Want the honest version? Comment ${T}`, `Comment ${T} and let's see if it suits you`, `Pop ${T} in the comments and I will come to you`, `Comment ${T} for a no pressure chat`, `Questions about ${l}? Comment ${T} and I will answer them`][k];
+        }
+        return [dm, "Message me and let's have a proper chat", "Send me a DM, I would love to hear what you are hoping for", `Based in ${area1}? Pop into my DMs and say hello`, "Save this for later and send me a message when you are ready", "Share this with someone who deserves a little treat", "Drop me a message and we will find what suits you", "Want to know more? My DMs are always open", "Come and say hello in my DMs, I do not bite", `Looking for a caring practitioner in ${area1}? Message me`, "Ask me anything in the DMs, no question is too small", "Tell me in the comments what you would like to see more of"][k];
+      };
       packFonts.body = BODY_CSS;
 
       // The personal posts, from the pack templates.
@@ -385,7 +395,7 @@ export function Builder({ id }: { id: string }) {
       }
       const finalPack = results.map((p) => {
         const preset = built.find((b) => b.post.n === p.n)?.slot.preset;
-        const withPreset = { ...(preset ? { ...p, text: { ...p.text, ...preset } } : p), cta: slidesOf(p) > 1 ? dm : p.cta };
+        const withPreset = { ...(preset ? { ...p, text: { ...p.text, ...preset } } : p), cta: slidesOf(p) > 1 ? ctaFor(p.n, (p as any).treatment?.name) : p.cta };
         return withPreset.hashtags ? withPreset : { ...withPreset, hashtags: tagsA || tagsB };
       });
 
@@ -449,7 +459,7 @@ export function Builder({ id }: { id: string }) {
           const text = (pickedHooks[hi] ? pickedHookPayload([pickedHooks[hi]], [tr.name], req.area.split(",")[0].trim(), req.clinicianName)[0]?.text : "") || hookTexts[hi] || "";
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
           const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
-          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
+          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: ctaFor(slot.n) }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           hi++;
           const canvases = renderUniversalPost(args, assets);
           out.push({ n: slot.n, label: "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
@@ -460,7 +470,7 @@ export function Builder({ id }: { id: string }) {
           const c = tcopy[ti];
           const urls = byT.get(p.treatment.id) ?? [];
           const photos = await Promise.all(urls.slice(0, 12).map((u) => loadBitmap(u).catch(() => null)));
-          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: dm }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
+          const uniArgs = { treatmentId: p.treatment.id, headline: p.headline, copy: { subtitle: c.subtitle, slides: c.slides, cta: ctaFor(slot.n, p.treatment.name) }, photos: photos.filter((x): x is ImageBitmap => !!x), offset: ti * 2, angle: p.angle, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           const canvases = renderUniversalPost(uniArgs, assets);
           out.push({ n: slot.n, label: `${p.treatment.name} carousel`, source: "universal", carousel: true, uni: canvases, uniArgs, libUrls: urls.slice(0, 12), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           ti++;

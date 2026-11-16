@@ -74,7 +74,7 @@ type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
-  months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string }[];
+  months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
 };
 
 const MONZO_PAY_URL = "https://monzo.com/pay/r/the-cyber-suite_EaAvaKNRRDB14P";
@@ -331,7 +331,44 @@ function Choose({ token, data, reload }: { token: string; data: Portal; reload: 
   );
 }
 
-function Content({ data, plan }: { data: Portal; plan: "69" | "222" }) {
+// Stars out of 5 for each post and a reason, so next month can be better.
+function Feedback({ token, month, posts, saved }: { token: string; month: string; posts: { n: number; label: string }[]; saved?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }) {
+  const init: Record<number, { rating: number; reason: string }> = {};
+  for (const p of saved?.posts ?? []) init[p.n] = { rating: p.rating, reason: p.reason };
+  const [fb, setFb] = useState(init);
+  const [overall, setOverall] = useState(saved?.overall ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(saved?.posts?.length || saved?.overall ? "Thank you, your feedback is saved. You can change it any time." : "");
+  const send = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = await fetch(`${API}/club/me/${token}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ month, overall, posts: Object.entries(fb).map(([n, v]) => ({ n: Number(n), rating: v.rating, reason: v.reason })) }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Could not send");
+      setMsg("Thank you. I read every word and it shapes your next month.");
+    } catch (e) { setMsg(e instanceof Error ? e.message : "That did not send, please try again"); } finally { setBusy(false); }
+  };
+  if (!posts.length) return null;
+  return (
+    <div className="cp-box" style={{ marginTop: 26 }}>
+      <b>How did I do this month?</b>
+      <p className="cp-sub">Give each post a mark out of 5 and tell me why you do or do not like it. Be honest, it helps me get your next month just right.</p>
+      {posts.map((p) => (
+        <div key={p.n} style={{ padding: "12px 0", borderTop: "1px solid #e5e5e5" }}>
+          <div style={{ fontWeight: 800 }}>Post {p.n} <span className="cp-sub">{p.label}</span></div>
+          <div style={{ display: "flex", gap: 6, margin: "6px 0" }}>
+            {[1, 2, 3, 4, 5].map((v) => <button key={v} type="button" aria-label={`${v} out of 5`} onClick={() => setFb((f) => ({ ...f, [p.n]: { rating: v, reason: f[p.n]?.reason ?? "" } }))} style={{ fontSize: 28, lineHeight: 1, background: "none", border: 0, cursor: "pointer", color: (fb[p.n]?.rating ?? 0) >= v ? "#ec4899" : "#cfcfcf" }}>★</button>)}
+          </div>
+          <textarea className="cp-input" rows={2} placeholder="Why? (what you love, or what to change)" value={fb[p.n]?.reason ?? ""} onChange={(e) => setFb((f) => ({ ...f, [p.n]: { rating: f[p.n]?.rating ?? 0, reason: e.target.value } }))} style={{ width: "100%" }} />
+        </div>
+      ))}
+      <label className="cp-field"><span>Anything else you would like me to know for next month?</span><textarea value={overall} onChange={(e) => setOverall(e.target.value)} rows={3} /></label>
+      <button className="cp-btn" disabled={busy} onClick={send}>{busy ? "Sending..." : "Send my feedback"}</button>
+      {msg && <p className="cp-pink" style={{ fontWeight: 700 }}>{msg}</p>}
+    </div>
+  );
+}
+
+function Content({ data, plan, token }: { data: Portal; plan: "69" | "222"; token: string }) {
   const [open, setOpen] = useState<string>(data.months[0]?.month ?? "");
   if (!data.months.length) return <div className="cp-box"><b>Nothing here yet.</b><p className="cp-sub">Once I have built and checked your {monthName(data.cycle.month)} content it will appear here, ready to download and upload yourself.</p></div>;
   const m = data.months.find((x) => x.month === open) ?? data.months[0];
@@ -379,6 +416,7 @@ function Content({ data, plan }: { data: Portal; plan: "69" | "222" }) {
           ))}
         </>
       )}
+      <Feedback key={m.month} token={token} month={m.month} posts={(m.content.posts ?? []).map((p) => ({ n: p.n, label: p.label }))} saved={m.feedback} />
       <div className="cp-box"><b>Upload these yourself.</b><p className="cp-sub">Download the images, copy the captions, and post when you like. For {plan === "69" ? "anything you need, I am on the end of WhatsApp like a big sister in the background" : "anything you need, message me on Instagram DM"}.</p></div>
     </div>
   );
@@ -388,7 +426,7 @@ const EXTRA_LABEL: Record<string, string> = { rants: "Rants", recipe: "Recipes",
 const EXTRA_ORDER = ["rants", "recipe", "book"] as const;
 
 // The front page: a little bit of me before the business, then a big button to the content.
-function Home({ data, go, plan }: { data: Portal; go: (t: "choose" | "content") => void; plan: "69" | "222" }) {
+function Home({ data, go, plan, token }: { data: Portal; go: (t: "choose" | "content") => void; plan: "69" | "222"; token: string }) {
   const [open, setOpen] = useState<string>("");
   const byKind = new Map((data.extras ?? []).map((x) => [x.kind, x]));
   return (
@@ -414,7 +452,7 @@ function Home({ data, go, plan }: { data: Portal; go: (t: "choose" | "content") 
           <button type="button" className="cp-btn k" onClick={() => go("choose")}>Choose this month's treatments</button>
         </p>
       )}
-      <Content data={data} plan={plan} />
+      <Content data={data} plan={plan} token={token} />
     </div>
   );
 }
@@ -481,12 +519,12 @@ export default function ClubPortal({ token }: { token: string }) {
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
-            {tab === "home" && <Home data={data} plan={data.member.plan} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
+            {tab === "home" && <Home data={data} plan={data.member.plan} token={token} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
             {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
               <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
             )}
             {tab === "choose" && <Choose token={token} data={data} reload={load} />}
-            {tab === "content" && <Content data={data} plan={data.member.plan} />}
+            {tab === "content" && <Content data={data} plan={data.member.plan} token={token} />}
             {tab === "me" && (
               <div>
                 <h2>Add more photos</h2>

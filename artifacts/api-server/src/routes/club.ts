@@ -108,6 +108,7 @@ function ensureTables(): Promise<void> {
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS welcome_photo_url TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS feedback JSONB NOT NULL DEFAULT '{}'::jsonb`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_name TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ`))
     .then(() => undefined);
@@ -283,7 +284,7 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     const { date, month } = nextBilling(m.billing_day);
     const cur = await getOrMakeMonth(m.id, month);
     const cutOffDate = new Date(date.getTime() - CUT_OFF_DAYS * 86400000);
-    const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at, choices FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
+    const approved = await db.execute(sql`SELECT month, content, ai_urls, approved_at, choices, feedback FROM club_months WHERE member_id = ${m.id} AND status = 'approved' ORDER BY month DESC`);
     // The welcome page extras: this calendar month's, or the most recent month she has filled in.
     const nowMonth = `${new Date().getUTCFullYear()}-${pad(new Date().getUTCMonth() + 1)}`;
     let extraRows = (await db.execute(sql`SELECT * FROM club_extras WHERE month = ${nowMonth}`)).rows as any[];
@@ -304,7 +305,7 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
         status: cur.status === "approved" ? "approved" : cur.status === "choosing" ? "choosing" : "building",
         choices: cur.choices,
       },
-      months: (approved.rows as any[]).map((r) => ({ month: r.month, content: { ...(r.content ?? {}), bank: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at })),
+      months: (approved.rows as any[]).map((r) => ({ month: r.month, content: { ...(r.content ?? {}), bank: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at, feedback: r.feedback ?? {} })),
     });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load your portal" });
@@ -403,6 +404,26 @@ router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: 
 });
 
 // Each month: four treatments and the rest of the posts. Open until a week before billing.
+// A member rates each post out of 5 with a reason, so the next month can be improved. Saved against the approved month.
+router.post("/club/me/:token/feedback", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = await memberByToken(String(req.params.token));
+    if (!m || m.status !== "active") { res.status(403).json({ error: "This link is not active" }); return; }
+    const b = req.body as { month?: string; posts?: { n?: number; rating?: number; reason?: string }[]; overall?: string };
+    const month = str(b.month, 10);
+    const x = (await db.execute(sql`SELECT id FROM club_months WHERE member_id = ${m.id} AND month = ${month} AND status = 'approved'`)).rows[0] as any;
+    if (!x) { res.status(404).json({ error: "That month is not ready yet" }); return; }
+    const posts = (Array.isArray(b.posts) ? b.posts : []).slice(0, 40).map((p) => ({ n: Number(p.n) || 0, rating: Math.min(5, Math.max(0, Math.round(Number(p.rating) || 0))), reason: noDashes(p.reason).slice(0, 600) })).filter((p) => p.n && (p.rating || p.reason));
+    const fb = { posts, overall: noDashes(b.overall).slice(0, 1200), at: new Date().toISOString() };
+    await db.execute(sql`UPDATE club_months SET feedback = ${JSON.stringify(fb)}::jsonb, updated_at = now() WHERE id = ${x.id}`);
+    void emailVanessa(`Club feedback: ${m.name} rated ${month}`, [`${m.name} has left feedback on ${month}.`, "", ...posts.map((p) => `Post ${p.n}: ${p.rating}/5 ${p.reason}`), ...(fb.overall ? ["", `Overall: ${fb.overall}`] : [])]);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save your feedback" });
+  }
+});
+
 router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
   try {
     await ensureTables();
@@ -549,18 +570,16 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
     if (!key) throw new Error("This member has not uploaded a photo of themselves yet");
     const buf = await readKey(key);
     const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: m.details?.clinicName || m.name, photoUrl: `/api/media/${key}`, notes: "club" }).returning();
-    // Two different black and white David Bailey shots, then two colour shots in the scrubs colour: in her clinic if she sent a clinic photo, otherwise on plain white.
-    const pool = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-06", "bl-07", "bl-08"];
-    const pick = () => `cbw-${pool.splice(Math.floor(Math.random() * pool.length), 1)[0]}`;
-    const scrub = String(m.details?.scrubs || "").trim().slice(0, 40) || "navy blue";
-    // The worker reads pictures from storage by their /api/media path.
-    const clinic = m.clinic_photo_url ? `/api/media/${m.clinic_photo_url.replace("/api/free-samples/media/", "")}` : "";
+    // The same hyper realistic prompts as her AI Photo Studio Mix tab: one clinical, one jeans and silk shirt, one black jumper, then one more from the last two sets.
+    // Clinical is always black scrubs. A random shot is taken from each set so no two members or months get the same four.
+    const take = (ids: string[]) => ids.splice(Math.floor(Math.random() * ids.length), 1)[0];
+    const clinical = ["mx-01", "mx-02", "mx-03", "mx-04"], jeans = ["mx-05", "mx-06", "mx-07", "mx-08"], jumper = ["mx-13", "mx-14", "mx-15", "mx-16"];
+    const extra = Math.random() < 0.5 ? jeans : jumper;
     const cfgs: any[] = [
-      { id: pick(), aspectRatio: "3:4" },
-      { id: pick(), aspectRatio: "3:4" },
-      ...(clinic
-        ? [{ id: "club-clinic-1", aspectRatio: "3:4", scrubColor: scrub, backgroundImageUrl: clinic }, { id: "club-clinic-2", aspectRatio: "3:4", scrubColor: scrub, backgroundImageUrl: clinic }]
-        : [{ id: "club-white-1", aspectRatio: "3:4", scrubColor: scrub }, { id: "club-white-2", aspectRatio: "3:4", scrubColor: scrub }]),
+      { id: take(clinical), aspectRatio: "3:4" },
+      { id: take(jeans), aspectRatio: "3:4" },
+      { id: take(jumper), aspectRatio: "3:4" },
+      { id: take(extra), aspectRatio: "3:4" },
     ];
     const results = new Map<string, string>();
     const reasons: string[] = [];
@@ -651,6 +670,7 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
+            feedback: (x as any).feedback ?? {}, bank: ((x.content?.bank as any[]) ?? []), postsList: ((x.content?.posts as any[]) ?? []).map((p: any) => ({ n: p.n, label: p.label, image: (p.images ?? [])[0] ?? "" })),
           })),
         };
       }),

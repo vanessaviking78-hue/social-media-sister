@@ -12,7 +12,10 @@ const pw = () => localStorage.getItem("cybersuite-pw") || "";
 const authOnly = (): Record<string, string> => ({ "x-app-password": pw(), Authorization: "Bearer " + pw() });
 const jsonHeaders = (): Record<string, string> => ({ ...authOnly(), "Content-Type": "application/json" });
 
-type Month = { id: string; month: string; status: string; choices: { treatments?: string[] }; postCount: number; reelCount: number; aiUrls: string[]; aiStatus: string };
+type Month = { id: string; month: string; status: string; choices: { treatments?: string[] }; postCount: number; reelCount: number; aiUrls: string[]; aiStatus: string;
+  feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string; at?: string };
+  bank?: { n: number; label: string; images: string[]; caption: string; tags: string }[];
+  postsList?: { n: number; label: string; image: string }[] };
 type Member = {
   id: string; name: string; email: string; plan: "69" | "222"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
   photoCount: number; welcomePhotoUrl?: string; photoUrls?: string[]; logoUrl?: string; clinicPhotoUrl?: string; refPhotoUrl?: string; months: Month[];
@@ -46,6 +49,53 @@ function Details({ m }: { m: Member }) {
         {row("Why", d.why)}{row("How started", d.howStarted)}{row("Passion", d.passion)}{row("Facts", d.facts)}{row("Hobbies", d.hobbies)}{row("Pets", d.pets)}{row("Mum", d.mum)}{row("Age", d.age)}
       </div>
       {(m.photoUrls ?? []).length > 0 && <div className="flex gap-2 overflow-x-auto">{(m.photoUrls ?? []).map((u) => <img key={u} src={u} className="h-20 rounded max-w-none shrink-0" />)}</div>}
+    </div>
+  );
+}
+
+// What the member said about each post, and the posts kept back for later months.
+function FeedbackAndBank({ m }: { m: Member }) {
+  const withFb = m.months.filter((x) => x.feedback && ((x.feedback.posts ?? []).length || x.feedback.overall));
+  const bank = m.months.flatMap((x) => (x.bank ?? []).map((b) => ({ ...b, month: x.month })));
+  const [showBank, setShowBank] = useState(false);
+  if (!withFb.length && !bank.length) return null;
+  return (
+    <div className="space-y-2">
+      {withFb.map((x) => {
+        const rs = (x.feedback!.posts ?? []).filter((p) => p.rating);
+        const avg = rs.length ? (rs.reduce((a, p) => a + p.rating, 0) / rs.length).toFixed(1) : "";
+        return (
+          <div key={x.id} className="border rounded p-3 text-sm space-y-1">
+            <div className="font-bold uppercase">Their feedback for {monthName(x.month)}{avg ? <span className="text-pink-500"> · average {avg} out of 5</span> : null}</div>
+            {(x.feedback!.posts ?? []).map((p) => {
+              const pic = x.postsList?.find((q) => q.n === p.n)?.image;
+              return (
+                <div key={p.n} className="flex gap-2 items-start">
+                  {pic && <img src={pic} alt="" className="w-10 h-12 object-cover rounded keep-colour" />}
+                  <div><b>Post {p.n}</b> {p.rating ? <span className="text-pink-500">{p.rating}/5</span> : null}{p.reason ? <div className="text-gray-600">{p.reason}</div> : null}</div>
+                </div>
+              );
+            })}
+            {x.feedback!.overall && <div><b>Overall:</b> {x.feedback!.overall}</div>}
+          </div>
+        );
+      })}
+      {bank.length > 0 && (
+        <div className="border rounded p-3 text-sm">
+          <button className="font-bold uppercase underline" onClick={() => setShowBank((v) => !v)}>{showBank ? "Hide" : "Show"} their bank ({bank.length} saved posts)</button>
+          {showBank && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+              {bank.map((b) => (
+                <div key={`${b.month}-${b.n}`} className="space-y-1">
+                  <div className="flex gap-1 overflow-x-auto">{b.images.map((u) => <a key={u} href={u} download target="_blank" rel="noreferrer"><img src={u} alt="" className="h-40 w-auto max-w-none rounded keep-colour" /></a>)}</div>
+                  <div className="text-xs text-gray-600">{monthName(b.month)} · {b.label}</div>
+                  <button className="text-xs underline" onClick={() => navigator.clipboard?.writeText(`${b.caption}${b.tags ? `\n\n${b.tags}` : ""}`)}>Copy caption</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -141,6 +191,7 @@ export default function ClubBuild() {
                 </div>
                 <WelcomePhoto member={m as any} reload={load} />
                 {!ready && <div className="text-sm text-red-600">They have not sent their details form yet. Their link is in Members and billing.</div>}
+                <FeedbackAndBank m={m} />
                 {open === m.id && <Details m={m} />}
               </div>
             );
