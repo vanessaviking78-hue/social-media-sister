@@ -535,6 +535,7 @@ async function writeStories(m: Member, month: MonthRow): Promise<Story[]> {
     `Clinician: ${d.clinicianName || m.name}`, `Clinic: ${d.clinicName || ""}`, `Area: ${d.area || ""}`,
     d.personality && `Her personality and how she talks: ${d.personality}`, d.hobbies && `Hobbies: ${d.hobbies}`, d.pets && `Pets: ${d.pets}`,
     treatments.length && `Treatments she is promoting this month: ${treatments.join(", ")}`,
+    month.choices?.note && `Her note for this month (use it for theme and timing only, never state results, percentages, satisfaction or claims about any product): ${str(month.choices.note, 500)}`,
   ].filter(Boolean).join("\n");
   const r = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -562,6 +563,7 @@ async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
     d.howStarted && `How she got into aesthetics: ${d.howStarted}`, d.why && `Why she loves it: ${d.why}`, d.personality && `Her personality and how she talks: ${d.personality}`,
     d.threeWords && `Three words for her: ${d.threeWords}`, d.hobbies && `Hobbies: ${d.hobbies}`, d.pets && `Pets: ${d.pets}`, d.passion && `Passion: ${d.passion}`,
     (d.facts ?? []).length && `Things people might not know: ${(d.facts ?? []).join("; ")}`,
+    month.choices?.note && `Her note for this month (use it for theme and timing only, never state results, percentages, satisfaction or claims about any product): ${str(month.choices.note, 500)}`,
   ].filter(Boolean).join("\n");
 
   const ask = async (kind: "treatment" | "engagement", count: number, startAt: number, focus: string) => {
@@ -677,6 +679,34 @@ async function prepareMonth(memberId: string, month: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Vanessa's side
 // ---------------------------------------------------------------------------
+
+// Reads the member's note for the month and pulls out a theme (Christmas, say) and any new treatment on its way, with a safe description that makes no claims.
+router.post("/club/note/analyse", requireAuth, async (req: Request, res: Response) => {
+  const empty = { theme: "", newTreatment: "", headline: "", safeDetail: "" };
+  try {
+    const note = str((req.body as any)?.note, 500);
+    if (!note) { res.json(empty); return; }
+    const r = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.4,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: `You read a note a UK aesthetics clinician wrote about her month and return JSON: {"theme": string, "newTreatment": string, "headline": string, "safeDetail": string}.
+- theme: a short seasonal or topical theme if the note has one (for example "Christmas"), otherwise "".
+- newTreatment: the name of a new treatment or product she says is coming to her clinic, otherwise "". Name only, no description.
+- headline: if newTreatment is set, a curious, warm cover line of at most 9 words teasing that something new is on its way, never naming results, never a claim, no dashes, no exclamation marks, no emojis. Otherwise "".
+- safeDetail: if newTreatment is set, one or two plain sentences describing it using only soft, general wording from the note (for example hydrating and moisturising). REMOVE every result claim, percentage, satisfaction figure, comparison, guarantee or medical promise. Say "may" and "many people find". Otherwise "".
+British English. No em dashes.` },
+        { role: "user", content: note },
+      ],
+    });
+    const j = JSON.parse(r.choices[0]?.message?.content ?? "{}");
+    res.json({ theme: noDashes(j.theme).slice(0, 60), newTreatment: noDashes(j.newTreatment).slice(0, 60), headline: noDashes(j.headline).slice(0, 90), safeDetail: noDashes(j.safeDetail).slice(0, 400) });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "club note analyse failed");
+    res.json(empty);
+  }
+});
 
 router.post("/club/members", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -927,7 +957,7 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
     bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
     threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
     facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-    usedAngles, clubHooks: hookCodes, clubTreatmentSlots: caps.treatmentPosts, clubAboutSlots: caps.aboutPosts, clubPostCap: caps.posts, clubHookSlots: Math.min(caps.picks - caps.aboutPosts, Math.max(hookCodes.length, caps.picks - caps.aboutPosts - picks.filter((p) => p.kind === "tool").length)) + CLUB_BANK_EXTRA,
+    monthNote: str(x.choices?.note, 500), usedAngles, clubHooks: hookCodes, clubTreatmentSlots: caps.treatmentPosts, clubAboutSlots: caps.aboutPosts, clubPostCap: caps.posts, clubHookSlots: Math.min(caps.picks - caps.aboutPosts, Math.max(hookCodes.length, caps.picks - caps.aboutPosts - picks.filter((p) => p.kind === "tool").length)) + CLUB_BANK_EXTRA,
   };
   await ensureTenFreeTable();
   const rid = `club-${x.id}`;

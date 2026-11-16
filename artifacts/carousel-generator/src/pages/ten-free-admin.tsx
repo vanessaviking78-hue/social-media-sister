@@ -401,6 +401,14 @@ export function Builder({ id }: { id: string }) {
         return withPreset.hashtags ? withPreset : { ...withPreset, hashtags: tagsA || tagsB };
       });
 
+      // Her note for the month: a theme (Christmas, say) is woven in lightly, and a new treatment on its way becomes a coming soon teaser.
+      let noteInfo = { theme: "", newTreatment: "", headline: "", safeDetail: "" };
+      const monthNote = String((req.answers as any)?.monthNote ?? "").trim();
+      if (isClub && monthNote) {
+        setStatus("Reading her note for the month...");
+        noteInfo = await post("/club/note/analyse", { note: monthNote }).catch(() => noteInfo);
+      }
+      const themeBrief = noteInfo.theme ? ` This month's theme from the clinician is ${noteInfo.theme}. Weave it in lightly where it fits, never forced and never a claim.` : "";
       setStatus("Writing the treatment posts...");
       // Premium: every treatment carousel opens on a scroll stopping hook from the Treatment section of the bank, filled with the treatment.
       if (isPremium) {
@@ -413,7 +421,7 @@ export function Builder({ id }: { id: string }) {
       }
       const tcopy: any[] = [];
       for (const p of picks) {
-        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: p.brief, intro: p.angle === 0, note: isPremium ? voiceFor(ans.personality) : "" }));
+        tcopy.push(await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: p.treatment.name, headline: p.headline, brief: `${p.brief}${themeBrief}`, intro: p.angle === 0, note: isPremium ? voiceFor(ans.personality) : "" }));
       }
 
       setStatus("Drawing the posts...");
@@ -458,16 +466,18 @@ export function Builder({ id }: { id: string }) {
         if (slot.source === "hook") {
           const tr = (picks[hi % picks.length] ?? picks[0]).treatment;
           // Fill the hook with the same treatment the slides are written about, so the cover and the slides always match.
-          const text = (pickedHooks[hi] ? pickedHookPayload([pickedHooks[hi]], [tr.name], req.area.split(",")[0].trim(), req.clinicianName)[0]?.text : "") || hookTexts[hi] || "";
+          const teaser = hi === 0 && noteInfo.newTreatment && noteInfo.headline;
+          const text = teaser ? noteInfo.headline : (pickedHooks[hi] ? pickedHookPayload([pickedHooks[hi]], [tr.name], req.area.split(",")[0].trim(), req.clinicianName)[0]?.text : "") || hookTexts[hi] || "";
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
           // Only a treatment hook is written about the treatment. Every other hook is written about its own topic, so the set is not all microneedling or skin boosters.
           const hk = pickedHooks[hi] ? HOOK_BANK.find((x: Hook) => x.code === pickedHooks[hi]) : undefined;
           const isTreatHook = !!hk && (hk.day === "Monday" || /\[treatment\]/i.test(hk.text));
-          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: isTreatHook ? tr.name : "", general: !isTreatHook, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
-          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: ctaFor(slot.n) }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
+          const teaserBrief = `THIS IS A COMING SOON TEASER. ${noteInfo.newTreatment} is a new treatment on its way to the clinic. What may be said: ${noteInfo.safeDetail} Build curiosity and warmth, introduce it in plain words, say it is coming soon and that she can comment to be first to hear. Never state results, satisfaction, percentages or promises, never say it works or is better than anything else. Say may and many people find. Suitability is decided at a consultation.`;
+          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: teaser ? noteInfo.newTreatment : isTreatHook ? tr.name : "", general: !teaser && !isTreatHook, headline: text, brief: (teaser ? teaserBrief : "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.") + (teaser ? "" : themeBrief), intro: false, note: voiceFor(ans.personality) });
+          const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: ctaFor(slot.n, teaser ? noteInfo.newTreatment : undefined) }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           hi++;
           const canvases = renderUniversalPost(args, assets);
-          out.push({ n: slot.n, label: "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
+          out.push({ n: slot.n, label: teaser ? "Coming soon teaser" : "Hook carousel", source: "universal", carousel: true, uni: canvases, uniArgs: args, libUrls: pool.map((p) => p.url), caption: c.caption || "", tags: (c.hashtags || []).map((h: string) => (h.startsWith("#") ? h : `#${h}`)).join(" "), previews: canvases.map((cv) => cv.toDataURL("image/jpeg", 0.6)), poll: { question: "", a: "", b: "", instruction: "" } });
           continue;
         }
         if (slot.source === "universal") {
