@@ -1057,8 +1057,10 @@ export async function clubDueCheck(): Promise<void> {
     logger.warn({ err }, "Club due check failed");
   }
 }
+// The five days before billing check is switched off: Vanessa tracks payments herself and starts each month from Club Build.
+// Set CLUB_AUTO_DUE=1 on the server to bring the automatic check and its email back.
 let timer: NodeJS.Timeout | null = null;
-if (!timer && process.env.NODE_ENV !== "test") {
+if (!timer && process.env.NODE_ENV !== "test" && process.env.CLUB_AUTO_DUE === "1") {
   timer = setInterval(() => void clubDueCheck(), 6 * 60 * 60 * 1000);
   timer.unref?.();
   setTimeout(() => void clubDueCheck(), 90_000).unref?.();
