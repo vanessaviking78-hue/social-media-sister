@@ -30,6 +30,19 @@ export const CLUB_PLANS = {
 type PlanId = keyof typeof CLUB_PLANS;
 export const PLACES = { "69": 5, "222": 7 } as const;
 const MAX_PHOTOS = 20;
+const PICK_HOURS = 48; // a member has 48 hours after approval to choose her posts
+/** Works out what the member sees for one approved month: either the full set to choose from, or the posts she has chosen. */
+function pickState(content: Record<string, any> | null | undefined, approvedAt: string | Date | null, cap: number) {
+  const all: any[] = (content?.posts as any[]) ?? [];
+  const deadline = approvedAt ? new Date(new Date(approvedAt).getTime() + PICK_HOURS * 3600000) : null;
+  if (all.length <= cap) return { phase: "done" as const, shown: all, picked: all.map((p) => p.n), deadline, cap, all };
+  const chosen: number[] | null = Array.isArray(content?.picked) && content!.picked.length ? content!.picked.map(Number) : null;
+  const expired = !!deadline && Date.now() > deadline.getTime();
+  if (chosen) return { phase: "done" as const, shown: all.filter((p) => chosen.includes(p.n)), picked: chosen, deadline, cap, all };
+  // Past the deadline with no choice: the first ones in order are used, so she is never left with nothing.
+  if (expired) { const first = [...all].sort((a, b) => a.n - b.n).slice(0, cap); return { phase: "done" as const, shown: first, picked: first.map((p) => p.n), deadline, cap, all }; }
+  return { phase: "choose" as const, shown: [] as any[], picked: [] as number[], deadline, cap, all };
+}
 const CLUB_BANK_EXTRA = 8; // extra posts built each month and saved to the member's bank for later
 const CUT_OFF_DAYS = 7; // members choose up to a week before billing, generation starts five days before
 const PREP_DAYS = 5;
@@ -305,7 +318,11 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
         status: cur.status === "approved" ? "approved" : cur.status === "choosing" ? "choosing" : "building",
         choices: cur.choices,
       },
-      months: (approved.rows as any[]).map((r) => ({ month: r.month, content: { ...(r.content ?? {}), bank: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at, feedback: r.feedback ?? {} })),
+      months: (approved.rows as any[]).map((r) => {
+        const ps = pickState(r.content, r.approved_at, CLUB_PLANS[m.plan].posts);
+        return { month: r.month, content: { ...(r.content ?? {}), posts: ps.shown, bank: undefined, picked: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at, feedback: r.feedback ?? {},
+          ...(ps.phase === "choose" ? { choose: { cap: ps.cap, deadline: ps.deadline, posts: ps.all.map((p: any) => ({ n: p.n, label: p.label, images: p.images })) } } : {}) };
+      }),
     });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load your portal" });
@@ -404,6 +421,31 @@ router.post("/club/me/:token/details", detailsUpload, async (req: Request, res: 
 });
 
 // Each month: four treatments and the rest of the posts. Open until a week before billing.
+// The member chooses her posts from the full set. Once sent it cannot be changed, and she has 48 hours from approval.
+router.post("/club/me/:token/pick", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = await memberByToken(String(req.params.token));
+    if (!m || m.status !== "active") { res.status(403).json({ error: "This link is not active" }); return; }
+    const b = req.body as { month?: string; picks?: number[] };
+    const month = str(b.month, 10);
+    const x = (await db.execute(sql`SELECT id, content, approved_at FROM club_months WHERE member_id = ${m.id} AND month = ${month} AND status = 'approved'`)).rows[0] as any;
+    if (!x) { res.status(404).json({ error: "That month is not ready yet" }); return; }
+    const cap = CLUB_PLANS[m.plan].posts;
+    const ps = pickState(x.content, x.approved_at, cap);
+    if (ps.phase !== "choose") { res.status(409).json({ error: "Your posts for this month are already chosen" }); return; }
+    const valid = new Set(ps.all.map((p: any) => Number(p.n)));
+    const picks = [...new Set((Array.isArray(b.picks) ? b.picks : []).map(Number))].filter((n) => valid.has(n));
+    if (picks.length !== cap) { res.status(400).json({ error: `Please choose exactly ${cap} posts. You have chosen ${picks.length}.` }); return; }
+    const content = { ...(x.content ?? {}), picked: picks, pickedAt: new Date().toISOString() };
+    await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, updated_at = now() WHERE id = ${x.id}`);
+    void emailVanessa(`Club: ${m.name} has chosen her ${cap} posts for ${month}`, [`${m.name} picked posts ${picks.sort((a, c) => a - c).join(", ")}.`, "The rest are in her bank on Club Build."]);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not save your choice" });
+  }
+});
+
 // A member rates each post out of 5 with a reason, so the next month can be improved. Saved against the approved month.
 router.post("/club/me/:token/feedback", async (req: Request, res: Response) => {
   try {
@@ -670,7 +712,8 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
-            feedback: (x as any).feedback ?? {}, bank: ((x.content?.bank as any[]) ?? []), postsList: ((x.content?.posts as any[]) ?? []).map((p: any) => ({ n: p.n, label: p.label, image: (p.images ?? [])[0] ?? "" })),
+            feedback: (x as any).feedback ?? {}, pick: (() => { const ps = pickState(x.content, x.approved_at, CLUB_PLANS[m.plan].posts); return { phase: ps.phase, picked: ps.picked, deadline: ps.deadline, cap: ps.cap, total: ps.all.length }; })(),
+            bank: (() => { const ps = pickState(x.content, x.approved_at, CLUB_PLANS[m.plan].posts); const left = ps.phase === "done" && ps.all.length > ps.cap ? ps.all.filter((p: any) => !ps.picked.includes(p.n)) : []; return [...(((x.content?.bank as any[]) ?? [])), ...left]; })(), postsList: ((x.content?.posts as any[]) ?? []).map((p: any) => ({ n: p.n, label: p.label, image: (p.images ?? [])[0] ?? "" })),
           })),
         };
       }),

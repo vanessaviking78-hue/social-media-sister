@@ -14,6 +14,7 @@ const jsonHeaders = (): Record<string, string> => ({ ...authOnly(), "Content-Typ
 
 type Month = { id: string; month: string; status: string; choices: { treatments?: string[] }; postCount: number; reelCount: number; aiUrls: string[]; aiStatus: string;
   feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string; at?: string };
+  pick?: { phase: string; picked: number[]; deadline: string | null; cap: number; total: number };
   bank?: { n: number; label: string; images: string[]; caption: string; tags: string }[];
   postsList?: { n: number; label: string; image: string }[] };
 type Member = {
@@ -61,6 +62,11 @@ function FeedbackAndBank({ m }: { m: Member }) {
   if (!withFb.length && !bank.length) return null;
   return (
     <div className="space-y-2">
+      {m.months.filter((x) => x.pick && x.pick.total > x.pick.cap && x.status === "approved").map((x) => (
+        <div key={`p-${x.id}`} className="border rounded p-3 text-sm">
+          <b className="uppercase">{monthName(x.month)} choice</b>: {x.pick!.phase === "choose" ? `waiting for her to choose ${x.pick!.cap} of ${x.pick!.total} (until ${x.pick!.deadline ? new Date(x.pick!.deadline).toLocaleString("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "?"}, then the first ${x.pick!.cap} are used)` : `she chose posts ${x.pick!.picked.slice().sort((a, b) => a - b).join(", ")}`}
+        </div>
+      ))}
       {withFb.map((x) => {
         const rs = (x.feedback!.posts ?? []).filter((p) => p.rating);
         const avg = rs.length ? (rs.reduce((a, p) => a + p.rating, 0) / rs.length).toFixed(1) : "";

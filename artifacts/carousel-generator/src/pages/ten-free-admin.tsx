@@ -808,12 +808,12 @@ export function Builder({ id }: { id: string }) {
         const images: string[] = [];
         for (const [k, c] of cvs.entries()) images.push(await upload(await jpg(c), `post-${it.n}-${k + 1}.jpg`));
         const rec = { n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags, ...(it.uniArgs && it.source === "universal" ? { treatment: it.uniArgs.treatmentId, angle: it.uniArgs.angle } : {}) };
-        if (isClub && isBanked(it.n)) bank.push(rec); else posts.push(rec);
+        posts.push(rec);
         if (!isClub) stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
       }
       if (isClub) {
         await post(`/club/months/${monthId}/posts`, { posts, bank });
-        setStatus(`Saved: ${posts.length} in your approval queue and ${bank.length} in the bank. Nothing reaches the member until you approve it.`);
+        setStatus(`Saved ${posts.length} posts to your approval queue. Nothing reaches the member until you approve it. She then picks her own from them.`);
       } else {
         const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
         setLink(siteLink(j.slug));
@@ -1039,7 +1039,6 @@ export function Builder({ id }: { id: string }) {
             <div className="flex justify-between items-center">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
               <div className="flex items-center gap-3">
-                {isClub && <label className="text-xs flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={isBanked(it.n)} onChange={(e) => setBankSel((m) => ({ ...m, [it.n]: e.target.checked }))} />Save to bank</label>}
                 <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
               </div>
             </div>

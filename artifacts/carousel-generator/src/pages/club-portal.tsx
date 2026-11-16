@@ -74,7 +74,7 @@ type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
-  months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
+  months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; choose?: { cap: number; deadline: string | null; posts: { n: number; label: string; images: string[] }[] }; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
 };
 
 const MONZO_PAY_URL = "https://monzo.com/pay/r/the-cyber-suite_EaAvaKNRRDB14P";
@@ -368,7 +368,50 @@ function Feedback({ token, month, posts, saved }: { token: string; month: string
   );
 }
 
-function Content({ data, plan, token }: { data: Portal; plan: "69" | "222"; token: string }) {
+// She has a big set to choose from. She ticks her favourites, and once she presses send it cannot be changed.
+function ChoosePosts({ token, month, cap, deadline, posts, reload }: { token: string; month: string; cap: number; deadline: string | null; posts: { n: number; label: string; images: string[] }[]; reload: () => void }) {
+  const [sel, setSel] = useState<number[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const left = deadline ? Math.max(0, new Date(deadline).getTime() - Date.now()) : 0;
+  const hrs = Math.floor(left / 3600000);
+  const toggle = (n: number) => setSel((c) => (c.includes(n) ? c.filter((x) => x !== n) : c.length >= cap ? c : [...c, n]));
+  const send = async () => {
+    if (sel.length !== cap) return;
+    if (!window.confirm(`Send these ${cap} posts? Once you press OK you cannot change your mind.`)) return;
+    setBusy(true); setMsg("");
+    try {
+      const r = await fetch(`${API}/club/me/${token}/pick`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ month, picks: sel }) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Could not send");
+      reload();
+    } catch (e) { setMsg(e instanceof Error ? e.message : "That did not send, please try again"); } finally { setBusy(false); }
+  };
+  return (
+    <div>
+      <h2>Choose your {cap} posts</h2>
+      <p className="cp-sub">I have made you {posts.length} posts. Tap the {cap} you love most. The rest are kept safe for a later month. You have {hrs > 0 ? `about ${hrs} hours` : "very little time"} left to choose{left <= 0 ? ", so I will pick for you" : ""}, and once you press send it cannot be changed.</p>
+      <div className="cp-box" style={{ position: "sticky", top: 0, zIndex: 5, background: "#fff" }}>
+        <b>{sel.length} of {cap} chosen</b>
+        <button className="cp-btn" style={{ marginLeft: 12 }} disabled={busy || sel.length !== cap} onClick={send}>{busy ? "Sending..." : `Send my ${cap}`}</button>
+        {msg && <p className="cp-pink" style={{ fontWeight: 700 }}>{msg}</p>}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12, marginTop: 14 }}>
+        {posts.map((p) => {
+          const on = sel.includes(p.n);
+          return (
+            <button key={p.n} type="button" onClick={() => toggle(p.n)} style={{ padding: 0, border: on ? "4px solid #ec4899" : "4px solid transparent", background: "none", cursor: "pointer", position: "relative", textAlign: "left" }}>
+              <img src={p.images[0]} alt={`Post ${p.n}`} loading="lazy" style={{ width: "100%", display: "block" }} />
+              <span style={{ position: "absolute", top: 6, left: 6, background: on ? "#ec4899" : "#111", color: "#fff", fontWeight: 900, fontSize: 12, padding: "2px 7px" }}>{on ? "✓ " : ""}Post {p.n}</span>
+              <span className="cp-sub" style={{ display: "block", padding: "4px 2px" }}>{p.label}{p.images.length > 1 ? ` · ${p.images.length} slides` : ""}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function Content({ data, plan, token, reload }: { data: Portal; plan: "69" | "222"; token: string; reload: () => void }) {
   const [open, setOpen] = useState<string>(data.months[0]?.month ?? "");
   if (!data.months.length) return <div className="cp-box"><b>Nothing here yet.</b><p className="cp-sub">Once I have built and checked your {monthName(data.cycle.month)} content it will appear here, ready to download and upload yourself.</p></div>;
   const m = data.months.find((x) => x.month === open) ?? data.months[0];
@@ -377,8 +420,9 @@ function Content({ data, plan, token }: { data: Portal; plan: "69" | "222"; toke
       <div className="cp-chips" style={{ margin: "18px 0" }}>
         {data.months.map((x) => <button key={x.month} className={`cp-chip ${x.month === m.month ? "on" : ""}`} onClick={() => setOpen(x.month)}>{monthName(x.month)}</button>)}
       </div>
-      <h2>Your posts</h2>
-      {(m.content.posts ?? []).map((p) => (
+      {m.choose && <ChoosePosts key={m.month} token={token} month={m.month} cap={m.choose.cap} deadline={m.choose.deadline} posts={m.choose.posts} reload={reload} />}
+      {!m.choose && <h2>Your posts</h2>}
+      {!m.choose && (m.content.posts ?? []).map((p) => (
         <div key={p.n} style={{ padding: "26px 0", borderBottom: "1px solid #e5e5e5" }}>
           <div className="cp-pink" style={{ fontWeight: 900, letterSpacing: ".2em", fontSize: 12, textTransform: "uppercase" }}>Post {p.n} · {p.label}</div>
           <div className="cp-strip" style={{ marginTop: 10 }}>{p.images.map((u, i) => <img key={u} src={u} alt={`Post ${p.n} image ${i + 1}`} loading="lazy" />)}</div>
@@ -426,7 +470,7 @@ const EXTRA_LABEL: Record<string, string> = { rants: "Rants", recipe: "Recipes",
 const EXTRA_ORDER = ["rants", "recipe", "book"] as const;
 
 // The front page: a little bit of me before the business, then a big button to the content.
-function Home({ data, go, plan, token }: { data: Portal; go: (t: "choose" | "content") => void; plan: "69" | "222"; token: string }) {
+function Home({ data, go, plan, token, reload }: { data: Portal; go: (t: "choose" | "content") => void; plan: "69" | "222"; token: string; reload: () => void }) {
   const [open, setOpen] = useState<string>("");
   const byKind = new Map((data.extras ?? []).map((x) => [x.kind, x]));
   return (
@@ -452,7 +496,7 @@ function Home({ data, go, plan, token }: { data: Portal; go: (t: "choose" | "con
           <button type="button" className="cp-btn k" onClick={() => go("choose")}>Choose this month's treatments</button>
         </p>
       )}
-      <Content data={data} plan={plan} token={token} />
+      <Content data={data} plan={plan} token={token} reload={reload} />
     </div>
   );
 }
@@ -519,12 +563,12 @@ export default function ClubPortal({ token }: { token: string }) {
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
-            {tab === "home" && <Home data={data} plan={data.member.plan} token={token} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
+            {tab === "home" && <Home data={data} plan={data.member.plan} token={token} reload={load} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
             {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
               <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
             )}
             {tab === "choose" && <Choose token={token} data={data} reload={load} />}
-            {tab === "content" && <Content data={data} plan={data.member.plan} token={token} />}
+            {tab === "content" && <Content data={data} plan={data.member.plan} token={token} reload={load} />}
             {tab === "me" && (
               <div>
                 <h2>Add more photos</h2>
