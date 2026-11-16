@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { aiSourcePhotosTable } from "@workspace/db/schema";
+import { aiSourcePhotosTable, clientPresetsTable } from "@workspace/db/schema";
 import { saveSampleFile, readKey, appLink } from "../lib/freeSampleWorker";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
@@ -124,6 +124,7 @@ function ensureTables(): Promise<void> {
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS slug TEXT`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS preset_id INTEGER`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS feedback JSONB NOT NULL DEFAULT '{}'::jsonb`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_name TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ`))
@@ -689,6 +690,31 @@ async function prepareMonth(memberId: string, month: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Vanessa's side
 // ---------------------------------------------------------------------------
+
+// Treats a club member like a client: makes (once) her own client page with all the tools, named "<clinic> (club)", and returns its id. The hub's Club tab opens it from her tile.
+router.post("/club/members/:id/client-page", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${String(req.params.id)}`)).rows[0] as unknown as (Member & { preset_id?: number | null }) | undefined;
+    if (!m) { res.status(404).json({ error: "Member not found" }); return; }
+    if (m.preset_id) { res.json({ id: m.preset_id }); return; }
+    const d = m.details ?? {};
+    const name = `${str(d.clinicName, 60) || m.name} (club)`;
+    const accent = hex(d.accentHex, "") || hex(d.mainHex, "") || "#d6006f";
+    const row = await db.insert(clientPresetsTable).values({
+      name, logoUrl: m.logo_url || null, clientPhotoUrl: m.clinic_photo_url || (m.photo_urls ?? [])[0] || null, accentColor: accent, seoArea: str(d.area, 80) || null,
+    } as any).returning().catch(async (err: any) => {
+      if (err?.code === "23505" || err?.cause?.code === "23505") return (await db.select().from(clientPresetsTable)).filter((p: any) => p.name === name);
+      throw err;
+    });
+    const id = (row as any[])[0]?.id;
+    if (!id) throw new Error("Could not make her client page");
+    await db.execute(sql`UPDATE club_members SET preset_id = ${id} WHERE id = ${m.id}`);
+    res.json({ id });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not make her client page" });
+  }
+});
 
 // Christmas reels for every active member: ten hooks with scripts each, in her own voice, added to her latest month. Nothing about treatments, results or claims.
 async function writeChristmasReels(m: Member, month: MonthRow, count: number): Promise<Reel[]> {

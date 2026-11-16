@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { usePresets } from "@/lib/use-presets";
 import { useEffect, useState } from "react";
 import { Users, Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
@@ -1376,6 +1376,7 @@ style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", bo
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">{live.map((tool, i) => <ToolCard key={tool.href + tool.name} idx={i} tool={tool} badge={badgeFor(tool)} />)}</div>
+      {activeGroup === "club" && <ClubMemberTiles />}
       {tucked.length > 0 && (
         <div className="mt-10">
           <button type="button" onClick={() => setShowTucked((v) => !v)} className="px-4 py-2" style={{ border: "3px solid #000", borderRadius: 4, fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase" }}>{showTucked ? "Hide" : "Show"} tucked away ({tucked.length})</button>
@@ -1432,11 +1433,54 @@ return (
 );
 }
 
+// CLUB: one tile per active member, opening her own client page with all the tools (made the first time she is pressed).
+function ClubMemberTiles() {
+  const [, nav] = useLocation();
+  const [members, setMembers] = useState<{ id: string; name: string; plan: string; clinic: string }[]>([]);
+  const [busy, setBusy] = useState("");
+  const BASE_ = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  const pw = localStorage.getItem("cybersuite-pw") || "";
+  const hdr = { "x-app-password": pw, Authorization: "Bearer " + pw };
+  useEffect(() => {
+    fetch(`${BASE_}/api/club/members`, { headers: hdr }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+      const arr = (d?.members ?? d ?? []) as any[];
+      setMembers(arr.filter((m) => m.status === "active").map((m) => ({ id: m.id, name: m.name, plan: m.plan, clinic: m.details?.clinicName || "" })));
+    }).catch(() => {});
+  }, []);
+  const open = async (id: string) => {
+    setBusy(id);
+    try {
+      const r = await fetch(`${BASE_}/api/club/members/${id}/client-page`, { method: "POST", headers: hdr });
+      const j = await r.json();
+      if (j?.id) nav(`/client/${j.id}`);
+    } finally { setBusy(""); }
+  };
+  if (!members.length) return null;
+  return (
+    <div className="mt-10">
+      <h2 style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "1.4rem", textTransform: "uppercase", marginBottom: 12 }}>Club members</h2>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+        {members.map((m, i) => {
+          const dark = i % 2 === 0;
+          const fg = dark ? "#ff1f8e" : "#000";
+          return (
+            <button key={m.id} type="button" onClick={() => open(m.id)} disabled={busy === m.id} className="text-left p-5 transition-all duration-200 hover:-translate-y-1" style={{ background: dark ? "#000" : "#ff1f8e", color: fg, border: "4px solid #000", borderRadius: 4, boxShadow: `6px 6px 0 ${dark ? "#ff1f8e" : "#000"}` }}>
+              <Users className="w-8 h-8 mb-3" strokeWidth={2.5} />
+              <div style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "1.5rem", lineHeight: 0.95, textTransform: "uppercase" }}>{m.name}</div>
+              <div style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 600, fontSize: "0.9rem", color: dark ? "#fff" : "#000", marginTop: 6 }}>{busy === m.id ? "Opening..." : `${m.plan === "69" ? "£69" : "£275"} club${m.clinic ? ` · ${m.clinic}` : ""}`}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // CLIENTS: one icon per client in alphabetical order, each opening that client's own page.
 const OWN_PAGES: [RegExp, string][] = [[/ryder/i, "/ryder"], [/lisa.*academy|academy.*lisa/i, "/lisa"], [/clare/i, "/clare"], [/castle/i, "/castle"], [/kathryn/i, "/kathryn"]];
 function ClientsGrid() {
   const { presets, loading } = usePresets();
-  const list = [...presets].sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  const list = [...presets].filter((p) => !/\(club\)$/i.test(p.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   if (loading) return <p style={{ fontWeight: 800 }}>Loading...</p>;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
