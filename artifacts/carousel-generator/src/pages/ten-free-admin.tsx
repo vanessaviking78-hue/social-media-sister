@@ -166,6 +166,10 @@ export function Builder({ id }: { id: string }) {
   const [chEl, setChEl] = useState<Record<number, string>>({});
   // Drag the writing: when "Move text" is on for a post, dragging its picture moves the words (sideways and up/down) instead of the photo.
   const [moveTextOn, setMoveTextOn] = useState<Record<number, boolean>>({});
+  // Club: posts ticked "save to bank" go to the client's bank instead of the approval queue. By default everything past the plan's post count is banked.
+  const [bankSel, setBankSel] = useState<Record<number, boolean>>({});
+  const postCap = Number((req?.answers as any)?.clubPostCap) || 12;
+  const isBanked = (n: number) => bankSel[n] ?? n > postCap;
   const textDrag = useRef<{ n: number; i: number; x: number; y: number; tx: number; ty: number; ratio: number } | null>(null);
   const [tAngles, setTAngles] = useState<Record<string, number>>({});
   const [textHex, setTextHex] = useState<string>("");
@@ -220,7 +224,20 @@ export function Builder({ id }: { id: string }) {
   useEffect(() => {
     if (!req) return;
     setChosenT((c) => (c.length ? c : req.treatments.slice(0, req.kind?.startsWith("club") ? Math.max(1, Number((req.answers as any)?.clubTreatmentSlots) || 4) : 3)));
-    if (req.kind?.startsWith("club")) setPickedHooks((h) => (h.length ? h : (((req.answers as any).clubHooks as string[]) ?? [])));
+    if (req.kind?.startsWith("club")) setPickedHooks((h) => {
+      if (h.length) return h;
+      const base = (((req.answers as any).clubHooks as string[]) ?? []);
+      const want = Math.max(0, Number((req.answers as any)?.clubHookSlots) || 0);
+      if (base.length >= want) return base;
+      // Top up with more hooks that fit their treatments so the extra posts for the bank can be built.
+      const ts = req.treatments.slice(0, 6);
+      const extra = HOOK_BANK.filter((x: Hook) => (x.theme === "Treatment" || x.theme === "Emotional" || x.theme === "Engagement") && !base.includes(x.code) && hookFits(x, ts)).map((x: Hook) => x.code);
+      const out = [...base];
+      const start = extra.length ? hashSeed(req.id) % extra.length : 0;
+      for (let k = 0; k < extra.length && out.length < want; k++) { const c = extra[(start + k * 3) % extra.length]; if (!out.includes(c)) out.push(c); }
+      for (let k = 0; k < extra.length && out.length < want; k++) if (!out.includes(extra[k])) out.push(extra[k]);
+      return out.slice(0, want);
+    });
     setAbout((a) => a ?? req.answers);
     if (req.answers.font) setUniFont(req.answers.font);
     injectSuiteFontCss();
@@ -600,7 +617,7 @@ export function Builder({ id }: { id: string }) {
     if (!it) return;
     const rest = it.uniArgs && assets ? renderUniversalPost(it.uniArgs, assets) : it.uni ?? [];
     if (!next) { patchItem(n, { coverArgs: undefined, uni: rest, previews: rest.map((cv) => cv.toDataURL("image/jpeg", 0.6)) }); return; }
-    const cv = await renderCoverPost(next);
+    const cv = await renderCoverPost({ ...next, logo: assets?.logoImg ?? null });
     const cvs = coverInfo(next.layout).statik ? [cv] : [cv, ...rest.slice(1)];
     patchItem(n, { coverArgs: next, uni: cvs, previews: cvs.map((c2) => c2.toDataURL("image/jpeg", 0.6)) });
   };
@@ -648,7 +665,7 @@ export function Builder({ id }: { id: string }) {
   // Text box cover: drag the box anywhere on the first slide.
   const boxDrag = useRef<{ n: number; w: number; h: number } | null>(null);
   const textDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number): boolean => {
-    if (!moveTextOn[it.n] || !it.uniArgs || it.uniArgs.box || i > 4) return false;
+    if (moveTextOn[it.n] === false || !it.uniArgs || it.uniArgs.box || i > 4) return false;
     const r = e.currentTarget.getBoundingClientRect();
     const a = it.uniArgs;
     textDrag.current = { n: it.n, i, x: e.clientX, y: e.clientY, tx: a.textX ?? 0, ty: (i === 0 ? a.coverY : a.blockY) ?? 0, ratio: 1080 / Math.max(1, r.width) };
@@ -773,18 +790,20 @@ export function Builder({ id }: { id: string }) {
     setBusy(true);
     try {
       const posts = [];
+      const bank: any[] = [];
       const stories = [];
       for (const [i, it] of itemsRef.current.entries()) {
         setStatus(`Saving images ${i + 1} of ${itemsRef.current.length}...`);
         const cvs = it.post ? await renderPackPost(it.post, client, 1) : it.uni!;
         const images: string[] = [];
         for (const [k, c] of cvs.entries()) images.push(await upload(await jpg(c), `post-${it.n}-${k + 1}.jpg`));
-        posts.push({ n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags, ...(it.uniArgs && it.source === "universal" ? { treatment: it.uniArgs.treatmentId, angle: it.uniArgs.angle } : {}) });
+        const rec = { n: it.n, kind: it.source, label: it.label, images, caption: it.caption, tags: it.tags, ...(it.uniArgs && it.source === "universal" ? { treatment: it.uniArgs.treatmentId, angle: it.uniArgs.angle } : {}) };
+        if (isClub && isBanked(it.n)) bank.push(rec); else posts.push(rec);
         if (!isClub) stories.push({ n: it.n, image: await upload(await jpg(renderStory(cvs[0], assets)), `story-${it.n}.jpg`), instruction: it.poll.instruction, poll: { question: it.poll.question, a: it.poll.a, b: it.poll.b } });
       }
       if (isClub) {
-        await post(`/club/months/${monthId}/posts`, { posts });
-        setStatus("Saved to your approval queue. Nothing reaches the member until you approve it.");
+        await post(`/club/months/${monthId}/posts`, { posts, bank });
+        setStatus(`Saved: ${posts.length} in your approval queue and ${bank.length} in the bank. Nothing reaches the member until you approve it.`);
       } else {
         const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
         setLink(siteLink(j.slug));
@@ -1009,13 +1028,16 @@ export function Builder({ id }: { id: string }) {
           <div key={it.n} className="border rounded-xl p-3 space-y-2">
             <div className="flex justify-between items-center">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Post {it.n} · {it.label}</div>
-              <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
+              <div className="flex items-center gap-3">
+                {isClub && <label className="text-xs flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={isBanked(it.n)} onChange={(e) => setBankSel((m) => ({ ...m, [it.n]: e.target.checked }))} />Save to bank</label>}
+                <button className="text-xs text-red-600 underline" onClick={() => { if (confirm(`Delete post ${it.n} from this pack?`)) setItems((xs) => xs.filter((x) => x.n !== it.n)); }}>Delete post</button>
+              </div>
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (textDown(e, it, i)) return; if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (textDrag.current) textMove(e); else if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { textDrag.current = null; dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
-                  onClick={() => (moveTextOn[it.n] || (i === 0 && it.uniArgs?.box) ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
-                  className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${moveTextOn[it.n] && it.uniArgs ? "cursor-move touch-none ring-2 ring-pink-500" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
+                  onClick={() => (moveTextOn[it.n] !== false || (i === 0 && it.uniArgs?.box) ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
+                  className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${moveTextOn[it.n] !== false && it.uniArgs ? "cursor-move touch-none ring-2 ring-pink-500" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
             {isPrem && it.uniArgs && assetsRef.current && (() => {
@@ -1053,7 +1075,7 @@ export function Builder({ id }: { id: string }) {
                     {dots.map(([label, val, css]) => <button key={label} type="button" title={label} onClick={() => setU({ [keyEl]: val })} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
                     {keyEl !== "block" && <button type="button" className="px-1 py-0.5 rounded border bg-white text-black" onClick={() => setU({}, [keyEl])}>{keyEl === "bgColour" ? "Photo" : "Auto"}</button>}
                   </span>
-                  <button type="button" className={pill(!!moveTextOn[it.n])} onClick={() => setMoveTextOn((m) => ({ ...m, [it.n]: !m[it.n] }))}>{moveTextOn[it.n] ? "Moving text: drag the picture" : "Move text"}</button>
+                  <button type="button" className={pill(moveTextOn[it.n] === false)} onClick={() => setMoveTextOn((m) => ({ ...m, [it.n]: m[it.n] === false }))}>{moveTextOn[it.n] === false ? "Pick photos (press to drag text again)" : "Dragging text on the picture (press to pick photos)"}</button>
                   {sl("Writing up/down", "blockY", -600, 120, 10, 0)}
                   {sl("Text left/right", "textX", -300, 300, 10, 0)}
                   {sl("Writing size", "textScale", 0.6, 1.6, 0.05, 1)}

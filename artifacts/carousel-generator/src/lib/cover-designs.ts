@@ -79,6 +79,8 @@ async function loadFonts(fonts: AboutFont[]) {
 export type CoverMove = Record<string, [number, number]>;
 export type CoverOptions = {
   layout: CoverLayout;
+  /** The clinic logo, drawn small at the top right when given. */
+  logo?: HTMLImageElement | null;
   /** The photos to draw, first one is the main picture. */
   photos: ImageBitmap[];
   /** The clinician cut out of their photo, for the strip and circle templates. */
@@ -577,5 +579,9 @@ export async function renderCoverPost(o: CoverOptions): Promise<HTMLCanvasElemen
   const { c, ctx } = newCanvas();
   ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
   DRAW[o.layout]({ ctx, o, hf, bf, sf });
+  if (o.logo && o.logo.width && o.logo.height) {
+    const lh = 110, lw = Math.round(lh * (o.logo.width / o.logo.height));
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 8; ctx.drawImage(o.logo, W - lw - 40, 40, lw, lh); ctx.restore();
+  }
   return c;
 }

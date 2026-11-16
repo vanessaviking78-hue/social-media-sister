@@ -30,6 +30,7 @@ export const CLUB_PLANS = {
 type PlanId = keyof typeof CLUB_PLANS;
 export const PLACES = { "69": 5, "222": 7 } as const;
 const MAX_PHOTOS = 20;
+const CLUB_BANK_EXTRA = 8; // extra posts built each month and saved to the member's bank for later
 const CUT_OFF_DAYS = 7; // members choose up to a week before billing, generation starts five days before
 const PREP_DAYS = 5;
 
@@ -303,7 +304,7 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
         status: cur.status === "approved" ? "approved" : cur.status === "choosing" ? "choosing" : "building",
         choices: cur.choices,
       },
-      months: (approved.rows as any[]).map((r) => ({ month: r.month, content: r.content, aiUrls: r.ai_urls, approvedAt: r.approved_at })),
+      months: (approved.rows as any[]).map((r) => ({ month: r.month, content: { ...(r.content ?? {}), bank: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at })),
     });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load your portal" });
@@ -857,7 +858,7 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
     bizType: d.bizType || "Clinic", age: d.age || "", hobbies: d.hobbies || "", mum: d.mum || "", pets: d.pets || "", why: [d.why, d.howStarted].filter(Boolean).join(" "),
     threeWords: d.threeWords || "", personality: d.personality || "", font: d.font || "hatcher", passion: d.passion || "",
     facts: d.facts ?? [], favTreatments: d.favTreatments ?? [], howStarted: d.howStarted || "",
-    usedAngles, clubHooks: hookCodes, clubTreatmentSlots: caps.treatmentPosts, clubAboutSlots: caps.aboutPosts, clubHookSlots: Math.min(caps.picks - caps.aboutPosts, Math.max(hookCodes.length, caps.picks - caps.aboutPosts - picks.filter((p) => p.kind === "tool").length)),
+    usedAngles, clubHooks: hookCodes, clubTreatmentSlots: caps.treatmentPosts, clubAboutSlots: caps.aboutPosts, clubPostCap: caps.posts, clubHookSlots: Math.min(caps.picks - caps.aboutPosts, Math.max(hookCodes.length, caps.picks - caps.aboutPosts - picks.filter((p) => p.kind === "tool").length)) + CLUB_BANK_EXTRA,
   };
   await ensureTenFreeTable();
   const rid = `club-${x.id}`;
@@ -958,14 +959,16 @@ router.post("/club/months/:id/posts", requireAuth, async (req: Request, res: Res
       res.status(404).json({ error: "Not found" });
       return;
     }
-    const b = req.body as { posts?: any[]; reels?: any[] };
+    const b = req.body as { posts?: any[]; bank?: any[]; reels?: any[] };
     const posts = (Array.isArray(b.posts) ? b.posts : []).slice(0, 24).map((p, i) => ({
       n: Number(p.n) || i + 1, kind: str(p.kind, 30), label: str(p.label, 100),
       images: (p.images ?? []).map((u: unknown) => str(u, 400)).filter(Boolean).slice(0, 10),
       caption: noDashes(p.caption).slice(0, 1800), tags: noDashes(p.tags).slice(0, 300),
       ...(p.treatment ? { treatment: str(p.treatment, 60), angle: Number(p.angle) || 0 } : {}),
     }));
-    const content = { ...(x.content ?? {}), posts };
+    const content: Record<string, any> = { ...(x.content ?? {}), posts };
+    // Posts she keeps back for later months. Never shown to the member.
+    if (Array.isArray(b.bank)) content.bank = b.bank.slice(0, 40).map((p: any, i: number) => ({ n: Number(p.n) || i + 1, kind: str(p.kind, 30), label: str(p.label, 100), images: (p.images ?? []).map((u: unknown) => str(u, 400)).filter(Boolean).slice(0, 10), caption: noDashes(p.caption).slice(0, 1800), tags: noDashes(p.tags).slice(0, 300), ...(p.treatment ? { treatment: str(p.treatment, 60), angle: Number(p.angle) || 0 } : {}) }));
     if (Array.isArray(b.reels)) {
       (content as any).reels = b.reels.slice(0, 30).map((r: any, i: number) => ({ n: i + 1, kind: r.kind === "treatment" ? "treatment" : "engagement", treatment: str(r.treatment, 60), hook: noDashes(r.hook).slice(0, 220), onScreen: noDashes(r.onScreen).slice(0, 80), script: noDashes(r.script).slice(0, 900) }));
     }
