@@ -13,7 +13,7 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { logger } from "../lib/logger";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 
-// THE CLUBS. £69 club (free injectors WhatsApp group, 10 places) and £275 club (Instagram DM, 7 places).
+// THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £275 club (Instagram DM, 7 places).
 // The £69 club also has a public invitation page (/youreinvited): someone accepts the promise, becomes a PENDING member, fills in the details form, and waits for Vanessa to approve her.
 // A member is made by Vanessa, gets a private link /club/<token>, fills in their details once, then picks their treatments and posts each month.
 // Five days before their billing date the month is prepared (reel hooks and scripts, six AI photos), and an email tells Vanessa it is waiting.
@@ -28,7 +28,7 @@ export const CLUB_PLANS = {
   "222": { price: 275, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
-export const PLACES = { "69": 10, "222": 7 } as const;
+export const PLACES = { "69": 5, "222": 7 } as const;
 const MAX_PHOTOS = 20;
 const CUT_OFF_DAYS = 7; // members choose up to a week before billing, generation starts five days before
 const PREP_DAYS = 5;
