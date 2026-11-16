@@ -57,22 +57,22 @@ For this tool only, these lines override the house rules above on the call to ac
 
 You write as ${client}${area ? ` in ${area}` : ""}, in the first person ("I", "my", "you"), as the clinician running the clinic, never as a social media manager. Where the client's own words are given below, their personality sets the tone. Otherwise use the house voice.
 
-THIS IS A FIVE SLIDE CAROUSEL ABOUT ${treatment.toUpperCase()}.
+${treatment ? `THIS IS A FIVE SLIDE CAROUSEL ABOUT ${treatment.toUpperCase()}.` : `THIS IS A FIVE SLIDE CAROUSEL ABOUT THE HEADLINE'S OWN TOPIC, NOT ABOUT ANY TREATMENT. Never name a treatment anywhere in it (no microneedling, skin boosters, fillers or similar). Do not sell or explain a treatment. Stay with the feeling, the situation and the person.`}
 THE HEADLINE (set, do not change it): "${headline}"
 THE BRIEF: ${brief}
 ${fromHook ? `
-THE HEADLINE IS A HOOK THE CLINIC CHOSE, AND IT SETS THE WHOLE POST. The slides must read as one continuous thought with it, never a generic explainer about ${treatment}.
+THE HEADLINE IS A HOOK THE CLINIC CHOSE, AND IT SETS THE WHOLE POST. The slides must read as one continuous thought with it, never a generic explainer.
 - slide2 picks up the exact moment, feeling or detail in the headline (its place, age, memory or situation) and says more about it, in the same voice.
 - slide3 turns that into how it feels for her now, in her own skin and her own confidence, still referring back to the headline's detail.
-- slide4 brings ${treatment} in gently as one option many people find helpful, tied back to the same thought, ending on a warm line that echoes the headline.
+- slide4 ${treatment ? `brings ${treatment} in gently as one option many people find helpful, tied back to the same thought, ending on a warm line that echoes the headline.` : "ends on a warm line that echoes the headline and invites her to talk to me, with no treatment named."}
 - "phrases": exactly 6 short lines of at most 5 words each, that sit on the cover around the headline. Each one is a small observation, feeling or wry aside that belongs to the headline's own world, never advice, never a generic tip like "sun cream" or "aftercare matters".
 - "points": exactly 3 items, each { "t": at most 4 words, "b": one short sentence of at most 14 words } that carry the headline's thought forward.
-- The subtitle and the caption must also stay inside the headline's world. If the headline is not about ${treatment}, do not turn the slides into a treatment explainer.
+- The subtitle and the caption must also stay inside the headline's world. ${treatment ? `If the headline is not about ${treatment}, do not turn the slides into a treatment explainer.` : "Do not turn the slides into a treatment explainer."}
 ` : ""}
 THE WRITING
 - "subtitle": the line under the headline on slide 1. ${intro ? "ONE short sentence, maximum 14 words, quirky and warm, that explains what the treatment is in plain words." : "ONE short sentence, maximum 14 words, quirky and warm, that adds a wink to the headline."} It should make a woman over 35 smile and keep reading. Never a question. Never a pun on someone's looks or age.
 - "slide2", "slide3", "slide4": each is EXACTLY three short sentences, friendly but informative, each carrying on from the one before. Plain everyday words, a little humour where it fits.
-- "caption": the Instagram caption, maximum 120 words. A first line that holds attention, short lines, a little humour and personality, adding something the slides do not say. ${CAPTION_END_RULE}
+- "caption": the Instagram caption, maximum 120 words. A first line that holds attention, short lines, a little humour and personality, adding something the slides do not say. ${treatment ? CAPTION_END_RULE : "It must end on one friendly question that relates to the post, and must not name a treatment."}
 - "hashtags": exactly 5, lower case, no spaces${area ? `, each joining ${area} to a beauty, mums or skin theme` : ""}.
 
 WRITING RULES (non-negotiable)
@@ -102,7 +102,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     const note = str(b.note, 900);
     const intro = b.intro === true;
     const fromHook = b.fromHook === true;
-    if (!client || !treatment || !headline || !brief) {
+    if (!client || (!treatment && b.general !== true) || !headline || !brief) {
       res.status(400).json({ error: "Pick a client and a post first" });
       return;
     }
@@ -120,12 +120,12 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
     if (!raw) throw new Error("No copy came back, try again");
     const j = JSON.parse(raw);
 
-    const cta = matchedCta(treatment, undefined, headline);
+    const cta = treatment ? matchedCta(treatment, undefined, headline) : "";
     res.json({
       subtitle: clean(j.subtitle, 140),
       slides: [clean(j.slide2, 340), clean(j.slide3, 340), clean(j.slide4, 340)],
       cta,
-      caption: withCta(clean(j.caption, 900), cta),
+      caption: treatment ? withCta(clean(j.caption, 900), cta) : clean(j.caption, 900),
       hashtags: fiveTags(j.hashtags, area),
       ...(fromHook ? {
         phrases: (Array.isArray(j.phrases) ? j.phrases : []).map((x: unknown) => clean(x, 60)).filter(Boolean).slice(0, 6),

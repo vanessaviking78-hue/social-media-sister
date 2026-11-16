@@ -231,7 +231,9 @@ export function Builder({ id }: { id: string }) {
       if (base.length >= want) return base;
       // Top up with more hooks that fit their treatments so the extra posts for the bank can be built.
       const ts = req.treatments.slice(0, 6);
-      const extra = HOOK_BANK.filter((x: Hook) => (x.theme === "Treatment" || x.theme === "Emotional" || x.theme === "Engagement") && !base.includes(x.code) && hookFits(x, ts)).map((x: Hook) => x.code);
+      const fitting = HOOK_BANK.filter((x: Hook) => (x.theme === "Treatment" || x.theme === "Emotional" || x.theme === "Engagement") && !base.includes(x.code) && hookFits(x, ts));
+      // Mostly hooks about feelings and engagement, so the posts are not all about one treatment. Treatment hooks only fill any gap.
+      const extra = [...fitting.filter((x: Hook) => !(x.day === "Monday" || /\[treatment\]/i.test(x.text))), ...fitting.filter((x: Hook) => x.day === "Monday" || /\[treatment\]/i.test(x.text))].map((x: Hook) => x.code);
       const out = [...base];
       const start = extra.length ? hashSeed(req.id) % extra.length : 0;
       for (let k = 0; k < extra.length && out.length < want; k++) { const c = extra[(start + k * 3) % extra.length]; if (!out.includes(c)) out.push(c); }
@@ -458,7 +460,10 @@ export function Builder({ id }: { id: string }) {
           // Fill the hook with the same treatment the slides are written about, so the cover and the slides always match.
           const text = (pickedHooks[hi] ? pickedHookPayload([pickedHooks[hi]], [tr.name], req.area.split(",")[0].trim(), req.clinicianName)[0]?.text : "") || hookTexts[hi] || "";
           setStatus(`Writing the hook posts... ${hi + 1} of ${hookSlots.length}`);
-          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: tr.name, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
+          // Only a treatment hook is written about the treatment. Every other hook is written about its own topic, so the set is not all microneedling or skin boosters.
+          const hk = pickedHooks[hi] ? HOOK_BANK.find((x: Hook) => x.code === pickedHooks[hi]) : undefined;
+          const isTreatHook = !!hk && (hk.day === "Monday" || /\[treatment\]/i.test(hk.text));
+          const c = await post("/universal/copy", { client: req.clinicName, area: req.area, treatment: isTreatHook ? tr.name : "", general: !isTreatHook, headline: text, brief: "The cover line is a hook the clinician chose. Carry the idea on from it with friendly, informative slides that feel true to her as a person, using only what she told us about herself and her clinic. No claims, results or promises.", intro: false, note: voiceFor(ans.personality) });
           const args = { treatmentId: "about-me", headline: text, copy: { subtitle: c.subtitle, slides: c.slides, cta: ctaFor(slot.n) }, photos: aboutBmps, offset: 1 + hi * 2, angle: hi % 2, shift: [0, 0, 0, 0], variant: isPremium ? vi++ % 2 : 0, block: blockFor(slot.n) };
           hi++;
           const canvases = renderUniversalPost(args, assets);
