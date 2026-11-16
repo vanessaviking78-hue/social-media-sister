@@ -4,6 +4,7 @@
 
 import { NO1_TREATMENTS } from "./no1-posts";
 import { UNIQUE } from "./unique-designs";
+import { COVER_XMAS } from "./cover-banks"; // read only: her Christmas quote bank, used here without changing it for anyone else
 
 export type StaticGroup = { id: string; label: string; treatmentId?: string };
 
@@ -14,6 +15,7 @@ export type StaticPostType = {
   brief: string;
   word: string; // comment word for the closing line, or "" for a friendly closing question
   fixed?: { hook: string; line: string; caption: string; hashtags: string[] }; // her own approved words, used as written
+  quote?: string; // her own words for the picture, used exactly as written; only the caption and hashtags are written for it
 };
 
 const T = (id: string) => NO1_TREATMENTS.find((t) => t.id === id)!;
@@ -157,6 +159,17 @@ const safetyTypes: StaticPostType[] = [
   { id: "st-safety-sf3", group: "safety", label: "Aftercare and what to do if you are worried", brief: "A reassuring post on why aftercare matters and why you should always feel able to contact your practitioner if something does not feel right. Never invent a name, qualification, year, number, client or story: only say what I could truthfully say about how I work. No promises, no prices, no medicine names, no website.", word: "" },
 ];
 
+// Christmas: her warm, sentimental quote bank as single image posts. The quote sits on the picture exactly as she wrote it,
+// and the useful, comforting detail goes in the caption.
+const xmasTypes: StaticPostType[] = COVER_XMAS.map((q, i) => ({
+  id: `st-xmas-${i + 1}`,
+  group: "xmas",
+  label: `Christmas: ${q.split(" ").slice(0, 7).join(" ").replace(/[.,:;!?]+$/, "")}`,
+  brief: `A warm, gentle Christmas post in my own voice as the clinic owner. The picture already carries this line exactly as written, so the caption must carry on from it without repeating it: "${q}". Put the comfort and the detail in the caption. Be kind, personal and a little funny. Never sell, no treatments, no prices, no offers. Close with one question that relates to the line.`,
+  word: "",
+  quote: q,
+}));
+
 export const STATIC_GROUPS: StaticGroup[] = [
   ...treatmentGroups,
   { id: "volume", label: "Volume loss and why it happens" },
@@ -168,8 +181,9 @@ export const STATIC_GROUPS: StaticGroup[] = [
   { id: "bf", label: "Black Friday" },
   { id: "safety", label: "Safety" },
   { id: "unique", label: "Unique" },
+  { id: "xmas", label: "Christmas" },
 ];
 
-export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...bfTypes, ...safetyTypes, ...uniqueTypes];
+export const STATIC_POST_TYPES: StaticPostType[] = [...treatmentTypes, ...otherTypes, ...aboutTypes, ...fitTypes, ...bfTypes, ...safetyTypes, ...uniqueTypes, ...xmasTypes];
 
 export const STATIC_CLINIC = "NO 1 BODY SCULPTING";

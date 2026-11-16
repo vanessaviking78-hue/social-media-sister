@@ -61,7 +61,7 @@ const uniOf = (typeId: string) => {
 };
 const mkPost = (t: StaticPostType, photo: number, when: string, busy: boolean): Post => {
   const d = uniOf(t.id);
-  return { id: uid(), typeId: t.id, hook: t.label, line: "", caption: "", hashtags: [], photo, note: "", when, busy, scheduling: false, ...LAYOUT0, ...(d ? { uni: resolveUniText(d, {}, UNI_FILL) } : {}) };
+  return { id: uid(), typeId: t.id, hook: t.quote ?? t.label, line: "", caption: "", hashtags: [], photo, note: "", when, busy, scheduling: false, ...LAYOUT0, ...(d ? { uni: resolveUniText(d, {}, UNI_FILL) } : {}) };
 };
 const briefFor = (post: Post, t: StaticPostType): string => {
   const d = uniOf(t.id);
@@ -581,7 +581,7 @@ function No1StaticsPage() {
       const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: post.note }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, post.uni ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+      patch(post.id, post.uni || t.quote ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
@@ -770,7 +770,7 @@ function No1StaticsPage() {
         const r = await fetch(`${BASE}/api/no1/static-copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: t.label, brief: briefFor(post, t), word: t.word, tweet: isTweet(t), note: "" }) });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data?.error || "failed");
-        patch(post.id, post.uni ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
+        patch(post.id, post.uni || t.quote ? { busy: false, caption: data.caption, hashtags: data.hashtags } : { busy: false, hook: data.hook, line: data.line ?? "", caption: data.caption, hashtags: data.hashtags });
       } catch {
         patch(post.id, { busy: false });
         toast.error(`"${t.label}" would not write, press Write it on it`);
