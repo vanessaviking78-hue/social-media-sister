@@ -679,10 +679,13 @@ export function Builder({ id }: { id: string }) {
   };
   // Text box cover: drag the box anywhere on the first slide.
   const boxDrag = useRef<{ n: number; w: number; h: number } | null>(null);
+  // A plain click on a picture (no drag) opens the photo chooser, even while text dragging is on.
+  const dragMoved = useRef(false);
   const textDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number): boolean => {
     if (moveTextOn[it.n] === false || !it.uniArgs || it.uniArgs.box || i > 4) return false;
     const r = e.currentTarget.getBoundingClientRect();
     const a = it.uniArgs;
+    dragMoved.current = false;
     textDrag.current = { n: it.n, i, x: e.clientX, y: e.clientY, tx: a.textX ?? 0, ty: (i === 0 ? a.coverY : a.blockY) ?? 0, ratio: 1080 / Math.max(1, r.width) };
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* fine */ }
     return true;
@@ -691,6 +694,7 @@ export function Builder({ id }: { id: string }) {
     const d = textDrag.current;
     const assets = assetsRef.current;
     if (!d || !assets) return;
+    if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) > 5) dragMoved.current = true;
     const it = itemsRef.current.find((x) => x.n === d.n);
     if (!it?.uniArgs) return;
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v / 10) * 10));
@@ -1050,7 +1054,7 @@ export function Builder({ id }: { id: string }) {
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (textDown(e, it, i)) return; if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (textDrag.current) textMove(e); else if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { textDrag.current = null; dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
-                  onClick={() => (moveTextOn[it.n] !== false || (i === 0 && it.uniArgs?.box) ? undefined : isPrem && it.uniArgs && i <= 3 ? setSel({ n: it.n, i }) : swapPhoto(it, i))} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo" : "Click to swap the photo") : undefined}
+                  onClick={() => { if (i === 0 && it.uniArgs?.box) return; if (moveTextOn[it.n] !== false) { if (!dragMoved.current && it.uniArgs && i <= 3) { if (isPrem) setSel({ n: it.n, i }); else swapPhoto(it, i); } return; } if (isPrem && it.uniArgs && i <= 3) setSel({ n: it.n, i }); else swapPhoto(it, i); }} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo, drag to move the text" : "Click to swap the photo") : undefined}
                   className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${moveTextOn[it.n] !== false && it.uniArgs ? "cursor-move touch-none ring-2 ring-pink-500" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
