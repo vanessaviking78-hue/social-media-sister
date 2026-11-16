@@ -33,6 +33,10 @@ const MAX_PHOTOS = 20;
 const CUT_OFF_DAYS = 7; // members choose up to a week before billing, generation starts five days before
 const PREP_DAYS = 5;
 
+// A member can be built for once their details and photos are saved, even if her form was later reopened for edits.
+const canBuild = (m: { details_done: boolean; details?: Record<string, any>; photo_urls?: string[] }) =>
+  m.details_done || (!!m.details?.clinicName && !!m.details?.clinicianName && (m.photo_urls ?? []).length > 0);
+
 const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
 const noDashes = (t: unknown) => String(t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 const hex = (v: unknown, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v ?? "").trim()) ? String(v).trim() : fallback);
@@ -586,7 +590,7 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
 async function prepareMonth(memberId: string, month: string): Promise<void> {
   const mr = await db.execute(sql`SELECT * FROM club_members WHERE id = ${memberId}`);
   const m = mr.rows[0] as unknown as Member | undefined;
-  if (!m || m.status !== "active" || !m.details_done) return;
+  if (!m || m.status !== "active" || !canBuild(m)) return;
   const cur = await getOrMakeMonth(memberId, month);
   if (cur.status === "approved") return;
   await db.execute(sql`UPDATE club_months SET status = CASE WHEN status = 'choosing' THEN 'to_build' ELSE status END, reels_status = 'working', updated_at = now() WHERE id = ${cur.id}`);
@@ -641,7 +645,7 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
       members: ms.map((m) => {
         const { date, month } = nextBilling(m.billing_day);
         return {
-          id: m.id, name: m.name, email: m.email, phone: m.phone ?? "", agreedName: m.agreed_name ?? "", agreedAt: m.agreed_at ?? null, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, details: m.details,
+          id: m.id, name: m.name, email: m.email, phone: m.phone ?? "", agreedName: m.agreed_name ?? "", agreedAt: m.agreed_at ?? null, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, canBuild: canBuild(m), details: m.details,
           link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
@@ -860,7 +864,9 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
   const kind = `club${m.plan}`;
   const aiUrls = (x.ai_urls ?? []);
   const photos = (m.photo_urls ?? []).slice(0, 12);
-  const treatments = ((x.choices?.treatments as string[]) ?? []).slice(0, 4);
+  const chosen = ((x.choices?.treatments as string[]) ?? []).slice(0, 4);
+  // If she has not picked her treatments yet, start from the favourites she listed on her details form.
+  const treatments = chosen.length ? chosen : (((d.favTreatments as string[]) ?? []).slice(0, caps.treatmentPosts));
   const exists = (await db.execute(sql`SELECT 1 FROM tenfree_requests WHERE id = ${rid}`)).rows.length > 0;
   if (exists) {
     await db.execute(sql`UPDATE tenfree_requests SET treatments = ${JSON.stringify(treatments)}::jsonb, answers = ${JSON.stringify(answers)}::jsonb, ai_urls = ${JSON.stringify(aiUrls)}::jsonb,

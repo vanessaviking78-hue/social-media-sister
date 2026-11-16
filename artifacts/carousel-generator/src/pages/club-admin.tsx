@@ -19,7 +19,7 @@ type Month = {
   reelCount: number; postCount: number; aiUrls: string[]; aiStatus: string; aiError?: string; reelsStatus: string; note: string;
 };
 type Member = {
-  id: string; name: string; email: string; phone?: string; agreedName?: string; agreedAt?: string | null; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; link: string; nextBilling: string; daysToBilling: number;
+  id: string; name: string; email: string; phone?: string; agreedName?: string; agreedAt?: string | null; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; canBuild?: boolean; link: string; nextBilling: string; daysToBilling: number;
   cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; welcomePhotoUrl?: string; months: Month[];
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
@@ -152,13 +152,13 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
           </details>
           <div className="space-y-2">
             <div className="flex gap-2 flex-wrap items-center">
-            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>1. Build the posts and studio photos</button>
+            <button disabled={busy || !(member.canBuild ?? member.detailsDone)} className="px-3 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={build}>1. Build the posts and studio photos</button>
             <button disabled={busy || month.status === "approved"} className="px-3 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={approve}>3. Approve and show to member</button>
             </div>
-            {!member.detailsDone && <div className="text-sm text-red-600">Their details form is open again, so building is switched off. Ask them to press Send on it, or tell me.</div>}
+            {!(member.canBuild ?? member.detailsDone) && <div className="text-sm text-red-600">They have not filled in their details and photos yet. Send them their link and ask them to press Send.</div>}
             <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">More options (you rarely need these)</summary>
               <div className="space-y-2 pt-2"><div className="flex gap-2 flex-wrap">
-            <button disabled={busy || !member.detailsDone} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reel hooks. Refresh in a minute."); }}>Write the reel hooks (no AI photos)</button>
+            <button disabled={busy || !(member.canBuild ?? member.detailsDone)} className="px-3 py-1.5 rounded border" onClick={async () => { if (await call(`/club/members/${member.id}/prepare`, { month: month.month })) toast.success("Started the reel hooks. Refresh in a minute."); }}>Write the reel hooks (no AI photos)</button>
             <button disabled={busy} className="px-3 py-1.5 rounded border" onClick={sendBack}>Send back to build</button>
               </div>
           <input className="w-full border rounded px-2 py-1 text-sm" placeholder="Note to yourself when sending back" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -397,7 +397,7 @@ export default function ClubAdmin() {
                   <div>
                     <div className="font-semibold">{m.name} <span className="text-xs uppercase text-pink-500">{m.status === "pending" ? "waiting for your approval" : m.status}</span></div>
                     {m.status === "pending" && <div className="text-xs">{m.phone ? `WhatsApp ${m.phone} · ` : ""}signed the promise as "{m.agreedName}"{m.agreedAt ? ` on ${new Date(m.agreedAt).toLocaleDateString("en-GB")}` : ""}</div>}
-                    <div className="text-xs text-muted-foreground">{m.email || "no email"} · bills on day {m.billingDay} · next {m.nextBilling} ({m.daysToBilling} days) · {m.detailsDone ? `details done, ${m.photoCount} photos${m.hasClinicPhoto ? ", clinic photo" : ""}` : "details not filled in yet"}</div>
+                    <div className="text-xs text-muted-foreground">{m.email || "no email"} · bills on day {m.billingDay} · next {m.nextBilling} ({m.daysToBilling} days) · {m.detailsDone || m.canBuild ? `details done, ${m.photoCount} photos${m.hasClinicPhoto ? ", clinic photo" : ""}` : "details not filled in yet"}</div>
                   </div>
                   <div className="flex gap-2 text-sm flex-wrap">
                     <button className="px-3 py-1 rounded border" onClick={() => { navigator.clipboard?.writeText(m.link); toast.success("Link copied"); }}>Copy link</button>
@@ -414,7 +414,7 @@ export default function ClubAdmin() {
                 </div>
                 <WelcomePhoto member={m} reload={load} />
                 {m.months.filter((x) => x.status !== "pending_approval").slice(0, 3).map((x) => <MonthPanel key={x.id} member={m} month={x} reload={load} />)}
-                {m.months.length === 0 && m.detailsDone && (
+                {m.months.length === 0 && (m.canBuild ?? m.detailsDone) && (
                   <button className="px-3 py-1 rounded border text-sm" onClick={async () => { await fetch(`${API}/club/members/${m.id}/prepare`, { method: "POST", headers: jsonHeaders(), body: "{}" }); toast.success("Started. Refresh in a few minutes."); load(); }}>Start their first month now</button>
                 )}
               </div>
