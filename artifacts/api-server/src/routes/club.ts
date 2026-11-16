@@ -525,7 +525,7 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
 // Reel hooks and scripts. Some are tailored to the treatments she chose, the rest are written to start conversations.
 // ---------------------------------------------------------------------------
 
-type Reel = { n: number; kind: "treatment" | "engagement"; treatment?: string; hook: string; onScreen: string; script: string };
+type Reel = { n: number; kind: "treatment" | "engagement"; theme?: string; treatment?: string; hook: string; onScreen: string; script: string };
 
 type Story = { n: number; text: string; poll: { question: string; a: string; b: string } };
 
@@ -681,6 +681,56 @@ async function prepareMonth(memberId: string, month: string): Promise<void> {
 // ---------------------------------------------------------------------------
 // Vanessa's side
 // ---------------------------------------------------------------------------
+
+// Christmas reels for every active member: ten hooks with scripts each, in her own voice, added to her latest month. Nothing about treatments, results or claims.
+async function writeChristmasReels(m: Member, month: MonthRow, count: number): Promise<Reel[]> {
+  const d = m.details ?? {};
+  const profile = [
+    `Clinician: ${d.clinicianName || m.name}`, `Clinic: ${d.clinicName || ""}`, `Area: ${d.area || ""}`,
+    d.personality && `Her personality and how she talks: ${d.personality}`, d.threeWords && `Three words for her: ${d.threeWords}`,
+    d.hobbies && `Hobbies: ${d.hobbies}`, d.pets && `Pets: ${d.pets}`, d.passion && `Passion: ${d.passion}`, (d.facts ?? []).length && `Things people might not know: ${(d.facts ?? []).join("; ")}`,
+    month.choices?.note && `Her note this month (theme and timing only, never state results or claims): ${str(month.choices.note, 500)}`,
+  ].filter(Boolean).join("\n");
+  const r = await openai.chat.completions.create({
+    model: "gpt-4o",
+    temperature: 0.95,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write short form video reels for a UK aesthetics clinician, in HER first person, as her. Every reel is Christmas related but NOT about a treatment: the chaos of December, the party season, family, work do's, gifts, the clinic in the run up to Christmas, small confessions and funny truths, questions that are easy to answer in the comments. Hooks must stop the scroll in three seconds, be unique and not the kind of line seen all over the industry. Scripts are 40 to 70 words, spoken, conversational, ending on a question that invites a comment. Never mention a website, never mention Botox, anti-wrinkle or prescription treatments, never promise a result, never use emojis, never use em dashes, no negative parallelism, no AI patter, no "here's the thing". Use British spelling. Every one a different shape (a confession, a question, a hot take, a story, a list of three). Do not use the same opening words twice.\nReturn JSON: {"reels":[{"hook":string,"onScreen":string,"script":string}]}` },
+      { role: "user", content: `${profile}\n\nWrite ${count} Christmas reels.` },
+    ],
+  });
+  let list: any[] = [];
+  try { list = JSON.parse(r.choices[0]?.message?.content ?? "{}").reels ?? []; } catch { list = []; }
+  return list.slice(0, count).map((x) => ({ n: 0, kind: "engagement" as const, theme: "christmas", hook: noDashes(x.hook).slice(0, 220), onScreen: noDashes(x.onScreen).slice(0, 80), script: noDashes(x.script).slice(0, 900) })).filter((x) => x.hook && x.script);
+}
+
+router.post("/club/reels/christmas", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const count = Math.min(15, Math.max(1, Number((req.body as any)?.count) || 10));
+    const members = (await db.execute(sql`SELECT * FROM club_members WHERE status = 'active'`)).rows as unknown as Member[];
+    const who = members.filter((m) => canBuild(m));
+    res.json({ ok: true, members: who.map((m) => m.name), count });
+    void (async () => {
+      for (const m of who) {
+        try {
+          const x = (await db.execute(sql`SELECT * FROM club_months WHERE member_id = ${m.id} ORDER BY month DESC LIMIT 1`)).rows[0] as unknown as MonthRow | undefined;
+          if (!x) continue;
+          const content = { ...(x.content ?? {}) } as Record<string, any>;
+          const have: Reel[] = (content.reels as Reel[]) ?? [];
+          if (have.some((r) => r.theme === "christmas")) continue;
+          const xmas = await writeChristmasReels(m, x, count);
+          if (!xmas.length) continue;
+          content.reels = [...have, ...xmas].map((r, i) => ({ ...r, n: i + 1 }));
+          await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, reels_status = 'ready', updated_at = now() WHERE id = ${x.id}`);
+        } catch (err) { logger.warn({ err, member: m.name }, "Christmas reels failed"); }
+      }
+    })();
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not start" });
+  }
+});
 
 // Reads the member's note for the month and pulls out a theme (Christmas, say) and any new treatment on its way, with a safe description that makes no claims.
 router.post("/club/note/analyse", requireAuth, async (req: Request, res: Response) => {
