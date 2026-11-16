@@ -129,7 +129,7 @@ export default function ClubInvite() {
           <b><span>£69</span> a month</b>
           <span className="ci-sm" style={{ margin: 0 }}>Cancel any time. No contract.</span>
         </div>
-        <a className="ci-btn" href={MONZO_PAY_URL} target="_blank" rel="noopener noreferrer" style={{ marginTop: 12, display: "block", textAlign: "center" }}>Pay £69 on Monzo</a>
+        <a className="ci-btn" href={MONZO_PAY_URL} target="_blank" rel="noopener noreferrer" style={{ marginTop: 12, display: "block", textAlign: "center" }}>Pay the first month</a>
         <p className="ci-sm" style={{ marginTop: 8 }}>Please use your full name as the payment reference so I know it is you.</p>
 
         <h2>What lands in your portal every month</h2>
