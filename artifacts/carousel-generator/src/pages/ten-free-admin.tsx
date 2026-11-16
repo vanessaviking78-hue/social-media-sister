@@ -527,6 +527,11 @@ export function Builder({ id }: { id: string }) {
       patchItem(n, { previews: list });
     }, 60);
   };
+  // Open the photo chooser for one slide and bring it into view, because it sits under the post.
+  const openPhotoPanel = (n: number, i: number) => {
+    setSel({ n, i });
+    setTimeout(() => document.getElementById(`photo-panel-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  };
   // Click a photo on a treatment carousel to swap it for the next one in the library.
   const swapPhoto = (it: Item, i: number) => {
     const assets = assetsRef.current;
@@ -682,7 +687,7 @@ export function Builder({ id }: { id: string }) {
   // A plain click on a picture (no drag) opens the photo chooser, even while text dragging is on.
   const dragMoved = useRef(false);
   const textDown = (e: React.PointerEvent<HTMLImageElement>, it: Item, i: number): boolean => {
-    if (moveTextOn[it.n] === false || !it.uniArgs || it.uniArgs.box || i > 4) return false;
+    if (moveTextOn[it.n] === false || !it.uniArgs || (it.uniArgs.box && i === 0) || i > 4) return false;
     const r = e.currentTarget.getBoundingClientRect();
     const a = it.uniArgs;
     dragMoved.current = false;
@@ -1054,7 +1059,7 @@ export function Builder({ id }: { id: string }) {
             <div className="flex gap-2 overflow-x-auto">
               {it.previews.map((src, i) => (
                 <img key={i} src={src} draggable={false} onPointerDown={(e) => { if (textDown(e, it, i)) return; if (i === 0 && coverDown(e, it)) return; if (!aboutDown(e, it)) onDown(e, it, i); }} onPointerMove={(e) => { if (textDrag.current) textMove(e); else if (coverDrag.current) coverMove(e); else if (aboutDrag.current) void aboutMove(e); else if (i === 0 && it.uniArgs?.box) boxMove(e, it); else onMove(e); }} onPointerUp={() => { textDrag.current = null; dragRef.current = null; boxDrag.current = null; aboutDrag.current = null; coverDrag.current = null; }}
-                  onClick={() => { if (i === 0 && it.uniArgs?.box) return; if (moveTextOn[it.n] !== false) { if (!dragMoved.current && it.uniArgs && i <= 3) { if (isPrem) setSel({ n: it.n, i }); else swapPhoto(it, i); } return; } if (isPrem && it.uniArgs && i <= 3) setSel({ n: it.n, i }); else swapPhoto(it, i); }} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo, drag to move the text" : "Click to swap the photo") : undefined}
+                  onClick={() => { if (i === 0 && it.uniArgs?.box) return; if (moveTextOn[it.n] !== false) { if (!dragMoved.current && it.uniArgs && i <= 3) { if (isPrem) openPhotoPanel(it.n, i); else swapPhoto(it, i); } return; } if (isPrem && it.uniArgs && i <= 3) openPhotoPanel(it.n, i); else swapPhoto(it, i); }} title={it.uniArgs && i <= 3 ? (isPrem ? "Click to choose the photo, drag to move the text" : "Click to swap the photo") : undefined}
                   className={`h-[min(30rem,68vh)] w-auto max-w-none rounded shrink-0 ${(it.aboutArgs && moveSel[it.n]) || (i === 0 && it.coverArgs && coverSel[it.n]) ? "cursor-grab touch-none" : ""} ${moveTextOn[it.n] !== false && it.uniArgs ? "cursor-move touch-none ring-2 ring-pink-500" : ""} ${(it.post && it.post.kind !== "tweet") || (i === 0 && it.uniArgs?.box) ? "cursor-grab touch-none" : it.uniArgs && i <= 3 ? "cursor-pointer" : ""}`} />
               ))}
             </div>
@@ -1111,6 +1116,22 @@ export function Builder({ id }: { id: string }) {
               return (
                 <div className="space-y-1">
                   {compactBar}
+                  <div className="rounded border p-2 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2 text-xs"><b className="uppercase text-foreground">Change the photo on slide</b>
+                      {[0, 1, 2, 3].map((k) => <button key={k} type="button" className={pill(sel?.n === it.n && sel?.i === k)} onClick={() => openPhotoPanel(it.n, k)}>{k + 1}</button>)}
+                      <span>(slide 5 is the call to action, it has no photo)</span>
+                    </div>
+                    <div className="bg-white text-black rounded-lg p-2 space-y-2">
+                      {it.uniArgs.box && <>
+                        <ColourPicker label="Text box colour" value={it.uniArgs.box.fill} onChange={(v) => v && setU({ box: { ...it.uniArgs!.box!, fill: v } })} brand={[req.mainHex, req.accentHex]} />
+                        <ColourPicker label="Text box writing" value={it.uniArgs.box.text} placeholder="Automatic" onChange={(v) => setU({ box: { ...it.uniArgs!.box!, text: v || undefined } })} onReset={() => setU({ box: { ...it.uniArgs!.box!, text: undefined } })} brand={[req.mainHex, req.accentHex]} />
+                        <label className="flex items-center gap-2 text-xs"><span className="w-28 shrink-0">Text box width</span><input type="range" min={460} max={980} step={20} className="flex-1" value={it.uniArgs.box.w ?? 780} onChange={(e) => setU({ box: { ...it.uniArgs!.box!, w: Number(e.target.value) } })} /></label>
+                      </>}
+                      {it.uniArgs.block && <ColourPicker label="Colour block" value={it.uniArgs.block} onChange={(v) => v && setU({ block: v })} brand={[req.mainHex, req.accentHex]} />}
+                      {!it.uniArgs.block && !it.uniArgs.box && <ColourPicker label="Gradient colour" value={it.uniArgs.gradColour} placeholder="Automatic" onChange={(v) => v && setU({ gradColour: v })} onReset={() => setU({}, ["gradColour"])} brand={[req.mainHex, req.accentHex]} />}
+                      <ColourPicker label="Writing colour" value={it.uniArgs.textColour} placeholder="Automatic" onChange={(v) => v && setU({ textColour: v })} onReset={() => setU({}, ["textColour"])} brand={[req.mainHex, req.accentHex]} />
+                    </div>
+                  </div>
                   {(() => {
                     const trName = U_TREATMENTS.find((t) => t.id === it.uniArgs!.treatmentId)?.name || [...chosenT, ...req.treatments][0] || "";
                     const area1 = req.area.split(",")[0].trim();
@@ -1295,7 +1316,7 @@ export function Builder({ id }: { id: string }) {
                   <input type="range" min={min} max={max} step={step} className="flex-1" value={it.uniArgs![key]?.[i] ?? def} onChange={(e) => setAdj(it, i, key, Number(e.target.value))} /></label>
               );
               return (
-                <div className="space-y-2 border rounded p-2">
+                <div id={`photo-panel-${it.n}`} className="space-y-2 border rounded p-2">
                   <div className="text-xs font-semibold">Photo for slide {i + 1}</div>
                   <div className="text-xs text-muted-foreground">Their photos</div>
                   <div className="flex gap-2 overflow-x-auto">

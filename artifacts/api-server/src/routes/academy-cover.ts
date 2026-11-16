@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, ACADEMY_RULES } from "../lib/houseRules";
+import { britishise } from "../lib/british";
 
 const router: IRouter = Router();
 
@@ -9,7 +10,7 @@ type FieldReq = { key: string; label: string; words: number; current: string };
 const clean = (text: unknown, max: number): string =>
   typeof text !== "string"
     ? ""
-    : text.replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").trim().slice(0, max);
+    : britishise(text).replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").trim().slice(0, max);
 
 // Rewrites the words on a post's cover so a training academy can use any of the clinic designs.
 router.post("/academy/cover", async (req: Request, res: Response) => {

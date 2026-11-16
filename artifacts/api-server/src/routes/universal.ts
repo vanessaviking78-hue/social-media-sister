@@ -5,6 +5,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { matchedCta, withCta, CAPTION_END_RULE } from "../lib/hookBank";
 import { clientProfileContext } from "./client-profiles";
+import { britishise } from "../lib/british";
 
 // UNIVERSAL: one tool for every client, six posts per treatment. The headline is the treatment name or the
 // angle, the subtitle is one quirky line, and the writing comes from the client's own voice.
@@ -12,7 +13,7 @@ const router: IRouter = Router();
 
 function clean(text: unknown, max: number): string {
   if (typeof text !== "string") return "";
-  return text
+  return britishise(text)
     .replace(/[–—]/g, ", ")
     .replace(/\s+,/g, ",")
     .replace(/,\s*,/g, ",")
@@ -71,7 +72,8 @@ THE HEADLINE IS A HOOK THE CLINIC CHOSE, AND IT SETS THE WHOLE POST. The slides 
 ` : ""}
 THE WRITING
 - "subtitle": the line under the headline on slide 1. ${intro ? "ONE short sentence, maximum 14 words, quirky and warm, that explains what the treatment is in plain words." : "ONE short sentence, maximum 14 words, quirky and warm, that adds a wink to the headline."} It should make a woman over 35 smile and keep reading. Never a question. Never a pun on someone's looks or age.
-- "slide2", "slide3", "slide4": each is EXACTLY three short sentences, friendly but informative, each carrying on from the one before. Plain everyday words, a little humour where it fits.
+- "slide2", "slide3", "slide4": each is EXACTLY three short sentences, friendly but informative, each carrying on from the one before. Plain everyday words.
+- WIT: these must never read like a leaflet. Every one of slide2, slide3 and slide4 carries ONE properly witty line, the kind a clever, warm, slightly dry friend would say: an honest aside, a sharp little comparison drawn from everyday life, or a wry observation about how women over 35 actually live. Professional humour, never silly, never a pun for the sake of it, never at her expense, and never a stock joke. The three witty lines must be different in kind. Slide 3 should be the funniest. Still keep the facts correct and the compliance rules below.
 - "caption": the Instagram caption, maximum 120 words. A first line that holds attention, short lines, a little humour and personality, adding something the slides do not say. ${treatment ? CAPTION_END_RULE : "It must end on one friendly question that relates to the post, and must not name a treatment."}
 - "hashtags": exactly 5, lower case, no spaces${area ? `, each joining ${area} to a beauty, mums or skin theme` : ""}.
 
@@ -112,7 +114,7 @@ router.post("/universal/copy", async (req: Request, res: Response) => {
         { role: "system", content: systemPrompt(client, area, treatment, headline, brief, intro, fromHook) + (await clientProfileContext(client)) },
         { role: "user", content: `Write the carousel "${headline}" for ${client}.${note ? ` Extra from them: ${note}` : ""}` },
       ],
-      temperature: 0.85,
+      temperature: 0.95,
       max_tokens: 1400,
       response_format: { type: "json_object" },
     });

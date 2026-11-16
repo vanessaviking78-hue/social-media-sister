@@ -3,6 +3,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
 import { matchedCta, withCta, REPLY_WORD_RULE } from "../lib/hookBank";
+import { britishise } from "../lib/british";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, one carousel at a time.
 const router: IRouter = Router();
@@ -13,7 +14,7 @@ const AREA = "Wakefield";
 
 function clean(text: unknown, max: number): string {
   if (typeof text !== "string") return "";
-  return text
+  return britishise(text)
     .replace(/[–—]/g, ", ")
     .replace(/\s+,/g, ",")
     .replace(/,\s*,/g, ",")

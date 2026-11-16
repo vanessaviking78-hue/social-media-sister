@@ -7,6 +7,7 @@ import { clientProfileContext, rememberSiteTreatments } from "./client-profiles"
 import { parsePickedHooks, followOnVoice, splitHook, type PickedHook } from "../lib/hookBank";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
+import { britishise } from "../lib/british";
 
 // Client Stylish pack: writes the 16 row Stylish CSV for one clinic from its website,
 // the 3 treatments being promoted this month and a chosen writing style. The images are
@@ -253,7 +254,7 @@ Give each hook to a different row, a treatment hook to a treatment post (${topic
 }
 
 export function clean(text: unknown): string {
-  return String(text ?? "")
+  return britishise(String(text ?? ""))
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/,\s*,/g, ",")
     .replace(/\bfluff\b/gi, "nonsense")

@@ -9,6 +9,7 @@ import { saveSampleFile, needsRewrite, rewriteFlagged } from "../lib/freeSampleW
 import { runPackDraft, type PackInput } from "../lib/packWorker";
 import { HOUSE_RULES, HASHTAG_RULE, HOUSE_VOICE } from "../lib/houseRules";
 import { BASE_RULES } from "./caption-generator";
+import { britishise } from "../lib/british";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 6 } });
@@ -23,7 +24,7 @@ const ROLES = ["nurse", "injector", "dentist", "doctor", "pharmacist", "other"];
 
 const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
 const hex = (v: unknown, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v ?? "").trim()) ? String(v).trim() : fallback);
-const noDashes = (t: unknown) => String(t ?? "").replace(/[–—]/g, ",").replace(/\s+\n/g, "\n").trim();
+const noDashes = (t: unknown) => britishise(String(t ?? "")).replace(/[–—]/g, ",").replace(/\s+\n/g, "\n").trim();
 
 const hits = new Map<string, number[]>();
 function tooMany(ip: string): boolean {

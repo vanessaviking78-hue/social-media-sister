@@ -6,6 +6,7 @@ import { db } from "@workspace/db";
 import { freeSamplesTable, freeSampleDraftsTable, scheduledPostsTable, clientPresetsTable } from "@workspace/db/schema";
 import { objectStorageClient } from "../lib/objectStorage";
 import { saveSampleFile, runDraft, markStaleDrafts, type DraftInput, type MixType } from "../lib/freeSampleWorker";
+import { britishise } from "../lib/british";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 12 } });
@@ -34,7 +35,7 @@ function slugify(s: string): string {
 }
 
 function clean(s: unknown): string {
-  return String(s ?? "")
+  return britishise(String(s ?? ""))
     .replace(/[–—]/g, ",")
     .replace(/\s+\n/g, "\n")
     .trim();

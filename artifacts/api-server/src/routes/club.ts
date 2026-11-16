@@ -12,6 +12,7 @@ import { HOUSE_VOICE, HOUSE_RULES } from "../lib/houseRules";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { logger } from "../lib/logger";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
+import { britishise } from "../lib/british";
 
 // THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £275 club (Instagram DM, 7 places).
 // The £69 club also has a public invitation page (/youreinvited): someone accepts the promise, becomes a PENDING member, fills in the details form, and waits for Vanessa to approve her.
@@ -52,7 +53,7 @@ const canBuild = (m: { details_done: boolean; details?: Record<string, any>; pho
   m.details_done || (!!m.details?.clinicName && !!m.details?.clinicianName && (m.photo_urls ?? []).length > 0);
 
 const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
-const noDashes = (t: unknown) => String(t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+const noDashes = (t: unknown) => britishise(String(t ?? "")).replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 const hex = (v: unknown, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v ?? "").trim()) ? String(v).trim() : fallback);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

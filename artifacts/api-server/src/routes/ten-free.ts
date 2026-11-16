@@ -16,6 +16,7 @@ import { readKey } from "../lib/freeSampleWorker";
 import { signedTransformUrl } from "../lib/objectStorage";
 import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { freebiePortraitIds } from "../lib/aiPortraitScenarios";
+import { britishise } from "../lib/british";
 
 // 10 FREE POSTS. A public form at /10freeposts where a clinic asks for nine free posts (3 treatment carousels, an empowering post,
 // 2 about the injector, one about ignoring other people's opinions on ageing, one for men, one seasonal), with stories, poll ideas,
@@ -28,7 +29,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 
 const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
 const str = (v: unknown, max = 300) => String(v ?? "").trim().slice(0, max);
-const noDashes = (t: unknown) => String(t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+const noDashes = (t: unknown) => britishise(String(t ?? "")).replace(/[–—]/g, ", ").replace(/\s+,/g, ",").replace(/,\s*,/g, ",").replace(/!/g, ".").replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
 const hex = (v: unknown, fallback: string) => (/^#[0-9a-fA-F]{6}$/.test(String(v ?? "").trim()) ? String(v).trim() : fallback);
 const slugOf = (s: string) => s.toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 36);
 

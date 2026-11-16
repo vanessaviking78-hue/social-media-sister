@@ -4,6 +4,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_RULES } from "../lib/houseRules";
 import { clientProfileContext } from "./client-profiles";
 import { RYDER_TONE } from "./caption-generator";
+import { britishise } from "../lib/british";
 
 // THE RYDER CLINIC: her own page. Very professional, sincere, no humour, one carousel at a time.
 const router: IRouter = Router();
@@ -12,7 +13,7 @@ const CLINIC = "The Ryder Clinic";
 
 function clean(text: unknown, max: number): string {
   if (typeof text !== "string") return "";
-  return text
+  return britishise(text)
     .replace(/[–—]/g, ", ")
     .replace(/\s+,/g, ",")
     .replace(/,\s*,/g, ",")
