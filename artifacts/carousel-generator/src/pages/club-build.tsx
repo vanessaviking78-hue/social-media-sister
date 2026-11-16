@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { WelcomePhoto } from "@/pages/club-admin";
 
 // CLUB BUILD: the one place to build a club member's month. Pick a member, see everything they sent, build, check, approve.
 // It uses the same builder as the premium freebies, so the posts, studio photos, logo and clinic photo all come through the same way.
@@ -10,12 +11,11 @@ const API = `${BASE}/api`;
 const pw = () => localStorage.getItem("cybersuite-pw") || "";
 const authOnly = (): Record<string, string> => ({ "x-app-password": pw(), Authorization: "Bearer " + pw() });
 const jsonHeaders = (): Record<string, string> => ({ ...authOnly(), "Content-Type": "application/json" });
-const PINK = "#ff1f8e";
 
 type Month = { id: string; month: string; status: string; choices: { treatments?: string[] }; postCount: number; reelCount: number; aiUrls: string[]; aiStatus: string };
 type Member = {
   id: string; name: string; email: string; plan: "69" | "222"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
-  photoCount: number; photoUrls?: string[]; logoUrl?: string; clinicPhotoUrl?: string; refPhotoUrl?: string; months: Month[];
+  photoCount: number; welcomePhotoUrl?: string; photoUrls?: string[]; logoUrl?: string; clinicPhotoUrl?: string; refPhotoUrl?: string; months: Month[];
 };
 
 const monthName = (ym: string) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }); };
@@ -32,13 +32,13 @@ function stage(m: Member, x?: Month) {
 
 function Details({ m }: { m: Member }) {
   const d = m.details ?? {};
-  const row = (k: string, v: unknown) => (v ? <div key={k} className="text-sm"><b className="uppercase text-xs" style={{ color: PINK }}>{k}</b> {Array.isArray(v) ? v.join(", ") : String(v)}</div> : null);
+  const row = (k: string, v: unknown) => (v ? <div key={k} className="text-sm"><b className="uppercase text-xs text-pink-500">{k}</b> {Array.isArray(v) ? v.join(", ") : String(v)}</div> : null);
   return (
     <div className="space-y-3 border-t pt-3">
       <div className="flex gap-4 flex-wrap items-center">
         {m.logoUrl ? <div className="text-center"><img src={m.logoUrl} className="h-16 max-w-[160px] object-contain bg-gray-100 rounded p-1" /><div className="text-xs">Logo</div></div> : <div className="text-xs text-red-600">No logo sent</div>}
         {m.clinicPhotoUrl ? <div className="text-center"><img src={m.clinicPhotoUrl} className="h-16 rounded" /><div className="text-xs">Clinic photo</div></div> : <div className="text-xs text-red-600">No clinic photo sent</div>}
-        <div className="flex items-center gap-2 text-xs">Brand colours <span className="inline-block w-6 h-6 rounded border" style={{ background: d.mainHex || "#d6006f" }} /><span className="inline-block w-6 h-6 rounded border" style={{ background: d.accentHex || "#1a1a1a" }} /></div>
+        <div className="flex items-center gap-2 text-xs">Brand colours <span className="inline-block w-6 h-6 rounded border keep-colour" style={{ background: d.mainHex || "#d6006f" }} /><span className="inline-block w-6 h-6 rounded border keep-colour" style={{ background: d.accentHex || "#1a1a1a" }} /></div>
       </div>
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1">
         {row("Clinic", d.clinicName)}{row("Name", d.clinicianName)}{row("Instagram", d.handle)}{row("Area", d.area)}{row("Scrubs", d.scrubs)}{row("Font", d.font)}
@@ -101,12 +101,12 @@ export default function ClubBuild() {
   const approve = async (x: Month) => { if (await call(`ap-${x.id}`, `/club/months/${x.id}/approve`, {})) { toast.success("Approved. It is now in their portal."); load(); } };
 
   return (
-    <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "'League Spartan', sans-serif" }}>
+    <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <Link href="/" className="text-xs uppercase underline">Back to the hub</Link>
-            <h1 style={{ fontWeight: 900, fontSize: "clamp(2.2rem,6vw,3.6rem)", lineHeight: 0.95, textTransform: "uppercase" }}>Club <span style={{ color: PINK }}>build</span></h1>
+            <h1>Club <span className="text-pink-500">build</span></h1>
             <p className="text-sm mt-1">Pick a member. Everything they sent is here. Press Build and it opens the builder with their logo, photos, clinic photo and treatments already loaded.</p>
           </div>
           <Link href="/club-admin" className="px-3 py-1.5 rounded border text-sm">Members and billing</Link>
@@ -119,20 +119,21 @@ export default function ClubBuild() {
           {rows.map(({ m, x, s }) => {
             const ready = m.canBuild ?? m.detailsDone;
             return (
-              <div key={m.id} className="border-2 border-black rounded-lg p-4 space-y-2" style={{ boxShadow: s.rank === 0 ? `5px 5px 0 ${PINK}` : "none", opacity: m.status === "cancelled" ? 0.55 : 1 }}>
+              <div key={m.id} className={`border-2 rounded-lg p-4 space-y-2 ${s.rank === 0 ? "border-pink-500" : ""} ${m.status === "cancelled" ? "opacity-60" : ""}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div style={{ fontWeight: 900, fontSize: "1.35rem", textTransform: "uppercase" }}>{m.name} <span className="text-xs" style={{ color: PINK }}>{m.plan === "69" ? "£69 club" : "£275 club"}</span></div>
-                    <div className="text-sm"><span className="uppercase font-bold" style={{ color: PINK }}>{s.label}</span>{x ? ` · ${monthName(x.month)}` : ""}</div>
+                    <div className="text-xl font-extrabold uppercase">{m.name} <span className="text-xs text-pink-500">{m.plan === "69" ? "£69 club" : "£275 club"}</span></div>
+                    <div className="text-sm"><span className="uppercase font-bold text-pink-500">{s.label}</span>{x ? ` · ${monthName(x.month)}` : ""}</div>
                     {x && <div className="text-xs text-gray-600">Treatments: {(x.choices.treatments ?? []).join(", ") || "not chosen yet (starts from their favourites)"} · Posts {x.postCount} · Reels {x.reelCount} · Studio photos {x.aiUrls.length}{x.aiStatus === "working" ? " (making them now)" : ""}</div>}
                   </div>
                   <div className="flex gap-2 flex-wrap text-sm">
                     <button className="px-3 py-1.5 rounded border" onClick={() => setOpen(open === m.id ? "" : m.id)}>{open === m.id ? "Hide their details" : "Their details"}</button>
-                    {ready && s.key !== "live" && <button disabled={!!busy} className="px-4 py-1.5 rounded text-white disabled:opacity-50" style={{ background: PINK }} onClick={() => build(m, x)}>{!x ? "Start their month" : x.postCount ? "Open the builder" : "Build"}</button>}
+                    {ready && s.key !== "live" && <button disabled={!!busy} className="px-4 py-1.5 rounded bg-pink-500 text-white disabled:opacity-50" onClick={() => build(m, x)}>{!x ? "Start their month" : x.postCount ? "Open the builder" : "Build"}</button>}
                     {ready && s.key === "live" && x && <button disabled={!!busy} className="px-3 py-1.5 rounded border" onClick={() => build(m, x)}>Open the builder</button>}
                     {x && x.postCount > 0 && x.status !== "approved" && <button disabled={!!busy} className="px-4 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={() => approve(x)}>Approve and show to member</button>}
                   </div>
                 </div>
+                <WelcomePhoto member={m as any} reload={load} />
                 {!ready && <div className="text-sm text-red-600">They have not sent their details form yet. Their link is in Members and billing.</div>}
                 {open === m.id && <Details m={m} />}
               </div>

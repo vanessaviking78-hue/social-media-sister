@@ -236,7 +236,7 @@ const EXTRAS: { kind: "book" | "recipe" | "rants"; name: string; hint: string }[
 ];
 const thisMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
 
-function WelcomePhoto({ member, reload }: { member: Member; reload: () => void }) {
+export function WelcomePhoto({ member, reload }: { member: Member; reload: () => void }) {
   const [busy, setBusy] = useState(false);
   const send = async (file: File | null, remove = false) => {
     setBusy(true);
