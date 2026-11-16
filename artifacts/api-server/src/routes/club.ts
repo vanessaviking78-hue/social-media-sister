@@ -13,6 +13,7 @@ import { createJob, getJob, processPortraitJob } from "../lib/aiPortraitWorker";
 import { logger } from "../lib/logger";
 import { ensureTable as ensureTenFreeTable } from "./ten-free";
 import { britishise } from "../lib/british";
+import { REELS_CHALLENGE_ITEMS } from "./portal";
 
 // THE CLUBS. £69 club (free injectors WhatsApp group, 5 places) and £275 club (Instagram DM, 7 places).
 // The £69 club also has a public invitation page (/youreinvited): someone accepts the promise, becomes a PENDING member, fills in the details form, and waits for Vanessa to approve her.
@@ -310,6 +311,7 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     res.set("Cache-Control", "private, no-store");
     res.json({
       extras,
+      challengeHooks: REELS_CHALLENGE_ITEMS,
       member: publicMember(m),
       cycle: {
         month,

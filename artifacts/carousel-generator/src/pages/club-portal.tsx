@@ -73,6 +73,7 @@ type Portal = {
   pending?: boolean;
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
+  challengeHooks?: string[];
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; choose?: { cap: number; deadline: string | null; posts: { n: number; label: string; images: string[] }[] }; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
 };
@@ -411,6 +412,27 @@ function ChoosePosts({ token, month, cap, deadline, posts, reload }: { token: st
   );
 }
 
+function ChallengeHooks({ hooks, token }: { hooks: string[]; token: string }) {
+  const key = `club-hooks-done-${token}`;
+  const [done, setDone] = useState<number[]>(() => { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } });
+  const tick = (i: number) => setDone((d) => { const n = d.includes(i) ? d.filter((x) => x !== i) : [...d, i]; try { localStorage.setItem(key, JSON.stringify(n)); } catch {} return n; });
+  return (
+    <>
+      <h2>Your {hooks.length} reel hooks to film <span className="cp-count">{done.length} of {hooks.length} filmed</span></h2>
+      <p className="cp-sub">Relatable ideas with nothing to do with treatments. Pick one, talk to the camera for thirty seconds and post it. Tick them off as you go. The ones that make you a little nervous usually land the hardest.</p>
+      {hooks.map((h, i) => (
+        <div key={i} className="cp-reel" style={{ display: "flex", gap: 10, alignItems: "flex-start", justifyContent: "space-between" }}>
+          <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", flex: 1 }}>
+            <input type="checkbox" checked={done.includes(i)} onChange={() => tick(i)} style={{ marginTop: 4 }} />
+            <span><span className="cp-pink" style={{ fontWeight: 900, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase" }}>Hook {i + 1}</span><br /><b style={{ textDecoration: done.includes(i) ? "line-through" : "none", opacity: done.includes(i) ? 0.5 : 1 }}>{h}</b></span>
+          </label>
+          <button className="cp-btn k" onClick={() => navigator.clipboard?.writeText(h)}>Copy</button>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function Content({ data, plan, token, reload }: { data: Portal; plan: "69" | "222"; token: string; reload: () => void }) {
   const [open, setOpen] = useState<string>(data.months[0]?.month ?? "");
   if (!data.months.length) return <div className="cp-box"><b>Nothing here yet.</b><p className="cp-sub">Once I have built and checked your {monthName(data.cycle.month)} content it will appear here, ready to download and upload yourself.</p></div>;
@@ -437,7 +459,7 @@ function Content({ data, plan, token, reload }: { data: Portal; plan: "69" | "22
           <div className="cp-ai">{m.aiUrls.map((u, i) => <div key={u}><img src={u} alt={`AI photo ${i + 1}`} /><button className="cp-btn k" style={{ marginTop: 6 }} onClick={() => download(u, `${m.month}-photo-${i + 1}.jpg`)}>Download</button></div>)}</div>
         </>
       )}
-      <h2>Your {m.content.reels?.length ?? 0} reel hooks and scripts</h2>
+      {(m.content.reels ?? []).length > 0 && <h2>Your {m.content.reels?.length ?? 0} reel hooks and scripts</h2>}
       {(m.content.reels ?? []).map((r) => (
         <div key={r.n} className="cp-reel">
           <div className="cp-pink" style={{ fontWeight: 900, fontSize: 12, letterSpacing: ".2em", textTransform: "uppercase" }}>Reel {r.n}{r.treatment ? ` · ${r.treatment}` : ""}</div>
@@ -447,6 +469,7 @@ function Content({ data, plan, token, reload }: { data: Portal; plan: "69" | "22
           <button className="cp-btn k" onClick={() => navigator.clipboard?.writeText(`${r.hook}\n\n${r.script}`)}>Copy</button>
         </div>
       ))}
+      {(data.challengeHooks ?? []).length > 0 && <ChallengeHooks hooks={data.challengeHooks!} token={token} />}
       {(m.content.stories ?? []).length > 0 && (
         <>
           <h2>Your {m.content.stories!.length} stories with poll ideas</h2>
