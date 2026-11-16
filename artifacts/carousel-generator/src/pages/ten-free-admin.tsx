@@ -1075,9 +1075,17 @@ export function Builder({ id }: { id: string }) {
               const row = "flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground";
               const ua = it.uniArgs as unknown as Record<string, any>;
               const setU = (patch: Record<string, unknown>, clear: string[] = []) => upd(patch as Partial<NonNullable<Item["uniArgs"]>>, clear);
-              const els: [string, string][] = [[it.uniArgs.block ? "block" : "gradColour", it.uniArgs.block ? "Colour block" : "Gradient"], ["textColour", "Text"], ["bgColour", "Background"]];
+              const els: [string, string][] = it.uniArgs.box
+                ? [["boxFill", "Text box"], ["boxText", "Text box writing"], ["textColour", "Writing on the other slides"]]
+                : [[it.uniArgs.block ? "block" : "gradColour", it.uniArgs.block ? "Colour block" : "Gradient"], ["textColour", "Text"], ["bgColour", "Background"]];
               const keyEl = els.some(([k]) => k === chEl[it.n]) ? chEl[it.n] : els[0][0];
-              const curV = String(ua[keyEl] ?? "");
+              const curV = keyEl === "boxFill" ? String(it.uniArgs.box?.fill ?? "") : keyEl === "boxText" ? String(it.uniArgs.box?.text ?? "") : String(ua[keyEl] ?? "");
+              // One place that knows where each colour lives, so the little dots and the picker change the right thing.
+              const setEl = (key: string, val: string) => {
+                if (key === "boxFill" && it.uniArgs?.box) setU({ box: { ...it.uniArgs.box, fill: val } });
+                else if (key === "boxText" && it.uniArgs?.box) setU({ box: { ...it.uniArgs.box, text: val } });
+                else setU({ [key]: val });
+              };
               const goldCss = "linear-gradient(135deg,#7a5a14,#d4a93c,#fff1a8,#c9962b,#7a5a14)";
               const silverCss = "linear-gradient(135deg,#6d6f73,#c9ccd1,#ffffff,#a9adb3,#6d6f73)";
               const dots: [string, string, string][] = [["Main", req.mainHex, req.mainHex], ["Accent", req.accentHex, req.accentHex], ["White", "#ffffff", "#ffffff"], ["Black", "#111111", "#111111"], ...(keyEl === "textColour" || keyEl === "bgColour" ? [] : ([["Gold", "metal:gold", goldCss], ["Silver", "metal:silver", silverCss]] as [string, string, string][]))];
@@ -1094,9 +1102,9 @@ export function Builder({ id }: { id: string }) {
                   </span>
                   <span className="flex items-center gap-1"><b className="uppercase text-foreground">Changing</b>
                     <select className="rounded border bg-white text-black px-1 py-0.5 text-[10px]" value={keyEl} onChange={(e) => setChEl((c) => ({ ...c, [it.n]: e.target.value }))}>{els.map(([k, l]) => <option key={k} value={k}>{l} colour</option>)}</select>
-                    <input type="color" title="Pick any colour" className="h-4 w-5 p-0 cursor-pointer rounded border" value={/^#[0-9a-f]{6}$/i.test(curV) ? curV : "#888888"} onChange={(e) => setU({ [keyEl]: e.target.value })} />
-                    {dots.map(([label, val, css]) => <button key={label} type="button" title={label} onClick={() => setU({ [keyEl]: val })} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
-                    {keyEl !== "block" && <button type="button" className="px-1 py-0.5 rounded border bg-white text-black" onClick={() => setU({}, [keyEl])}>{keyEl === "bgColour" ? "Photo" : "Auto"}</button>}
+                    <input type="color" title="Pick any colour" className="h-4 w-5 p-0 cursor-pointer rounded border" value={/^#[0-9a-f]{6}$/i.test(curV) ? curV : "#888888"} onChange={(e) => setEl(keyEl, e.target.value)} />
+                    {dots.map(([label, val, css]) => <button key={label} type="button" title={label} onClick={() => setEl(keyEl, val)} className="keep-colour h-3.5 w-3.5 rounded-full border" style={{ background: css }} />)}
+                    {keyEl !== "block" && keyEl !== "boxFill" && <button type="button" className="px-1 py-0.5 rounded border bg-white text-black" onClick={() => (keyEl === "boxText" && it.uniArgs?.box ? setU({ box: { ...it.uniArgs.box, text: undefined } }) : setU({}, [keyEl]))}>{keyEl === "bgColour" ? "Photo" : "Auto"}</button>}
                   </span>
                   <button type="button" className={pill(moveTextOn[it.n] === false)} onClick={() => setMoveTextOn((m) => ({ ...m, [it.n]: m[it.n] === false }))}>{moveTextOn[it.n] === false ? "Pick photos (press to drag text again)" : "Dragging text on the picture (press to pick photos)"}</button>
                   {sl("Writing up/down", "blockY", -600, 120, 10, 0)}
