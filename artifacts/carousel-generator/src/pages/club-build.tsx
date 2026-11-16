@@ -18,11 +18,41 @@ type Month = { id: string; month: string; status: string; choices: { treatments?
   bank?: { n: number; label: string; images: string[]; caption: string; tags: string }[];
   postsList?: { n: number; label: string; image: string }[] };
 type Member = {
-  id: string; name: string; email: string; plan: "69" | "222"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
+  id: string; name: string; email: string; phone?: string; link?: string; plan: "69" | "222"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
   photoCount: number; welcomePhotoUrl?: string; photoUrls?: string[]; logoUrl?: string; clinicPhotoUrl?: string; refPhotoUrl?: string; months: Month[];
 };
 
 const monthName = (ym: string) => { const [y, m] = ym.split("-").map(Number); return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }); };
+
+
+// Once a month is live, this is the one-press way to tell the member it is ready: a friendly message with her private link, ready to copy, email or WhatsApp.
+function SendToMember({ m, x }: { m: Member; x: Month }) {
+  const first = (m.name || "").split(" ")[0] || "lovely";
+  const def = `Hi ${first}, your ${monthName(x.month)} content is ready and waiting for you. Pop in here to see everything, choose your posts and tell me what you think:\n\n${m.link ?? ""}\n\nVanessa x`;
+  const [msg, setMsg] = useState(def);
+  const [show, setShow] = useState(false);
+  const phone = (m.phone || "").replace(/[^\d+]/g, "").replace(/^\+/, "").replace(/^0/, "44");
+  return (
+    <div className="border-2 border-pink-500 rounded-lg p-3 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <b className="uppercase text-sm">It is live. Tell {first} it is ready</b>
+        <button className="px-3 py-1.5 rounded bg-pink-500 text-white text-sm" onClick={() => setShow((v) => !v)}>{show ? "Hide the message" : `Send it to ${first}`}</button>
+      </div>
+      {show && (
+        <div className="space-y-2">
+          <textarea className="w-full border rounded p-2 text-sm min-h-[8rem]" value={msg} onChange={(e) => setMsg(e.target.value)} />
+          <div className="flex flex-wrap gap-2 text-sm">
+            <button className="px-3 py-1.5 rounded bg-black text-white" onClick={() => { navigator.clipboard?.writeText(msg); toast.success("Message copied. Paste it wherever you chat to her."); }}>Copy message</button>
+            <a className="px-3 py-1.5 rounded border" target="_blank" rel="noreferrer" href={`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`}>WhatsApp {phone ? first : "(choose who)"}</a>
+            {m.email && <a className="px-3 py-1.5 rounded border" href={`mailto:${m.email}?subject=${encodeURIComponent(`Your ${monthName(x.month)} club content is ready`)}&body=${encodeURIComponent(msg)}`}>Email {first}</a>}
+            {m.link && <button className="px-3 py-1.5 rounded border" onClick={() => { navigator.clipboard?.writeText(m.link!); toast.success("Link copied"); }}>Copy just her link</button>}
+            {m.link && <a className="px-3 py-1.5 rounded border" target="_blank" rel="noreferrer" href={m.link}>See what she sees</a>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // What stage is this member at? Drives the badge and the order of the list.
 function stage(m: Member, x?: Month) {
@@ -158,7 +188,7 @@ export default function ClubBuild() {
     const j = await call(month.id, `/club/months/${month.id}/build-request`, {});
     if (j?.id) nav(`/club-builder?id=${j.id}`);
   };
-  const approve = async (x: Month) => { if (await call(`ap-${x.id}`, `/club/months/${x.id}/approve`, {})) { toast.success("Approved. It is now in their portal."); load(); } };
+  const approve = async (x: Month) => { if (await call(`ap-${x.id}`, `/club/months/${x.id}/approve`, {})) { toast.success("Approved and live. Press Send it to her on her card to tell her."); load(); } };
 
   return (
     <div className="min-h-screen">
@@ -195,6 +225,7 @@ export default function ClubBuild() {
                     {x && x.postCount > 0 && x.status !== "approved" && <button disabled={!!busy} className="px-4 py-1.5 rounded bg-black text-white disabled:opacity-50" onClick={() => approve(x)}>Approve and show to member</button>}
                   </div>
                 </div>
+                {x && s.key === "live" && <SendToMember m={m} x={x} />}
                 <WelcomePhoto member={m as any} reload={load} />
                 {!ready && <div className="text-sm text-red-600">They have not sent their details form yet. Their link is in Members and billing.</div>}
                 <FeedbackAndBank m={m} />
