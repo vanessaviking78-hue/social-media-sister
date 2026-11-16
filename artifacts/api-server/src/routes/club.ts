@@ -123,6 +123,7 @@ function ensureTables(): Promise<void> {
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS welcome_photo_url TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS ai_error TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS phone TEXT NOT NULL DEFAULT ''`))
+    .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS slug TEXT`))
     .then(() => db.execute(sql`ALTER TABLE club_months ADD COLUMN IF NOT EXISTS feedback JSONB NOT NULL DEFAULT '{}'::jsonb`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_name TEXT NOT NULL DEFAULT ''`))
     .then(() => db.execute(sql`ALTER TABLE club_members ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ`))
@@ -202,8 +203,15 @@ const publicMember = (m: Member) => ({
   billingDay: m.billing_day,
 });
 
+// A friendly link: her name plus a few random letters, so it reads well but cannot be guessed from her name alone. The old long link keeps working too.
+function makeSlug(name: string): string {
+  const base = (name || "member").toLowerCase().replace(/\(.*?\)/g, "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30) || "member";
+  const tail = Array.from(randomBytes(5)).map((b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
+  return `${base}-${tail}`;
+}
+
 async function memberByToken(token: string): Promise<Member | null> {
-  const r = await db.execute(sql`SELECT * FROM club_members WHERE token = ${token}`);
+  const r = await db.execute(sql`SELECT * FROM club_members WHERE token = ${token} OR slug = ${token}`);
   return (r.rows[0] as unknown as Member) ?? null;
 }
 
@@ -252,8 +260,8 @@ router.post("/club/invite/69", async (req: Request, res: Response) => {
     // She chooses the day of the month she would like her payment link sent (1 to 28); today's date if she did not pick one.
     const picked = Math.round(Number(b.billingDay));
     const billingDay = picked >= 1 && picked <= 28 ? picked : Math.min(28, new Date().getUTCDate());
-    const ins = await db.execute(sql`INSERT INTO club_members (id, token, plan, status, name, email, billing_day, phone, agreed_name, agreed_at)
-      SELECT ${id}::text, ${token}::text, '69', 'pending', ${name}::text, ${email}::text, ${billingDay}::int, ${phone}::text, ${agreedName}::text, now()
+    const ins = await db.execute(sql`INSERT INTO club_members (id, token, slug, plan, status, name, email, billing_day, phone, agreed_name, agreed_at)
+      SELECT ${id}::text, ${token}::text, ${makeSlug(name)}::text, '69', 'pending', ${name}::text, ${email}::text, ${billingDay}::int, ${phone}::text, ${agreedName}::text, now()
       WHERE (SELECT count(*) FROM club_members WHERE plan = '69' AND status IN ('active', 'pending')) < ${PLACES["69"]}::int
       RETURNING id`);
     if (!ins.rows.length) { res.status(409).json({ full: true, error: "All the places have just been taken. Message me and I will add you to the list." }); return; }
@@ -778,9 +786,10 @@ router.post("/club/members", requireAuth, async (req: Request, res: Response) =>
     }
     const id = uuid();
     const token = randomBytes(18).toString("base64url");
+    const slugNew = makeSlug(name);
     const billingDay = Math.min(28, Math.max(1, Number(b.billingDay) || new Date().getUTCDate()));
-    await db.execute(sql`INSERT INTO club_members (id, token, plan, name, email, billing_day) VALUES (${id}, ${token}, ${plan}, ${name}, ${str(b.email, 160)}, ${billingDay})`);
-    res.json({ id, link: appLink(`/club/${token}`) });
+    await db.execute(sql`INSERT INTO club_members (id, token, slug, plan, name, email, billing_day) VALUES (${id}, ${token}, ${slugNew}, ${plan}, ${name}, ${str(b.email, 160)}, ${billingDay})`);
+    res.json({ id, link: appLink(`/club/${slugNew}`) });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not add the member" });
   }
@@ -789,14 +798,16 @@ router.post("/club/members", requireAuth, async (req: Request, res: Response) =>
 router.get("/club/members", requireAuth, async (_req: Request, res: Response) => {
   try {
     await ensureTables();
-    const ms = (await db.execute(sql`SELECT * FROM club_members ORDER BY created_at DESC`)).rows as unknown as Member[];
+    const ms = (await db.execute(sql`SELECT * FROM club_members ORDER BY created_at DESC`)).rows as unknown as (Member & { slug?: string | null })[];
+    // Anyone without a friendly link yet gets one now.
+    for (const m of ms) if (!m.slug) { m.slug = makeSlug(m.name); await db.execute(sql`UPDATE club_members SET slug = ${m.slug} WHERE id = ${m.id}`); }
     const months = (await db.execute(sql`SELECT * FROM club_months ORDER BY month DESC`)).rows as unknown as MonthRow[];
     res.json({
       members: ms.map((m) => {
         const { date, month } = nextBilling(m.billing_day);
         return {
           id: m.id, name: m.name, email: m.email, phone: m.phone ?? "", agreedName: m.agreed_name ?? "", agreedAt: m.agreed_at ?? null, plan: m.plan, status: m.status, billingDay: m.billing_day, detailsDone: m.details_done, canBuild: canBuild(m), details: m.details,
-          link: appLink(`/club/${m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], logoUrl: m.logo_url ?? "", clinicPhotoUrl: m.clinic_photo_url ?? "", refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
+          link: appLink(`/club/${m.slug || m.token}`), nextBilling: ymd(date), daysToBilling: daysUntil(date), cycle: month, photoCount: (m.photo_urls ?? []).length, hasClinicPhoto: !!m.clinic_photo_url, photoUrls: m.photo_urls ?? [], logoUrl: m.logo_url ?? "", clinicPhotoUrl: m.clinic_photo_url ?? "", refPhotoUrl: m.ref_photo_url ?? "", welcomePhotoUrl: m.welcome_photo_url ?? "",
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
