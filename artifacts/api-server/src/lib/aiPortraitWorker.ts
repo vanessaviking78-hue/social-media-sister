@@ -160,6 +160,7 @@ export async function processPortraitJob(
   sourcePhotoId: number,
   clientName: string,
   scenarios: ScenarioConfig[],
+  extraPhotos: Buffer[] = [],
 ): Promise<void> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -305,6 +306,15 @@ export async function processPortraitJob(
       }
     }
 
+    // Extra photos of the same woman help the likeness. They are only sent when the caller supplies them.
+    const extraRefParts: { inlineData: { mimeType: string; data: string } }[] = [];
+    for (const eb of extraPhotos) {
+      try {
+        const em = await sharp(eb).metadata();
+        extraRefParts.push({ inlineData: { mimeType: ({ jpeg: "image/jpeg", png: "image/png", webp: "image/webp" } as Record<string, string>)[em.format ?? ""] ?? "image/jpeg", data: eb.toString("base64") } });
+      } catch { /* skip a photo that will not open */ }
+    }
+
     let attempt = 0;
     let succeeded = false;
 
@@ -317,8 +327,9 @@ export async function processPortraitJob(
               role: "user",
               parts: [
                 ...(cfg.textOnly ? [] : [{ inlineData: { mimeType: sourceMime, data: base64Photo } }]),
+                ...(cfg.textOnly ? [] : extraRefParts),
                 ...(backgroundImagePart ? [backgroundImagePart] : []),
-                { text: prompt },
+                { text: !cfg.textOnly && extraRefParts.length ? `${prompt}\n\nThe first image is the main reference. The ${extraRefParts.length === 1 ? "other image shows" : "other images show"} the same woman from another angle, use ${extraRefParts.length === 1 ? "it" : "them"} to keep her face, features, skin tone and hairstyle exactly accurate. It is one woman only.` : prompt },
               ],
             },
           ],

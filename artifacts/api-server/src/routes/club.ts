@@ -612,6 +612,11 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
     const key = src.replace("/api/free-samples/media/", "");
     if (!key) throw new Error("This member has not uploaded a photo of themselves yet");
     const buf = await readKey(key);
+    // Up to two more of her own photos go in as extra references so the face comes out closer to her.
+    const extraBufs: Buffer[] = [];
+    for (const u of photos.filter((x) => x !== src).slice(0, 2)) {
+      try { extraBufs.push(await readKey(u.replace("/api/free-samples/media/", ""))); } catch { /* skip */ }
+    }
     const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: m.details?.clinicName || m.name, photoUrl: `/api/media/${key}`, notes: "club" }).returning();
     // The same hyper realistic prompts as her AI Photo Studio Mix tab: one clinical, one jeans and silk shirt, one black jumper, then one more from the last two sets.
     // Clinical is always black scrubs. A random shot is taken from each set so no two members or months get the same four.
@@ -631,7 +636,7 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
     for (let round = 0; round < 1 && pending.length > 0; round++) {
       const jobId = `club_${Date.now()}_${uuid().slice(0, 8)}`;
       createJob(jobId, pending.map((c) => c.id));
-      await processPortraitJob(jobId, buf, source.id, m.details?.clinicName || m.name, pending as any);
+      await processPortraitJob(jobId, buf, source.id, m.details?.clinicName || m.name, pending as any, extraBufs);
       for (const c of getJob(jobId)?.cards ?? []) {
         if (c.status === "success" && c.outputImageUrl) results.set(c.scenarioId, c.outputImageUrl);
         else if (c.failureReason) reasons.push(`${c.scenarioId}: ${c.failureReason}`);
