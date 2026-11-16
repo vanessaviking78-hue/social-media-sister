@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { CRM_HTML } from "../data/crm-html";
+import { CRM_INSTAGRAM_JS } from "../data/crm-instagram-client";
 
 const router: IRouter = Router();
 
@@ -13,7 +14,10 @@ router.get("/crm-page", (req, res) => {
     }
   }
   res.setHeader("Cache-Control", "no-store");
-  res.type("html").send(CRM_HTML);
+  // The Instagram layer (engagement badges, DM buttons, Instagram tab) is added on the way out so the big CRM page itself stays untouched.
+  const at = CRM_HTML.lastIndexOf("</body>");
+  const page = at === -1 ? CRM_HTML + "<script>" + CRM_INSTAGRAM_JS + "</script>" : CRM_HTML.slice(0, at) + "<script>" + CRM_INSTAGRAM_JS + "</script>" + CRM_HTML.slice(at);
+  res.type("html").send(page);
 });
 
 export default router;
