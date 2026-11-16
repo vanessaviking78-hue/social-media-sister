@@ -59,19 +59,6 @@ export default function Analytics() {
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Analytics</span>
           </div>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/hub" className="text-muted-foreground hover:text-foreground transition">Carousel</Link>
-            <Link href="/single-image" className="text-muted-foreground hover:text-foreground transition">Single Image</Link>
-            <Link href="/stories" className="text-muted-foreground hover:text-foreground transition">Stories</Link>
-            <Link href="/reels" className="text-muted-foreground hover:text-foreground transition">Reels</Link>
-            <Link href="/video-overlay" className="text-muted-foreground hover:text-foreground transition">Video Overlay</Link>
-            <Link href="/presets" className="text-muted-foreground hover:text-foreground transition">Presets</Link>
-            <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
-            <Link href="/library" className="text-muted-foreground hover:text-foreground transition">Library</Link>
-            <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>
-            <Link href="/approval" className="text-muted-foreground hover:text-foreground transition">Approvals</Link>
-            <Link href="/scheduler" className="text-muted-foreground hover:text-foreground transition">Scheduler</Link>
-          </nav>
         </div>
       </header>
 

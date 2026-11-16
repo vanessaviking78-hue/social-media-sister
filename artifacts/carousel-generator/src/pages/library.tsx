@@ -1,12 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import ExportToCanvaButton from "@/components/export-to-canva";
-import {
-  ArrowLeft, Layers, Image as ImageIcon, Film, BookOpen, Trash2, Calendar,
-  Upload, X, CheckSquare, Square, CalendarDays, Clock, ChevronDown, Loader2,
-  BarChart3, ShieldCheck, MessageSquareText, Play, Palette,
-  Archive, AlertTriangle, CheckCircle2, ExternalLink, FolderOpen,
-} from "lucide-react";
+import { ArrowLeft, Layers, Image as ImageIcon, Film, BookOpen, Trash2, Calendar, Upload, X, CheckSquare, Square, ChevronDown, Loader2, Play, Palette, Archive, AlertTriangle, CheckCircle2, ExternalLink, FolderOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -397,19 +392,6 @@ export default function Library() {
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Content Library</span>
           </div>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/hub" className="text-muted-foreground hover:text-white transition">Carousel</Link>
-            <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
-            <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
-            <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>
-            <Link href="/video-overlay" className="text-muted-foreground hover:text-white transition">Video Overlay</Link>
-            <Link href="/presets" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><Palette className="w-4 h-4" />Presets</Link>
-            <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
-            <Link href="/calendar" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><CalendarDays className="w-4 h-4" />Calendar</Link>
-            <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BarChart3 className="w-4 h-4" />Analytics</Link>
-            <Link href="/approval" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><ShieldCheck className="w-4 h-4" />Approvals</Link>
-            <Link href="/scheduler" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><Clock className="w-4 h-4" />Scheduler</Link>
-          </nav>
         </div>
       </header>
 

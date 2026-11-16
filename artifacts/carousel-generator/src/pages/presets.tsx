@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain, Upload, ImageOff } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Zap, UserCheck, Link2, Brain, Upload, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -536,19 +536,6 @@ export default function PresetsPage() {
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
           </div>
-          <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/hub" className="text-muted-foreground hover:text-white transition">Carousel</Link>
-            <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
-            <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
-            <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>
-            <Link href="/video-overlay" className="text-muted-foreground hover:text-white transition">Video Overlay</Link>
-            <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
-            <Link href="/library" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BookOpen className="w-4 h-4" />Library</Link>
-            <Link href="/calendar" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><CalendarDays className="w-4 h-4" />Calendar</Link>
-            <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BarChart3 className="w-4 h-4" />Analytics</Link>
-            <Link href="/approval" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><ShieldCheck className="w-4 h-4" />Approvals</Link>
-            <Link href="/scheduler" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><Clock className="w-4 h-4" />Scheduler</Link>
-          </nav>
         </div>
       </header>
 
