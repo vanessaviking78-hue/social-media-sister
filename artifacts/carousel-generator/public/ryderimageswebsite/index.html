@@ -19,11 +19,11 @@ main{max-width:1280px;margin:0 auto;padding:0 16px 60px}
 h2{margin:36px 0 12px;padding-bottom:6px;border-bottom:3px solid var(--pink);font-size:22px;text-transform:uppercase;letter-spacing:1px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
 .card{margin:0;border:2px solid var(--ink);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
-.ph{aspect-ratio:1/1;background:var(--soft);position:relative}
+.ph{background:var(--soft);position:relative;display:flex;align-items:center;justify-content:center;min-height:160px}
 .badge{position:absolute;top:8px;left:8px;background:var(--pink);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
 .btns{flex-wrap:wrap}
 button.orig{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
-.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph img{width:100%;height:auto;max-height:460px;object-fit:contain;display:block}
 figcaption{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
 figcaption b{font-size:14px}
 .slug{font-size:12px;color:#777;word-break:break-all}
@@ -43,6 +43,7 @@ button.tab.on{background:var(--ink);color:#fff}
 button.crem{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
 #cd main{padding-top:6px}
 .empty{color:#777;padding:18px 0}
+button.sv{flex:1 1 100%!important;background:var(--pink);border-color:var(--pink);color:#fff}
 button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 .btns button{flex:1 1 42%;white-space:nowrap}
 .btns button.orig,.btns button.crem,.btns button.del{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
@@ -66,8 +67,8 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
 <main id="m"></main></div>
 <div id="cd" class="hide">
-<div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. They go on this page straight away, so your client can see and download them. You can edit or delete them below.</p><button id="cdadd">Upload more images</button><p><button id="mig" class="hide" style="flex:none;margin-top:12px"></button></p><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
-<main><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add will appear here for your client.</p></main>
+<div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. Each one waits for you to press Save before your client can see it. You can edit or delete saved ones below.</p><button id="cdadd">Upload more images</button><p><button id="mig" class="hide" style="flex:none;margin-top:12px"></button></p><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
+<main><p><button id="cdsaveall" class="hide" style="flex:none;padding:10px 18px;background:var(--pink);border-color:var(--pink);color:#fff"></button></p><div class="grid" id="cddraft"></div><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add will appear here for your client.</p></main>
 <main><h2>Content Day, 15th October</h2><p class="empty" id="drnote">Tap Download under any picture to save it. Tap Copy link to share it.</p><div class="grid" id="drgrid"></div></main>
 </div>
 <input type="file" id="f" accept="image/*" hidden>
@@ -98,6 +99,7 @@ m.innerHTML=secs.map(function(s){
 function say(x){t.textContent=x;t.classList.add("on");clearTimeout(say.x);say.x=setTimeout(function(){t.classList.remove("on")},1800)}
 var R={},SH={},cur=null,fi=document.getElementById("f");
 var CW="Ryder Website Images",PW="ryder-website-image";
+document.querySelectorAll("#m .card .btns").forEach(function(b){var x=document.createElement("button");x.className="sv hide";x.textContent="Save for client";b.insertBefore(x,b.firstChild)});
 var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
 if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
 function upX(blob,name,cn,pt,meta){
@@ -111,7 +113,8 @@ function showShared(slug,url,id){
   SH[slug]={id:id,url:url};
   var c=card(slug);if(!c)return;
   c.querySelector("img").src=url;
-  c.querySelector(".badge").classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+  var bd=c.querySelector(".badge");bd.textContent="Replaced";bd.classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+  var sv=c.querySelector(".sv");if(sv)sv.classList.add("hide");
 }
 function pubW(slug,blob){
   var old=SH[slug]&&SH[slug].id;
@@ -130,9 +133,14 @@ function loadShared(){
     wmigCheck();
   }).catch(function(){});
 }
+document.addEventListener("click",function(e){
+  var b=e.target.closest(".sv");if(!b)return;var c=b.closest(".card"),slug=c.dataset.slug;if(!R[slug])return;
+  var blob=R[slug].blob;b.disabled=true;b.textContent="Saving";
+  pubW(slug,blob).then(function(){wmigCheck();say("Saved. Your client can see it now.")}).catch(function(){say("Could not save that one. Try again.")}).then(function(){b.disabled=false;b.textContent="Save for client"});
+});
 function wmigCheck(){
   if(!OWN)return;
-  dbRun("readonly",function(s){return s.getAllKeys()}).then(function(k){k=k||[];var b=document.getElementById("wmig");b.textContent="Publish "+k.length+" edited website picture"+(k.length===1?"":"s")+" from this computer";b.classList.toggle("hide",k.length===0)});
+  dbRun("readonly",function(s){return s.getAllKeys()}).then(function(k){k=k||[];var b=document.getElementById("wmig");b.textContent="Save all "+k.length+" unsaved website picture"+(k.length===1?"":"s")+" for client";b.classList.toggle("hide",k.length===0)});
 }
 function db(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-images",1);q.onupgradeneeded=function(){q.result.createObjectStore("f")};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
 function dbRun(mode,fn){return db().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("f",mode),s=tx.objectStore("f"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
@@ -141,13 +149,15 @@ function show(slug,blob){
   if(R[slug])URL.revokeObjectURL(R[slug].url);
   R[slug]={blob:blob,url:URL.createObjectURL(blob)};
   var c=card(slug);c.querySelector("img").src=R[slug].url;
-  c.querySelector(".badge").classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+  var bd=c.querySelector(".badge");bd.textContent="Not saved yet";bd.classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+  var sv=c.querySelector(".sv");if(sv&&OWN)sv.classList.remove("hide");
 }
 function reset(slug){
   if(R[slug])URL.revokeObjectURL(R[slug].url);delete R[slug];
   if(SH[slug]){if(OWN)fetch("/api/library/"+SH[slug].id,{method:"DELETE"}).catch(function(){});delete SH[slug]}
   var c=card(slug),i=c.querySelector("img");i.src=i.dataset.orig;
   c.querySelector(".badge").classList.add("hide");c.querySelector(".orig").classList.add("hide");
+  var sv0=c.querySelector(".sv");if(sv0)sv0.classList.add("hide");
   dbRun("readwrite",function(s){return s.delete(slug)});
 }
 function ext(b){return b.type.indexOf("png")>-1?".png":(b.type.indexOf("webp")>-1?".webp":".jpg")}
@@ -155,9 +165,8 @@ function save(blob,name){var a=document.createElement("a");a.href=URL.createObje
 D.forEach(function(r){dbRun("readonly",function(s){return s.get(r[0])}).then(function(b){if(b)show(r[0],b)})});
 fi.addEventListener("change",function(){
   var f=fi.files[0];if(!f||!cur)return;var slug=cur;fi.value="";
-  show(slug,f);
-  if(OWN){say("Saving for your client");pubW(slug,f).then(function(){wmigCheck();say("Changed. Your client sees the new picture.")}).catch(function(){dbRun("readwrite",function(s){return s.put(f,slug)});wmigCheck();say("Could not publish that one. It is kept on this computer.")})}
-  else{dbRun("readwrite",function(s){return s.put(f,slug)});say("Image changed on this screen only.")}
+  show(slug,f);dbRun("readwrite",function(s){return s.put(f,slug)}).then(wmigCheck);
+  say(OWN?"Picture added. Press Save for client when you want them to see it.":"Image changed on this screen only.");
 });
 document.addEventListener("click",function(e){
   var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
@@ -218,10 +227,31 @@ function cdAdd(files){
   if(!OWN)return;
   var list=Array.prototype.slice.call(files).filter(function(f){return f.type.indexOf("image/")===0});
   if(!list.length){say("Those were not pictures");return}
-  var bad=0,p=Promise.resolve();
-  list.forEach(function(f,i){p=p.then(function(){say("Uploading "+(i+1)+" of "+list.length);return upFile(f,f.name).then(function(){},function(){bad++})})});
-  p.then(function(){cdRender();say(bad?("Added "+(list.length-bad)+", "+bad+" failed. Try those again."):("Added "+list.length+". Your client can see them now."))});
+  list.forEach(function(f){CDD.push({blob:f,name:f.name,url:URL.createObjectURL(f)})});
+  drRender();say("Added "+list.length+". Press Save on each one when you want your client to see it.");
 }
+var CDD=[];
+function drRender(){
+  var g=document.getElementById("cddraft");g.innerHTML="";
+  CDD.forEach(function(d,i){
+    var f=document.createElement("figure");f.className="card";f.dataset.i=i;
+    f.innerHTML='<div class="ph"><img alt=""><span class="badge">Not saved yet</span></div><figcaption><b></b><span class="slug">Only you can see this until you press Save</span><div class="btns"><button class="sv dsv">Save for client</button><button class="ddc crem">Discard</button></div></figcaption>';
+    f.querySelector("img").src=d.url;f.querySelector("b").textContent=d.name;g.appendChild(f);
+  });
+  var b=document.getElementById("cdsaveall");b.textContent="Save all "+CDD.length+" for client";b.classList.toggle("hide",CDD.length<2);
+}
+function dropDraft(d){URL.revokeObjectURL(d.url);CDD.splice(CDD.indexOf(d),1)}
+document.getElementById("cddraft").addEventListener("click",function(e){
+  var c=e.target.closest(".card");if(!c)return;var d=CDD[Number(c.dataset.i)];if(!d)return;
+  if(e.target.closest(".ddc")){dropDraft(d);drRender();return}
+  var sv=e.target.closest(".dsv");if(!sv)return;sv.disabled=true;sv.textContent="Saving";
+  upFile(d.blob,d.name).then(function(){dropDraft(d);drRender();cdRender();say("Saved. Your client can see it now.")}).catch(function(){sv.disabled=false;sv.textContent="Save for client";say("Could not save that one. Try again.")});
+});
+document.getElementById("cdsaveall").addEventListener("click",function(){
+  var list=CDD.slice(),p=Promise.resolve(),bad=0;
+  list.forEach(function(d,i){p=p.then(function(){say("Saving "+(i+1)+" of "+list.length);return upFile(d.blob,d.name).then(function(){dropDraft(d)},function(){bad++})})});
+  p.then(function(){drRender();cdRender();say(bad?("Saved "+(list.length-bad)+", "+bad+" failed. Try those again."):("Saved "+list.length+". Your client can see them now."))});
+});
 document.getElementById("cdadd").addEventListener("click",function(){document.getElementById("cdf").click()});
 document.getElementById("cdf").addEventListener("change",function(e){cdAdd(e.target.files);e.target.value=""});
 var dz=document.getElementById("drop");
@@ -298,9 +328,8 @@ document.getElementById("eds").addEventListener("click",function(){
   var t=tgt(),o=document.createElement("canvas"),st=ED;
   try{paint(o,t.ow,t.oh);o.toBlob(function(b){
     if(!b){say("Could not save that edit");return}
-    if(st.kind==="w"){show(st.key,b);
-      if(OWN){say("Saving for your client");pubW(st.key,b).then(function(){wmigCheck();say("Edited. Your client sees the new version.")}).catch(function(){dbRun("readwrite",function(s){return s.put(b,st.key)});wmigCheck();say("Could not publish that edit. It is kept on this computer.")})}
-      else{dbRun("readwrite",function(s){return s.put(b,st.key)});say("Edited on this screen only.")}}
+    if(st.kind==="w"){show(st.key,b);dbRun("readwrite",function(s){return s.put(b,st.key)}).then(wmigCheck);
+      say(OWN?"Edited. Press Save for client when you want them to see it.":"Edited on this screen only.")}
     else if(st.kind==="d"){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
     else{var base=(st.name||"edited").replace(/\.[^.]+$/,"");say("Saving for your client");upFile(b,base+".jpg").then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){cdRender();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     edm.classList.add("hide");ED=null;
