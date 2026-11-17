@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, type ComponentType } from "react";
+import { TabBoundary } from "@/components/tab-boundary";
 import { ForcedClientContext } from "@/lib/forced-client";
 
 // Wraps a client's own page with a second tab, "About me", the two About me templates from the free tools opened on that client.
@@ -25,7 +26,7 @@ export function withAboutTab(Own: ComponentType, pattern: RegExp, ownLabel: stri
         <Suspense fallback={null}><Info pattern={pattern} /></Suspense>
         {tab === "own" ? <Own /> : (
           <ForcedClientContext.Provider value={{ pattern }}>
-            <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>{tab === "hooks" ? <Hooks /> : tab === "fillers" ? <Fillers /> : tab === "xmas" ? <Xmas /> : tab === "newxmas" ? <NewXmas /> : tab === "new" ? <NewCovers /> : <About />}</Suspense>
+            <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}><TabBoundary key={tab}>{tab === "hooks" ? <Hooks /> : tab === "fillers" ? <Fillers /> : tab === "xmas" ? <Xmas /> : tab === "newxmas" ? <NewXmas /> : tab === "new" ? <NewCovers /> : <About />}</TabBoundary></Suspense>
           </ForcedClientContext.Provider>
         )}
       </div>

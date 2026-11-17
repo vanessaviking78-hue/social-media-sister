@@ -1,4 +1,5 @@
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
+import { TabBoundary } from "@/components/tab-boundary";
 import { BoxControls } from "@/components/box-controls";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ForcedClientContext, useForcedClient, type ForcedClient } from "@/lib/forced-client";
@@ -1375,7 +1376,7 @@ export default function ClarePage() {
         <ForcedClientContext.Provider value={CLARE_FORCED}>
           <div className="[&_a[href='/hub']]:hidden">
             <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>
-              <current.Comp key={current.id} />
+              <TabBoundary key={current.id}><current.Comp /></TabBoundary>
             </Suspense>
           </div>
         </ForcedClientContext.Provider>

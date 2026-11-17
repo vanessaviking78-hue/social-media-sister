@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { TabBoundary } from "@/components/tab-boundary";
 import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { usePresets } from "@/lib/use-presets";
@@ -104,7 +105,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
       <ForcedClientContext.Provider value={forced}>
         <div className="[&_a[href='/hub']]:hidden">
           <Suspense fallback={<div className="p-10 text-center text-white/60">Loading...</div>}>
-            <current.Comp key={`${current.id}-${ids?.join(",") ?? "all"}`} />
+            <TabBoundary key={`${current.id}-${ids?.join(",") ?? "all"}`}><current.Comp /></TabBoundary>
           </Suspense>
         </div>
       </ForcedClientContext.Provider>
