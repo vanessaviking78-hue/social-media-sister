@@ -78,6 +78,9 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <div id="ed" class="hide"><div class="edbox"><canvas id="edc"></canvas>
 <label>Shape <select id="edsz"><option value="o">Original</option><option value="1">Square</option><option value="0.75">Vertical</option><option value="1.3333">Horizontal</option><option value="c">Custom (banners)</option></select></label>
 <label id="edcw" class="hide">Size in pixels <input type="number" id="edw" value="1920" min="50" max="4000"> x <input type="number" id="edh" value="600" min="50" max="4000"></label>
+<label>Quick sizes <select id="edq"><option value="">Choose a ready made size</option>
+<optgroup label="Website"><option value="1920x600">Web header banner, 1920 x 600</option><option value="2400x800">Wide banner 3 to 1, 2400 x 800</option><option value="1920x1080">Web hero 16 to 9, 1920 x 1080</option><option value="1200x800">Website card 3 to 2, 1200 x 800</option><option value="600x600">Small thumbnail square, 600 x 600</option></optgroup>
+<optgroup label="Social"><option value="1080x1080">Square, 1080 x 1080</option><option value="1080x1350">Portrait 4 to 5, 1080 x 1350</option><option value="1080x1440">Portrait 3 to 4, 1080 x 1440</option><option value="1350x1080">Landscape 5 to 4, 1350 x 1080</option><option value="1440x1080">Landscape 4 to 3, 1440 x 1080</option><option value="1080x1920">Story or reel 9 to 16, 1080 x 1920</option></optgroup></select></label>
 <label id="edlk" class="hide"><input type="checkbox" id="edlkc"> Keep the shape (change one number and the other follows)</label>
 <p id="edinfo"></p>
 <label>Darker <input type="range" id="edb" min="-100" max="100" value="0"> Lighter</label>
@@ -346,7 +349,7 @@ document.getElementById("cdgrid").addEventListener("click",function(e){
     fetch("/api/library/"+id,{method:"DELETE"}).then(function(r){if(!r.ok)throw new Error("x");cdRender();say("Deleted for everyone")}).catch(function(){say("Could not delete that one")});
   }
 });
-var ED=null,edc=document.getElementById("edc"),edm=document.getElementById("ed"),edb=document.getElementById("edb"),edz=document.getElementById("edz"),edsz=document.getElementById("edsz"),edw=document.getElementById("edw"),edh=document.getElementById("edh"),edg=document.getElementById("edg"),edcw=document.getElementById("edcw"),edlk=document.getElementById("edlk"),edlkc=document.getElementById("edlkc"),edinfo=document.getElementById("edinfo"),edDrag=null;
+var ED=null,edc=document.getElementById("edc"),edm=document.getElementById("ed"),edb=document.getElementById("edb"),edz=document.getElementById("edz"),edsz=document.getElementById("edsz"),edw=document.getElementById("edw"),edh=document.getElementById("edh"),edg=document.getElementById("edg"),edcw=document.getElementById("edcw"),edlk=document.getElementById("edlk"),edq=document.getElementById("edq"),edlkc=document.getElementById("edlkc"),edinfo=document.getElementById("edinfo"),edDrag=null;
 function tgt(){
   var iw=ED.im.naturalWidth,ih=ED.im.naturalHeight,v=edsz.value,a,ow,oh;
   if(v==="o"){a=iw/ih;ow=Math.min(iw,2400);oh=Math.round(ow/a)}
@@ -368,7 +371,7 @@ function edDraw(){
   w=Math.max(40,Math.round(w));h=Math.max(20,Math.round(h));
   paint(edc,w,h);edc.style.width=w+"px";edc.style.height=h+"px";
 }
-function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=100;edg.checked=false;edsz.value="o";edcw.classList.add("hide");edlk.classList.add("hide");edlkc.checked=false}
+function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=100;edg.checked=false;edsz.value="o";edcw.classList.add("hide");edlk.classList.add("hide");edlkc.checked=false;edq.value=""}
 function openEd(kind,key,name,preset){
   var src;
   if(kind==="d")src="https://lh3.googleusercontent.com/d/"+key+"=w2400";
@@ -385,6 +388,11 @@ function openEd(kind,key,name,preset){
 edb.addEventListener("input",function(){ED.b=Number(edb.value);edDraw()});
 edz.addEventListener("input",function(){ED.z=Number(edz.value)/100;edDraw()});
 edg.addEventListener("change",function(){ED.g=edg.checked;edDraw()});
+edq.addEventListener("change",function(){
+  if(!edq.value||!ED)return;var wh=edq.value.split("x");
+  edsz.value="c";edw.value=wh[0];edh.value=wh[1];edcw.classList.remove("hide");edlk.classList.remove("hide");edlkc.checked=false;
+  ED.x=0;ED.y=0;ED.z=1;edz.value=100;edDraw();
+});
 edsz.addEventListener("change",function(){edcw.classList.toggle("hide",edsz.value!=="c");edlk.classList.toggle("hide",edsz.value!=="c");ED.x=0;ED.y=0;edDraw()});
 [edw,edh].forEach(function(i){i.addEventListener("input",function(){
   if(edlkc.checked&&ED){var r=ED.im.naturalHeight/ED.im.naturalWidth;
