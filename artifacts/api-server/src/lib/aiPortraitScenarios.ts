@@ -4357,3 +4357,71 @@ export const NEW_XMAS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo laughing as she lifts the lid off a gift box in [XMAS COLOUR] with matching tissue paper spilling out, a Santa style hat in [XMAS COLOUR] on her head, seated on a light sofa. Candid but polished, soft natural window light, shallow depth of field, genuine delight, wearing a black knit.${NEW_XMAS_SUFFIX}`,
   },
 ];
+
+// REALISTIC XMAS: ten natural, true to life Christmas portraits. A thin border
+// of tinsel along the edges, the client holding a bauble, a knitted hat and a
+// scarf. No colour picker, the festive colours stay natural and understated.
+const REALISTIC_XMAS_SUFFIX = ` A thin border of real silver tinsel runs along the edges of the frame, only a narrow strip so the whole face and upper body stay clear. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Realistic photography, not an illustration. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "rx-01",
+    name: "Bauble In Hand Knit Hat",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding one glass Christmas bauble in her open palm at chest height, wearing a chunky knitted bobble hat and a soft wool scarf, smiling warmly at the camera. Plain light grey studio backdrop, soft window light from the left, shallow depth of field, visible wool texture.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-02",
+    name: "Two Hands Bauble Scarf Close Up",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a close portrait holding a bauble in both hands just below her chin, a thick cosy scarf wrapped twice around her neck and a knitted hat pulled down to her brows. A gentle closed mouth smile, soft diffused daylight, creamy blurred background.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-03",
+    name: "Santa Hat Bauble Laugh",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo laughing naturally while holding up a shiny bauble between finger and thumb, wearing a classic Santa hat and a chunky scarf. Candid but polished, plain cream backdrop, soft natural light, genuine delight, real laughter lines.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-04",
+    name: "Snowy Street Bauble Walk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing on a quiet winter street with light snowfall, wearing a wool coat, a knitted hat and a long scarf, holding a single bauble up in a gloved hand and looking at the camera over it. Soft overcast daylight, gentle bokeh of shop lights behind, realistic snowflakes.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-05",
+    name: "Cosy Jumper Bauble By The Tree",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo beside a real Christmas tree with warm white fairy lights softly blurred behind her, holding a bauble she is about to hang, wearing a cable knit jumper, a beanie hat and a loose scarf. Warm lamp light mixed with soft window light, a relaxed natural smile.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-06",
+    name: "Bauble Reflection Portrait",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a large silver bauble in front of one eye, her reflection curved in the glass, with her other eye and smile visible beside it. She wears a knitted hat and a scarf. Plain studio backdrop, soft beauty lighting, fine detail on the glossy bauble.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-07",
+    name: "Window Seat Hat And Scarf",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting on a window seat with a bauble resting in her lap, wearing a woollen hat and a thick scarf, glancing at the camera with a calm smile. Cool daylight from the window on her face, a soft frosted pane behind her, quiet cosy mood.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-08",
+    name: "Hot Drink And Bauble",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a bauble in one hand and a plain ceramic mug in the other, wearing a bobble hat and a chunky scarf, breath just visible in the cold air outside a doorway. Soft winter light, shallow depth of field, a warm relaxed expression.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-09",
+    name: "Santa Hat Profile Bauble",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in gentle three quarter profile, wearing a Santa hat and a soft scarf, holding a bauble up to the light and looking at it with a soft smile. Dark neutral backdrop, one soft key light, fine rim light on her hair, realistic wool and glass textures.${REALISTIC_XMAS_SUFFIX}`,
+  },
+  {
+    id: "rx-10",
+    name: "Bauble Toss Candid",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo caught mid moment gently tossing a bauble from one hand to the other, wearing a knitted hat and a long scarf, looking straight at the camera with a cheeky grin. Plain light backdrop, bright soft daylight, crisp detail, natural movement in the scarf ends.${REALISTIC_XMAS_SUFFIX}`,
+  },
+];
