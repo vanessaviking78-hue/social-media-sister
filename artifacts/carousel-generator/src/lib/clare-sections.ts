@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "feral" | "blackfriday";
+export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "newxmas" | "feral" | "blackfriday";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; nx?: NewXmasRow };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -129,6 +129,11 @@ export function sectionsForTreatments(ids?: string[]): { sections: typeof CLARE_
 }
 
 export const CLARE_SECTION_CLINIC = { name: "Clare Connolly Aesthetics", area: "Wakefield" } as const;
+
+// NEWXMAS: 50 ready written party season carousels (4 slides each, caption written). Nothing here is rewritten by the AI.
+import { NEWXMAS_ROWS, type NewXmasRow } from "./newxmas";
+export const NEWXMAS_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "newxmas", label: "NEWXMAS", word: "" }];
+export const NEWXMAS_POSTS: ClareSectionPost[] = NEWXMAS_ROWS.map((r, i) => ({ id: `nxp-${r.id}`, group: "newxmas" as const, label: `${i + 1}. ${r.hook.length > 70 ? r.hook.slice(0, 67) + "..." : r.hook}`, brief: "", word: r.word, nx: r }));
 
 // XMAS: one carousel for each of the 32 hooks (8 weeks of 4). The cover hook is fixed to the version she picks, colloquial or professional.
 import { XMAS_WEEKS } from "./xmas-weeks";

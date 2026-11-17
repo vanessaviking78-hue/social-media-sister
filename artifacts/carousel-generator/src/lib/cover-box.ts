@@ -18,7 +18,7 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): s
   return out;
 }
 
-export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: string; box: CoverBox; tf: { lf: any; style: any } | null; headFont: string; ts?: number }) {
+export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: string; box: CoverBox; tf: { lf: any; style: any } | null; headFont: string; ts?: number; sub?: string; subFont?: string }) {
   const W = ctx.canvas.width, H = ctx.canvas.height;
   const b = o.box;
   const ts = o.ts ?? 1;
@@ -43,7 +43,11 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
     while (size > 40 && lines.length * size * 1.1 > 460) { size -= 4; ctx.font = `400 ${size}px "${o.headFont}", serif`; lines = wrapLines(ctx, o.headline, inner); }
     lineH = lines.length * size * 1.1;
   }
-  const bh = lineH + pad * 2;
+  let subLines: string[] = [];
+  const subPx = 34;
+  if (o.sub) { ctx.font = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`; subLines = wrapLines(ctx, o.sub, inner); }
+  const subH = subLines.length ? 28 + subLines.length * subPx * 1.35 : 0;
+  const bh = lineH + subH + pad * 2;
   const bl = Math.max(20, Math.min(W - bw - 20, Math.round(b.x * W - bw / 2)));
   const bt = Math.max(20, Math.min(H - bh - 20, Math.round(b.y * H - bh / 2)));
   ctx.save();
@@ -60,6 +64,13 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
     ctx.textAlign = "left";
     ctx.font = `400 ${size}px "${o.headFont}", serif`;
     lines.forEach((l, i) => ctx.fillText(l, bl + pad, ty + i * size * 1.1));
+  }
+  if (subLines.length) {
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+    ctx.font = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`;
+    ctx.fillStyle = paintFor(ctx, textVal, bl + pad, ty + lineH, inner, subH);
+    subLines.forEach((l, i) => ctx.fillText(l, bl + pad, ty + lineH + 28 + i * subPx * 1.35));
   }
   ctx.textAlign = "left";
 }
