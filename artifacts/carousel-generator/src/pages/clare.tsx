@@ -13,7 +13,7 @@ import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { fillArea, fillTreatment } from "@/lib/hook-bank";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
-import { newxmasHashtags } from "@/lib/newxmas";
+import { newxmasHashtags, areaFromPreset } from "@/lib/newxmas";
 import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
@@ -582,7 +582,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     loadLogoImg(url).then(setLogo).catch(() => toast.error("That logo could not be read. Try a PNG."));
   };
   // anything they filled in on their profile: the area comes straight from it
-  useEffect(() => { if (preset?.seoArea && CLINIC_KEY !== "clare") setArea((cur) => cur || preset.seoArea!); }, [preset?.id, preset?.seoArea]);
+  useEffect(() => { const a = areaFromPreset(preset); if (a && CLINIC_KEY !== "clare") setArea((cur) => cur || a); }, [preset?.id, preset?.seoArea, preset?.clinicAddress]);
   // the cover title is always Hatcher with a curly first letter
   useEffect(() => {
     let live = true;

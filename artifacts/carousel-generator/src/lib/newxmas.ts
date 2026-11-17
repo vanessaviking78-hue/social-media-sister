@@ -507,7 +507,23 @@ export const NEWXMAS_ROWS: NewXmasRow[] = [
 
 // Exactly 5 area based hashtags: the area plus beauty and mums themes.
 export function newxmasHashtags(area: string): string[] {
-  const a = (area || "").replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join("");
+  const a = firstPlace(area).replace(/[^A-Za-z0-9 ]/g, " ").split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join("");
   if (!a) return [];
   return [`#${a}`, `#${a}Beauty`, `#${a}Mums`, `#${a}Aesthetics`, `#${a}Skin`];
+}
+
+// The first place in a list such as "Wakefield, West Yorkshire" or "Bedford and Hertfordshire", so the hashtags use the town.
+export function firstPlace(area: string): string {
+  return (area || "").split(/,|;|\/|&|\band\b/i)[0].replace(/[^A-Za-z0-9 ]/g, " ").trim();
+}
+
+// The area for a client, taken from their preset: the SEO area if it is filled in, otherwise the town from the clinic address.
+const COUNTIES = /^(west|east|north|south|greater|mid)?\s*(yorkshire|lancashire|midlands|sussex|surrey|kent|essex|devon|cornwall|norfolk|suffolk|london|manchester|merseyside|cheshire|derbyshire|hertfordshire|bedfordshire|wiltshire|somerset|dorset|hampshire|england|uk|united kingdom|scotland|wales|northern ireland)$/i;
+const POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d?[A-Z]{0,2}$/i;
+export function areaFromPreset(p: { seoArea?: string | null; clinicAddress?: string | null } | null | undefined): string {
+  const seo = (p?.seoArea || "").trim();
+  if (seo) return seo;
+  const parts = (p?.clinicAddress || "").split(/,|\n/).map((x) => x.trim()).filter(Boolean);
+  const town = parts.find((x, i) => i > 0 && !/^\d/.test(x) && !POSTCODE.test(x) && !COUNTIES.test(x));
+  return town ? firstPlace(town) : "";
 }
