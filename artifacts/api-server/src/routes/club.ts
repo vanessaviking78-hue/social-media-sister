@@ -613,7 +613,7 @@ async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
 }
 
 // ---------------------------------------------------------------------------
-// The six AI photos a month: three black and white studio, three colour. If she gave a clinic photo, the colour ones are set in her clinic.
+// The four AI photos a month: her David Bailey black and white studio portraits, two on a black backdrop and two on white.
 // ---------------------------------------------------------------------------
 
 async function makeAiShots(m: Member, monthId: string): Promise<void> {
@@ -631,17 +631,12 @@ async function makeAiShots(m: Member, monthId: string): Promise<void> {
       try { extraBufs.push(await readKey(u.replace("/api/free-samples/media/", ""))); } catch { /* skip */ }
     }
     const [source] = await db.insert(aiSourcePhotosTable).values({ clientName: m.details?.clinicName || m.name, photoUrl: `/api/media/${key}`, notes: "club" }).returning();
-    // The same hyper realistic prompts as her AI Photo Studio Mix tab: one clinical, one jeans and silk shirt, one black jumper, then one more from the last two sets.
-    // Clinical is always black scrubs. A random shot is taken from each set so no two members or months get the same four.
+    // Her David Bailey range from the AI Photo Studio: hyper realistic black and white editorial portraits, strict face lock.
+    // Four different shots picked at random, with the backdrop alternating black, white, black, white so every member gets a mix.
+    const pool = ["bl-01", "bl-02", "bl-03", "bl-04", "bl-06", "bl-07", "bl-08"].map((x) => `cbw-${x}`);
     const take = (ids: string[]) => ids.splice(Math.floor(Math.random() * ids.length), 1)[0];
-    const clinical = ["mx-01", "mx-02", "mx-03", "mx-04"], jeans = ["mx-05", "mx-06", "mx-07", "mx-08"], jumper = ["mx-13", "mx-14", "mx-15", "mx-16"];
-    const extra = Math.random() < 0.5 ? jeans : jumper;
-    const cfgs: any[] = [
-      { id: take(clinical), aspectRatio: "3:4" },
-      { id: take(jeans), aspectRatio: "3:4" },
-      { id: take(jumper), aspectRatio: "3:4" },
-      { id: take(extra), aspectRatio: "3:4" },
-    ];
+    const backdrops = ["#000000", "#ffffff", "#000000", "#ffffff"];
+    const cfgs: any[] = backdrops.map((colour) => ({ id: take(pool), aspectRatio: "3:4", promptVars: { colour } }));
     const results = new Map<string, string>();
     const reasons: string[] = [];
     let pending = cfgs;

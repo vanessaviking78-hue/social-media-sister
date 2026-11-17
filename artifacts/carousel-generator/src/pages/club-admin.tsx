@@ -191,7 +191,7 @@ function MonthPanel({ member, month, reload }: { member: Member; month: Month; r
               </div>
               <div className="space-y-2">
                 <h3 className="font-bold uppercase text-sm">2. Studio photos ({full.aiUrls.length} of 4)</h3>
-                <p className="text-xs text-muted-foreground">2 black and white on a black studio backdrop, then 2 colour in their scrubs colour{member.hasClinicPhoto ? ", placed in their clinic" : " on plain white (they sent no clinic photo)"}. Scrubs: {String((member as any).details?.scrubs || "not given, navy blue will be used")}.</p>
+                <p className="text-xs text-muted-foreground">4 hyper realistic David Bailey black and white portraits, 2 on a black backdrop and 2 on white, with their face locked from the reference photo.</p>
                 {(member.photoUrls ?? []).length > 0 ? (
                   <div className="space-y-1">
                     <div className="text-xs font-semibold">Tap the photo to use as the reference</div>
