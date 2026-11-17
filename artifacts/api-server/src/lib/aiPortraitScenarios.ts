@@ -2755,7 +2755,7 @@ export const MIX_PRESETS: PhotoStudioPreset[] = [
 
 const DEFAULT_CASUAL_OUTFIT = "a fitted black t-shirt";
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean; month?: string; mixStyle?: string; scrubs?: string }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { xmasColour?: string; colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean; month?: string; mixStyle?: string; scrubs?: string }): string {
   let prompt = preset.promptTemplate;
   if (MIX_SEASONAL_IDS.includes(preset.id)) {
     const mix = mixSeasonText(vars?.month, vars?.mixStyle);
@@ -2791,6 +2791,7 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     if (vars.wordColour?.trim()) prompt = prompt.replace(/\[WORD COLOUR\]/g, vars.wordColour.trim());
     if (vars.outfit?.trim()) prompt = prompt.replace(/\[OUTFIT\]/g, vars.outfit.trim());
     if (vars.studioColour?.trim()) prompt = prompt.replace(/\[STUDIO COLOUR\]/g, vars.studioColour.trim());
+    prompt = prompt.replace(/\[XMAS COLOUR\]/g, vars.xmasColour?.trim() || "red");
     if (vars.scrubColour?.trim()) prompt = prompt.replace(/\[SCRUB COLOUR\]/g, vars.scrubColour.trim());
     const rows = (vars.skills || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join(", ");
     if (rows) prompt = prompt.replace(/\[SKILL LABEL\]: \[SKILL VALUE\]/g, rows);
@@ -4286,5 +4287,73 @@ export const ACADEMY_PRESETS: PhotoStudioPreset[] = [
   {
     id: "ac-10", name: "The academy founder", hasColour: false,
     promptTemplate: `A sophisticated editorial photograph of the trainer standing in the centre of her medical aesthetics training academy. Large presentation screen displaying facial anatomy, Venus system equipment positioned nearby, anatomical models arranged neatly on a clinical teaching table. She is wearing black scrubs, looking directly at camera with quiet confidence. Beautiful architectural interior, premium medical education branding aesthetic, realistic photography, natural light, high detail.\n\n${ACADEMY_CONSISTENCY}`,
+  },
+];
+
+// NEW XMAS: ten stylish, artistic but hyper realistic Christmas portraits.
+// One colour is chosen once in the studio and fills every [XMAS COLOUR] so all
+// the articles (gift wrap, baubles, hats, scarves, ribbon) match.
+const NEW_XMAS_SUFFIX = ` Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Every Christmas article in the image (gift wrap, ribbon, baubles, hats, scarves, bows, candles, garlands, stockings, tissue paper) is rendered in the same single colour, [XMAS COLOUR], and no other festive colour appears. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const NEW_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "nx-01",
+    name: "Wrapped Up Gift Wrap Editorial",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a pale studio floor surrounded by a tower of beautifully wrapped presents, all the paper, satin ribbon and bows in [XMAS COLOUR], wearing a simple elegant black knit. Soft window light from camera left, glossy editorial finish, shallow depth of field, a calm self assured expression. Shot on a medium format camera.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-02",
+    name: "Bauble Halo Beauty Close Up",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a tight beauty close up, a loose garland of glass Christmas baubles in [XMAS COLOUR] suspended around her at eye line like a halo, each bauble catching a small window reflection, creamy bokeh behind. Soft diffused beauty lighting, direct gaze to camera, black polo neck. Shot on an 85mm lens at f1.8.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-03",
+    name: "Knit Hat And Scarf Snow Window",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo wearing a chunky knitted hat and a long oversized scarf, both in [XMAS COLOUR], standing at a tall window with soft snowfall outside, cool natural daylight on her face, a warm genuine closed mouth smile. Visible wool texture, fine fibres catching the light, wearing a black coat. Editorial winter portrait.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-04",
+    name: "Tree Glow Moody Room",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a dark, moody room in front of a tall Christmas tree dressed only in baubles and ribbon in [XMAS COLOUR], warm white fairy lights glowing and softly blurred behind her, wearing an elegant black dress. Cinematic low key lighting, rim light on her hair and shoulders, a quiet confident look.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-05",
+    name: "Velvet Bow Dark Studio",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo against a deep black seamless studio backdrop, an oversized velvet bow in [XMAS COLOUR] at her shoulder, wearing a fitted black top. A single sculpted key light and a thin rim light, rich velvet texture, high fashion editorial portrait, calm direct gaze to camera.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-06",
+    name: "Fireside Luxe Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed in a leather armchair beside a fireplace, a garland along the mantel, hanging stockings and pillar candles all in [XMAS COLOUR], wearing a soft black cashmere jumper. Golden firelight on her skin, shallow depth of field, a warm amused expression, luxury magazine feel.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-07",
+    name: "Mirror Bauble Macro",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding one large glass Christmas bauble in [XMAS COLOUR] up towards the camera, her reflection curved in its glossy surface, tiny window highlights across the glass. Her face sits softly behind it, shallow depth of field, fine detail on the bauble finish, clean studio backdrop, black sleeves.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-08",
+    name: "Ribbon Couture Seamless",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo styled as high fashion, wrapped in flowing satin ribbon in [XMAS COLOUR] draped over her shoulders and arms like couture, against a seamless neutral backdrop. Sculpted soft light, ribbon catching highlights with believable folds, a poised editorial stance, black clothing underneath.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-09",
+    name: "Frosted Window Wreath",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo beside a frosted window at dusk, a wreath with a large bow in [XMAS COLOUR] hanging on the glass behind her, a few small candles in [XMAS COLOUR] glowing on the sill, soft blue evening light mixed with warm candle glow. She wears a black wool coat and a scarf in [XMAS COLOUR], a serene closed mouth smile.${NEW_XMAS_SUFFIX}`,
+  },
+  {
+    id: "nx-10",
+    name: "Gift Box Giggle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo laughing as she lifts the lid off a gift box in [XMAS COLOUR] with matching tissue paper spilling out, a Santa style hat in [XMAS COLOUR] on her head, seated on a light sofa. Candid but polished, soft natural window light, shallow depth of field, genuine delight, wearing a black knit.${NEW_XMAS_SUFFIX}`,
   },
 ];
