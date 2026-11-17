@@ -20,6 +20,7 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "empower", label: "Empower", Comp: lazyTab(() => import("./empower")) },
   { id: "mens", label: "Men", Comp: lazyTab(() => import("./mens")) },
   { id: "november", label: "November", Comp: lazyTab(() => import("./november-posts")) },
+  { id: "newxmas", label: "NEWXMAS", Comp: lazyTab(() => import("./newxmas-tab")) },
   { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./xmas-tab")) },
   { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
   { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
