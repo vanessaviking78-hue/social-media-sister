@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; fixed?: { hook: string; caption: string; cta: string; tags?: string[] } };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -210,3 +210,18 @@ export const BF_POSTS: ClareSectionPost[] = BF_ROWS.map((r) => ({
   xmas: { c: r.hook, p: r.hook },
   brief: `A Black Friday countdown carousel for aesthetic clinic owners, posting on ${r.day}. ${r.n <= 14 ? "Week one, the warm up: build curiosity, trust and a bit of mischief, no hard sell yet." : "Week two, the countdown: the offers are real now, so build urgency with humour and make the reply word the obvious next step."} The cover hook is already written and must stay exactly as given. Slides 2 to 4 carry on from the hook in my feral voice and lead to the reply word ${r.word}. ${BF_FACTS}`,
 }));
+
+// 16 POSTS: hooks and captions already written (see sixteen-posts.ts). One for Social Media Sister, one for every clinic and club member page.
+import { SMS_SIXTEEN, CLINIC_SIXTEEN } from "./sixteen-posts";
+export const S16_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "s16" as ClareSectionId, label: "16 posts", word: "" }];
+const s16 = (list: typeof SMS_SIXTEEN, pre: string): ClareSectionPost[] => list.map((r) => ({
+  id: `${pre}-${r.n}`,
+  group: "s16" as ClareSectionId,
+  label: `${r.n}. ${r.label}`,
+  word: r.word,
+  feral: pre === "s16s",
+  brief: "Hook and caption already written.",
+  fixed: { hook: r.hook, caption: r.caption, cta: `Comment ${r.word} for more info`, tags: r.tags },
+}));
+export const S16_SMS_POSTS: ClareSectionPost[] = s16(SMS_SIXTEEN, "s16s");
+export const S16_CLINIC_POSTS: ClareSectionPost[] = s16(CLINIC_SIXTEEN, "s16c");

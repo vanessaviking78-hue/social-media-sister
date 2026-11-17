@@ -24,10 +24,12 @@ const TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
   { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
   { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
   { id: "halloween", label: "Halloween", Comp: lazyTab(() => import("./halloween-posts")) },
+  { id: "sixteen", label: "16 posts", Comp: lazyTab(() => import("./sixteen-clinic-tab")) },
 ];
 
 // Social Media Sister (Vanessa herself) has three tabs only: Xmas, Feral and Black Friday. No other client gets them.
 const SMS_TABS: { id: string; label: string; Comp: React.ComponentType }[] = [
+  { id: "sixteen", label: "16 posts", Comp: lazyTab(() => import("./sixteen-sms-tab")) },
   { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./smxmas-tab")) },
   { id: "feral", label: "Feral", Comp: lazyTab(() => import("./feral-tab")) },
   { id: "blackfriday", label: "Black Friday", Comp: lazyTab(() => import("./bf-tab")) },

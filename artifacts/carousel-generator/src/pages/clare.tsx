@@ -17,7 +17,8 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { clinicTags } from "@/lib/sixteen-posts";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -256,7 +257,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -483,7 +484,7 @@ function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?:
 }
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "hooks" | "feral" | "blackfriday" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -493,8 +494,8 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "hooks" | "feral
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
   const own = isClare ? { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS } : sectionsForTreatments(forced?.treatmentIds);
-  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : own.sections;
-  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : own.posts;
+  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
+  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -701,9 +702,15 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
 
   const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
   const initHook = (t: ClareSectionPost) => (t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
+  // The 16 posts tab arrives with hooks, captions and hashtags already written. Clinic hashtags are built from the area typed on the page.
+  const seed = (t: ClareSectionPost): Pick<Post, "hook" | "cta" | "caption" | "hashtags"> => t.fixed
+    ? { hook: t.fixed.hook, cta: t.fixed.cta, caption: t.fixed.caption, hashtags: t.fixed.tags ?? clinicTags(area) }
+    : { hook: initHook(t), cta: "", caption: "", hashtags: [] };
+  const needsArea = POSTS === S16_CLINIC_POSTS || !(POSTS === FERAL_POSTS || POSTS === SMX_POSTS || POSTS === BF_POSTS || POSTS === S16_SMS_POSTS);
   const addPost = (t: ClareSectionPost) => {
+    if (t.fixed && POSTS === S16_CLINIC_POSTS && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const start = posts.length * 5;
-    setPosts((l) => [{ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: initWhen(t), busy: false, scheduling: false }, ...l]);
+    setPosts((l) => [{ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((i) => start + i), note: "", when: initWhen(t), busy: false, scheduling: false }, ...l]);
     setTypeId(t.id);
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
@@ -716,7 +723,7 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const hookOptions = useMemo(() => (forced?.treatmentIds?.length ? U_TREATMENTS.filter((t) => forced.treatmentIds!.includes(t.id)) : U_TREATMENTS), [forced]);
   useEffect(() => { if (!hookTreatment && hookOptions[0]) setHookTreatment(hookOptions[0].name); }, [hookOptions, hookTreatment]);
   const make40 = async () => {
-    if (!(POSTS === FERAL_POSTS || POSTS === SMX_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const allTypes = [...POSTS];
     const N = POSTS === HOOK_POSTS ? 40 : POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
     const byGroup = new Map<string, typeof allTypes>();
@@ -724,9 +731,10 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     const order: typeof allTypes = [];
     for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: initHook(t), slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
+      if (TYPE_BY_ID.get(made[i].typeId)?.fixed) continue; // hooks and captions are already written
       setMaking(`Writing post ${i + 1} of ${made.length}`);
       await write(made[i]);
     }
@@ -743,14 +751,15 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
   const fullCaption = (post: Post) => [noFoot(post.caption), post.hashtags.join(" "), foot].filter(Boolean).join("\n\n");
 
   const write = async (post: Post, fix?: string) => {
-    if (!(POSTS === FERAL_POSTS || POSTS === SMX_POSTS || POSTS === BF_POSTS) && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
     try {
-      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas ? post.hook : undefined, feral: t.feral ? true : undefined, offers: t.bf ? true : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
+      const r = await fetch(`${BASE}/api/clare/copy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fixedHook: t.xmas || t.fixed ? post.hook : undefined, feral: t.feral ? true : undefined, offers: t.bf ? true : undefined, clientName: /clare/i.test(preset?.name ?? "clare") ? undefined : preset?.name, area, label: t.label, brief: t.fixed ? `Write slides 2 to 4 and the last slide for a carousel whose cover hook is "${post.hook}" and whose caption is already written: ${post.caption.slice(0, 600)} Three friendly, informative sentences per slide, in the same voice, no promises, no prices.` : t.brief, word: t.word, note: [post.note, fix ? `The last version was rejected, so put this right: ${fix.slice(0, 200)}` : ""].filter(Boolean).join(" ") }) });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The words would not write, try again");
-      patch(post.id, { busy: false, hook: t.xmas ? post.hook : data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
+      if (t.fixed) patch(post.id, { busy: false, slides: data.slides, rejected: undefined });
+      else patch(post.id, { busy: false, hook: t.xmas ? post.hook : data.hook, slides: data.slides, cta: data.cta, caption: fixDoctor(data.caption), hashtags: data.hashtags, rejected: undefined });
     } catch (e) {
       patch(post.id, { busy: false });
       toast.error(e instanceof Error ? e.message : "The words would not write, try again");
