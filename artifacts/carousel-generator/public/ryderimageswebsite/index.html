@@ -44,7 +44,7 @@ button.crem{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12p
 #cd main{padding-top:6px}
 .empty{color:#777;padding:18px 0}
 button.sv{flex:1 1 100%!important;background:var(--pink);border-color:var(--pink);color:#fff}
-button.sqr,button.csq{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
+button.sqr,button.csq,button.rsz,button.crs,button.xsq,button.xrs{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 .btns button{flex:1 1 42%;white-space:nowrap}
 .btns button.orig,.btns button.crem,.btns button.del{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
@@ -78,6 +78,8 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <div id="ed" class="hide"><div class="edbox"><canvas id="edc"></canvas>
 <label>Shape <select id="edsz"><option value="o">Original</option><option value="1">Square</option><option value="0.75">Vertical</option><option value="1.3333">Horizontal</option><option value="c">Custom (banners)</option></select></label>
 <label id="edcw" class="hide">Size in pixels <input type="number" id="edw" value="1920" min="50" max="4000"> x <input type="number" id="edh" value="600" min="50" max="4000"></label>
+<label id="edlk" class="hide"><input type="checkbox" id="edlkc"> Keep the shape (change one number and the other follows)</label>
+<p id="edinfo"></p>
 <label>Darker <input type="range" id="edb" min="-100" max="100" value="0"> Lighter</label>
 <label><input type="checkbox" id="edg"> Black and white</label>
 <label>Zoom <input type="range" id="edz" min="100" max="300" value="100"></label>
@@ -105,7 +107,7 @@ var CW="Ryder Website Images",PW="ryder-website-image";
 document.querySelectorAll("#m .card .btns").forEach(function(b){var x=document.createElement("button");x.className="sv hide";x.textContent="Save for client";b.insertBefore(x,b.firstChild)});
 var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
 if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
-if(OWN)document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q)});
+if(OWN)document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q);var z=document.createElement("button");z.className="rsz";z.textContent="Resize";b.appendChild(z)});
 var PX="ryder-website-extra",XD=[];
 function xslug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"image"}
 if(OWN)document.getElementById("xadd").classList.remove("hide");
@@ -141,7 +143,7 @@ function xItems(items){
   items.filter(function(i){return i.postType===PX&&i.mediaUrl}).reverse().forEach(function(it){
     var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
     f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;f.dataset.name=nm.toLowerCase();
-    f.innerHTML='<div class="ph"><img alt="" loading="lazy"></div><figcaption><b></b><span class="slug">Added image</span><div class="btns"><a class="abtn xdl">Download</a><button class="xcp">Copy link</button>'+(OWN?'<button class="xedt">Edit image</button><button class="xsq">Make square</button><button class="xrem crem">Delete</button>':'')+'</div></figcaption>';
+    f.innerHTML='<div class="ph"><img alt="" loading="lazy"></div><figcaption><b></b><span class="slug">Added image</span><div class="btns"><a class="abtn xdl">Download</a><button class="xcp">Copy link</button>'+(OWN?'<button class="xedt">Edit image</button><button class="xsq">Make square</button><button class="xrs">Resize</button><button class="xrem crem">Delete</button>':'')+'</div></figcaption>';
     f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
     var a=f.querySelector(".xdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
     g.appendChild(f);
@@ -151,6 +153,7 @@ function xItems(items){
 document.getElementById("xgrid").addEventListener("click",function(e){
   var c=e.target.closest(".card");if(!c)return;var id=c.dataset.key;
   if(e.target.closest(".xcp")){var u="https://www.thecybersuite.com"+c.dataset.url;if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){say("Link copied")},function(){say("Copy failed")})}
+  else if(e.target.closest(".xrs")){openEd("x",id,c.dataset.fn,"rs")}
   else if(e.target.closest(".xsq")){openEd("x",id,c.dataset.fn,"sq")}
   else if(e.target.closest(".xedt")){openEd("x",id,c.dataset.fn)}
   else if(e.target.closest(".xrem")){
@@ -229,6 +232,7 @@ fi.addEventListener("change",function(){
 document.addEventListener("click",function(e){
   var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
   var slug=(e.target.closest(".card")||{dataset:{}}).dataset.slug;
+  if(e.target.closest(".rsz")){openEd("w",slug,undefined,"rs");return}
   if(e.target.closest(".sqr")){openEd("w",slug,undefined,"sq");return}
   if(e.target.closest(".edt")){openEd("w",slug);return}
   if(g){cur=slug;fi.click();return}
@@ -275,7 +279,7 @@ function cdRender(){
     items.forEach(function(it){
       var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
       f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;
-      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="csq">Make square</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
+      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="csq">Make square</button><button class="crs">Resize</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
       f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
       var a=f.querySelector(".cdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
       g.appendChild(f);
@@ -333,7 +337,8 @@ document.getElementById("cdgrid").addEventListener("click",function(e){
   if(e.target.closest(".ccp")){
     var u="https://www.thecybersuite.com"+c.dataset.url;
     if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){say("Link copied")},function(){say("Copy failed")});
-  }else if(e.target.closest(".csq")){openEd("c",id,c.dataset.fn,"sq")}
+  }else if(e.target.closest(".crs")){openEd("c",id,c.dataset.fn,"rs")}
+  else if(e.target.closest(".csq")){openEd("c",id,c.dataset.fn,"sq")}
   else if(e.target.closest(".cedt")){openEd("c",id,c.dataset.fn)}
   else if(e.target.closest(".crem")){
     var d=e.target.closest(".crem");
@@ -341,7 +346,7 @@ document.getElementById("cdgrid").addEventListener("click",function(e){
     fetch("/api/library/"+id,{method:"DELETE"}).then(function(r){if(!r.ok)throw new Error("x");cdRender();say("Deleted for everyone")}).catch(function(){say("Could not delete that one")});
   }
 });
-var ED=null,edc=document.getElementById("edc"),edm=document.getElementById("ed"),edb=document.getElementById("edb"),edz=document.getElementById("edz"),edsz=document.getElementById("edsz"),edw=document.getElementById("edw"),edh=document.getElementById("edh"),edg=document.getElementById("edg"),edcw=document.getElementById("edcw"),edDrag=null;
+var ED=null,edc=document.getElementById("edc"),edm=document.getElementById("ed"),edb=document.getElementById("edb"),edz=document.getElementById("edz"),edsz=document.getElementById("edsz"),edw=document.getElementById("edw"),edh=document.getElementById("edh"),edg=document.getElementById("edg"),edcw=document.getElementById("edcw"),edlk=document.getElementById("edlk"),edlkc=document.getElementById("edlkc"),edinfo=document.getElementById("edinfo"),edDrag=null;
 function tgt(){
   var iw=ED.im.naturalWidth,ih=ED.im.naturalHeight,v=edsz.value,a,ow,oh;
   if(v==="o"){a=iw/ih;ow=Math.min(iw,2400);oh=Math.round(ow/a)}
@@ -363,22 +368,29 @@ function edDraw(){
   w=Math.max(40,Math.round(w));h=Math.max(20,Math.round(h));
   paint(edc,w,h);edc.style.width=w+"px";edc.style.height=h+"px";
 }
-function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=100;edg.checked=false;edsz.value="o";edcw.classList.add("hide")}
+function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=100;edg.checked=false;edsz.value="o";edcw.classList.add("hide");edlk.classList.add("hide");edlkc.checked=false}
 function openEd(kind,key,name,preset){
   var src;
   if(kind==="d")src="https://lh3.googleusercontent.com/d/"+key+"=w2400";
   else{var el=document.querySelector(kind==="w"?'.card[data-slug="'+key+'"] img':(kind==="x"?'#xgrid .card[data-key="'+key+'"] img':'#cdgrid .card[data-key="'+key+'"] img'));if(!el)return;src=el.src}
   var im=new Image();
   if(src.indexOf("blob:")!==0)im.crossOrigin="anonymous";
-  im.onload=function(){ED={kind:kind,key:key,name:name,im:im,z:1,x:0,y:0,b:0,g:false};edReset();if(preset==="sq")edsz.value="1";edm.classList.remove("hide");edDraw()};
+  im.onload=function(){ED={kind:kind,key:key,name:name,im:im,z:1,x:0,y:0,b:0,g:false};edReset();if(preset==="sq")edsz.value="1";
+    var iw=im.naturalWidth,ih=im.naturalHeight;edinfo.textContent="Current size: "+iw+" x "+ih+" pixels";
+    if(preset==="rs"){var W=Math.min(4000,iw);edsz.value="c";edw.value=W;edh.value=Math.max(50,Math.round(W*ih/iw));edcw.classList.remove("hide");edlk.classList.remove("hide");edlkc.checked=true}
+    edm.classList.remove("hide");edDraw()};
   im.onerror=function(){say("Could not open that picture for editing")};
   im.src=src;
 }
 edb.addEventListener("input",function(){ED.b=Number(edb.value);edDraw()});
 edz.addEventListener("input",function(){ED.z=Number(edz.value)/100;edDraw()});
 edg.addEventListener("change",function(){ED.g=edg.checked;edDraw()});
-edsz.addEventListener("change",function(){edcw.classList.toggle("hide",edsz.value!=="c");ED.x=0;ED.y=0;edDraw()});
-[edw,edh].forEach(function(i){i.addEventListener("input",function(){ED.x=0;ED.y=0;edDraw()})});
+edsz.addEventListener("change",function(){edcw.classList.toggle("hide",edsz.value!=="c");edlk.classList.toggle("hide",edsz.value!=="c");ED.x=0;ED.y=0;edDraw()});
+[edw,edh].forEach(function(i){i.addEventListener("input",function(){
+  if(edlkc.checked&&ED){var r=ED.im.naturalHeight/ED.im.naturalWidth;
+    if(i===edw){edh.value=Math.max(50,Math.min(4000,Math.round((parseInt(edw.value)||0)*r)))}
+    else{edw.value=Math.max(50,Math.min(4000,Math.round((parseInt(edh.value)||0)/r)))}}
+  ED.x=0;ED.y=0;edDraw()})});
 edc.addEventListener("pointerdown",function(e){edDrag={sx:e.clientX,sy:e.clientY,ox:ED.x,oy:ED.y};edc.setPointerCapture(e.pointerId);edc.style.cursor="grabbing"});
 edc.addEventListener("pointermove",function(e){if(!edDrag)return;var r=edc.getBoundingClientRect();ED.x=edDrag.ox+(e.clientX-edDrag.sx)/r.width;ED.y=edDrag.oy+(e.clientY-edDrag.sy)/r.height;edDraw()});
 ["pointerup","pointercancel"].forEach(function(n){edc.addEventListener(n,function(){edDrag=null;edc.style.cursor="grab"})});
