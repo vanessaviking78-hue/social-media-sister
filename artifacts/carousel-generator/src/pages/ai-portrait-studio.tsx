@@ -837,6 +837,10 @@ export default function AiPortraitStudio() {
   const [clientName, setClientName]         = useState("");
   const [isDragging, setIsDragging]         = useState(false);
   const fileInputRef                        = useRef<HTMLInputElement>(null);
+  const [roomPhotoUrl, setRoomPhotoUrl]     = useState<string | null>(null);
+  const [roomPreview, setRoomPreview]     = useState<string | null>(null);
+  const [roomUploading, setRoomUploading] = useState(false);
+  const roomInputRef                        = useRef<HTMLInputElement>(null);
   const [urlInput, setUrlInput]             = useState("");
   const [urlLoading, setUrlLoading]         = useState(false);
   const [showUrlInput, setShowUrlInput]     = useState(false);
@@ -971,6 +975,28 @@ export default function AiPortraitStudio() {
       setUploading(false);
     }
   }, [clientName]);
+
+  // Same Room: optional second photo of the room the clinician should be placed in
+  const handleRoomFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    setRoomPreview(URL.createObjectURL(file));
+    setRoomUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const r = await fetch(`${BASE}api/ai-portrait/background-image`, { method: "POST", body: fd });
+      const data = await r.json() as { url?: string; error?: string };
+      if (!r.ok || !data.url) throw new Error(data.error || "Room upload failed");
+      setRoomPhotoUrl(data.url);
+      toast.success("Room photo uploaded");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Room upload failed");
+      setRoomPreview(null);
+      setRoomPhotoUrl(null);
+    } finally {
+      setRoomUploading(false);
+    }
+  };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); setIsDragging(false);
@@ -1117,6 +1143,9 @@ export default function AiPortraitStudio() {
         ...(id.startsWith("rx-") ? { promptVars: { xmasColour: realXmasColour.trim() || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
+      if (id.startsWith("sr-") && roomPhotoUrl) {
+        scenario.backgroundImageUrl = roomPhotoUrl;
+      }
       if (globalBgColour.trim()) {
         scenario.promptVars = { ...(scenario.promptVars || {}), colour: globalBgColour.trim() };
       }
@@ -2080,7 +2109,44 @@ export default function AiPortraitStudio() {
 {activeSection === "sameroom" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">SAME ROOM</p>
-<p className="text-xs text-muted-foreground mb-3">Upload a photo of her in her own room. Each shot keeps your exact background, angle and lighting, puts her in black scrubs and changes only the pose. Tick the poses you want.</p>
+<p className="text-xs text-muted-foreground mb-3">Upload a photo of her in her own room and each shot keeps your exact background, angle and lighting, puts her in black scrubs and changes only the pose. Or add a separate room photo below and she is placed into that room instead. Tick the poses you want.</p>
+
+            <div className="mb-3 rounded-lg border border-dashed border-border/50 p-3">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium mb-2">Room photo (optional)</p>
+              {roomPreview ? (
+                <div className="flex items-center gap-3">
+                  <img src={roomPreview} alt="Room" className="h-20 w-28 object-cover rounded border border-border/40" />
+                  <div className="text-xs text-muted-foreground">
+                    {roomUploading ? "Uploading room photo..." : "She will be placed into this room."}
+                    {!roomUploading && (
+                      <button
+                        type="button"
+                        className="block mt-1 text-violet-400 hover:underline"
+                        onClick={() => { setRoomPreview(null); setRoomPhotoUrl(null); }}
+                      >
+                        Remove room photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="text-xs px-3 py-2 rounded border border-border/50 hover:border-violet-500/50 hover:bg-violet-500/10 transition-colors"
+                  onClick={() => roomInputRef.current?.click()}
+                >
+                  Upload the room photo
+                </button>
+              )}
+              <input
+                ref={roomInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleRoomFile(f); e.target.value = ""; }}
+              />
+              <p className="text-[11px] text-muted-foreground/70 mt-2">Upload the clinician photo in the main box at the top as usual. With a room photo added, the background in the clinician photo is ignored.</p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {SAME_ROOM_PRESETS.map((preset) => {

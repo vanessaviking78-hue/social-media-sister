@@ -8,7 +8,7 @@ import { randomBytes } from "crypto";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { geminiOk, geminiFailed } from "./aiCreditAlert";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, SAME_ROOM_WITH_ROOM_BASE, SAME_ROOM_BASE, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS } from "./aiPortraitScenarios";
 
 // Every photo shoot image goes straight into that client's approved photos, so it shows up under
 // "Add approved photos" next to their name with no review step. One batch per client, repeats are skipped.
@@ -226,6 +226,11 @@ export async function processPortraitJob(
     // Build prompt — photo studio presets take priority, then custom outfit/background, then legacy scenarios
     let prompt: string;
     let backgroundImageUrl = cfg.backgroundImageUrl;
+    // Same Room shots remember their room photo in outfitStyle ("room:<url>") so a regenerate keeps the same room
+    if (cfg.id.startsWith("sr-") && !backgroundImageUrl && cfg.outfitStyle?.startsWith("room:")) {
+      backgroundImageUrl = cfg.outfitStyle.slice(5);
+    }
+    const sameRoomStyle = cfg.id.startsWith("sr-") && backgroundImageUrl ? `room:${backgroundImageUrl}` : undefined;
 
     let photoStudioPreset;
     try {
@@ -308,6 +313,11 @@ export async function processPortraitJob(
       prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
     }
 
+    // Same Room shots with an uploaded room photo: place the clinician into that room instead of keeping her own background.
+    if (cfg.id.startsWith("sr-") && backgroundImageUrl && !cfg.textOnly) {
+      prompt = prompt.replace(SAME_ROOM_BASE, SAME_ROOM_WITH_ROOM_BASE);
+    }
+
     // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly.
     // Skipped entirely for text-only jobs, which have no real source photo buffer.
     let sourceMime = "image/jpeg";
@@ -385,7 +395,7 @@ export async function processPortraitJob(
 
         const storedOutfitStyle = cfg.outfitType
           ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl })
-          : cfg.outfitStyle;
+          : (sameRoomStyle ?? cfg.outfitStyle);
 
         const [row] = await db
           .insert(aiGeneratedPortraitsTable)
@@ -433,7 +443,7 @@ export async function processPortraitJob(
               scenarioId: cfg.id,
               prompt,
               scrubColor: cfg.scrubColor,
-              outfitStyle: cfg.outfitType ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl }) : cfg.outfitStyle,
+              outfitStyle: cfg.outfitType ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl }) : (sameRoomStyle ?? cfg.outfitStyle),
               aspectRatio: cfg.aspectRatio,
               status: "failed",
               failureReason: msg,
