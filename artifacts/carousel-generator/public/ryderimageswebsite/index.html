@@ -44,6 +44,7 @@ button.crem{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12p
 #cd main{padding-top:6px}
 .empty{color:#777;padding:18px 0}
 button.sv{flex:1 1 100%!important;background:var(--pink);border-color:var(--pink);color:#fff}
+button.sqr,button.csq{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 .btns button{flex:1 1 42%;white-space:nowrap}
 .btns button.orig,.btns button.crem,.btns button.del{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
@@ -102,6 +103,7 @@ var CW="Ryder Website Images",PW="ryder-website-image";
 document.querySelectorAll("#m .card .btns").forEach(function(b){var x=document.createElement("button");x.className="sv hide";x.textContent="Save for client";b.insertBefore(x,b.firstChild)});
 var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
 if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
+if(OWN)document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q)});
 function upX(blob,name,cn,pt,meta){
   var fd=new FormData();fd.append("file",blob,name);fd.append("clientName",cn);
   return fetch("/api/library/upload-file",{method:"POST",body:fd}).then(function(r){if(!r.ok)throw new Error("upload");return r.json()}).then(function(j){
@@ -171,6 +173,7 @@ fi.addEventListener("change",function(){
 document.addEventListener("click",function(e){
   var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
   var slug=(e.target.closest(".card")||{dataset:{}}).dataset.slug;
+  if(e.target.closest(".sqr")){openEd("w",slug,undefined,"sq");return}
   if(e.target.closest(".edt")){openEd("w",slug);return}
   if(g){cur=slug;fi.click();return}
   if(o){reset(slug);say("Original restored");return}
@@ -216,7 +219,7 @@ function cdRender(){
     items.forEach(function(it){
       var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
       f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;
-      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
+      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="csq">Make square</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
       f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
       var a=f.querySelector(".cdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
       g.appendChild(f);
@@ -274,7 +277,8 @@ document.getElementById("cdgrid").addEventListener("click",function(e){
   if(e.target.closest(".ccp")){
     var u="https://www.thecybersuite.com"+c.dataset.url;
     if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){say("Link copied")},function(){say("Copy failed")});
-  }else if(e.target.closest(".cedt")){openEd("c",id,c.dataset.fn)}
+  }else if(e.target.closest(".csq")){openEd("c",id,c.dataset.fn,"sq")}
+  else if(e.target.closest(".cedt")){openEd("c",id,c.dataset.fn)}
   else if(e.target.closest(".crem")){
     var d=e.target.closest(".crem");
     if(!d.dataset.sure){d.dataset.sure="1";d.dataset.t=d.textContent;d.textContent="Sure? Tap again";setTimeout(function(){delete d.dataset.sure;d.textContent=d.dataset.t},3000);return}
@@ -304,13 +308,13 @@ function edDraw(){
   paint(edc,w,h);edc.style.width=w+"px";edc.style.height=h+"px";
 }
 function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=100;edg.checked=false;edsz.value="o";edcw.classList.add("hide")}
-function openEd(kind,key,name){
+function openEd(kind,key,name,preset){
   var src;
   if(kind==="d")src="https://lh3.googleusercontent.com/d/"+key+"=w2400";
   else{var el=document.querySelector(kind==="w"?'.card[data-slug="'+key+'"] img':'#cdgrid .card[data-key="'+key+'"] img');if(!el)return;src=el.src}
   var im=new Image();
   if(src.indexOf("blob:")!==0)im.crossOrigin="anonymous";
-  im.onload=function(){ED={kind:kind,key:key,name:name,im:im,z:1,x:0,y:0,b:0,g:false};edReset();edm.classList.remove("hide");edDraw()};
+  im.onload=function(){ED={kind:kind,key:key,name:name,im:im,z:1,x:0,y:0,b:0,g:false};edReset();if(preset==="sq")edsz.value="1";edm.classList.remove("hide");edDraw()};
   im.onerror=function(){say("Could not open that picture for editing")};
   im.src=src;
 }
