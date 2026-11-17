@@ -320,16 +320,16 @@ export async function processPortraitJob(
 
     // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly.
     // Skipped entirely for text-only jobs, which have no real source photo buffer.
+    const formatToMime: Record<string, string> = {
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+      gif: "image/gif",
+    };
     let sourceMime = "image/jpeg";
     let base64Photo = "";
     if (!cfg.textOnly) {
       const sharpMeta = await sharp(sourcePhotoBuffer).metadata();
-      const formatToMime: Record<string, string> = {
-        jpeg: "image/jpeg",
-        png: "image/png",
-        webp: "image/webp",
-        gif: "image/gif",
-      };
       sourceMime = formatToMime[sharpMeta.format ?? ""] ?? "image/jpeg";
       base64Photo = sourcePhotoBuffer.toString("base64");
     }
@@ -343,7 +343,7 @@ export async function processPortraitJob(
         const bgMime = formatToMime[bgMeta.format ?? ""] ?? "image/jpeg";
         backgroundImagePart = { inlineData: { mimeType: bgMime, data: bgBuf.toString("base64") } };
       } catch (e) {
-        logger.warn({ err: e, backgroundImageUrl }, "Failed to fetch background image — generating without it");
+        logger.warn({ err: e, backgroundImageUrl }, `Failed to fetch background image — generating without it: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
