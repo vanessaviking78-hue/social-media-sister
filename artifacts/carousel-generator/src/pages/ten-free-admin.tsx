@@ -64,16 +64,17 @@ function List() {
     <div className="max-w-3xl mx-auto p-6 space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Free posts: requests</h1><Link href="/10free-tracker" className="text-sm underline">Tracker of the ones done</Link></div>
       <p className="text-sm text-muted-foreground">Premium form: {window.location.origin}{BASE}/premiumfreebies</p>
+      <p className="text-sm text-muted-foreground">Xmas freebies form: {window.location.origin}{BASE}/xmasfreebies</p>
       {loading && <p>Loading...</p>}
       {!loading && rows.length === 0 && <p>No requests yet.</p>}
       {rows.map((r) => (
         <div key={r.id} className="border rounded-lg p-4 flex flex-wrap items-center gap-3 justify-between">
           <div>
-            <div className="font-semibold">{r.clinicName} <span className="text-xs uppercase text-pink-500">{r.status}</span>{r.kind === "premium" && <span className="ml-2 text-xs uppercase bg-black text-white rounded px-2 py-0.5">Premium</span>}</div>
+            <div className="font-semibold">{r.clinicName} <span className="text-xs uppercase text-pink-500">{r.status}</span>{r.kind === "xmas" && <span className="ml-2 text-xs uppercase bg-pink-500 text-white rounded px-2 py-0.5">Xmas</span>}{r.kind === "premium" && <span className="ml-2 text-xs uppercase bg-black text-white rounded px-2 py-0.5">Premium</span>}</div>
             <div className="text-sm text-muted-foreground">{r.clinicianName} · {r.email} · {r.area}</div>
           </div>
           <div className="flex gap-2 text-sm">
-            <Link href={`/10free-admin?id=${r.id}`} className="px-3 py-1 rounded bg-pink-500 text-white">{r.status === "published" ? "Open" : "Build"}</Link>
+            <Link href={r.kind === "xmas" ? `/xmas-build?id=${r.id}` : `/10free-admin?id=${r.id}`} className="px-3 py-1 rounded bg-pink-500 text-white">{r.status === "published" ? "Open" : "Build"}</Link>
             {r.status === "new" && <button className="px-3 py-1 rounded border" onClick={() => patch(r.id, "declined")}>Decline</button>}
             {r.status === "declined" && <button className="px-3 py-1 rounded border" onClick={() => patch(r.id, "new")}>Reopen</button>}
             <button className="px-3 py-1 rounded border" onClick={() => del(r.id)}>Delete</button>

@@ -110,7 +110,7 @@ async function toUsable(file: File): Promise<File> {
   return new File([blob], file.name.replace(/\.(heic|heif)$/i, "") + ".jpg", { type: "image/jpeg" });
 }
 
-export default function TenFreePosts({ premium = false }: { premium?: boolean }) {
+export default function TenFreePosts({ premium = false, xmas = false }: { premium?: boolean; xmas?: boolean }) {
   const [f, setF] = useState({ clinicianName: "", clinicName: "", email: "", handle: "", area: "", website: "", whatsapp: "", bizType: "", age: "", hobbies: "", mum: "", pets: "", why: "", threeWords: "", personality: "", font: "hatcher", passion: "" });
   useEffect(() => { injectSuiteFontCss(); }, []);
   const [cols, setCols] = useState<Colours>({ main: "#c2185b", accent: "#1a1a1a" });
@@ -194,7 +194,8 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
 
   async function submit() {
     setErr("");
-    if (premium && photos.length < 3) return setErr("Please add 3 photos of you. No filter needed, and get your face, head and shoulders in.");
+    if (xmas && photos.length < 1) return setErr("Please add at least 1 photo of you. No filter needed, and get your face, head and shoulders in.");
+    if (premium && !xmas && photos.length < 3) return setErr("Please add 3 photos of you. No filter needed, and get your face, head and shoulders in.");
     if (!premium && !photo) return setErr("Please add a photo of you. No filter needed, and get your full face, head and shoulders in.");
     if (!consent) return setErr("Please tick the box at the bottom so I know you are happy.");
     setBusy(true);
@@ -207,7 +208,7 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
       fd.append("consent", "yes");
       if (logoBlob) fd.append("logo", new File([logoBlob], "logo.png", { type: "image/png" }));
       if (premium) {
-        fd.append("kind", "premium");
+        fd.append("kind", xmas ? "xmas" : "premium");
         photos.forEach((ph) => fd.append("photos", ph));
       } else if (photo) fd.append("photo", photo);
       const r = await fetch("/api/ten-free/intake", { method: "POST", body: fd });
@@ -259,11 +260,20 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
         ) : (
           <>
             <div className="tf-hero">
-              <div className="tf-kicker">{premium ? "Premium, and still free" : "One free turn per email"}</div>
+              <div className="tf-kicker">{xmas ? "A little Christmas gift" : premium ? "Premium, and still free" : "One free turn per email"}</div>
               <h1 className="tf-h1">
-                {premium ? <>Premium <span>freebies</span></> : <>Your <span>10 free</span> posts</>}
+                {xmas ? <>Xmas <span>freebies</span></> : premium ? <>Premium <span>freebies</span></> : <>Your <span>10 free</span> posts</>}
               </h1>
-              {premium ? (
+              {xmas ? (
+                <>
+                  <p className="tf-lede">A little Christmas gift from me. Tell me a bit about you and your clinic and I will make you a handful of party season carousel posts in your colours, with your logo, your photos and your own caption, ready to post.</p>
+                  <div className="tf-list">
+                    <div><b>5</b>Christmas carousels</div>
+                    <div><b>5</b>Fun captions</div>
+                    <div><b>5</b>Local hashtags</div>
+                  </div>
+                </>
+              ) : premium ? (
                 <>
                   <p className="tf-lede">These are the very same designs my paying clients get. Tell me a little about you and your clinic. I build ten premium posts in your colours with your logo and your own photos, plus matching stories and reel scripts.</p>
                   <div className="tf-list">
@@ -338,10 +348,10 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
               {premium ? (
                 <>
                   <div className="tf-drop" style={{ marginTop: 26 }} onClick={() => photosRef.current?.click()}>
-                    <div className="tf-l" style={{ width: 150, flex: "none" }}>{photos.length >= 3 ? "3 photos added" : `${photos.length} of 3 photos`}</div>
+                    <div className="tf-l" style={{ width: 150, flex: "none" }}>{xmas ? `${photos.length} photo${photos.length === 1 ? "" : "s"} added` : photos.length >= 3 ? "3 photos added" : `${photos.length} of 3 photos`}</div>
                     <div>
-                      <div style={{ fontSize: 22, textTransform: "uppercase" }}>{photos.length >= 3 ? "Tap to add more or start again" : "Add 3 photos of you (needed)"}</div>
-                      <div className="tf-note">No filter needed. Head and shoulders, nice and clear, in good light. Two of them become your AI photos too.</div>
+                      <div style={{ fontSize: 22, textTransform: "uppercase" }}>{xmas ? (photos.length ? "Tap to add more or start again" : "Add 1 to 3 photos of you (needed)") : photos.length >= 3 ? "Tap to add more or start again" : "Add 3 photos of you (needed)"}</div>
+                      <div className="tf-note">No filter needed. Head and shoulders, nice and clear, in good light. {xmas ? "" : "Two of them become your AI photos too."}</div>
                     </div>
                     <input ref={photosRef} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={(e) => { onPhotos(e.target.files); e.target.value = ""; }} />
                   </div>
@@ -456,7 +466,7 @@ export default function TenFreePosts({ premium = false }: { premium?: boolean })
             {err && <div className="tf-err">{err}</div>}
             {repeat && TENFREE_WHATSAPP && <a className="tf-go" style={{ display: "block", textAlign: "center", textDecoration: "none" }} href={`https://wa.me/${TENFREE_WHATSAPP}?text=${encodeURIComponent("Hi Vanessa, I would like my discount for a monthly membership")}`}>Claim my discount on WhatsApp</a>}
             <button className="tf-go" disabled={busy || logoBusy} onClick={submit}>
-              {busy ? "Sending..." : premium ? "Send me my premium freebies" : "Send me my 10 free posts"}
+              {busy ? "Sending..." : xmas ? "Send me my Xmas freebies" : premium ? "Send me my premium freebies" : "Send me my 10 free posts"}
             </button>
             <div className="tf-note">I review every request by hand. One free turn per email.</div>
           </>

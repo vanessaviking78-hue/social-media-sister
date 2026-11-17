@@ -203,6 +203,7 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
 type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number; tScale?: number[]; tY?: number[]; bY?: number[] };
 type Post = {
   id: string;
+  pick?: boolean; // chosen for a gift (Xmas freebies)
   adj?: Adj; // photo zoom and pan per slide, headline size and position, block position: this post only
   typeId: string;
   hook: string;
@@ -260,7 +261,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -528,7 +529,24 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "hoo
   return <ClareOwnInner key={`${preset?.id ?? "clare"}-${mode ?? ""}-${own.posts.length}`} preset={preset} />;
 }
 
-function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["presets"][number] | null }) {
+export type FreebieReq = { id: string; clinicName: string; area: string; mainHex: string; accentHex: string; logoUrl: string; photos: string[]; photoUrl: string };
+type FreebieProp = { id: string; photos: string[]; logoUrl: string };
+
+// XMAS FREEBIES: the same NEWXMAS posts, opened on one freebie request (its colours, logo, photos and area). Vanessa ticks the posts for the gift and publishes a private link.
+export function ClareFreebie({ req }: { req: FreebieReq }) {
+  const preset = useMemo(() => ({ id: -1, name: req.clinicName, seoArea: req.area, clinicAddress: null, pageColor: req.mainHex, accentColor: req.accentHex, overlayColor: req.mainHex, logoUrl: req.logoUrl, defaultPostTime: "09:00", captionFootnote: "" }) as unknown as ReturnType<typeof usePresets>["presets"][number], [req]);
+  CLINIC_KEY = `xmasfree-${req.id}`;
+  CLINIC_NAME = req.clinicName;
+  SECS = NEWXMAS_SECTIONS;
+  POSTS = NEWXMAS_POSTS;
+  LOOK_KEY = `clare-look-v1-xmasfree-${req.id}`;
+  FONT_KEY = `clare-fonts-v1-xmasfree-${req.id}`;
+  AREA_KEY = `clare-area-v1-xmasfree-${req.id}`;
+  SCHED_KEY = `clare-scheduled-v1-xmasfree-${req.id}`;
+  return <ClareOwnInner key={`free-${req.id}`} preset={preset} freebie={{ id: req.id, photos: req.photos.length ? req.photos : req.photoUrl ? [req.photoUrl] : [], logoUrl: req.logoUrl }} />;
+}
+
+function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePresets>["presets"][number] | null; freebie?: FreebieProp }) {
 
   const [pool, setPool] = useState<Photo[]>([]);
   // The saved photos for each section. Uploaded once, kept for every post in that section.
@@ -843,6 +861,49 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
     saveAs(await zip.generateAsync({ type: "blob" }), `clare-${t.id}.zip`);
   };
 
+  // XMAS FREEBIES: load the clinic's own photos once, then publish the ticked posts to a private link.
+  const [gift, setGift] = useState<{ busy: string; link: string }>({ busy: "", link: "" });
+  useEffect(() => {
+    if (!freebie) return;
+    let live = true;
+    (async () => {
+      const files: File[] = [];
+      for (const u of freebie.photos) {
+        try { const b = await (await fetch(u)).blob(); files.push(new File([b], "photo.jpg", { type: b.type || "image/jpeg" })); } catch { /* skip */ }
+      }
+      if (live && files.length) await addPhotos(files);
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freebie?.id]);
+  const publishGift = async () => {
+    if (!freebie) return;
+    const chosen = posts.filter((p) => p.pick);
+    if (!chosen.length) { toast.error("Tick the posts for the gift first"); return; }
+    if (!area.trim()) { toast.error("Type the area first, so the hashtags are local"); return; }
+    try {
+      const out: { n: number; kind: string; label: string; images: string[]; caption: string; tags: string }[] = [];
+      for (let i = 0; i < chosen.length; i++) {
+        setGift({ busy: `Making post ${i + 1} of ${chosen.length}`, link: "" });
+        const post = chosen[i];
+        const t = TYPE_BY_ID.get(post.typeId)!;
+        const cs = await render(post);
+        const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, k) => `xmasgift-${t.id}-${k + 1}-${Date.now()}.png`));
+        out.push({ n: i + 1, kind: "xmas", label: t.label.replace(/^\d+\.\s*/, ""), images: urls, caption: noFoot(post.caption), tags: tagsOf(post).join(" ") });
+      }
+      setGift({ busy: "Publishing the link", link: "" });
+      const pw = localStorage.getItem("cybersuite-pw") || "";
+      const r = await fetch(`${BASE}/api/ten-free/publish`, { method: "POST", headers: { "Content-Type": "application/json", "x-app-password": pw, Authorization: "Bearer " + pw }, body: JSON.stringify({ id: freebie.id, posts: out, stories: [], hooks: [], fact: "", logoUrl: freebie.logoUrl }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.slug) throw new Error(j?.error || "Could not publish the link");
+      setGift({ busy: "", link: `${window.location.origin}${BASE}/10free/${j.slug}` });
+      toast.success("The gift link is ready");
+    } catch (e) {
+      setGift({ busy: "", link: "" });
+      toast.error(e instanceof Error ? e.message : "Could not publish the link");
+    }
+  };
+
   const lookFor = (post: Post): Look => normLook({ ...look, ...(post.look || {}) });
 
   // Pressing Schedule first asks: schedule it, or reject it with a reason.
@@ -1088,7 +1149,23 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
 
         <section className="space-y-6">
           {posts.length === 0 && <p className="text-white/50 text-sm">Press a post name above and it opens here.</p>}
-          {posts.length > 0 && (
+          {freebie && (
+            <div className="rounded-xl border border-pink-400/40 bg-pink-400/5 p-4 space-y-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-sm text-white/80">{posts.filter((p) => p.pick).length} ticked for the gift (5 is the plan, more is fine)</span>
+                <Button size="sm" disabled={!!gift.busy} onClick={() => void publishGift()}>{gift.busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{gift.busy}</> : "Publish the gift link"}</Button>
+              </div>
+              {gift.link && (
+                <div className="flex items-center gap-2 flex-wrap text-sm">
+                  <input readOnly value={gift.link} className="bg-white/10 rounded p-2 flex-1 min-w-[260px]" onFocus={(e) => e.currentTarget.select()} />
+                  <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard.writeText(gift.link).then(() => toast.success("Link copied")).catch(() => undefined); }}>Copy link</Button>
+                  <a className="underline text-white/70" href={gift.link} target="_blank" rel="noreferrer">Open it</a>
+                </div>
+              )}
+              <p className="text-xs text-white/50">Open any post below, tick "In the gift", choose gradient, block or text box, then publish. Photos from the clinic's form are already loaded.</p>
+            </div>
+          )}
+          {posts.length > 0 && !freebie && (
             <div className="rounded-xl border border-white/10 p-4 flex items-center gap-3 flex-wrap">
               <span className="text-sm text-white/70">{ready.length} written and waiting</span>
               {bulkBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{bulkBusy}</span>}
@@ -1105,14 +1182,15 @@ function ClareOwnInner({ preset }: { preset: ReturnType<typeof usePresets>["pres
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <h3 className="font-semibold">{t.label}</h3>
                   <div className="flex gap-2 items-center flex-wrap">
-                    <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
+                    {freebie && <label className="flex items-center gap-2 text-sm rounded border border-pink-400/50 px-3 py-1.5"><input type="checkbox" checked={!!post.pick} onChange={(e) => patch(post.id, { pick: e.target.checked })} />In the gift</label>}
+                    {!freebie && <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
-                    </Button>
-                    <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />
-                    <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling}>
+                    </Button>}
+                    {!freebie && <input type="datetime-local" className="bg-white/5 rounded p-1.5 text-sm" value={post.when} onChange={(e) => patch(post.id, { when: e.target.value })} />}
+                    {!freebie && <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
-                    </Button>
-                    <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>
+                    </Button>}
+                    {!freebie && <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     {t.feral && <Button size="sm" variant="secondary" onClick={() => downloadStories(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Stories 1080 x 1920</Button>}
                     <Button size="sm" variant="outline" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Delete post"><Trash2 className="w-4 h-4 mr-2" />Delete</Button>

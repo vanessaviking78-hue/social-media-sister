@@ -171,6 +171,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     // Freehold Socials (pubs and bars at /freehousefreebies) is the same form with its own venue list and no AI Studio portraits.
     const freehouse = b.kind === "freehouse";
     const ownForm = hammered || freehouse;
+    // Xmas freebies (/xmasfreebies): the premium form, but the gift is made by hand in the NEWXMAS tool, so one photo is enough and there are no AI Studio portraits.
+    const xmas = b.kind === "xmas";
     const extraPhotos = files.photos ?? [];
     const photo = files.photo?.[0] ?? extraPhotos[0];
 
@@ -228,6 +230,10 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       res.status(400).json({ error: "Please add at least 1 photo, ideally you and a job you are proud of" });
       return;
     }
+    if (xmas && extraPhotos.length < 1) {
+      res.status(400).json({ error: "Please add at least 1 photo of you" });
+      return;
+    }
     if (premium && extraPhotos.length < 3) {
       res.status(400).json({ error: "Please add all 3 photos of you, so the posts and your AI photos look just like you" });
       return;
@@ -258,8 +264,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
     // freebies@cybersuite.com is the shared address Vanessa hands out, so it never trips the one turn rule (she checks repeats herself).
     const isTest = isTester || /^vanessa(viking78)?\+test[a-z0-9._-]*@(gmail\.com|thecybersuite\.com)$/i.test(email) || /^freebies@(cybersuite|thecybersuite)\.com$/i.test(email);
     // Premium has its own list, so everyone who had a free turn before gets a fresh one and the old requests stay untouched.
-    const kind = hammered ? "hammered" : freehouse ? "freehouse" : premium ? "premium" : "free";
-    const base = hammered ? `hammered:${emailKey(email)}` : freehouse ? `freehouse:${emailKey(email)}` : premium ? `premium:${emailKey(email)}` : emailKey(email);
+    const kind = hammered ? "hammered" : freehouse ? "freehouse" : xmas ? "xmas" : premium ? "premium" : "free";
+    const base = hammered ? `hammered:${emailKey(email)}` : freehouse ? `freehouse:${emailKey(email)}` : xmas ? `xmas:${emailKey(email)}` : premium ? `premium:${emailKey(email)}` : emailKey(email);
     const MAX_TURNS = 3;
     // Each email and each clinic can have up to three turns. The first keeps the plain key, later ones get a suffix because the column is unique.
     const used = isTest ? 0 : Number((await db.execute(sql`SELECT count(*)::int AS n FROM tenfree_requests WHERE email_key = ${base} OR left(email_key, ${base.length + 1}) = ${base + "#"}`)).rows[0]?.n ?? 0);
@@ -272,8 +278,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
 
     const logoKey = logo ? await saveSampleFile(logo.buffer, logo.mimetype, "logo") : "";
     const photoUrls: string[] = [];
-    for (const f of premium || ownForm ? extraPhotos : []) photoUrls.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
-    const photoKey = premium || ownForm ? (photoUrls[0] ?? "").replace("/api/free-samples/media/", "") : photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
+    for (const f of premium || ownForm || xmas ? extraPhotos : []) photoUrls.push(`/api/free-samples/media/${await saveSampleFile(f.buffer, f.mimetype, "photo")}`);
+    const photoKey = premium || ownForm || xmas ? (photoUrls[0] ?? "").replace("/api/free-samples/media/", "") : photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : "";
     const id = uuid();
     try {
       await db.execute(sql`INSERT INTO tenfree_requests
@@ -288,8 +294,8 @@ router.post("/ten-free/intake", intakeUpload, async (req: Request, res: Response
       }
       throw err;
     }
-    if (photoKey && !ownForm) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
-    void notifyTenFreeRequest({ clinicName: hammered ? `HAMMERED${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : freehouse ? `FREEHOLD SOCIALS${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
+    if (photoKey && !ownForm && !xmas) void runStudio(id, photoKey, clinicName, premium ? premiumStudioSlots() : studioSlots());
+    void notifyTenFreeRequest({ clinicName: xmas ? `XMAS FREEBIES: ${clinicName}` : hammered ? `HAMMERED${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : freehouse ? `FREEHOLD SOCIALS${answers.ref ? ` (from ${answers.ref})` : ""}: ${clinicName}` : clinicName, clinicianName, handle, email, area, website, whatsapp, link: appLink(`/10free-admin?id=${id}`) });
     res.json({ ok: true });
   } catch (err: unknown) {
     req.log?.error({ err }, "ten-free intake failed");

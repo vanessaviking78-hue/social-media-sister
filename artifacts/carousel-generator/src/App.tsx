@@ -194,6 +194,7 @@ import FreehouseProposal18 from "@/pages/freehouse-proposal18";
 import FreehouseProposal from "@/pages/freehouse-proposal";
 import SalesProposal from "@/pages/sales-proposal";
 import TenFreeAdmin from "@/pages/ten-free-admin";
+import XmasBuild from "@/pages/xmas-build";
 import ClubAdmin from "@/pages/club-admin";
 import ClubLinks from "@/pages/club-links";
 import ClubBuilder from "@/pages/club-builder";
@@ -233,6 +234,7 @@ function ProtectedRouter() {
       <Route path="/crmpage" component={CrmPage} />
       <Route path="/blackfriday26/stats" component={BlackFriday26Stats} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
+      <Route path="/xmas-build" component={XmasBuild} />
       <Route path="/club-admin" component={ClubAdmin} />
       <Route path="/club-links" component={ClubLinks} />
       <Route path="/club-builder" component={ClubBuilder} />
@@ -432,6 +434,7 @@ function AppContent() {
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
   const [isTenFreeForm] = useRoute("/10freeposts");
   const [isPremiumFreebies] = useRoute("/premiumfreebies");
+  const [isXmasFreebies] = useRoute("/xmasfreebies");
   const [isHammeredFreebies] = useRoute("/hammeredfreebies");
   const [isHammeredFreebiesAlt] = useRoute("/hammeredfreeies"); // old spelling still works
   const [isFreehouseFreebiesOld] = useRoute("/freehousefreebies");
@@ -639,6 +642,9 @@ function AppContent() {
   }
   if (isPremiumFreebies) {
     return <TenFreePosts premium />;
+  }
+  if (isXmasFreebies) {
+    return <TenFreePosts premium xmas />;
   }
   if (isHammeredFreebies || isHammeredFreebiesAlt) {
     return <HammeredFreebies />;
