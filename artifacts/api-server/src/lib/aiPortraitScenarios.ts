@@ -4360,8 +4360,8 @@ export const NEW_XMAS_PRESETS: PhotoStudioPreset[] = [
 
 // REALISTIC XMAS: ten natural, true to life Christmas portraits. A thin border
 // of tinsel along the edges, the client holding a bauble, a knitted hat and a
-// scarf. No colour picker, the festive colours stay natural and understated.
-const REALISTIC_XMAS_SUFFIX = ` A thin border of real silver tinsel runs along the edges of the frame, only a narrow strip so the whole face and upper body stay clear. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Realistic photography, not an illustration. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+// scarf. One colour is chosen in the studio and fills every [XMAS COLOUR].
+const REALISTIC_XMAS_SUFFIX = ` A thin border of real tinsel runs along the edges of the frame, only a narrow strip so the whole face and upper body stay clear. The tinsel border, the bauble, the knitted hat and the scarf are all in the same single colour, [XMAS COLOUR], and no other festive colour appears. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Realistic photography, not an illustration. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
 
 export const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
   {
@@ -4398,7 +4398,7 @@ export const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
     id: "rx-06",
     name: "Bauble Reflection Portrait",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo holding a large silver bauble in front of one eye, her reflection curved in the glass, with her other eye and smile visible beside it. She wears a knitted hat and a scarf. Plain studio backdrop, soft beauty lighting, fine detail on the glossy bauble.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo holding a large glossy glass bauble in front of one eye, her reflection curved in the glass, with her other eye and smile visible beside it. She wears a knitted hat and a scarf. Plain studio backdrop, soft beauty lighting, fine detail on the glossy bauble.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-07",

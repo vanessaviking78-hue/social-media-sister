@@ -854,6 +854,7 @@ export default function AiPortraitStudio() {
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
   const [globalBgColour, setGlobalBgColour] = useState("");
   const [newXmasColour, setNewXmasColour] = useState("");
+  const [realXmasColour, setRealXmasColour] = useState("");
   const [globalMonochrome, setGlobalMonochrome] = useState(false);
   const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
   const [perspexVars, setPerspexVars] = useState({ number: "", numberColour: "", outfit: "", studioColour: "" });
@@ -1113,6 +1114,7 @@ export default function AiPortraitStudio() {
         ...(MIX_SEASONAL_IDS.includes(id) ? { promptVars: { month: mixMonth, mixStyle } } : {}),
         ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("nx-") ? { promptVars: { xmasColour: newXmasColour.trim() || "red" } } : {}),
+        ...(id.startsWith("rx-") ? { promptVars: { xmasColour: realXmasColour.trim() || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
       if (globalBgColour.trim()) {
@@ -2510,8 +2512,27 @@ export default function AiPortraitStudio() {
 {activeSection === "realxmas" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">REALISTIC XMAS</p>
-<p className="text-xs text-muted-foreground mb-3">Ten natural, true to life Christmas portraits. A thin tinsel border, a bauble in hand, a knitted hat and a scarf.</p>
-<div className="mb-4" onClick={(e) => e.stopPropagation()}>
+<p className="text-xs text-muted-foreground mb-3">Ten natural, true to life Christmas portraits. A thin tinsel border, a bauble in hand, a knitted hat and a scarf. Pick one colour and the tinsel, bauble, hat and scarf all match it.</p>
+<div className="mb-4 space-y-2" onClick={(e) => e.stopPropagation()}>
+  <Label className="text-xs">Christmas colour for tinsel, bauble, hat and scarf</Label>
+  <div className="flex flex-wrap gap-2">
+    {NEW_XMAS_SWATCHES.map((sw) => (
+      <button
+        key={sw.name}
+        type="button"
+        title={sw.name}
+        onClick={() => setRealXmasColour(sw.name)}
+        className={`w-7 h-7 rounded-full border-2 transition-all ${realXmasColour === sw.name ? "border-violet-500 scale-110" : "border-border/40"}`}
+        style={{ backgroundColor: sw.hex }}
+      />
+    ))}
+  </div>
+  <Input
+    value={realXmasColour}
+    onChange={(e) => setRealXmasColour(e.target.value)}
+    placeholder="or type any colour, e.g. dusky rose (blank = red)"
+    className="h-8 text-xs"
+  />
   <button
     type="button"
     className="text-[11px] underline text-muted-foreground"
