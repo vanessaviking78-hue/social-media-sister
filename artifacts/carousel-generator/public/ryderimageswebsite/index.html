@@ -61,7 +61,7 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 #eds{background:var(--pink);border-color:var(--pink);color:#fff}
 </style></head><body>
 <header><h1>The Ryder Clinic <span>website images</span></h1>
-<p>71 images, named from the brief. Copy link gives the direct image address for the website. Download saves the file with the name shown under each image. Change image lets you swap in your own picture, which stays on this computer and can be downloaded.</p><p><button id="rest" class="hide" style="flex:none;padding:8px 14px"></button></p></header>
+<p>71 images, named from the brief. Copy link gives the direct image address for the website. Download saves the file with the name shown under each image. Pictures marked Replaced are the newest versions. Copy link and Download give you the replaced picture.</p><p><button id="rest" class="hide" style="flex:none;padding:8px 14px"></button> <button id="wmig" class="hide" style="flex:none;padding:8px 14px"></button></p></header>
 <div class="tabs"><button class="tab on" data-tab="web">Website images</button><button class="tab" data-tab="cd">Content Day images 15th October</button></div>
 <div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
 <main id="m"></main></div>
@@ -96,7 +96,44 @@ m.innerHTML=secs.map(function(s){
   }).join("")+'</div>';
 }).join("");
 function say(x){t.textContent=x;t.classList.add("on");clearTimeout(say.x);say.x=setTimeout(function(){t.classList.remove("on")},1800)}
-var R={},cur=null,fi=document.getElementById("f");
+var R={},SH={},cur=null,fi=document.getElementById("f");
+var CW="Ryder Website Images",PW="ryder-website-image";
+var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
+if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
+function upX(blob,name,cn,pt,meta){
+  var fd=new FormData();fd.append("file",blob,name);fd.append("clientName",cn);
+  return fetch("/api/library/upload-file",{method:"POST",body:fd}).then(function(r){if(!r.ok)throw new Error("upload");return r.json()}).then(function(j){
+    return fetch("/api/library",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({clientName:cn,postType:pt,caption:name,mediaUrl:j.url,metadata:meta})}).then(function(r){if(!r.ok)throw new Error("save");return r.json()});
+  });
+}
+function showShared(slug,url,id){
+  if(R[slug]){URL.revokeObjectURL(R[slug].url);delete R[slug]}
+  SH[slug]={id:id,url:url};
+  var c=card(slug);if(!c)return;
+  c.querySelector("img").src=url;
+  c.querySelector(".badge").classList.remove("hide");c.querySelector(".orig").classList.remove("hide");
+}
+function pubW(slug,blob){
+  var old=SH[slug]&&SH[slug].id;
+  return upX(blob,slug+ext(blob),CW,PW,{slug:slug,name:slug}).then(function(j){
+    var it=j.item;showShared(slug,it.mediaUrl,it.id);
+    dbRun("readwrite",function(s){return s.delete(slug)});
+    if(old)fetch("/api/library/"+old,{method:"DELETE"}).catch(function(){});
+    return it;
+  });
+}
+function loadShared(){
+  fetch("/api/library?clientName="+encodeURIComponent(CW)).then(function(r){return r.json()}).then(function(j){
+    (j.items||[]).filter(function(i){return i.postType===PW&&i.mediaUrl&&i.metadata&&i.metadata.slug}).forEach(function(i){
+      if(card(i.metadata.slug))showShared(i.metadata.slug,i.mediaUrl,i.id);
+    });
+    wmigCheck();
+  }).catch(function(){});
+}
+function wmigCheck(){
+  if(!OWN)return;
+  dbRun("readonly",function(s){return s.getAllKeys()}).then(function(k){k=k||[];var b=document.getElementById("wmig");b.textContent="Publish "+k.length+" edited website picture"+(k.length===1?"":"s")+" from this computer";b.classList.toggle("hide",k.length===0)});
+}
 function db(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-images",1);q.onupgradeneeded=function(){q.result.createObjectStore("f")};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
 function dbRun(mode,fn){return db().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("f",mode),s=tx.objectStore("f"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
 function card(slug){return document.querySelector('.card[data-slug="'+slug+'"]')}
@@ -108,6 +145,7 @@ function show(slug,blob){
 }
 function reset(slug){
   if(R[slug])URL.revokeObjectURL(R[slug].url);delete R[slug];
+  if(SH[slug]){if(OWN)fetch("/api/library/"+SH[slug].id,{method:"DELETE"}).catch(function(){});delete SH[slug]}
   var c=card(slug),i=c.querySelector("img");i.src=i.dataset.orig;
   c.querySelector(".badge").classList.add("hide");c.querySelector(".orig").classList.add("hide");
   dbRun("readwrite",function(s){return s.delete(slug)});
@@ -117,8 +155,9 @@ function save(blob,name){var a=document.createElement("a");a.href=URL.createObje
 D.forEach(function(r){dbRun("readonly",function(s){return s.get(r[0])}).then(function(b){if(b)show(r[0],b)})});
 fi.addEventListener("change",function(){
   var f=fi.files[0];if(!f||!cur)return;var slug=cur;fi.value="";
-  show(slug,f);dbRun("readwrite",function(s){return s.put(f,slug)});
-  say("Image changed. Download it to keep a copy.");
+  show(slug,f);
+  if(OWN){say("Saving for your client");pubW(slug,f).then(function(){wmigCheck();say("Changed. Your client sees the new picture.")}).catch(function(){dbRun("readwrite",function(s){return s.put(f,slug)});wmigCheck();say("Could not publish that one. It is kept on this computer.")})}
+  else{dbRun("readwrite",function(s){return s.put(f,slug)});say("Image changed on this screen only.")}
 });
 document.addEventListener("click",function(e){
   var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
@@ -127,11 +166,13 @@ document.addEventListener("click",function(e){
   if(g){cur=slug;fi.click();return}
   if(o){reset(slug);say("Original restored");return}
   if(c){
-    if(R[slug]){say("This is your own picture. Upload it to your site to get a link");return}
+    if(SH[slug]){var su="https://www.thecybersuite.com"+SH[slug].url;if(navigator.clipboard)navigator.clipboard.writeText(su).then(function(){say("Link copied")},function(){say("Copy failed")});return}
+    if(R[slug]){say("This picture is only on this screen, so it has no link yet");return}
     if(navigator.clipboard){navigator.clipboard.writeText(c.dataset.url).then(function(){say("Link copied")},function(){say("Copy failed")})}
     else{var i=document.createElement("input");i.value=c.dataset.url;document.body.appendChild(i);i.select();document.execCommand("copy");i.remove();say("Link copied")}
   }
   if(d){
+    if(SH[slug]){fetch(SH[slug].url).then(function(r){return r.blob()}).then(function(b){save(b,slug+ext(b))}).catch(function(){window.open(SH[slug].url,"_blank")});return}
     if(R[slug]){save(R[slug].blob,slug+ext(R[slug].blob));return}
     fetch(d.closest(".card").querySelector("img").dataset.orig).then(function(r){return r.blob()}).then(function(b){save(b,slug+ext(b))})
     .catch(function(){window.open(d.dataset.url,"_blank");say("Opened in a new tab, right click to save")});
@@ -150,8 +191,6 @@ document.querySelectorAll("button.tab").forEach(function(b){b.addEventListener("
   window.scrollTo(0,0);
 })});
 var CN="Ryder Content Day 15 Oct",PT="ryder-content-day";
-var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
-if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
 document.getElementById("drop").classList.toggle("hide",!OWN);
 function cdb(){return new Promise(function(ok){try{var q=indexedDB.open("ryder-content-day",1);q.onupgradeneeded=function(){q.result.createObjectStore("c",{autoIncrement:true})};q.onsuccess=function(){ok(q.result)};q.onerror=function(){ok(null)}}catch(e){ok(null)}})}
 function cRun(mode,fn){return cdb().then(function(d){if(!d)return null;return new Promise(function(ok){try{var tx=d.transaction("c",mode),s=tx.objectStore("c"),r=fn(s);tx.oncomplete=function(){ok(r&&r.result)};tx.onerror=function(){ok(null)}}catch(e){ok(null)}})})}
@@ -259,7 +298,9 @@ document.getElementById("eds").addEventListener("click",function(){
   var t=tgt(),o=document.createElement("canvas"),st=ED;
   try{paint(o,t.ow,t.oh);o.toBlob(function(b){
     if(!b){say("Could not save that edit");return}
-    if(st.kind==="w"){show(st.key,b);dbRun("readwrite",function(s){return s.put(b,st.key)});say("Edited. Download it to keep a copy.")}
+    if(st.kind==="w"){show(st.key,b);
+      if(OWN){say("Saving for your client");pubW(st.key,b).then(function(){wmigCheck();say("Edited. Your client sees the new version.")}).catch(function(){dbRun("readwrite",function(s){return s.put(b,st.key)});wmigCheck();say("Could not publish that edit. It is kept on this computer.")})}
+      else{dbRun("readwrite",function(s){return s.put(b,st.key)});say("Edited on this screen only.")}}
     else if(st.kind==="d"){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
     else{var base=(st.name||"edited").replace(/\.[^.]+$/,"");say("Saving for your client");upFile(b,base+".jpg").then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){cdRender();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     edm.classList.add("hide");ED=null;
@@ -295,6 +336,15 @@ document.addEventListener("click",function(e){
     happly();say("Deleted from your view. Your client still sees the shared page.");
   }
 });
+document.getElementById("wmig").addEventListener("click",function(){
+  var b=document.getElementById("wmig");b.disabled=true;
+  dbRun("readonly",function(s){return s.getAllKeys()}).then(function(ks){
+    ks=ks||[];var p=Promise.resolve(),n=0;
+    ks.forEach(function(k,i){p=p.then(function(){say("Publishing "+(i+1)+" of "+ks.length);
+      return dbRun("readonly",function(s){return s.get(k)}).then(function(blob){if(!blob)return;return pubW(k,blob).then(function(){n++},function(){})})})});
+    p.then(function(){b.disabled=false;wmigCheck();say("Published "+n+". Your client can see them now.")});
+  });
+});
 happly();
-cdRender();migCheck();
+cdRender();migCheck();loadShared();
 </script></body></html>
