@@ -2,12 +2,41 @@ import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import { v4 as uuid } from "uuid";
 import { db } from "@workspace/db";
-import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { aiGeneratedPortraitsTable, approvalBatchesTable, approvalImagesTable } from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { geminiOk, geminiFailed } from "./aiCreditAlert";
 import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS } from "./aiPortraitScenarios";
+
+// Every photo shoot image goes straight into that client's approved photos, so it shows up under
+// "Add approved photos" next to their name with no review step. One batch per client, repeats are skipped.
+const approvedFilingQueue = new Map<string, Promise<unknown>>();
+async function fileIntoApprovedPhotos(clientName: string, url: string): Promise<void> {
+  const name = (clientName ?? "").trim();
+  if (!name || name.toLowerCase() === "unknown" || !url) return;
+  const key = name.toLowerCase();
+  const run = async () => {
+    const batchName = `AI Photo Shoots - ${name}`;
+    const [existing] = await db.select().from(approvalBatchesTable)
+      .where(and(eq(approvalBatchesTable.name, batchName), eq(approvalBatchesTable.clientName, name)));
+    const batch = existing ?? (await db.insert(approvalBatchesTable).values({
+      name: batchName, clientName: name, token: randomBytes(6).toString("hex"), expiresAt: null, status: "reviewed",
+    }).returning())[0];
+    const dupe = await db.select({ id: approvalImagesTable.id }).from(approvalImagesTable)
+      .where(and(eq(approvalImagesTable.batchId, batch.id), eq(approvalImagesTable.imageUrl, url)));
+    if (dupe.length) return;
+    await db.insert(approvalImagesTable).values({ batchId: batch.id, imageUrl: url, status: "approved", clientNote: "" });
+  };
+  // Run one at a time per client so images landing together don't create two batches.
+  const prev = approvedFilingQueue.get(key) ?? Promise.resolve();
+  const next = prev.catch(() => undefined).then(run);
+  approvedFilingQueue.set(key, next);
+  try { await next; } catch (err: unknown) {
+    logger.error({ err: err instanceof Error ? err.message : String(err), clientName: name }, "Could not file photo shoot image into approved photos");
+  }
+}
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -376,6 +405,7 @@ export async function processPortraitJob(
           .returning();
 
         void geminiOk();
+        await fileIntoApprovedPhotos(clientName, originalUrl);
         patchCard({ status: "success", outputImageUrl: outputUrl, originalImageUrl: originalUrl, portraitId: row.id });
         succeeded = true;
       } catch (err: unknown) {
