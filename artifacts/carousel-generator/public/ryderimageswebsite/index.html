@@ -66,7 +66,9 @@ button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 <p>71 images, named from the brief. Copy link gives the direct image address for the website. Download saves the file with the name shown under each image. Pictures marked Replaced are the newest versions. Copy link and Download give you the replaced picture.</p><p><button id="rest" class="hide" style="flex:none;padding:8px 14px"></button> <button id="wmig" class="hide" style="flex:none;padding:8px 14px"></button></p></header>
 <div class="tabs"><button class="tab on" data-tab="web">Website images</button><button class="tab" data-tab="cd">Content Day images 15th October</button></div>
 <div id="web"><div class="bar"><div class="in"><input id="q" type="search" placeholder="Search by name, for example laser or blog" aria-label="Search images"><span id="nav" class="in"></span></div></div>
-<main id="m"></main></div>
+<div class="up hide" id="xadd" style="margin:16px"><p><b>Add a new image.</b> Type a name, then choose the picture. It waits for you to press Save for client before your client can see it.</p><input id="xname" type="text" placeholder="Name, for example laser genesis banner" aria-label="Image name" style="padding:10px;border:2px solid var(--ink);border-radius:8px;font-size:15px;min-width:240px;flex:1 1 240px"><button id="xpick">Choose picture</button><input type="file" id="xf" accept="image/*" multiple hidden></div>
+<main id="m"></main>
+<main id="xmain"><h2 id="added" class="hide">Added images</h2><div class="grid" id="xdraft"></div><div class="grid" id="xgrid"></div></main></div>
 <div id="cd" class="hide">
 <div class="up" id="drop"><p><b>Add more pictures.</b> Choose as many as you like. Each one waits for you to press Save before your client can see it. You can edit or delete saved ones below.</p><button id="cdadd">Upload more images</button><p><button id="mig" class="hide" style="flex:none;margin-top:12px"></button></p><input type="file" id="cdf" accept="image/*" multiple hidden><input type="file" id="cdc" accept="image/*" hidden></div>
 <main><p><button id="cdsaveall" class="hide" style="flex:none;padding:10px 18px;background:var(--pink);border-color:var(--pink);color:#fff"></button></p><div class="grid" id="cddraft"></div><div class="grid" id="cdgrid"></div><p class="empty" id="cdempty">Pictures you add will appear here for your client.</p></main>
@@ -104,6 +106,59 @@ document.querySelectorAll("#m .card .btns").forEach(function(b){var x=document.c
 var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
 if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
 if(OWN)document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q)});
+var PX="ryder-website-extra",XD=[];
+function xslug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"image"}
+if(OWN)document.getElementById("xadd").classList.remove("hide");
+document.getElementById("xpick").addEventListener("click",function(){
+  var n=document.getElementById("xname");
+  if(!n.value.trim()){say("Type a name first");n.focus();return}
+  document.getElementById("xf").click();
+});
+document.getElementById("xf").addEventListener("change",function(e){
+  var nm=document.getElementById("xname"),n=nm.value.trim(),list=Array.prototype.slice.call(e.target.files).filter(function(f){return f.type.indexOf("image/")===0});
+  e.target.value="";if(!list.length||!n)return;
+  list.forEach(function(f,i){XD.push({blob:f,name:list.length>1?n+" "+(i+1):n,url:URL.createObjectURL(f)})});
+  nm.value="";xdRender();say("Added. Press Save for client when you want them to see it.");
+});
+function xHead(){document.getElementById("added").classList.toggle("hide",!document.querySelectorAll("#xgrid .card").length&&!XD.length)}
+function xdRender(){
+  var g=document.getElementById("xdraft");g.innerHTML="";
+  XD.forEach(function(d,i){
+    var f=document.createElement("figure");f.className="card";f.dataset.i=i;
+    f.innerHTML='<div class="ph"><img alt=""><span class="badge">Not saved yet</span></div><figcaption><b></b><span class="slug">Only you can see this until you press Save</span><div class="btns"><button class="sv xsv">Save for client</button><button class="xdc crem">Discard</button></div></figcaption>';
+    f.querySelector("img").src=d.url;f.querySelector("b").textContent=d.name;g.appendChild(f);
+  });
+  xHead();
+}
+document.getElementById("xdraft").addEventListener("click",function(e){
+  var c=e.target.closest(".card");if(!c)return;var d=XD[Number(c.dataset.i)];if(!d)return;
+  if(e.target.closest(".xdc")){URL.revokeObjectURL(d.url);XD.splice(XD.indexOf(d),1);xdRender();return}
+  var sv=e.target.closest(".xsv");if(!sv)return;sv.disabled=true;sv.textContent="Saving";
+  upX(d.blob,xslug(d.name)+ext(d.blob),CW,PX,{name:d.name}).then(function(){URL.revokeObjectURL(d.url);XD.splice(XD.indexOf(d),1);xdRender();loadShared();say("Saved. Your client can see it now.")}).catch(function(){sv.disabled=false;sv.textContent="Save for client";say("Could not save that one. Try again.")});
+});
+function xItems(items){
+  var g=document.getElementById("xgrid");g.innerHTML="";
+  items.filter(function(i){return i.postType===PX&&i.mediaUrl}).reverse().forEach(function(it){
+    var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
+    f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;f.dataset.name=nm.toLowerCase();
+    f.innerHTML='<div class="ph"><img alt="" loading="lazy"></div><figcaption><b></b><span class="slug">Added image</span><div class="btns"><a class="abtn xdl">Download</a><button class="xcp">Copy link</button>'+(OWN?'<button class="xedt">Edit image</button><button class="xsq">Make square</button><button class="xrem crem">Delete</button>':'')+'</div></figcaption>';
+    f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
+    var a=f.querySelector(".xdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
+    g.appendChild(f);
+  });
+  xHead();
+}
+document.getElementById("xgrid").addEventListener("click",function(e){
+  var c=e.target.closest(".card");if(!c)return;var id=c.dataset.key;
+  if(e.target.closest(".xcp")){var u="https://www.thecybersuite.com"+c.dataset.url;if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){say("Link copied")},function(){say("Copy failed")})}
+  else if(e.target.closest(".xsq")){openEd("x",id,c.dataset.fn,"sq")}
+  else if(e.target.closest(".xedt")){openEd("x",id,c.dataset.fn)}
+  else if(e.target.closest(".xrem")){
+    var d=e.target.closest(".xrem");
+    if(!d.dataset.sure){d.dataset.sure="1";d.dataset.t=d.textContent;d.textContent="Sure? Tap again";setTimeout(function(){delete d.dataset.sure;d.textContent=d.dataset.t},3000);return}
+    fetch("/api/library/"+id,{method:"DELETE"}).then(function(r){if(!r.ok)throw new Error("x");loadShared();say("Deleted for everyone")}).catch(function(){say("Could not delete that one")});
+  }
+});
 function upX(blob,name,cn,pt,meta){
   var fd=new FormData();fd.append("file",blob,name);fd.append("clientName",cn);
   return fetch("/api/library/upload-file",{method:"POST",body:fd}).then(function(r){if(!r.ok)throw new Error("upload");return r.json()}).then(function(j){
@@ -132,6 +187,7 @@ function loadShared(){
     (j.items||[]).filter(function(i){return i.postType===PW&&i.mediaUrl&&i.metadata&&i.metadata.slug}).forEach(function(i){
       if(card(i.metadata.slug))showShared(i.metadata.slug,i.mediaUrl,i.id);
     });
+    xItems(j.items||[]);
     wmigCheck();
   }).catch(function(){});
 }
@@ -311,7 +367,7 @@ function edReset(){ED.z=1;ED.x=0;ED.y=0;ED.b=0;ED.g=false;edb.value=0;edz.value=
 function openEd(kind,key,name,preset){
   var src;
   if(kind==="d")src="https://lh3.googleusercontent.com/d/"+key+"=w2400";
-  else{var el=document.querySelector(kind==="w"?'.card[data-slug="'+key+'"] img':'#cdgrid .card[data-key="'+key+'"] img');if(!el)return;src=el.src}
+  else{var el=document.querySelector(kind==="w"?'.card[data-slug="'+key+'"] img':(kind==="x"?'#xgrid .card[data-key="'+key+'"] img':'#cdgrid .card[data-key="'+key+'"] img'));if(!el)return;src=el.src}
   var im=new Image();
   if(src.indexOf("blob:")!==0)im.crossOrigin="anonymous";
   im.onload=function(){ED={kind:kind,key:key,name:name,im:im,z:1,x:0,y:0,b:0,g:false};edReset();if(preset==="sq")edsz.value="1";edm.classList.remove("hide");edDraw()};
@@ -334,6 +390,7 @@ document.getElementById("eds").addEventListener("click",function(){
     if(!b){say("Could not save that edit");return}
     if(st.kind==="w"){show(st.key,b);dbRun("readwrite",function(s){return s.put(b,st.key)}).then(wmigCheck);
       say(OWN?"Edited. Press Save for client when you want them to see it.":"Edited on this screen only.")}
+    else if(st.kind==="x"){var bx=st.name||"image";say("Saving for your client");upX(b,xslug(bx)+".jpg",CW,PX,{name:bx}).then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){loadShared();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     else if(st.kind==="d"){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
     else{var base=(st.name||"edited").replace(/\.[^.]+$/,"");say("Saving for your client");upFile(b,base+".jpg").then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){cdRender();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     edm.classList.add("hide");ED=null;
