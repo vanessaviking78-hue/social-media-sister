@@ -44,7 +44,7 @@ button.crem{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12p
 #cd main{padding-top:6px}
 .empty{color:#777;padding:18px 0}
 button.sv{flex:1 1 100%!important;background:var(--pink);border-color:var(--pink);color:#fff}
-button.sqr,button.csq,button.rsz,button.crs,button.xsq,button.xrs{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
+button.sqr,button.csq,button.rsz,button.crs,button.xsq,button.xrs,button.dsq,button.drsz{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 button.chg,button.edt{flex:1 1 40%;border-color:var(--pink);color:var(--pink)}
 .btns button{flex:1 1 42%;white-space:nowrap}
 .btns button.orig,.btns button.crem,.btns button.del{flex:1 1 100%;border:0;background:none;font-weight:400;font-size:12px;text-decoration:underline;color:#555;padding:2px}
@@ -110,7 +110,7 @@ var CW="Ryder Website Images",PW="ryder-website-image";
 document.querySelectorAll("#m .card .btns").forEach(function(b){var x=document.createElement("button");x.className="sv hide";x.textContent="Save for client";b.insertBefore(x,b.firstChild)});
 var OWN=false;try{OWN=localStorage.getItem("ryder-owner")==="1"}catch(e){}
 if(location.hash==="#vanessa"){OWN=true;try{localStorage.setItem("ryder-owner","1")}catch(e){}}
-if(OWN)document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q);var z=document.createElement("button");z.className="rsz";z.textContent="Resize";b.appendChild(z)});
+document.querySelectorAll("#m .card .btns").forEach(function(b){var q=document.createElement("button");q.className="sqr";q.textContent="Make square";b.appendChild(q);var z=document.createElement("button");z.className="rsz";z.textContent="Resize";b.appendChild(z)});
 var PX="ryder-website-extra",XD=[];
 function xslug(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"image"}
 if(OWN)document.getElementById("xadd").classList.remove("hide");
@@ -146,7 +146,7 @@ function xItems(items){
   items.filter(function(i){return i.postType===PX&&i.mediaUrl}).reverse().forEach(function(it){
     var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
     f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;f.dataset.name=nm.toLowerCase();
-    f.innerHTML='<div class="ph"><img alt="" loading="lazy"></div><figcaption><b></b><span class="slug">Added image</span><div class="btns"><a class="abtn xdl">Download</a><button class="xcp">Copy link</button>'+(OWN?'<button class="xedt">Edit image</button><button class="xsq">Make square</button><button class="xrs">Resize</button><button class="xrem crem">Delete</button>':'')+'</div></figcaption>';
+    f.innerHTML='<div class="ph"><img alt="" loading="lazy"></div><figcaption><b></b><span class="slug">Added image</span><div class="btns"><a class="abtn xdl">Download</a><button class="xcp">Copy link</button>'+'<button class="xedt">Edit image</button><button class="xsq">Make square</button><button class="xrs">Resize</button>'+(OWN?'<button class="xrem crem">Delete</button>':'')+'</div></figcaption>';
     f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
     var a=f.querySelector(".xdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
     g.appendChild(f);
@@ -229,8 +229,8 @@ function save(blob,name){var a=document.createElement("a");a.href=URL.createObje
 D.forEach(function(r){dbRun("readonly",function(s){return s.get(r[0])}).then(function(b){if(b)show(r[0],b)})});
 fi.addEventListener("change",function(){
   var f=fi.files[0];if(!f||!cur)return;var slug=cur;fi.value="";
-  show(slug,f);dbRun("readwrite",function(s){return s.put(f,slug)}).then(wmigCheck);
-  say(OWN?"Picture added. Press Save for client when you want them to see it.":"Image changed on this screen only.");
+  show(slug,f);if(OWN)dbRun("readwrite",function(s){return s.put(f,slug)}).then(wmigCheck);
+  say(OWN?"Picture added. Press Save for client when you want them to see it.":"Changed on this screen only. Press Download to keep it.");
 });
 document.addEventListener("click",function(e){
   var c=e.target.closest(".copy"),d=e.target.closest(".dl"),g=e.target.closest(".chg"),o=e.target.closest(".orig");
@@ -282,7 +282,7 @@ function cdRender(){
     items.forEach(function(it){
       var nm=(it.metadata&&it.metadata.name)||it.caption||"picture",f=document.createElement("figure");
       f.className="card";f.dataset.key=it.id;f.dataset.url=it.mediaUrl;f.dataset.fn=nm;
-      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+(OWN?'<button class="cedt">Edit image</button><button class="csq">Make square</button><button class="crs">Resize</button><button class="crem">Delete</button>':'')+'</div></figcaption>';
+      f.innerHTML='<div class="ph"><img alt=""></div><figcaption><b></b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn cdl">Download</a><button class="ccp">Copy link</button>'+'<button class="cedt">Edit image</button><button class="csq">Make square</button><button class="crs">Resize</button>'+(OWN?'<button class="crem">Delete</button>':'')+'</div></figcaption>';
       f.querySelector("img").src=it.mediaUrl;f.querySelector("b").textContent=nm;
       var a=f.querySelector(".cdl");a.href=it.mediaUrl;a.setAttribute("download",nm);
       g.appendChild(f);
@@ -408,8 +408,9 @@ document.getElementById("eds").addEventListener("click",function(){
   var t=tgt(),o=document.createElement("canvas"),st=ED;
   try{paint(o,t.ow,t.oh);o.toBlob(function(b){
     if(!b){say("Could not save that edit");return}
-    if(st.kind==="w"){show(st.key,b);dbRun("readwrite",function(s){return s.put(b,st.key)}).then(wmigCheck);
-      say(OWN?"Edited. Press Save for client when you want them to see it.":"Edited on this screen only.")}
+    if(st.kind==="w"){show(st.key,b);if(OWN)dbRun("readwrite",function(s){return s.put(b,st.key)}).then(wmigCheck);
+      say(OWN?"Edited. Press Save for client when you want them to see it.":"Edited on this screen only. Press Download to keep it.")}
+    else if(!OWN&&(st.kind==="x"||st.kind==="c")){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
     else if(st.kind==="x"){var bx=st.name||"image";say("Saving for your client");upX(b,xslug(bx)+".jpg",CW,PX,{name:bx}).then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){loadShared();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
     else if(st.kind==="d"){save(b,(st.name||"photo").replace(/\.[^.]+$/,"")+"-edited.jpg");say("Edited copy downloaded. The shared page is not changed.")}
     else{var base=(st.name||"edited").replace(/\.[^.]+$/,"");say("Saving for your client");upFile(b,base+".jpg").then(function(){return fetch("/api/library/"+st.key,{method:"DELETE"})}).then(function(){cdRender();say("Edited. Your client sees the new version.")}).catch(function(){say("Could not save that edit")})}
@@ -421,7 +422,7 @@ var DR=[["IMG_6774.jpg","1RwWwRwrD7EYUDJb8d-452KAN8ukBzwBZ"],["IMG_6775.jpg","12
   var g=document.getElementById("drgrid");
   g.innerHTML=DR.map(function(r){
     var id=r[1],n=esc(r[0]);
-    return '<figure class="card" data-did="'+id+'" data-fn="'+n+'"><div class="ph"><img loading="lazy" referrerpolicy="no-referrer" src="https://lh3.googleusercontent.com/d/'+id+'=w640" alt="'+n+'"></div><figcaption><b>'+n+'</b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn dlb" href="https://drive.google.com/uc?export=download&id='+id+'" target="_blank" rel="noopener">Download</a><button class="drc" data-id="'+id+'">Copy link</button><button class="dedt" data-id="'+id+'">Edit image</button><button class="del">Delete</button></div></figcaption></figure>';
+    return '<figure class="card" data-did="'+id+'" data-fn="'+n+'"><div class="ph"><img loading="lazy" referrerpolicy="no-referrer" src="https://lh3.googleusercontent.com/d/'+id+'=w640" alt="'+n+'"></div><figcaption><b>'+n+'</b><span class="slug">Content Day 15th October</span><div class="btns"><a class="abtn dlb" href="https://drive.google.com/uc?export=download&id='+id+'" target="_blank" rel="noopener">Download</a><button class="drc" data-id="'+id+'">Copy link</button><button class="dedt" data-id="'+id+'">Edit image</button><button class="dsq" data-id="'+id+'">Make square</button><button class="drsz" data-id="'+id+'">Resize</button><button class="del">Delete</button></div></figcaption></figure>';
   }).join("");
   g.addEventListener("click",function(e){
     var b=e.target.closest(".drc");if(!b)return;
@@ -437,6 +438,8 @@ function happly(){
 }
 document.addEventListener("click",function(e){
   var d=e.target.closest(".del"),r=e.target.closest("#rest"),ed=e.target.closest(".dedt");
+  var dq=e.target.closest(".dsq,.drsz");
+  if(dq){var c0=dq.closest(".card");openEd("d",dq.dataset.id,c0.dataset.fn,dq.classList.contains("dsq")?"sq":"rs");return}
   if(ed){var c=ed.closest(".card");openEd("d",ed.dataset.id,c.dataset.fn);return}
   if(r){HID=[];try{localStorage.setItem("ryder-hidden","[]")}catch(x){}happly();say("All images are back");return}
   if(d){
