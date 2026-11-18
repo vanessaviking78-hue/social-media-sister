@@ -13,7 +13,7 @@ import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPr
 // Every photo shoot image goes straight into that client's approved photos, so it shows up under
 // "Add approved photos" next to their name with no review step. One batch per client, repeats are skipped.
 const approvedFilingQueue = new Map<string, Promise<unknown>>();
-async function fileIntoApprovedPhotos(clientName: string, url: string): Promise<void> {
+export async function fileIntoApprovedPhotos(clientName: string, url: string): Promise<void> {
   const name = (clientName ?? "").trim();
   if (!name || name.toLowerCase() === "unknown" || !url) return;
   const key = name.toLowerCase();

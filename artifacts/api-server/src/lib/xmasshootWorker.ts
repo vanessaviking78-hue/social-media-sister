@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { REALISTIC_XMAS_PRESETS, buildPhotoStudioPrompt } from "./aiPortraitScenarios";
 import { readObject, saveObject } from "./photoshootWorker";
+import { fileIntoApprovedPhotos } from "./aiPortraitWorker";
 import { objectStorageClient } from "./objectStorage";
 import { geminiOk, geminiFailed } from "./aiCreditAlert";
 import { logger } from "./logger";
@@ -21,6 +22,7 @@ type OrderRow = {
   colour: string;
   selfie_key: string;
   images: { n: number; label: string; url: string }[];
+  client_name?: string;
 };
 
 const mimeOf = (k: string) => (k.endsWith(".png") ? "image/png" : k.endsWith(".webp") ? "image/webp" : "image/jpeg");
@@ -60,7 +62,7 @@ export async function runXmasOrder(id: string, only?: number[]): Promise<void> {
   running.add(id);
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const o = ((await db.execute(sql`SELECT id, colour, selfie_key, images FROM xmasshoot_orders WHERE id = ${id}`)).rows as unknown as OrderRow[])[0];
+    const o = ((await db.execute(sql`SELECT id, colour, selfie_key, images, client_name FROM xmasshoot_orders WHERE id = ${id}`)).rows as unknown as OrderRow[])[0];
     if (!o) return;
     if (!apiKey) {
       await db.execute(sql`UPDATE xmasshoot_orders SET status = 'failed', note = 'GEMINI_API_KEY is not set', updated_at = now() WHERE id = ${id}`);
@@ -84,6 +86,9 @@ export async function runXmasOrder(id: string, only?: number[]): Promise<void> {
         images.push({ n, label: preset.name, url: `/api/media/${key}` });
         images.sort((a, b) => a.n - b.n);
         await db.execute(sql`UPDATE xmasshoot_orders SET images = ${JSON.stringify(images)}::jsonb, updated_at = now() WHERE id = ${id}`);
+        // A client's images go straight into their approved photos as each one lands (re-read in case Vanessa picked the client part way through).
+        const cl = (((await db.execute(sql`SELECT client_name FROM xmasshoot_orders WHERE id = ${id}`)).rows[0] as { client_name?: string } | undefined)?.client_name || "").trim();
+        if (cl) await fileIntoApprovedPhotos(cl, `/api/media/${key}`);
       } catch (e) {
         failed++;
         logger.warn({ err: e, id, n }, "xmasshoot image failed");
@@ -93,7 +98,7 @@ export async function runXmasOrder(id: string, only?: number[]): Promise<void> {
     const done = images.length >= XMAS_SHOT_COUNT;
     await db.execute(sql`UPDATE xmasshoot_orders SET status = ${done ? "ready" : "partial"},
       ready_at = CASE WHEN ${done} THEN COALESCE(ready_at, now()) ELSE ready_at END,
-      expires_at = CASE WHEN ${done} THEN COALESCE(expires_at, now() + interval '30 days') ELSE expires_at END,
+      expires_at = CASE WHEN ${done} AND client_name = '' THEN COALESCE(expires_at, now() + interval '30 days') ELSE expires_at END,
       note = ${failed ? `${failed} image(s) failed, press Make missing` : ""}, updated_at = now() WHERE id = ${id}`);
   } catch (e) {
     logger.error({ err: e, id }, "xmasshoot order failed");
@@ -109,7 +114,7 @@ const keyOf = (url: string) => url.replace(/^\/api\/media\//, "");
 export async function sweepExpiredXmas(): Promise<void> {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    const rows = (await db.execute(sql`SELECT id, selfie_key, images FROM xmasshoot_orders WHERE expires_at IS NOT NULL AND expires_at < now() AND status <> 'expired'`)).rows as unknown as OrderRow[];
+    const rows = (await db.execute(sql`SELECT id, selfie_key, images FROM xmasshoot_orders WHERE expires_at IS NOT NULL AND client_name = '' AND expires_at < now() AND status <> 'expired'`)).rows as unknown as OrderRow[];
     for (const r of rows) {
       if (bucketId) {
         const keys = [r.selfie_key, ...(r.images ?? []).map((i) => keyOf(i.url))].filter(Boolean);

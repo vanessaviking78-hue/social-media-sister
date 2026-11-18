@@ -11,7 +11,7 @@ const H = (): Record<string, string> => {
 };
 type Row = {
   id: string; name: string; email: string; phone: string; colour: string; code: string; label: string;
-  pay_state: string; status: string; note: string; slug: string | null; link: string; selfie_url: string; done: number; created_at: string; expires_at: string | null;
+  pay_state: string; status: string; note: string; slug: string | null; client_name?: string; link: string; selfie_url: string; done: number; created_at: string; expires_at: string | null;
 };
 type Img = { n: number; label: string; url: string };
 
@@ -30,6 +30,9 @@ const PAY: Record<string, string> = { unpaid: "not paid yet", claimed: "says pai
 export default function XmasShootAdmin() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(10);
+  const [clients, setClients] = useState<string[]>([]);
+  useEffect(() => { fetch(`${API}/presets`).then((r) => r.json()).then((j) => setClients(((j.presets || []) as { name: string }[]).map((p) => p.name).filter(Boolean))).catch(() => undefined); }, []);
+  const guessClient = (r: Row) => { const n = r.name.trim().toLowerCase(); if (n.length < 4) return ""; return clients.find((c) => c.toLowerCase().includes(n) || n.includes(c.toLowerCase())) || ""; };
   const [sisterUsed, setSisterUsed] = useState(0);
   const [sisterLeft, setSisterLeft] = useState<number | null>(null);
   const [sisterSlots, setSisterSlots] = useState<number | null>(null);
@@ -70,6 +73,24 @@ export default function XmasShootAdmin() {
                     <a href={gmail(r.email)} target="_blank" rel="noreferrer" style={{ color: "#000" }}>{r.email}</a>
                   </div>
                 </div>
+              </div>
+              <div style={{ marginTop: 10, fontSize: 15 }}>
+                <label>
+                  Client?{" "}
+                  <select value={r.client_name || ""} onChange={async (e) => {
+                    const v = e.target.value;
+                    const x = await act(`/xmasshoot/orders/${r.id}/client`, "POST", { clientName: v });
+                    if (!x.ok) { toast.error(x.error || "Could not do that"); return; }
+                    toast.success(v ? `Images go to ${v} approved photos` : "Not a client"); loadList();
+                  }} style={{ padding: 6, fontSize: 15, maxWidth: 260 }}>
+                    <option value="">Not a client</option>
+                    {clients.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </label>
+                {!r.client_name && guessClient(r) && (
+                  <button className="ps-btn alt" style={{ marginLeft: 8, padding: "6px 10px", fontSize: 12 }} onClick={async () => { const v = guessClient(r); const x = await act(`/xmasshoot/orders/${r.id}/client`, "POST", { clientName: v }); if (!x.ok) { toast.error(x.error || "Could not do that"); return; } toast.success(`Images go to ${v} approved photos`); loadList(); }}>Looks like {guessClient(r)}, use it</button>
+                )}
+                {r.client_name ? <span style={{ marginLeft: 8, color: "#555" }}>Images go straight to their approved photos</span> : null}
               </div>
               <div style={{ marginTop: 10 }}>
                 {r.pay_state !== "free" && (

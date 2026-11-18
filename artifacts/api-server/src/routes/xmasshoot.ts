@@ -1,4 +1,5 @@
 import { renderXmasOg, firstNameFor } from "../lib/xmasOg";
+import { fileIntoApprovedPhotos } from "../lib/aiPortraitWorker";
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import multer from "multer";
 import sharp from "sharp";
@@ -64,6 +65,7 @@ function ensureTable(): Promise<void> {
       ready_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ
     )`)
+    .then(() => db.execute(sql`ALTER TABLE xmasshoot_orders ADD COLUMN IF NOT EXISTS client_name TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -278,7 +280,7 @@ router.get("/xmasshoot/og/:file", async (req: Request, res: Response) => {
 // Vanessa's side.
 router.get("/xmasshoot/orders", requireAuth, async (_req: Request, res: Response) => {
   await ensureTable();
-  const rows = (await db.execute(sql`SELECT id, name, email, phone, colour, code, amount_pence, pay_state, status, note, slug, marketing, selfie_key, jsonb_array_length(images) AS done, created_at, expires_at
+  const rows = (await db.execute(sql`SELECT id, name, email, phone, colour, code, amount_pence, pay_state, status, note, slug, marketing, client_name, selfie_key, jsonb_array_length(images) AS done, created_at, expires_at
     FROM xmasshoot_orders ORDER BY created_at DESC LIMIT 200`)).rows as unknown as Record<string, unknown>[];
   res.json({
     total: XMAS_SHOT_COUNT,
@@ -307,6 +309,21 @@ router.post("/xmasshoot/orders/:id/payment-seen", requireAuth, async (req: Reque
   const seen = req.body?.seen !== false;
   await db.execute(sql`UPDATE xmasshoot_orders SET pay_state = ${seen ? "seen" : "claimed"}, updated_at = now() WHERE id = ${str(req.params.id, 60)} AND pay_state <> 'free'`);
   res.json({ ok: true });
+});
+
+// Marks an order as a client's. Their images go straight into that client's approved photos (the ones already made are filed now,
+// the rest as they land), and the order no longer expires after 30 days because the approved photos use the same files.
+router.post("/xmasshoot/orders/:id/client", requireAuth, async (req: Request, res: Response) => {
+  await ensureTable();
+  const id = str(req.params.id, 60);
+  const clientName = str(req.body?.clientName, 120).trim();
+  const r = (await db.execute(sql`SELECT images, status FROM xmasshoot_orders WHERE id = ${id}`)).rows[0] as { images: { url: string }[]; status: string } | undefined;
+  if (!r) { res.status(404).json({ error: "Not found" }); return; }
+  if (r.status === "expired") { res.status(409).json({ error: "Those images have already expired" }); return; }
+  await db.execute(sql`UPDATE xmasshoot_orders SET client_name = ${clientName}, expires_at = CASE WHEN ${clientName} <> '' THEN NULL ELSE expires_at END, updated_at = now() WHERE id = ${id}`);
+  let filed = 0;
+  if (clientName) for (const im of r.images ?? []) { await fileIntoApprovedPhotos(clientName, im.url); filed++; }
+  res.json({ ok: true, filed });
 });
 
 // Gives a SISTER space back. The order and its images stay; only the code is relabelled so it stops counting towards the 5.
