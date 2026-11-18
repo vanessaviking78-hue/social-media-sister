@@ -208,6 +208,8 @@ import Photoshoot, { PhotosView } from "@/pages/photoshoot";
 import Shop from "@/pages/shop";
 import SecretShop from "@/pages/secretshop";
 import PhotoshootAdmin from "@/pages/photoshoot-admin";
+import XmasShoot, { XmasShootView } from "@/pages/xmasshoot";
+import XmasShootAdmin from "@/pages/xmasshoot-admin";
 
 const queryClient = new QueryClient();
 
@@ -242,6 +244,7 @@ function ProtectedRouter() {
       <Route path="/club-build" component={ClubBuild} />
       <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
+      <Route path="/xmasshoot-admin" component={XmasShootAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
@@ -432,6 +435,7 @@ function AppContent() {
   const [isPackOrder] = useRoute("/getmyposts");
   const [isOver50] = useRoute("/over50");
   const [isPhotoshoot] = useRoute("/photoshoot");
+  const [isXmasShoot] = useRoute("/xmasshoot");
   const [isShop] = useRoute("/shop");
   const [isSecretShop] = useRoute("/secretshop");
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
@@ -641,6 +645,14 @@ function AppContent() {
   }
   if (isPhotoshoot) {
     return <Photoshoot />;
+  }
+  if (isXmasShoot) {
+    return <XmasShoot />;
+  }
+  // CYBERSUITE CHRISTMAS SHOOT private links, made from the person's first name: /vanessaxmas, /vanessa2xmas
+  const xmasSlug = /^\/([a-z0-9]+xmas)$/.exec(location)?.[1];
+  if (xmasSlug) {
+    return <XmasShootView slug={xmasSlug} />;
   }
   if (isPhotosView && photosParams?.token) {
     return <PhotosView token={photosParams.token} />;
