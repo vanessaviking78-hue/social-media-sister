@@ -80,7 +80,7 @@ def make(lines, pink, sub, path):
     spaced(d, (1200 - spaced_w(d, sub, font(ss), 3)) / 2, 545, sub, font(ss), 3, GREY)
     im.save(path, optimize=True)
 
-CUSTOM = {"xmasshoot"}  # picture made by hand with photos, do not overwrite
+CUSTOM = {"xmasshoot"}  # picture made by hand with photos (a small .jpg, WhatsApp skips pictures over 300KB). If this script rewrites previews.ts, re-add "img": "/og/xmasshoot.jpg" to that entry.
 os.makedirs(OUT, exist_ok=True)
 data = []
 for i, paths, lines, pink, sub, title, desc in L:

@@ -16,7 +16,7 @@ export default async (request: Request, context: { next: () => Promise<Response>
   if (!p) return res;
   const title = esc(p.title);
   const desc = esc(p.desc);
-  const img = `${url.origin}/og/${p.id}.png`;
+  const img = `${url.origin}${(p as { img?: string }).img || `/og/${p.id}.png`}`;
   const tags = `<meta property="og:title" content="${title}" /><meta property="og:description" content="${desc}" /><meta property="og:type" content="website" /><meta property="og:url" content="${url.origin}${url.pathname}" /><meta property="og:image" content="${img}" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" /><meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content="${title}" /><meta name="twitter:description" content="${desc}" /><meta name="twitter:image" content="${img}" /><meta name="description" content="${desc}" />`;
   let html = await res.text();
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`).replace(/<meta[^>]+(property="og:[^"]*"|name="twitter:[^"]*"|name="description")[^>]*>/g, "").replace("</head>", `${tags}</head>`);

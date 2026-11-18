@@ -1,5 +1,5 @@
 // Made by scripts/make-link-previews.py. Titles and descriptions for the link previews of every client facing link.
-export const PREVIEWS: { id: string; paths: string[]; title: string; desc: string }[] = [
+export const PREVIEWS: { id: string; paths: string[]; title: string; desc: string; img?: string }[] = [
  {
   "id": "know-me",
   "paths": [
@@ -332,6 +332,7 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
    "/xmasshoot"
   ],
   "title": "Cybersuite Christmas Shoot",
-  "desc": "One selfie in, ten festive images out, in your business colours."
+  "desc": "One selfie in, ten festive images out, in your business colours.",
+  "img": "/og/xmasshoot.jpg"
  }
 ];
