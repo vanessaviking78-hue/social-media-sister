@@ -325,5 +325,13 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
   ],
   "title": "Your posts are ready",
   "desc": "Tap to see and download your posts."
+ },
+ {
+  "id": "xmasshoot",
+  "paths": [
+   "/xmasshoot"
+  ],
+  "title": "Cybersuite Christmas Shoot",
+  "desc": "One selfie in, ten festive images out, in your business colours."
  }
 ];

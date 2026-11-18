@@ -126,6 +126,10 @@
   function = "link-og"
 
 [[edge_functions]]
+  path = "/xmasshoot"
+  function = "link-og"
+
+[[edge_functions]]
   path = "/photos/*"
   function = "link-og"
 

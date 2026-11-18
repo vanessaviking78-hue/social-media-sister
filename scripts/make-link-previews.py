@@ -31,6 +31,7 @@ L = [
  ("pack", ["/pack/*"], ["YOUR POSTS"], "ARE READY", "TAP TO SEE AND DOWNLOAD THEM", "Your posts are ready", "Tap to see and download your posts."),
  ("over50", ["/over50"], ["TEN POSTS FOR"], "WOMEN OVER 50", "MADE FOR YOUR CLINIC", "Ten posts for women over 50", "Ten posts for your clinic to speak to women over 50."),
  ("photoshoot", ["/photoshoot"], ["20 PHOTOS OF"], "YOU", "AN AI PHOTO SHOOT FOR YOUR CLINIC", "20 photos of you", "An AI photo shoot of you, made for your clinic socials."),
+ ("xmasshoot", ["/xmasshoot"], ["CYBERSUITE"], "CHRISTMAS SHOOT", "ONE SELFIE. TEN IMAGES.", "Cybersuite Christmas Shoot", "One selfie in, ten festive images out, in your business colours."),
  ("photos", ["/photos/*"], ["YOUR PHOTOS"], "ARE READY", "TAP TO SEE AND DOWNLOAD THEM", "Your photos are ready", "Tap to see and download your photos."),
  ("shop", ["/shop"], ["THE SOCIAL MEDIA"], "SISTER SHOP", "EVERYTHING I MAKE", "The Social Media Sister shop", "Everything I make for aesthetic clinics, in one place."),
  ("secretshop", ["/secretshop"], ["THE SECRET"], "SHOP", "JUST FOR YOU", "The secret shop", "Something extra, just for you."),
@@ -79,10 +80,11 @@ def make(lines, pink, sub, path):
     spaced(d, (1200 - spaced_w(d, sub, font(ss), 3)) / 2, 545, sub, font(ss), 3, GREY)
     im.save(path, optimize=True)
 
+CUSTOM = {"xmasshoot"}  # picture made by hand with photos, do not overwrite
 os.makedirs(OUT, exist_ok=True)
 data = []
 for i, paths, lines, pink, sub, title, desc in L:
-    make(lines, pink, sub, os.path.join(OUT, f"{i}.png"))
+    if i not in CUSTOM: make(lines, pink, sub, os.path.join(OUT, f"{i}.png"))
     data.append({"id": i, "paths": paths, "title": title, "desc": desc})
 ts = "// Made by scripts/make-link-previews.py. Titles and descriptions for the link previews of every client facing link.\nexport const PREVIEWS: { id: string; paths: string[]; title: string; desc: string }[] = " + json.dumps(data, indent=1, ensure_ascii=False) + ";\n"
 open(os.path.join(ROOT, "netlify/edge-functions/lib/previews.ts"), "w").write(ts)
