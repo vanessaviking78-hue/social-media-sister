@@ -12,7 +12,7 @@ import { appLink } from "../lib/freeSampleWorker";
 import { notifyOwner } from "../lib/notify";
 
 // CYBERSUITE CHRISTMAS SHOOT at /xmasshoot. One selfie in, ten REALISTIC XMAS images out.
-// Price: 49 pounds. BOTOX takes it to half price. SISTER is free for the first 5. Payment is by Monzo link, and Monzo cannot tell
+// Price: 49 pounds. BOTOX takes it to half price. SISTER is free for the first 10. Payment is by Monzo link, and Monzo cannot tell
 // the site who has paid, so the person taps "I have paid", Vanessa sees it in her inbox, checks Monzo and ticks "payment seen".
 // Only then does the Create images button work. She presses it, the site makes a link from their name (/vanessaxmas) and the
 // ten images. The link lasts 30 days and then the selfie and images are deleted.
@@ -24,7 +24,7 @@ const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
 const FULL_PENCE = 4900;
 const HALF_PENCE = 2450;
-const SISTER_SLOTS = 5;
+const SISTER_SLOTS = 10; // 5 more added on 18 Nov 2026
 const MONZO_FULL = process.env.XMASSHOOT_MONZO_FULL || "https://monzo.com/pay/r/the-cyber-suite_WRksQgUu0CyIZj";
 const MONZO_HALF = process.env.XMASSHOOT_MONZO_HALF || "https://monzo.com/pay/r/the-cyber-suite_gQiXptLmSKB2tC";
 
@@ -281,6 +281,7 @@ router.get("/xmasshoot/orders", requireAuth, async (_req: Request, res: Response
     FROM xmasshoot_orders ORDER BY created_at DESC LIMIT 200`)).rows as unknown as Record<string, unknown>[];
   res.json({
     total: XMAS_SHOT_COUNT,
+    sisterSlots: SISTER_SLOTS,
     sisterLeft: Math.max(0, SISTER_SLOTS - (await sisterUsed())),
     orders: rows.map((r) => ({
       ...r,
