@@ -47,7 +47,7 @@ const CSS = `
 .yp-post { padding:36px 0 28px; border-bottom:1px solid #e7e7e7; }
 .yp-k { color:${PINK}; letter-spacing:.3em; font-size:12px; text-transform:uppercase; margin-bottom:12px; }
 .yp-strip { display:flex; gap:14px; overflow-x:auto; padding-bottom:10px; }
-.yp-strip img { height:min(70vh,760px); width:auto; max-width:90vw; flex:none; display:block; box-shadow:0 18px 40px -22px rgba(0,0,0,.45); }
+.yp-strip img { width:min(86vw,calc(min(70vh,760px) * .8)); height:auto; max-width:none; flex:none; display:block; box-shadow:0 18px 40px -22px rgba(0,0,0,.45); }
 .yp-cap { white-space:pre-wrap; font-size:15px; line-height:1.4; margin:12px 0; font-weight:700 !important; }
 .yp-stories { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:26px; margin-top:24px; }
 .yp-lib { display:flex; justify-content:space-between; gap:16px; align-items:center; border-bottom:1px solid #e7e7e7; padding:18px 0; }

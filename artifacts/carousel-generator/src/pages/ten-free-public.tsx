@@ -33,7 +33,7 @@ const CSS = `
 .tp-tab.on { background:${PINK}; color:#fff; }
 .tp-post { padding:44px 0 36px; border-bottom:1px solid #e7e7e7; }
 .tp-strip { display:flex; gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:10px; }
-.tp-strip img { height:min(78vh,820px); width:auto; max-width:92vw; flex:none; scroll-snap-align:start; display:block; box-shadow:0 18px 40px -22px rgba(0,0,0,.45); }
+.tp-strip img { width:min(86vw,calc(min(78vh,820px) * .8)); height:auto; max-width:none; flex:none; scroll-snap-align:start; display:block; box-shadow:0 18px 40px -22px rgba(0,0,0,.45); }
 .tp-actions { margin-top:18px; }
 .tp-cap { white-space:pre-wrap; font-size:15px; line-height:1.4; margin:10px 0 14px; }
 .tp-btn { background:${PINK}; color:#fff; border:0; padding:12px 18px; font-size:13px; letter-spacing:.16em; text-transform:uppercase; cursor:pointer; margin:0 8px 8px 0; text-decoration:none; display:inline-block; }

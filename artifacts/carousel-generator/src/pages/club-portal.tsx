@@ -40,7 +40,7 @@ ${PREMIUM_FONTS.map((ft) => `.cp .ff-${ft.id}, .cp .ff-${ft.id} * { font-family:
 .cp-hook { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #eee; font-size:16px; line-height:1.3; }
 .cp-hook input { margin-top:4px; }
 .cp-strip { display:flex; gap:12px; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:8px; }
-.cp-strip img { height:min(70vh,640px); width:auto; max-width:90vw; flex:none; scroll-snap-align:start; box-shadow:0 14px 34px -20px rgba(0,0,0,.5); }
+.cp-strip img { width:min(86vw,calc(min(70vh,640px) * .8)); height:auto; max-width:none; flex:none; scroll-snap-align:start; box-shadow:0 14px 34px -20px rgba(0,0,0,.5); }
 .cp-cap { white-space:pre-wrap; font-size:15px; line-height:1.4; margin:10px 0; }
 .cp-box { border:3px solid ${INK}; padding:20px; margin:18px 0; }
 .cp-count { font-weight:900; color:${PINK}; }
