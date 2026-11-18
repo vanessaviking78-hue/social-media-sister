@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { sql } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
 import { db } from "@workspace/db";
 import { logger } from "../lib/logger";
 
@@ -57,6 +58,7 @@ function ensureTables(): Promise<void> {
       id SERIAL PRIMARY KEY, preset_id INTEGER NOT NULL, day DATE NOT NULL, minutes INTEGER NOT NULL, note TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_timer (preset_id INTEGER PRIMARY KEY, started_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_share (preset_id INTEGER PRIMARY KEY, token TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS ryder_goals (
       preset_id INTEGER PRIMARY KEY, dms INTEGER NOT NULL, comments INTEGER NOT NULL, new_followers INTEGER NOT NULL,
       story_responses INTEGER NOT NULL, bookings INTEGER NOT NULL)`);
@@ -375,12 +377,10 @@ function previousMonthRange(to: string): { from: string; to: string } {
   return { from: prevStart, to: same > prevEnd ? prevEnd : same };
 }
 
-router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) => {
-  try {
+async function buildDashboard(days: number) {
     await ensureTables();
     const p = await ryderPreset();
-    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
-    const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+    if (!p) return null;
     const to = londonToday();
     const from = addDays(to, -(days - 1));
     const prevTo = addDays(from, -1);
@@ -406,7 +406,7 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
     const timerRow = rowsOf(await db.execute(sql`SELECT started_at FROM ryder_timer WHERE preset_id = ${p.id}`))[0];
     const backlog = rowsOf(await db.execute(sql`SELECT COUNT(*) AS n FROM inbox_items WHERE preset_id = ${p.id} AND direction = 'in' AND is_read = false`))[0];
 
-    res.json({
+    return {
       clinic: p.name, connected: !!(p.ig_id && p.token), username: p.username, days, from, to,
       totals, prevTotals, health: { ...health, previous: prevHealth.score }, goals,
       series, followers: snap ? { now: Number(snap.followers), following: Number(snap.following), asOf: snap.day, since: first ? { day: first.day, count: Number(first.followers) } : null } : null,
@@ -419,9 +419,67 @@ router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) 
         totals: totalsOf(monthSeries), prevTotals: totalsOf(prevMonthSeries), booked: monthBooked.booked, prevBooked: prevMonthBooked.booked,
       },
       timer: timerRow ? { startedAt: new Date(timerRow.started_at).toISOString() } : null,
-    });
+    };
+}
+
+const parseDays = (v: unknown): number => ([7, 30, 90].includes(Number(v)) ? Number(v) : 30);
+
+router.get("/ryder/dashboard", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const d = await buildDashboard(parseDays(req.query.days));
+    if (!d) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    res.json(d);
   } catch (err) {
     logger.error({ err }, `Ryder dashboard failed: ${err instanceof Error ? err.message : String(err)}`);
+    res.status(500).json({ error: "Could not load the dashboard" });
+  }
+});
+
+// ---------- share link for the clinic ----------
+// The clinic gets a private link that shows the dashboard live without a password. It is read only and shows the same numbers as Clinic view:
+// no leads, no entry forms, no timer, no connection errors. Making a new link stops the old one working.
+
+router.get("/ryder/share", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const r = rowsOf(await db.execute(sql`SELECT token FROM ryder_share WHERE preset_id = ${p.id}`))[0];
+    res.json({ token: r ? String(r.token) : null });
+  } catch (err) {
+    res.status(500).json({ error: "Could not load the share link" });
+  }
+});
+
+router.post("/ryder/share", requireAuth, async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const p = await ryderPreset();
+    if (!p) { res.status(404).json({ error: "I could not find The Ryder Clinic in your clients" }); return; }
+    const existing = rowsOf(await db.execute(sql`SELECT token FROM ryder_share WHERE preset_id = ${p.id}`))[0];
+    if (existing && !req.body?.rotate) { res.json({ token: String(existing.token) }); return; }
+    const token = randomBytes(24).toString("hex");
+    await db.execute(sql`INSERT INTO ryder_share (preset_id, token, created_at) VALUES (${p.id}, ${token}, now())
+      ON CONFLICT (preset_id) DO UPDATE SET token = EXCLUDED.token, created_at = now()`);
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: "Could not make the share link" });
+  }
+});
+
+router.get("/ryder/share/:token/dashboard", async (req: Request, res: Response) => {
+  try {
+    await ensureTables();
+    const token = String(req.params.token || "");
+    const ok = /^[a-f0-9]{48}$/.test(token) && rowsOf(await db.execute(sql`SELECT 1 FROM ryder_share WHERE token = ${token}`)).length > 0;
+    if (!ok) { res.status(404).json({ error: "This link is not valid any more. Ask Vanessa for a new one." }); return; }
+    const d = await buildDashboard(parseDays(req.query.days));
+    if (!d) { res.status(404).json({ error: "Not found" }); return; }
+    const { lastSnapshot: _l, timer: _t, unanswered: _u, ...safe } = d;
+    res.setHeader("Cache-Control", "no-store");
+    res.json(safe);
+  } catch (err) {
+    logger.error({ err }, `Ryder share dashboard failed: ${err instanceof Error ? err.message : String(err)}`);
     res.status(500).json({ error: "Could not load the dashboard" });
   }
 });

@@ -102,12 +102,16 @@ function Ring({ score, band }: { score: number | null; band: string }) {
   );
 }
 
-export default function RyderDashboard() {
+export default function RyderDashboard({ shareToken }: { shareToken?: string } = {}) {
+  const shared = !!shareToken;
   const [days, setDays] = useState<7 | 30 | 90>(30);
   const [data, setData] = useState<Data | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const [clinicView, setClinicView] = useState(false);
+  const [clinicView, setClinicView] = useState(shared);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [shareMsg, setShareMsg] = useState("");
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [form, setForm] = useState({ day: "", newFollowers: "", newFollowing: "", storyResponses: "", note: "" });
   const [saved, setSaved] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -158,23 +162,46 @@ export default function RyderDashboard() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/ryder/dashboard?days=${days}`, { headers: authHeaders() });
+      const url = shareToken ? `${BASE}/api/ryder/share/${shareToken}/dashboard?days=${days}` : `${BASE}/api/ryder/dashboard?days=${days}`;
+      const r = await fetch(url, { headers: shareToken ? {} : authHeaders(), cache: "no-store" });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d?.error || "bad");
       setData(d);
+      setUpdatedAt(new Date());
       setErr("");
     } catch (e) {
       setErr(e instanceof Error && e.message !== "bad" ? e.message : "I could not load the numbers. Refresh the page and try again.");
     }
-  }, [days]);
+  }, [days, shareToken]);
 
+  // Live: the page checks for new numbers every 15 seconds, and straight away when the tab is opened again.
   useEffect(() => {
     load();
-    const id = setInterval(load, 60000);
-    return () => clearInterval(id);
+    const id = setInterval(load, 15000);
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [load]);
 
-  useEffect(() => { loadLeads(); }, [loadLeads]);
+  useEffect(() => {
+    if (shared) return;
+    fetch(`${BASE}/api/ryder/share`, { headers: authHeaders() }).then((r) => r.json()).then((d) => { if (d?.token) setShareLink(`${window.location.origin}${BASE}/ryderclinic/${d.token}`); }).catch(() => undefined);
+  }, [shared]);
+
+  const makeShare = async (rotate: boolean) => {
+    setShareMsg("");
+    const r = await fetch(`${BASE}/api/ryder/share`, { method: "POST", headers: authHeaders(), body: JSON.stringify({ rotate }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.token) { setShareMsg(d?.error || "Could not make the link"); return; }
+    setShareLink(`${window.location.origin}${BASE}/ryderclinic/${d.token}`);
+    setShareMsg(rotate ? "New link made. The old one no longer works." : "Link made");
+  };
+  const copyShare = async () => {
+    if (!shareLink) return;
+    try { await navigator.clipboard.writeText(shareLink); setShareMsg("Copied"); } catch { setShareMsg("Select the link and copy it"); }
+  };
+
+  useEffect(() => { if (!shared) loadLeads(); }, [loadLeads, shared]);
 
   useEffect(() => {
     if (data && !form.day) setForm((f) => ({ ...f, day: data.to }));
@@ -366,15 +393,15 @@ export default function RyderDashboard() {
       `}</style>
 
       <div className="top noprint">
-        <Link href="/" className="back">Back</Link>
+        {shared ? <span style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase" }}>Live{updatedAt ? `, updated ${updatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}</span> : <Link href="/" className="back">Back</Link>}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {([7, 30, 90] as const).map((n) => (
             <button key={n} className={`ghost${days === n ? " on" : ""}`} onClick={() => setDays(n)}>{n} days</button>
           ))}
-          <button className={`ghost${clinicView ? " on" : ""}`} onClick={() => setClinicView((v) => !v)}>{clinicView ? "Exit clinic view" : "Clinic view"}</button>
+          {!shared && <button className={`ghost${clinicView ? " on" : ""}`} onClick={() => setClinicView((v) => !v)}>{clinicView ? "Exit clinic view" : "Clinic view"}</button>}
           <button className="ghost" onClick={() => { setDays(30); setClinicView(true); setTimeout(() => window.print(), 1500); }}>Monthly report</button>
           <button className="ghost" onClick={() => window.print()}>Print or save PDF</button>
-          <button onClick={refresh} disabled={busy}>{busy ? "Checking..." : "Refresh numbers"}</button>
+          {!shared && <button onClick={refresh} disabled={busy}>{busy ? "Checking..." : "Refresh numbers"}</button>}
         </div>
       </div>
 
@@ -582,6 +609,25 @@ export default function RyderDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="noclinic noprint">
+            <h2>Share with the clinic</h2>
+            <p className="sub">A private link for The Ryder Clinic. They see this dashboard live, without a password, and it updates by itself every 15 seconds. They cannot change anything, and they never see the leads list, the timer or your entry forms.</p>
+            <div className="form" style={{ borderColor: "#000" }}>
+              {shareLink ? (
+                <>
+                  <label style={{ gridColumn: "1 / -1" }}>Clinic link<input readOnly value={shareLink} onFocus={(e) => e.target.select()} /></label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={copyShare}>Copy link</button>
+                    <button className="ghost" onClick={() => { if (window.confirm("Make a new link? The old one will stop working straight away.")) makeShare(true); }}>Make a new link</button>
+                  </div>
+                </>
+              ) : (
+                <div><button onClick={() => makeShare(false)}>Make the clinic link</button></div>
+              )}
+              {shareMsg && <span style={{ fontSize: 13 }}>{shareMsg}</span>}
+            </div>
           </div>
 
           <div className="noclinic noprint">
