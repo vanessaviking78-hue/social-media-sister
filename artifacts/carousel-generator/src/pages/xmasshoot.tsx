@@ -97,7 +97,7 @@ export default function XmasShoot() {
     const r = await j(await fetch(`${API}/xmasshoot/check-code`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: c }) }));
     const k = r.body.kind;
     if (k === "half") { setLabel(String(r.body.label)); setCodeNote(`Code applied. Your price is ${r.body.label}.`); }
-    else if (k === "free") { setLabel("free"); setCodeNote(`Code applied. This one is on me. ${r.body.slotsLeft} space${r.body.slotsLeft === 1 ? "" : "s"} left.`); }
+    else if (k === "free") { setLabel("free"); setCodeNote(`Code applied. This one is on me.${typeof r.body.slotsLeft === "number" ? ` ${r.body.slotsLeft} space${r.body.slotsLeft === 1 ? "" : "s"} left.` : ""}`); }
     else if (k === "gone") { setLabel("£49"); setCodeNote("All the SISTER spaces have gone. Clear the box to carry on at the usual price."); }
     else { setLabel("£49"); setCodeNote("I do not recognise that code. Check the spelling."); }
   };

@@ -30,11 +30,12 @@ const PAY: Record<string, string> = { unpaid: "not paid yet", claimed: "says pai
 export default function XmasShootAdmin() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(10);
-  const [sisterLeft, setSisterLeft] = useState(10);
-  const [sisterSlots, setSisterSlots] = useState(10);
+  const [sisterUsed, setSisterUsed] = useState(0);
+  const [sisterLeft, setSisterLeft] = useState<number | null>(null);
+  const [sisterSlots, setSisterSlots] = useState<number | null>(null);
   const [open, setOpen] = useState("");
   const [imgs, setImgs] = useState<Img[]>([]);
-  const loadList = useCallback(() => fetch(`${API}/xmasshoot/orders`, { headers: H() }).then((r) => r.json()).then((j) => { setRows(j.orders || []); setTotal(j.total || 10); setSisterLeft(j.sisterLeft ?? 0); setSisterSlots(j.sisterSlots ?? 10); }).catch(() => undefined), []);
+  const loadList = useCallback(() => fetch(`${API}/xmasshoot/orders`, { headers: H() }).then((r) => r.json()).then((j) => { setRows(j.orders || []); setTotal(j.total || 10); setSisterLeft(j.sisterLeft ?? null); setSisterSlots(j.sisterSlots ?? null); setSisterUsed(j.sisterUsed ?? 0); }).catch(() => undefined), []);
   const loadOne = useCallback((id: string) => fetch(`${API}/xmasshoot/orders/${id}`, { headers: H() }).then((r) => r.json()).then((j) => setImgs(j.order?.images || [])).catch(() => undefined), []);
   useEffect(() => { loadList(); const t = setInterval(() => { loadList(); if (open) loadOne(open); }, 10000); return () => clearInterval(t); }, [loadList, loadOne, open]);
   const act = async (url: string, method = "POST", body?: unknown) => {
@@ -49,7 +50,7 @@ export default function XmasShootAdmin() {
       <div className="ps-w">
         <div className="ps-k">CYBERSUITE CHRISTMAS SHOOT</div>
         <h1 className="ps-h1">Christmas shoot <span>inbox</span></h1>
-        <p className="ps-p">SISTER spaces left: {sisterLeft} of {sisterSlots}</p>
+        <p className="ps-p">{sisterSlots === null ? `SISTER: no limit, ${sisterUsed} used so far` : `SISTER spaces left: ${sisterLeft} of ${sisterSlots}`}</p>
         {rows.length === 0 && <p className="ps-p">Nobody yet. The first selfie will land here and in your email.</p>}
         {rows.map((r) => {
           const canCreate = r.pay_state === "free" || r.pay_state === "seen";

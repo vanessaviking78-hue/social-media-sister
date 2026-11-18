@@ -12,7 +12,7 @@ import { appLink } from "../lib/freeSampleWorker";
 import { notifyOwner } from "../lib/notify";
 
 // CYBERSUITE CHRISTMAS SHOOT at /xmasshoot. One selfie in, ten REALISTIC XMAS images out.
-// Price: 49 pounds. BOTOX takes it to half price. SISTER is free for the first 10. Payment is by Monzo link, and Monzo cannot tell
+// Price: 49 pounds. BOTOX takes it to half price. SISTER is free for everyone (no cap). Payment is by Monzo link, and Monzo cannot tell
 // the site who has paid, so the person taps "I have paid", Vanessa sees it in her inbox, checks Monzo and ticks "payment seen".
 // Only then does the Create images button work. She presses it, the site makes a link from their name (/vanessaxmas) and the
 // ten images. The link lasts 30 days and then the selfie and images are deleted.
@@ -24,7 +24,7 @@ const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
 const FULL_PENCE = 4900;
 const HALF_PENCE = 2450;
-const SISTER_SLOTS = 10; // 5 more added on 18 Nov 2026
+const SISTER_SLOTS: number | null = null; // no cap on SISTER (was 5, then 10, then removed on 18 Nov 2026). Set a number to cap it again.
 const MONZO_FULL = process.env.XMASSHOOT_MONZO_FULL || "https://monzo.com/pay/r/the-cyber-suite_WRksQgUu0CyIZj";
 const MONZO_HALF = process.env.XMASSHOOT_MONZO_HALF || "https://monzo.com/pay/r/the-cyber-suite_gQiXptLmSKB2tC";
 
@@ -89,6 +89,7 @@ async function readCode(raw: string): Promise<CodeInfo> {
   if (!code) return { kind: "none", amountPence: FULL_PENCE };
   if (code === "BOTOX") return { kind: "half", amountPence: HALF_PENCE };
   if (code === "SISTER") {
+    if (SISTER_SLOTS === null) return { kind: "free", amountPence: 0 };
     const left = SISTER_SLOTS - (await sisterUsed());
     return left > 0 ? { kind: "free", amountPence: 0, slotsLeft: left } : { kind: "gone", amountPence: FULL_PENCE, slotsLeft: 0 };
   }
@@ -167,7 +168,7 @@ router.post("/xmasshoot/start", upload.single("selfie"), async (req: Request, re
     // The SISTER cap is checked inside the insert itself, so two people pressing at once cannot both take the last space.
     const ins = await db.execute(sql`INSERT INTO xmasshoot_orders (id, token, name, email, phone, colour, code, amount_pence, pay_state, selfie_key, marketing)
       SELECT ${id}, ${token}, ${name}, ${email}, ${phone}, ${colour}, ${code}, ${info.amountPence}, ${payState}, ${selfieKey}, ${b.marketing === "yes"}
-      WHERE ${free ? sql`(SELECT count(*) FROM xmasshoot_orders WHERE upper(code) = 'SISTER') < ${SISTER_SLOTS}` : sql`true`}
+      WHERE ${free && SISTER_SLOTS !== null ? sql`(SELECT count(*) FROM xmasshoot_orders WHERE upper(code) = 'SISTER') < ${SISTER_SLOTS}` : sql`true`}
       RETURNING id`);
     if (!ins.rows.length) { res.status(409).json({ error: "All the SISTER spaces have gone. Clear the code box to carry on at the usual price." }); return; }
 
@@ -282,7 +283,8 @@ router.get("/xmasshoot/orders", requireAuth, async (_req: Request, res: Response
   res.json({
     total: XMAS_SHOT_COUNT,
     sisterSlots: SISTER_SLOTS,
-    sisterLeft: Math.max(0, SISTER_SLOTS - (await sisterUsed())),
+    sisterUsed: await sisterUsed(),
+    sisterLeft: SISTER_SLOTS === null ? null : Math.max(0, SISTER_SLOTS - (await sisterUsed())),
     orders: rows.map((r) => ({
       ...r,
       selfie_url: r.selfie_key ? `/api/media/${r.selfie_key}` : "",
@@ -312,7 +314,7 @@ router.post("/xmasshoot/orders/:id/release-sister", requireAuth, async (req: Req
   await ensureTable();
   const r = await db.execute(sql`UPDATE xmasshoot_orders SET code = 'SISTER (space given back)', note = coalesce(note, '') || ' [SISTER space given back]', updated_at = now() WHERE id = ${str(req.params.id, 60)} AND upper(code) = 'SISTER' RETURNING id`);
   if (!r.rows.length) { res.status(404).json({ error: "That one is not using a SISTER space" }); return; }
-  res.json({ ok: true, sisterLeft: Math.max(0, SISTER_SLOTS - (await sisterUsed())) });
+  res.json({ ok: true });
 });
 
 // The one button. Needs the payment ticked (or a free code), gives the order its /<name>xmas link and starts the ten images.
