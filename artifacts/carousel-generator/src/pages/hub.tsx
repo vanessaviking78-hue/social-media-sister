@@ -1092,6 +1092,26 @@ border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 },
 {
+href: "/xmasshoot-admin",
+group: "xmasshoot",
+icon: Inbox,
+name: "Xmas Shoot Inbox",
+description: "Everyone who has sent a selfie. Check Monzo, tick payment seen, press Create images, then send them their link.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
+href: "/xmasshoot",
+group: "xmasshoot",
+icon: TreePine,
+name: "Xmas Shoot Page",
+description: "The CYBERSUITE CHRISTMAS SHOOT page people use: demo video, colour, code and payment. Open it to check it, or copy the link to share.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
 href: "/10free-tracker",
 group: "admin",
 icon: Gift,
@@ -1188,7 +1208,7 @@ const [freeWaiting, setFreeWaiting] = useState(0);
 const [creditLow, setCreditLow] = useState(false);
 const [query, setQuery] = useState("");
 const [showTucked, setShowTucked] = useState(false);
-const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients" | "club">("today");
+const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients" | "club" | "xmasshoot">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
 if (!pw) return;
@@ -1325,7 +1345,7 @@ Your Google AI Studio credits look empty, so Studio portraits are failing. Top u
 <p className="mb-10" style={{ fontFamily: "'League Spartan', sans-serif", fontWeight: 900, fontSize: "clamp(2rem,5vw,3.6rem)", lineHeight: 0.95, textTransform: "uppercase", letterSpacing: "-0.02em", color: "#000" }}>Pick a tool. <span className="" style={{ color: "#ff1f8e", display: "inline-block", transform: "rotate(-2deg)" }}>Make it loud.</span></p>
 
 {/* Group tabs */}
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 mb-8">
 {[
 { key: "today", label: "Today & Clients" },
 { key: "admin", label: "Admin" },
@@ -1333,6 +1353,7 @@ Your Google AI Studio credits look empty, so Studio portraits are failing. Top u
 { key: "carousel", label: "Carousel" },
 { key: "clients", label: "Clients", icon: Users },
 { key: "club", label: "Club", icon: Crown },
+{ key: "xmasshoot", label: "Xmas Shoot", icon: TreePine },
 ].map((tab) => {
 const on = activeGroup === tab.key;
 return (
@@ -1340,8 +1361,8 @@ return (
 key={tab.key}
 type="button"
 onClick={() => setActiveGroup(tab.key as typeof activeGroup)}
-className="p-5 text-left transition-all duration-200 hover:-translate-y-1"
-style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", border: "4px solid #000", borderRadius: 4, boxShadow: on ? "6px 6px 0 #000" : "6px 6px 0 #ff1f8e", fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", fontSize: "1.2rem", }}
+className="p-4 text-left transition-all duration-200 hover:-translate-y-1"
+style={{ background: on ? "#ff1f8e" : "#000", color: on ? "#000" : "#ff1f8e", border: "4px solid #000", borderRadius: 4, boxShadow: on ? "6px 6px 0 #000" : "6px 6px 0 #ff1f8e", fontFamily: "'League Spartan', sans-serif", fontWeight: 900, textTransform: "uppercase", fontSize: "1rem", }}
 >
 <span className="flex items-center gap-2">
 {"icon" in tab && tab.icon ? <tab.icon className="w-5 h-5 shrink-0" /> : null}
