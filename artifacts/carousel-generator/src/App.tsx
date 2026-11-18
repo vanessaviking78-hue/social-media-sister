@@ -256,7 +256,7 @@ function ProtectedRouter() {
       <Route path="/no1" component={No1Page} />
       <Route path="/no1statics" component={No1StaticsPage} />
       <Route path="/ryder" component={RyderPage} />
-      <Route path="/ryderdashboard" component={RyderDashboard} />
+      <Route path="/ryderdashboard">{() => <RyderDashboard />}</Route>
       <Route path="/hammeredposts" component={HammeredTool} />
       <Route path="/hammeredlinks" component={HammeredLinks} />
       <Route path="/hammeredperformance" component={HammeredPerformance} />
@@ -395,6 +395,7 @@ function AppContent() {
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
   const [isPrivacy] = useRoute("/privacy");
   const [isPrizes] = useRoute("/prizes");
+  const [isRyderShare, ryderShareParams] = useRoute("/ryderclinic/:token");
   const [isSalesDashboard] = useRoute("/salesdashboard");
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
@@ -535,6 +536,9 @@ function AppContent() {
   }
   if (isPrizes) {
     return <Prizes />;
+  }
+  if (isRyderShare && ryderShareParams?.token) {
+    return <RyderDashboard shareToken={ryderShareParams.token} />;
   }
   if (isSalesDashboard) {
     return <SalesDashboard />;
