@@ -1152,7 +1152,7 @@ router.post("/club/months/:id/attach-post", requireAuth, upload.array("images", 
   }
 });
 
-// The browser build hands back the finished posts here. They go to the approval queue, never straight to the member.
+// The browser build hands back the finished posts here. Finishing a bundle publishes it straight to the member's link (no approval step). Re-saving an already live month keeps its original approval time so the member's 48 hour choosing window is not reset.
 router.post("/club/months/:id/posts", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
@@ -1175,7 +1175,7 @@ router.post("/club/months/:id/posts", requireAuth, async (req: Request, res: Res
     if (Array.isArray(b.reels)) {
       (content as any).reels = b.reels.slice(0, 30).map((r: any, i: number) => ({ n: i + 1, kind: r.kind === "treatment" ? "treatment" : "engagement", treatment: str(r.treatment, 60), hook: noDashes(r.hook).slice(0, 220), onScreen: noDashes(r.onScreen).slice(0, 80), script: noDashes(r.script).slice(0, 900) }));
     }
-    await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, status = 'pending_approval', updated_at = now() WHERE id = ${id}`);
+    await db.execute(sql`UPDATE club_months SET content = ${JSON.stringify(content)}::jsonb, status = 'approved', approved_at = CASE WHEN status = 'approved' AND approved_at IS NOT NULL THEN approved_at ELSE now() END, updated_at = now() WHERE id = ${id}`);
     res.json({ ok: true });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not save the posts" });
