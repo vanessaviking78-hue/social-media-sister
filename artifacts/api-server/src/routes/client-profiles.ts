@@ -12,7 +12,7 @@ import { notifySubmission } from "../lib/notify";
 const router: IRouter = Router();
 
 let ready: Promise<void> | null = null;
-function ensureTable(): Promise<void> {
+export function ensureTable(): Promise<void> {
   if (!ready) {
     ready = db
       .execute(sql`

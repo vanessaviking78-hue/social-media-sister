@@ -162,6 +162,25 @@ export default function GettingToKnowYou() {
     }
   };
 
+  // The full welcome page: Getting to know you, treatments, font, photos and Instagram in one personal link.
+  const copyWelcome = async () => {
+    if (!name) { toast.error("Pick or type a client first."); return; }
+    setLinking(true);
+    try {
+      const r = await fetch(`${BASE}api/welcome-link/${encodeURIComponent(name)}`, { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.token) throw new Error(d.error || "Could not make the link");
+      const url = `${window.location.origin}${BASE}welcome/${d.token}`.replace(/([^:]\/)\/+/g, "$1");
+      try { await navigator.clipboard.writeText(url); toast.success(`Welcome link for ${name} copied. Send it to them.`, { duration: 8000 }); }
+      catch { window.prompt("Copy this link and send it to your client", url); }
+      void refreshList();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the link");
+    } finally {
+      setLinking(false);
+    }
+  };
+
   const save = async () => {
     if (!name) { toast.error("Pick or type a client first."); return; }
     setSaving(true);
@@ -276,6 +295,9 @@ export default function GettingToKnowYou() {
               </Button>
               <Button variant="outline" onClick={copyLink} disabled={linking} className="gap-2">
                 {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Copy their link to fill it in
+              </Button>
+              <Button onClick={copyWelcome} disabled={linking} className="gap-2 bg-pink-600 hover:bg-pink-700 text-white">
+                {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Copy their welcome link (new clients)
               </Button>
             </div>
           </>

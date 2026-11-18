@@ -9,7 +9,7 @@ import { matchClient } from "./client-profiles";
 const router: IRouter = Router();
 
 let ready: Promise<unknown> | null = null;
-function ensureTable(): Promise<unknown> {
+export function ensureTable(): Promise<unknown> {
   if (!ready) {
     ready = db.execute(sql`
       CREATE TABLE IF NOT EXISTS client_treatments (
