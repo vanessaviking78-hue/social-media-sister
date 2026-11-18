@@ -81,6 +81,9 @@ export default function XmasShootAdmin() {
                 ) : (
                   <button className="ps-btn alt" onClick={() => { setOpen(isOpen ? "" : r.id); if (!isOpen) loadOne(r.id); }}>{isOpen ? "Hide images" : "See images"}</button>
                 )}
+                {(r.code || "").toUpperCase() === "SISTER" && (
+                  <button className="ps-btn alt" onClick={async () => { if (!window.confirm("Give this SISTER space back so someone else can use it? Their images stay.")) return; const x = await act(`/xmasshoot/orders/${r.id}/release-sister`); if (!x.ok) { toast.error(x.error || "Could not do that"); return; } toast.success("SISTER space given back"); loadList(); }}>Give SISTER space back</button>
+                )}
                 {link && <>
                   <button className="ps-btn alt" onClick={() => copy(link)}>Copy link</button>
                   <a className="ps-btn alt" href={`https://wa.me/${wa(r.phone)}?text=${encodeURIComponent(msgFor(r, link))}`} target="_blank" rel="noreferrer">WhatsApp it</a>

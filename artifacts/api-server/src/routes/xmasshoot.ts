@@ -306,6 +306,14 @@ router.post("/xmasshoot/orders/:id/payment-seen", requireAuth, async (req: Reque
   res.json({ ok: true });
 });
 
+// Gives a SISTER space back. The order and its images stay; only the code is relabelled so it stops counting towards the 5.
+router.post("/xmasshoot/orders/:id/release-sister", requireAuth, async (req: Request, res: Response) => {
+  await ensureTable();
+  const r = await db.execute(sql`UPDATE xmasshoot_orders SET code = 'SISTER (space given back)', note = coalesce(note, '') || ' [SISTER space given back]', updated_at = now() WHERE id = ${str(req.params.id, 60)} AND upper(code) = 'SISTER' RETURNING id`);
+  if (!r.rows.length) { res.status(404).json({ error: "That one is not using a SISTER space" }); return; }
+  res.json({ ok: true, sisterLeft: Math.max(0, SISTER_SLOTS - (await sisterUsed())) });
+});
+
 // The one button. Needs the payment ticked (or a free code), gives the order its /<name>xmas link and starts the ten images.
 router.post("/xmasshoot/orders/:id/create", requireAuth, async (req: Request, res: Response) => {
   await ensureTable();
