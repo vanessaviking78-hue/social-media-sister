@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { PS_CSS } from "@/pages/photoshoot";
@@ -13,7 +13,6 @@ const API = `${BASE}/api`;
 const XS_CSS = `
 .xs-video { position:relative; max-width: 360px; margin: 26px 0 0; border:2px solid #000; background:#000; }
 .xs-video video { width:100%; display:block; aspect-ratio:3/4; object-fit:cover; }
-.xs-snd { position:absolute; right:10px; bottom:10px; background:${PINK}; color:#fff; border:0; padding:10px 14px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; }
 .xs-cap { font-size:13px; letter-spacing:.22em; text-transform:uppercase; color:${PINK}; margin-top:10px; }
 .xs-sw { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
 .xs-sw button { border:2px solid #000; background:#fff; color:#000; padding:8px 12px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:8px; }
@@ -41,25 +40,10 @@ const COLOURS: { name: string; hex: string }[] = [
 const j = async (r: Response) => ({ ok: r.ok, status: r.status, body: (await r.json().catch(() => ({}))) as Record<string, any> });
 
 function Demo() {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [muted, setMuted] = useState(true);
   return (
     <div>
       <div className="xs-video">
-        <video ref={ref} src={`${BASE}/xmas-shoot-media/demo.mp4`} poster={`${BASE}/xmas-shoot-media/poster.jpg`} autoPlay loop muted={muted} playsInline preload="auto" />
-        <button
-          className="xs-snd"
-          onClick={() => {
-            const v = ref.current;
-            if (!v) return;
-            const next = !muted;
-            v.muted = next;
-            setMuted(next);
-            if (!next) void v.play().catch(() => undefined);
-          }}
-        >
-          {muted ? "Tap for Christmas music" : "Music off"}
-        </button>
+        <video src={`${BASE}/xmas-shoot-media/demo.mp4`} poster={`${BASE}/xmas-shoot-media/poster.jpg`} autoPlay loop muted playsInline preload="auto" />
       </div>
       <div className="xs-cap">These are the results to expect</div>
     </div>
