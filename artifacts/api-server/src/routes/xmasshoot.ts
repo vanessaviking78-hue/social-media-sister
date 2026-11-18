@@ -1,3 +1,4 @@
+import { renderXmasOg, firstNameFor } from "../lib/xmasOg";
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import multer from "multer";
 import sharp from "sharp";
@@ -256,6 +257,20 @@ router.get("/xmasshoot/view/:slug", async (req: Request, res: Response) => {
     res.json({ name: r.name, expired: false, ready: ok, images: ok ? r.images : [], expiresAt: r.expires_at });
   } catch {
     res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+// Link preview picture for the private link, e.g. /xmasshoot/og/izzyxmas.jpg says "IZZY'S XMAS SHOOT".
+router.get("/xmasshoot/og/:file", async (req: Request, res: Response) => {
+  try {
+    const slug = str(req.params.file, 80).toLowerCase().replace(/\.(png|jpg)$/, "");
+    if (!/^[a-z0-9]+xmas$/.test(slug)) { res.status(404).end(); return; }
+    await ensureTable();
+    const r = (await db.execute(sql`SELECT name FROM xmasshoot_orders WHERE slug = ${slug}`)).rows[0] as { name: string } | undefined;
+    const png = await renderXmasOg(firstNameFor(r?.name || "", slug));
+    res.set("Content-Type", "image/jpeg").set("Cache-Control", "public, max-age=86400").send(png);
+  } catch {
+    res.status(500).end();
   }
 });
 

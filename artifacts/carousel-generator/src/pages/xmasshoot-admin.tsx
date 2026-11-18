@@ -15,6 +15,10 @@ type Row = {
 };
 type Img = { n: number; label: string; url: string };
 
+// Opens a new Gmail message in the vanessa@thecybersuite.com account (not whichever Gmail is signed in first).
+const gmail = (to: string, subject = "", body = "") =>
+  `https://mail.google.com/mail/?authuser=${encodeURIComponent("vanessa@thecybersuite.com")}&view=cm&fs=1&to=${encodeURIComponent(to)}${subject ? `&su=${encodeURIComponent(subject)}` : ""}${body ? `&body=${encodeURIComponent(body)}` : ""}`;
+
 const wa = (phone: string) => {
   let d = phone.replace(/\D/g, "");
   if (d.startsWith("00")) d = d.slice(2);
@@ -61,7 +65,7 @@ export default function XmasShootAdmin() {
                   </div>
                   <div style={{ marginTop: 6, fontSize: 15 }}>
                     <a href={`https://wa.me/${wa(r.phone)}`} target="_blank" rel="noreferrer" style={{ color: "#000" }}>WhatsApp {r.phone}</a>{"  "}
-                    <a href={`mailto:${r.email}`} style={{ color: "#000" }}>{r.email}</a>
+                    <a href={gmail(r.email)} target="_blank" rel="noreferrer" style={{ color: "#000" }}>{r.email}</a>
                   </div>
                 </div>
               </div>
@@ -80,7 +84,7 @@ export default function XmasShootAdmin() {
                 {link && <>
                   <button className="ps-btn alt" onClick={() => copy(link)}>Copy link</button>
                   <a className="ps-btn alt" href={`https://wa.me/${wa(r.phone)}?text=${encodeURIComponent(msgFor(r, link))}`} target="_blank" rel="noreferrer">WhatsApp it</a>
-                  <a className="ps-btn alt" href={`mailto:${r.email}?subject=${encodeURIComponent("Your CYBERSUITE CHRISTMAS SHOOT")}&body=${encodeURIComponent(msgFor(r, link))}`}>Email it</a>
+                  <a className="ps-btn alt" href={gmail(r.email, "Your CYBERSUITE CHRISTMAS SHOOT", msgFor(r, link))} target="_blank" rel="noreferrer">Email it</a>
                 </>}
                 {link && <div style={{ fontSize: 14, color: "#555", marginTop: 8 }}>{link}{r.expires_at ? `, live until ${new Date(r.expires_at).toLocaleDateString("en-GB")}` : ""}</div>}
               </div>
