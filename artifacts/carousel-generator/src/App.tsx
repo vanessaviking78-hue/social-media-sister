@@ -178,6 +178,7 @@ import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import SalesDashboard from "@/pages/sales-dashboard";
+import SalesSignup from "@/pages/sales-signup";
 import CrmPage from "@/pages/crm-page";
 import BlackFriday26 from "@/pages/blackfriday26";
 import BlackFriday26Stats from "@/pages/blackfriday26-stats";
@@ -400,6 +401,7 @@ function AppContent() {
   const [isPrizes] = useRoute("/prizes");
   const [isRyderShare, ryderShareParams] = useRoute("/ryderclinic/:token");
   const [isSalesDashboard] = useRoute("/salesdashboard");
+  const [isSalesSignup] = useRoute("/signup");
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
   const [isHammeredProposal] = useRoute("/hammeredproposal");
@@ -546,6 +548,9 @@ function AppContent() {
   }
   if (isSalesDashboard) {
     return <SalesDashboard />;
+  }
+  if (isSalesSignup) {
+    return <SalesSignup />;
   }
   if (isHammeredSales) {
     return <HammeredSales />;

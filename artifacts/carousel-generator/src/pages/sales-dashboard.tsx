@@ -18,7 +18,7 @@ const FLOOR = 350;
 const SLOTS = [1, 2, 3, 4, 5];
 
 type Partner = { slot: number; name: string };
-type Lead = { id: string; partner: number; lead: string; clinic: string; handle: string; package: number; price: number; stage: string; test: boolean; paid: boolean; created: string };
+type Lead = { id: string; partner: number; lead: string; clinic: string; handle: string; package: number; price: number; stage: string; test: boolean; paid: boolean; created: string; contact?: string; viaLink?: boolean };
 
 const money = (n: number) => "£" + n.toLocaleString("en-GB", { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
 const value = (l: Lead) => l.price * (MONTHS_PAID[l.package] || 0);
@@ -35,6 +35,8 @@ function Dashboard() {
   const [msg, setMsg] = useState<{ text: string; bad: boolean } | null>(null);
   const [tableMsg, setTableMsg] = useState("");
   const [fPartner, setFPartner] = useState("");
+  const [linkStats, setLinkStats] = useState<{ events: Array<{ ref: string; opens: number; started: number }>; signups: Array<{ partner_slot: number; signups: number }> }>({ events: [], signups: [] });
+  const [copied, setCopied] = useState("");
   const [fStage, setFStage] = useState("");
   const [confirmId, setConfirmId] = useState("");
   const [names, setNames] = useState<Record<number, string>>({});
@@ -50,11 +52,21 @@ function Dashboard() {
     setNames(Object.fromEntries(full.map((p) => [p.slot, p.name])));
     setLeads(d.leads);
     setLoaded(true);
+    try {
+      const lr = await fetch(`${BASE}/api/sales/admin/signup-links`, { headers: authHeaders() });
+      if (lr.ok) setLinkStats(await lr.json());
+    } catch { /* ignore */ }
   };
   useEffect(() => { void load(); }, []);
 
   const nameOf = (slot: number) => partners.find((p) => p.slot === slot)?.name || "";
   const named = partners.filter((p) => p.name);
+  const SIGNUP = "https://www.thecybersuite.com/signup";
+  const refOf = (name: string) => name.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
+  const linkFor = (name: string) => `${SIGNUP}?ref=${refOf(name)}`;
+  const copyLink = async (name: string) => {
+    try { await navigator.clipboard.writeText(linkFor(name)); setCopied(name); setTimeout(() => setCopied(""), 1800); } catch { window.prompt("Copy this link", linkFor(name)); }
+  };
 
   useEffect(() => {
     if (!form.partner && named.length) setForm((f) => ({ ...f, partner: String(named[0].slot) }));
@@ -196,7 +208,35 @@ function Dashboard() {
         ))}
       </div>
 
-      <h2 className="text-xl font-black uppercase mb-2">Log a lead</h2>
+      <h2 className="text-xl font-black uppercase mt-8 mb-2">Sign up links</h2>
+      <p className="text-neutral-600 mb-2 text-sm">One link per partner. Opened counts each person once, started means they typed into the form, and sign ups land in the table below as Signed.</p>
+      <div style={{ overflowX: "auto" }} className="border-2 border-black">
+        <table className="w-full text-sm" style={{ minWidth: 640 }}>
+          <thead>
+            <tr className="bg-black text-white text-left">
+              <th className="p-2">Partner</th><th className="p-2 text-right">Opened</th><th className="p-2 text-right">Started</th><th className="p-2 text-right">Sign ups</th><th className="p-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {named.map((p) => {
+              const ev = linkStats.events.find((e) => e.ref === refOf(p.name));
+              const su = linkStats.signups.find((x) => x.partner_slot === p.slot);
+              return (
+                <tr key={p.slot} className="border-t border-black">
+                  <td className="p-2 font-bold">{p.name}<div className="font-normal text-xs text-neutral-500 break-all">{linkFor(p.name)}</div></td>
+                  <td className="p-2 text-right">{ev?.opens || 0}</td>
+                  <td className="p-2 text-right">{ev?.started || 0}</td>
+                  <td className="p-2 text-right font-bold" style={{ color: su?.signups ? PINK : undefined }}>{su?.signups || 0}</td>
+                  <td className="p-2"><button className="px-3 py-1 border-2 border-black text-xs" onClick={() => void copyLink(p.name)}>{copied === p.name ? "Copied" : "Copy link"}</button></td>
+                </tr>
+              );
+            })}
+            {named.length === 0 && <tr><td className="p-4 text-neutral-500 text-center" colSpan={5}>Add a partner name above to get their link.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="text-xl font-black uppercase mb-2 mt-8">Log a lead</h2>
       <form onSubmit={addLead} className="grid gap-3 border-2 border-black p-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", alignItems: "end" }}>
         <label className={lab}>Partner
           <select className={input} value={form.partner} onChange={(e) => setForm({ ...form, partner: e.target.value })}>
@@ -254,9 +294,9 @@ function Dashboard() {
               return (
                 <tr key={l.id} className="border-t border-black align-top">
                   <td className="p-2">{nameOf(l.partner) || "Unassigned"}{l.test && <span className="ml-2 px-2 rounded-full text-xs" style={{ background: "#eee", color: "#666" }}>Test</span>}</td>
-                  <td className="p-2 font-bold">{l.lead}<div className="font-normal text-xs text-neutral-500">{[l.clinic, l.handle, shortDate(l.created)].filter(Boolean).join(" · ")}</div></td>
+                  <td className="p-2 font-bold">{l.lead}<div className="font-normal text-xs text-neutral-500">{[l.clinic, l.handle, l.contact, shortDate(l.created)].filter(Boolean).join(" · ")}{l.viaLink && <span className="ml-2 px-2 rounded-full" style={{ background: "#ffe3f1", color: PINK }}>Via link</span>}</div></td>
                   <td className="p-2">{l.package} months</td>
-                  <td className="p-2 text-right">{money(l.price)}{l.price < FLOOR && <div><span className="px-2 rounded-full text-xs" style={{ background: "#fff1dc", color: "#a85d00" }}>Needs approval</span></div>}</td>
+                  <td className="p-2 text-right"><input type="number" min="0" step="10" defaultValue={l.price} key={l.id + l.price} aria-label={`Price a month for ${l.lead}`} className="border-2 border-black p-1 w-20 text-right" onBlur={(e) => { const v = Number(e.target.value); if (v > 0 && v !== l.price) void patch(l.id, { price: v }); }} />{l.price < FLOOR && <div><span className="px-2 rounded-full text-xs" style={{ background: "#fff1dc", color: "#a85d00" }}>Needs approval</span></div>}</td>
                   <td className="p-2 text-right">{money(value(l))}</td>
                   <td className="p-2 text-right">{isSigned ? <b style={{ color: PINK }}>{money(comm(l))}</b> : <span className="text-neutral-500">{money(comm(l))} if signed</span>}</td>
                   <td className="p-2">
