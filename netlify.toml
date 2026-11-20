@@ -243,6 +243,14 @@
   function = "link-og"
 
 [[edge_functions]]
+  path = "/hammeredblackfriday"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/blackfridayhammered"
+  function = "link-og"
+
+[[edge_functions]]
   path = "/freehouseproposal"
   function = "link-og"
 

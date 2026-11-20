@@ -3,6 +3,7 @@
 export const SALES_PREVIEWS: { id: string; paths: string[]; title: string; desc: string }[] = [
   { id: "hammeredproposal", paths: ["/hammeredproposal"], title: "Hammered sales partner proposal", desc: "What you earn, how it works and what to say. Sell Hammered to the trade and get paid the same day I do." },
   { id: "hammeredproposal18", paths: ["/hammeredproposal18"], title: "Hammered sales partner: the plain English version", desc: "The short, simple version of the Hammered proposal. What you do, what you earn, and how to start." },
+  { id: "hammeredblackfriday", paths: ["/hammeredblackfriday", "/blackfridayhammered"], title: "Hammered Black Friday", desc: "Four ways to get your socials sorted for the trade, at Black Friday prices. Live until the end of Monday 30 November." },
   { id: "hammeredsales", paths: ["/hammeredsales"], title: "Hammered sales dashboard", desc: "Partner login. Log your leads and track your commission." },
   { id: "freehouseproposal", paths: ["/freehouseproposal"], title: "Freehouse Socials sales partner proposal", desc: "What you earn, how it works and what to say. Sell Freehouse Socials to pubs and bars and get paid the same day I do." },
   { id: "freehouseproposal18", paths: ["/freehouseproposal18"], title: "Freehouse Socials sales partner: the plain English version", desc: "The short, simple version of the Freehouse Socials proposal. What you do, what you earn, and how to start." },
