@@ -428,6 +428,7 @@ function AppContent() {
     const [isLanding] = useRoute("/landing");
     const [isBf26] = useRoute("/blackfriday26");
     const [isHammeredBf] = useRoute("/hammeredblackfriday");
+    const [isHammeredBfAlt] = useRoute("/blackfridayhammered");
     const [isDailyFive] = useRoute("/dailytasks");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
@@ -617,7 +618,7 @@ function AppContent() {
     if (isBf26) {
           return <BlackFriday26 />;
     }
-    if (isHammeredBf) {
+    if (isHammeredBf || isHammeredBfAlt) {
           return <HammeredBlackFriday />;
     }
     if (isDailyFive) {
