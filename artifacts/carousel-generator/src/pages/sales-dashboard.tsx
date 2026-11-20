@@ -209,7 +209,7 @@ function Dashboard() {
       </div>
 
       <h2 className="text-xl font-black uppercase mt-8 mb-2">Sign up links</h2>
-      <p className="text-neutral-600 mb-2 text-sm">One link per partner. Opened counts each person once, started means they typed into the form, and sign ups land in the table below as Signed.</p>
+      <p className="text-neutral-600 mb-2 text-sm">One link per partner. Opened counts each person once, started means they typed into the form, and sign ups land in the table below as Call booked. Change them to Signed once you have confirmed them, and the commission is earned.</p>
       <div style={{ overflowX: "auto" }} className="border-2 border-black">
         <table className="w-full text-sm" style={{ minWidth: 640 }}>
           <thead>

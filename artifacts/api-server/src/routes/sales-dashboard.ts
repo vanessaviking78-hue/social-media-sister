@@ -232,7 +232,7 @@ router.delete("/sales/admin/test-leads", requireAuth, async (_req: Request, res:
 
 // SIGN UP LINKS. Each partner has a personal link, www.thecybersuite.com/signup?ref=kelly (the ref is the partner's name, lower case).
 // Same idea as the freebies links, but this counts people signing up as a client. The page reports an "open" when the link is opened and
-// a "start" when the visitor first types into the form; sending the form logs a Signed lead for that partner at the usual 25%.
+// a "start" when the visitor first types into the form; sending the form logs a Call booked lead for that partner. Vanessa moves it to Signed once confirmed, which is when the 25% is earned.
 const cleanRef = (v: unknown) => String(v ?? "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
 const cleanVisitor = (v: unknown) => String(v ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64);
 const partnerRef = (name: string) => cleanRef(name.trim().split(/\s+/)[0] || "");
@@ -276,13 +276,13 @@ router.post("/sales/signup", async (req: Request, res: Response) => {
       (r) => r.clinic.trim().toLowerCase() === clinic.toLowerCase() || (handle && r.handle && normHandle(r.handle) === normHandle(handle)),
     );
     if (dupe) {
-      // Already logged (by this partner or another): keep who found them first, just move them to Signed.
-      if (dupe.stage !== "Signed") await db.execute(sql`UPDATE sales_leads SET stage = 'Signed', package = ${pkg}, contact = ${contact}, via_link = TRUE WHERE id = ${dupe.id}`);
+      // Already logged (by this partner or another): keep who found them first, just move them on to Call booked (unless already further along).
+      if (dupe.stage !== "Signed") await db.execute(sql`UPDATE sales_leads SET stage = 'Call booked', package = ${pkg}, contact = ${contact}, via_link = TRUE WHERE id = ${dupe.id}`);
     } else {
       const id = "l" + randomBytes(6).toString("hex");
       await db.execute(sql`
         INSERT INTO sales_leads (id, partner_slot, lead, clinic, handle, package, price, stage, contact, via_link)
-        VALUES (${id}, ${match.slot}, ${name}, ${clinic}, ${handle}, ${pkg}, 500, 'Signed', ${contact}, TRUE)
+        VALUES (${id}, ${match.slot}, ${name}, ${clinic}, ${handle}, ${pkg}, 500, 'Call booked', ${contact}, TRUE)
       `);
     }
     res.json({ ok: true });
