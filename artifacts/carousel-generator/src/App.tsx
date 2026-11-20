@@ -179,6 +179,7 @@ import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
 import SalesDashboard from "@/pages/sales-dashboard";
 import SalesSignup from "@/pages/sales-signup";
+import LinkStats from "@/pages/link-stats";
 import CrmPage from "@/pages/crm-page";
 import BlackFriday26 from "@/pages/blackfriday26";
 import HammeredBlackFriday from "@/pages/hammered-blackfriday";
@@ -403,6 +404,7 @@ function AppContent() {
   const [isRyderShare, ryderShareParams] = useRoute("/ryderclinic/:token");
   const [isSalesDashboard] = useRoute("/salesdashboard");
   const [isSalesSignup] = useRoute("/signup");
+  const [isLinkStats] = useRoute("/linkstats");
   const [isHammeredSales] = useRoute("/hammeredsales");
   const [isHammeredProposal18] = useRoute("/hammeredproposal18");
   const [isHammeredProposal] = useRoute("/hammeredproposal");
@@ -554,6 +556,9 @@ function AppContent() {
   }
   if (isSalesSignup) {
     return <SalesSignup />;
+  }
+  if (isLinkStats) {
+    return <LinkStats />;
   }
   if (isHammeredSales) {
     return <HammeredSales />;

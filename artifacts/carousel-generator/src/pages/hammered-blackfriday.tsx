@@ -102,7 +102,7 @@ export default function HammeredBlackFriday() {
 
   useEffect(() => {
     document.title = "Black Friday | Hammered";
-    track("view");
+    track("view", "h-page");
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => {
         const key = (e.target as HTMLElement).dataset.offer;
