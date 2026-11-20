@@ -7,7 +7,7 @@ import { Link } from "wouter";
 const YELLOW = "#ffd60a";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const SITE = "https://www.thecybersuite.com/hammeredfreebies";
-const DEFAULT_NAMES = ["rob", "isaac", "vanessa"];
+const DEFAULT_NAMES = ["rob", "isaac", "vanessa", "deanos"];
 const EXTRA_KEY = "hammered-link-names";
 
 type LinkRow = { ref: string; opens: number; started: number; entries: number; lastOpen: string | null; lastEntry: string | null };

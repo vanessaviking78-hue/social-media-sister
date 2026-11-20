@@ -72,6 +72,11 @@ function ensureTables(): Promise<void> {
     for (const slot of SLOTS) {
       await db.execute(sql`INSERT INTO hammered_partners (slot, name) VALUES (${slot}, '') ON CONFLICT (slot) DO NOTHING`);
     }
+    // Deanos sells this one too. He takes the first open slot (only if he is not already there).
+    const hasDeanos = await db.execute(sql`SELECT 1 FROM hammered_partners WHERE lower(name) LIKE 'deanos%' LIMIT 1`);
+    if (hasDeanos.rows.length === 0) {
+      await db.execute(sql`UPDATE hammered_partners SET name = 'Deanos' WHERE slot = (SELECT slot FROM hammered_partners WHERE name = '' ORDER BY slot LIMIT 1)`);
+    }
   })().catch((e) => {
     ready = null;
     throw e;
