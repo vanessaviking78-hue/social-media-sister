@@ -181,6 +181,7 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import SalesSignup from "@/pages/sales-signup";
 import CrmPage from "@/pages/crm-page";
 import BlackFriday26 from "@/pages/blackfriday26";
+import HammeredBlackFriday from "@/pages/hammered-blackfriday";
 import BlackFriday26Stats from "@/pages/blackfriday26-stats";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
@@ -426,6 +427,7 @@ function AppContent() {
     const [isFreeCall] = useRoute("/freecall");
     const [isLanding] = useRoute("/landing");
     const [isBf26] = useRoute("/blackfriday26");
+    const [isHammeredBf] = useRoute("/hammeredblackfriday");
     const [isDailyFive] = useRoute("/dailytasks");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
@@ -614,6 +616,9 @@ function AppContent() {
     }
     if (isBf26) {
           return <BlackFriday26 />;
+    }
+    if (isHammeredBf) {
+          return <HammeredBlackFriday />;
     }
     if (isDailyFive) {
           return <DailyFive />;
