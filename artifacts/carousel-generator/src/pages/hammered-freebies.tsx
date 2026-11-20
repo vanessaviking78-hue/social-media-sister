@@ -120,7 +120,7 @@ const JOB_GROUPS: { id: string; label: string; items: string[] }[] = [
   { id: "build", label: "Building and structure", items: ["Extensions", "Loft conversions", "New builds", "Renovations", "Garage conversions", "Brickwork", "Groundworks", "Roofing"] },
   { id: "inside", label: "Inside the home", items: ["Kitchens", "Bathrooms", "Plastering", "Decorating", "Flooring", "Carpentry and joinery", "Fitted wardrobes"] },
   { id: "systems", label: "Plumbing, heating and electrics", items: ["Boilers and heating", "Plumbing repairs", "Rewires", "Fuse boards", "EV chargers", "Lighting"] },
-  { id: "outside", label: "Outside", items: ["Driveways", "Patios and paving", "Fencing", "Decking", "Garden landscaping", "Gutters"] },
+  { id: "outside", label: "Outside", items: ["Driveways", "Patios and paving", "Fencing", "Decking", "Garden landscaping", "Gutters", "Facades", "Rendering"] },
 ];
 
 try {
