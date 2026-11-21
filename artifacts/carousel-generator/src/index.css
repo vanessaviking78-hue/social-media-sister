@@ -263,6 +263,11 @@ html.cs-light .keep-colour {
   filter: invert(1) hue-rotate(180deg);
 }
 
+/* Scrollbars: the page is flipped, so a dark track here lands as a light one and stops the black stripe under scrolling rows. */
+html.cs-light * {
+  scrollbar-color: #666 #111;
+}
+
 /* Large League Spartan Black headings with a hot pink accent bar. */
 html.cs-light h1,
 html.cs-light h2,
