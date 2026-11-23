@@ -4427,3 +4427,131 @@ export const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo laughing naturally in an ivory knit with a soft scarf, one hand resting lightly at her collar, looking straight at the camera. Plain light backdrop, bright soft daylight, crisp detail, real laughter lines, relaxed and glowing.${REALISTIC_XMAS_SUFFIX}`,
   },
 ];
+
+// TWEAKED XMAS: twenty kitsch, tongue in cheek Christmas portraits in the Tweaked palette.
+// Every Christmas decoration is leopard print, all clothes are black and every accent is hot pink.
+// No colour picker, the palette is fixed.
+const TWEAKED_XMAS_SUFFIX = ` Kitsch, playful and glamorous, a fixed palette of leopard print, black and hot pink only. Every Christmas decoration is leopard print (tree, baubles, tinsel, stockings, wrapping, cushions) with hot pink accents, and all her clothes are black. No red and no green anywhere. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const TWEAKED_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "tx-01",
+    name: "Leopard Tree Queen",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing proudly beside a full size leopard print Christmas tree hung with hot pink baubles and a hot pink bow on top, one hand on her hip and a big cheeky grin. Black satin shirt dress. Cosy living room, soft warm lamp light, shallow depth of field, magazine quality. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-02",
+    name: "Hot Pink Tinsel Boa",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo draped in a fluffy hot pink tinsel boa, head tilted back in a full belly laugh. Fitted black polo neck, plain leopard print backdrop with a few leopard print baubles hanging in the foreground. Bright flattering studio light, glossy and fun. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-03",
+    name: "Stocking Filler",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting on the floor in front of a fireplace, hanging a row of leopard print stockings with hot pink cuffs along the mantel, glancing at the camera with a naughty smile. Black knit jumper dress and black tights. Hot pink fairy lights, warm glow, relaxed editorial. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-04",
+    name: "Bauble Wink",
+    hasColour: false,
+    promptTemplate: `A close up of a woman from the reference photo holding one large glossy leopard print bauble beside her face and winking at the camera. Black roll neck, hot pink lipstick, hot pink glitter tinsel softly out of focus behind her. Plain light backdrop, crisp beauty lighting. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-05",
+    name: "Gift Wrap Glam",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo kneeling on a fluffy rug wrapping presents in leopard print paper tied with wide hot pink ribbon, a roll of tape stuck to her sleeve and a laugh breaking out. Black lounge set. Stack of leopard print gifts with hot pink bows beside her, soft daylight from a window. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-06",
+    name: "Leopard Santa Hat Selfie",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo wearing a leopard print Father Christmas style hat with a hot pink fluffy trim, pulling a playful pout and holding her phone out as if taking a selfie. Black zip up top. Hot pink tinsel hung across the wall behind her, bright cheerful light, front facing and fun. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-07",
+    name: "Cocktail O'Clock",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a hot pink cocktail in a coupe glass with a leopard print cocktail stirrer, mid toast with a mischievous smile. Black sequin top. A leopard print tree glowing softly in the background with hot pink lights, warm bokeh, glossy party atmosphere. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-08",
+    name: "Sofa Slump",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo slumped happily on a black velvet sofa under a leopard print blanket, a plate of mince pies on her lap, hot pink tinsel wrapped around the sofa arm. Black fluffy cardigan. Leopard print cushions, a small hot pink tree on the side table, soft evening lamp light, candid and warm. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-09",
+    name: "Wreath Door Welcome",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo opening a glossy black front door with a huge leopard print wreath and a hot pink bow, beaming a warm welcome with one arm out. Black wool coat over black trousers. Hot pink fairy lights around the door frame, dusk blue sky, cheerful and inviting. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-10",
+    name: "Tinsel Halo",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo wearing a crown of hot pink tinsel like a halo, eyes closed in a serene smile. Black strapless top. Soft dark leopard print backdrop, dreamy glow, a few leopard print baubles floating out of focus. Beauty editorial lighting, high detail. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-11",
+    name: "Pink Fireplace Fabulous",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a mantelpiece dressed with leopard print garlands, hot pink candles and a row of tiny leopard print baubles, one eyebrow raised and a confident smile. Black blazer over a black camisole. Warm fire glow, rich moody room, editorial portrait. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-12",
+    name: "Leopard Pyjama Morning",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting cross legged on the bed on Christmas morning in black silk pyjamas, a hot pink satin eye mask pushed up on her forehead, unwrapping a present in leopard print paper with a delighted gasp. Black and leopard print bedding, hot pink tinsel along the headboard, soft morning light. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-13",
+    name: "Snow Globe Moment",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding up a large snow globe filled with tiny leopard print trees and hot pink snow, peering over the top with wide playful eyes. Black cashmere jumper. Plain dark backdrop, a spotlight on her face and hands, glossy highlights, humorous and polished. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-14",
+    name: "Cracker Pull",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo pulling a leopard print Christmas cracker with hot pink ribbon ends, mid bang with a surprised laugh. Black off the shoulder top. A dining table styled with leopard print runner, hot pink napkins and black plates, candlelight, bright festive party mood. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-15",
+    name: "Hot Pink Tree Hugger",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo giving a hot pink Christmas tree a big hug, cheek pressed to the branches and eyes closed in happiness. The tree is covered in leopard print baubles and leopard print ribbon. Black velvet dress. Dark moody room, glowing fairy lights, soft cinematic look. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-16",
+    name: "Window Shopping Chic",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo walking past a shop window dressed in leopard print Christmas displays with hot pink lights, carrying leopard print shopping bags tied with hot pink ribbon and looking back over her shoulder with a smirk. Black long coat and black boots, evening street, soft bokeh, fashion editorial. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-17",
+    name: "Bubbles And Baubles",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting in a black leather armchair with a flute of pink fizz, surrounded by dozens of leopard print baubles scattered across the floor, laughing at the chaos. Black wrap dress. Hot pink tinsel draped over the chair, warm glam lighting, fun and indulgent. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-18",
+    name: "Reindeer Antlers Diva",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo wearing a headband with leopard print antlers decorated with hot pink bows, a deadpan, unimpressed look to camera with the faintest smile. Black turtleneck. Plain hot pink backdrop with a leopard print garland, bright flat commercial lighting, crisp and cheeky. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-19",
+    name: "Kitchen Bake Off",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a black apron over a black top, holding up a tray of iced biscuits shaped like leopard print baubles with hot pink icing, flour on her cheek and a proud grin. Kitchen counter with a leopard print tea towel and hot pink tinsel along the shelves, bright natural daylight, candid and fun. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tx-20",
+    name: "Midnight Party Finale",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo dancing at a Christmas party under a huge leopard print and hot pink balloon arch and tinsel curtain, arms in the air with confetti falling, caught mid laugh. Black sparkly mini dress. Disco glow, motion in the confetti, high energy party editorial, sharp on her face. ${TWEAKED_XMAS_SUFFIX}`,
+  },
+];
