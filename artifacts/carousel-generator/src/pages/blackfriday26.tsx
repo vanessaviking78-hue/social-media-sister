@@ -40,6 +40,15 @@ const OFFERS: Offer[] = [
     ask: "6 months for the price of 3",
   },
   {
+    key: "3for1",
+    title: "3 months for the price of 1",
+    price: "£500",
+    unit: "upfront for 3 months",
+    saving: "Saves you £1000",
+    body: "Three months of content and management, usually £1500. A low risk way to see what I can do for your page before you commit to more.",
+    ask: "3 months for the price of 1",
+  },
+  {
     key: "diy",
     title: "DIY from the portal",
     price: "£275",
@@ -129,7 +138,7 @@ export default function BlackFriday26() {
         </h1>
         <div style={{ height: 10, width: 120, background: MAGENTA, marginBottom: 20 }} />
         <p style={{ fontSize: "clamp(1.2rem, 3vw, 1.7rem)", fontWeight: 600, lineHeight: 1.25, maxWidth: 760, margin: 0 }}>
-          Black Friday clients only. Four ways to have me look after your socials, at prices only Black Friday clients get. Live until the end of Monday 30th November, and slots are limited.
+          Black Friday clients only. Five ways to have me look after your socials, at prices only Black Friday clients get. Live until the end of Monday 30th November, and slots are limited.
         </p>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "26px 0 8px" }}>
