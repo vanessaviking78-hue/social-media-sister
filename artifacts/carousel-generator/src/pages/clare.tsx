@@ -20,7 +20,7 @@ import { uploadPngs } from "@/lib/month-engine";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { clinicTags } from "@/lib/sixteen-posts";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -210,6 +210,7 @@ type Post = {
   hook: string;
   sub?: string; // NEWXMAS cover subtitle
   four?: boolean; // NEWXMAS posts have 4 slides: cover, two body slides, then the CTA
+  one?: boolean; // XMAS FEELS posts are a single image: her line on the picture, nothing else
   slides: string[];
   cta: string;
   caption: string;
@@ -262,7 +263,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...XMASFEELS_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -436,7 +437,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       const sb = subtitleOf(ctx, f, post.sub);
       let size = Math.round(120 * ts);
       let layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
-      while (size > Math.round(50 * ts) && titleHeight(layout) > 330 * Math.max(1, ts)) {
+      while (size > Math.round(50 * ts) && titleHeight(layout) > (post.one ? 560 : 330) * Math.max(1, ts)) {
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
@@ -448,7 +449,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       const sb = subtitleOf(ctx, f, post.sub);
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
-      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
+      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, (post.one ? 560 : 330) * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
       let y = H - 175 - sb.h - total + cy;
       if (look.block) { blockAt(ctx, y - 90 + by, look); ctx.fillStyle = INKC; }
@@ -511,7 +512,7 @@ function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?:
 }
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xmasfeels" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -521,8 +522,8 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "hoo
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
   const own = isClare ? { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS } : sectionsForTreatments(forced?.treatmentIds);
-  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
-  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
+  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
+  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -745,8 +746,8 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   };
 
   const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
-  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : {});
-  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
+  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : {});
+  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xf ? t.xf.line : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   // The 16 posts tab arrives with hooks, captions and hashtags already written. Clinic hashtags are built from the area typed on the page.
   const seed = (t: ClareSectionPost): Pick<Post, "hook" | "cta" | "caption" | "hashtags"> => t.fixed
     ? { hook: t.fixed.hook, cta: t.fixed.cta, caption: t.fixed.caption, hashtags: t.fixed.tags ?? clinicTags(area) }
@@ -779,7 +780,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: { block: i % 2 === 1 }, ...nxFields(t) }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
-      if (made[i].four || TYPE_BY_ID.get(made[i].typeId)?.fixed) continue; // hooks and captions are already written
+      if (made[i].four || made[i].one || TYPE_BY_ID.get(made[i].typeId)?.fixed) continue; // hooks and captions are already written
       setMaking(`Writing post ${i + 1} of ${made.length}`);
       await write(made[i]);
     }
@@ -793,11 +794,11 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   // Her preset's caption footnote goes at the very end of every post, under the hashtags.
   const foot = (preset?.captionFootnote || "").trim();
   const noFoot = (c: string) => (foot ? c.split(foot).join("").trim() : c.trim());
-  const tagsOf = (post: Post) => (post.four ? newxmasHashtags(area) : post.hashtags);
+  const tagsOf = (post: Post) => (post.four || post.one ? newxmasHashtags(area) : post.hashtags);
   const fullCaption = (post: Post) => [noFoot(post.caption), tagsOf(post).join(" "), foot].filter(Boolean).join("\n\n");
 
   const write = async (post: Post, fix?: string) => {
-    if (post.four) { toast.info("NEWXMAS posts are already written. Edit the words in the boxes below."); return; }
+    if (post.four || post.one) { toast.info("These posts are already written. Edit the words in the boxes below."); return; }
     if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { busy: true });
@@ -817,7 +818,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     await ensureFonts(fonts);
     const tfNow = await loadTitleFont(CLINIC_KEY === "clare" ? undefined : CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
-    for (let n = 0; n < (post.four ? 4 : 5); n++) {
+    for (let n = 0; n < (post.one ? 1 : post.four ? 4 : 5); n++) {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
       drawSlide(c.getContext("2d")!, post, n, photoFor(post, n), fonts, tfNow, lookFor(post), logo);
@@ -1253,7 +1254,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   </div>
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {(post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
+                  {(post.one ? [0] : post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
                     <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
@@ -1271,7 +1272,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                       <summary className="cursor-pointer text-white/80">Photo, text and block controls</summary>
                       <div className="flex flex-wrap items-center gap-2 pt-2">
                         <span className="text-white/60">Photo on slide</span>
-                        {[0, 1, 2, 3].map((i) => <button key={i} type="button" onClick={() => setAdjSlide((m) => ({ ...m, [post.id]: i }))} className={`px-2 py-0.5 rounded border ${sl === i ? "bg-white text-black border-white" : "border-white/20"}`}>{i + 1}</button>)}
+                        {[0, 1, 2, 3].slice(0, post.one ? 1 : 4).map((i) => <button key={i} type="button" onClick={() => setAdjSlide((m) => ({ ...m, [post.id]: i }))} className={`px-2 py-0.5 rounded border ${sl === i ? "bg-white text-black border-white" : "border-white/20"}`}>{i + 1}</button>)}
                         <button type="button" onClick={() => patch(post.id, { adj: undefined })} className="ml-auto px-2 py-0.5 rounded border border-white/20">Reset</button>
                       </div>
                       {row("Zoom", 1, 2.5, 0.05, arr("zoom", 1)[sl], (v) => setSl("zoom", 1, v))}
@@ -1302,7 +1303,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                       <textarea className="w-full bg-white/5 rounded p-2" rows={2} value={post.sub ?? ""} onChange={(e) => patch(post.id, { sub: e.target.value })} />
                     </label>
                   )}
-                  {[0, 1, 2].slice(0, post.four ? 2 : 3).map((i) => (
+                  {[0, 1, 2].slice(0, post.one ? 0 : post.four ? 2 : 3).map((i) => (
                     <label key={i} className="space-y-1 block">
                       <span className="text-white/60">Slide {i + 2}</span>
                       <textarea className="w-full bg-white/5 rounded p-2" rows={3} value={post.slides[i]} onChange={(e) => patch(post.id, { slides: post.slides.map((s, k) => (k === i ? e.target.value : s)) })} />
@@ -1318,7 +1319,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     <span className="text-white/60">Caption</span>
                     <textarea className="w-full bg-white/5 rounded p-2" rows={6} value={post.caption} onChange={(e) => patch(post.id, { caption: e.target.value })} />
                   </label>
-                  <p className="md:col-span-2 text-white/50">{tagsOf(post).join(" ") || (post.four ? "Type her area above and the 5 hashtags appear here" : "")}</p>
+                  <p className="md:col-span-2 text-white/50">{tagsOf(post).join(" ") || (post.four || post.one ? "Type her area above and the 5 hashtags appear here" : "")}</p>
                   <label className="space-y-1 block md:col-span-2">
                     <span className="text-white/60">Anything extra for this one (optional)</span>
                     <input className="w-full bg-white/5 rounded p-2" value={post.note} onChange={(e) => patch(post.id, { note: e.target.value })} placeholder="A detail to include" />
@@ -1353,6 +1354,7 @@ const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null 
   { id: "mens", label: "Men", Comp: lazyTab(() => import("./mens")) },
   { id: "november", label: "November", Comp: lazyTab(() => import("./november-posts")) },
   { id: "newxmas", label: "NEWXMAS", Comp: lazyTab(() => import("./newxmas-tab")) },
+  { id: "xmasfeels", label: "XMAS FEELS", Comp: lazyTab(() => import("./xmasfeels-tab")) },
   { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./xmas-tab")) },
   { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
   { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
