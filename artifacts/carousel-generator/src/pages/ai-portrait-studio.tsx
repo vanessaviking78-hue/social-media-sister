@@ -811,7 +811,86 @@ const MIX_STYLES: { value: string; label: string }[] = [
   { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
 ];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const TEXTBLAZE_PRESETS: (PhotoStudioPreset & { group: string; defaultColour?: string })[] = [
+  { id: "tb-01", name: "Xmas Jumper", hasColour: false, group: "LUXURY XMAS" },
+  { id: "tb-02", name: "Pine Branches Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "green" },
+  { id: "tb-03", name: "Faux-Fur Hood Close-Up", hasColour: false, group: "LUXURY XMAS", defaultColour: "silver" },
+  { id: "tb-04", name: "Autumn Vintage Glamour", hasColour: false, group: "LUXURY XMAS", defaultColour: "burgundy" },
+  { id: "tb-05", name: "Cabin And Truck Scene", hasColour: false, group: "LUXURY XMAS", defaultColour: "red" },
+  { id: "tb-06", name: "Y2K Autumn Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "beige" },
+  { id: "tb-07", name: "Gothic Staircase Christmas", hasColour: false, group: "LUXURY XMAS", defaultColour: "black" },
+  { id: "tb-08", name: "Chunky Sweater Winter Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "cream" },
+  { id: "tb-09", name: "Mrs Claus Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "red" },
+  { id: "tb-10", name: "Pastel Antlers Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "pastel pink" },
+  { id: "tb-11", name: "Festive AF Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "pink" },
+  { id: "tb-12", name: "Glass Sphere Ornament Scene", hasColour: false, group: "LUXURY XMAS", defaultColour: "red" },
+  { id: "tb-13", name: "Fireplace And Tree Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "red" },
+  { id: "tb-14", name: "Black Satin Jumpsuit Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "black" },
+  { id: "tb-15", name: "Book And Soft Light Portrait", hasColour: false, group: "LUXURY XMAS", defaultColour: "monochrome" },
+  { id: "tb-16", name: "Xmas Stairs", hasColour: false, group: "LUXURY XMAS" },
+  { id: "tb-17", name: "Dreamy Moon Pyjamas Scene", hasColour: false, group: "CLIENT SHOTS", defaultColour: "pink" },
+  { id: "tb-18", name: "Microneedling Book Close-Up", hasColour: false, group: "CLIENT SHOTS", defaultColour: "beige" },
+  { id: "tb-19", name: "Festive Cozy Jumper Scene", hasColour: false, group: "CLIENT SHOTS", defaultColour: "lilac" },
+  { id: "tb-20", name: "Candy Cane Dream Room", hasColour: false, group: "CLIENT SHOTS", defaultColour: "blue" },
+  { id: "tb-21", name: "Lilac Marble Foyer", hasColour: false, group: "CLIENT SHOTS", defaultColour: "lilac" },
+  { id: "tb-22", name: "Baby Blue Christmas Staircase", hasColour: false, group: "CLIENT SHOTS", defaultColour: "baby blue" },
+  { id: "tb-23", name: "High-Fashion Business Portrait", hasColour: false, group: "CLIENT SHOTS", defaultColour: "black" },
+  { id: "tb-24", name: "Velvet Couch Magazine Moment", hasColour: false, group: "CLIENT SHOTS", defaultColour: "white" },
+  { id: "tb-25", name: "Studio Sweater Portrait", hasColour: false, group: "CLIENT SHOTS", defaultColour: "brown" },
+  { id: "tb-26", name: "Red Couch Editorial Scene", hasColour: false, group: "CLIENT SHOTS", defaultColour: "red" },
+  { id: "tb-27", name: "Cinematic Glam Portrait", hasColour: false, group: "CLIENT SHOTS", defaultColour: "neutral" },
+  { id: "tb-28", name: "Lifestyle Desk Moment", hasColour: false, group: "CLIENT SHOTS", defaultColour: "cream" },
+  { id: "tb-29", name: "Black Background Power Portrait", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-30", name: "Grey Backdrop Studio Stare", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-31", name: "Half Length Rembrandt", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-32", name: "High-Contrast Flash Laugh", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-33", name: "Chiaroscuro Confidence", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-34", name: "Tailored Authority Pose", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-35", name: "Side-Lit Vintage Texture", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-36", name: "Intense Eyes Close Crop", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-37", name: "Intense Eyes Close Crop In Scrubs", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-38", name: "Smirk Shallow Depth", hasColour: false, group: "DAVID BAILEY-ESQUE" },
+  { id: "tb-39", name: "Autumn Fence Y2K", hasColour: false, group: "LIFESTYLE" },
+  { id: "tb-40", name: "Seated Satin Jumpsuit Portrait", hasColour: false, group: "LIFESTYLE" },
+  { id: "tb-41", name: "On Front Reading", hasColour: false, group: "LIFESTYLE" },
+  { id: "tb-42", name: "Winking Selfie Close Up", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-43", name: "Black And White Half Body Studio Portrait", hasColour: false, group: "AI PHOTOSHOOTS", defaultColour: "pink" },
+  { id: "tb-44", name: "Colour Pop Profile", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-45", name: "Clinic Consultation", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-46", name: "Saying Goodbye At Reception", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-47", name: "Lip Filler Side Profile", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-48", name: "Skin Scanner", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-49", name: "Jaw Assessment", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-50", name: "Clinic Consult In Black Scrubs", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-51", name: "Preparing The Treatment Bed", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-52", name: "Client Mirror Reveal", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-53", name: "Stood In Clinic", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-54", name: "Why I Became", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-55", name: "Luxury Apartment Selfie", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-56", name: "Hand Hearts", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-57", name: "Extreme Close Up", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-58", name: "Black And White Close Up", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-59", name: "Black And White Portrait", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-60", name: "Editorial Stool", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-61", name: "Magazine Cover Energy", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-62", name: "Stroll Towards Camera", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-63", name: "Portrait Colour Halo", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-64", name: "Sage Scrubs Medic Portrait", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-65", name: "Triumph Power Stance", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-66", name: "Injector Close Up", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-67", name: "Injector In Motion", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-68", name: "Editorial Business", hasColour: false, group: "AI PHOTOSHOOTS" },
+  { id: "tb-69", name: "Mid-Procedure Precision Shot", hasColour: false, group: "AI PHOTOSHOOTS", defaultColour: "black" },
+  { id: "tb-70", name: "Consultation With Female Patient 40 Plus", hasColour: false, group: "CLINICAL JAN" },
+  { id: "tb-71", name: "Consultation With Male Patient 40 Plus", hasColour: false, group: "CLINICAL JAN" },
+  { id: "tb-72", name: "Explaining The Treatment Plan", hasColour: false, group: "CLINICAL JAN" },
+  { id: "tb-73", name: "Reviewing The Facial Assessment", hasColour: false, group: "CLINICAL JAN" },
+  { id: "tb-74", name: "Female Patient Pre-Treatment", hasColour: false, group: "CLINICAL JAN" },
+  { id: "tb-75", name: "Male Patient Pre-Treatment", hasColour: false, group: "CLINICAL JAN" },
+];
+const TEXTBLAZE_GROUPS = ["LUXURY XMAS", "CLIENT SHOTS", "DAVID BAILEY-ESQUE", "LIFESTYLE", "AI PHOTOSHOOTS", "CLINICAL JAN"];
+
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...TEXTBLAZE_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -1037,7 +1116,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "textblaze" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1141,6 +1220,7 @@ export default function AiPortraitStudio() {
         ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("nx-") ? { promptVars: { xmasColour: newXmasColour.trim() || "red" } } : {}),
         ...(id.startsWith("rx-") ? { promptVars: { xmasColour: realXmasColour.trim() || "red" } } : {}),
+        ...(id.startsWith("tb-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || TEXTBLAZE_PRESETS.find((p) => p.id === id)?.defaultColour || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
       if (id.startsWith("sr-") && roomPhotoUrl) {
@@ -1824,6 +1904,7 @@ export default function AiPortraitStudio() {
                 { key: "halloween", label: "HALLOWEEN" },
                 { key: "newxmas", label: "NEW XMAS" },
                 { key: "realxmas", label: "REALISTIC XMAS" },
+                { key: "textblaze", label: "TEXTBLAZE" },
                 { key: "xmas", label: "XMAS" },
                 { key: "xmascouples", label: "XMAS COUPLES" },
                 { key: "casual", label: "CASUAL" },
@@ -2630,6 +2711,68 @@ export default function AiPortraitStudio() {
     );
   })}
 </div>
+</>
+)}
+
+{activeSection === "textblaze" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">TEXTBLAZE</p>
+<p className="text-xs text-muted-foreground mb-3">All your TextBlaze image prompts in one place, grouped by their TextBlaze folder. Face lock is on for every one. Where a prompt has a colour, tick it and type the colour you want (blank uses the TextBlaze default). Tick up to 30 per run.</p>
+{TEXTBLAZE_GROUPS.map((group) => (
+  <div key={group} className="mb-5">
+    <div className="flex items-center gap-3 mb-2">
+      <p className="text-xs font-bold uppercase tracking-wide">{group}</p>
+      <button
+        type="button"
+        className="text-[11px] underline text-muted-foreground"
+        onClick={() => setSelectedPresets((prev) => { const n = new Set(prev); TEXTBLAZE_PRESETS.filter((p) => p.group === group).forEach((p) => n.add(p.id)); return n; })}
+      >
+        Select this folder
+      </button>
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+      {TEXTBLAZE_PRESETS.filter((p) => p.group === group).map((preset) => {
+        const isSelected = selectedPresets.has(preset.id);
+        return (
+          <div
+            key={preset.id}
+            className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+              isSelected ? "border-violet-500/70 bg-violet-500/10" : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+            }`}
+            onClick={() => togglePreset(preset.id)}
+          >
+            <div className="flex items-start gap-2.5">
+              <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+              }`}>
+                {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                {preset.defaultColour && (
+                  <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                    colour
+                  </Badge>
+                )}
+                {preset.defaultColour && isSelected && (
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={presetColours[preset.id] ?? ""}
+                      onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                      placeholder={`colour (default ${preset.defaultColour})`}
+                      className="w-full h-7 rounded border border-border/40 bg-background px-2 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+))}
 </>
 )}
 
