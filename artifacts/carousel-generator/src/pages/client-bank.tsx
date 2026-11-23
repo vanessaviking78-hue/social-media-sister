@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Archive, CalendarClock, Send, Trash2, Loader2, RefreshCcw, Copy, Check } from "lucide-react";
+import { Archive, CalendarClock, CalendarCheck, Send, Trash2, Loader2, RefreshCcw, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
@@ -27,6 +27,21 @@ type BankPost = {
   createdAt: string;
 };
 
+// Monday, Wednesday, Friday and Sunday are the posting days. The first date she gives is moved forward to the next one of those if it is not already.
+const POST_DAYS = [0, 1, 3, 5];
+const sameDayAt = (d: Date, hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const x = new Date(d); x.setHours(h || 9, m || 0, 0, 0); return x; };
+function postingDates(first: string, count: number, hhmm: string): Date[] {
+  const [y, m, d] = first.split("-").map(Number);
+  const cur = new Date(y, m - 1, d);
+  const out: Date[] = [];
+  while (out.length < count) {
+    if (POST_DAYS.includes(cur.getDay())) out.push(sameDayAt(cur, hhmm));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+const fmtDay = (d: Date) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+
 export default function ClientBank() {
   const { presets } = usePresets();
   const [posts, setPosts] = useState<BankPost[]>([]);
@@ -36,6 +51,9 @@ export default function ClientBank() {
   const [approvalTarget, setApprovalTarget] = useState<BankPost | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [firstDate, setFirstDate] = useState("");
+  const [postTime, setPostTime] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -96,6 +114,31 @@ export default function ClientBank() {
     ? `${window.location.origin}${BASE}/bank/${safeClientSlug(selectedPreset.name)}`
     : "";
 
+  // Everything waiting for this client goes out oldest first, on Monday, Wednesday, Friday and Sunday from the date she gives.
+  const queue = selectedPreset ? [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) : [];
+  const timeFor = postTime || selectedPreset?.defaultPostTime || "09:00";
+  const plan = firstDate && queue.length ? postingDates(firstDate, queue.length, timeFor) : [];
+
+  async function scheduleAllFromDate() {
+    if (!selectedPreset || !plan.length) return;
+    if (!confirm(`Schedule ${queue.length} post${queue.length !== 1 ? "s" : ""} for ${selectedPreset.name}, from ${fmtDay(plan[0])} to ${fmtDay(plan[plan.length - 1])}, on Monday, Wednesday, Friday and Sunday?`)) return;
+    setBulkBusy(true);
+    let done = 0;
+    for (const [n, post] of queue.entries()) {
+      try {
+        const r = await fetch(`${BASE}/api/scheduler/posts/${post.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "pending", scheduledAt: plan[n].toISOString() }) });
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Could not schedule it");
+        done++;
+        setPosts((prev) => prev.filter((p) => p.id !== post.id));
+      } catch (e) {
+        toast.error(`Stopped after ${done}: ${e instanceof Error ? e.message : "something failed"}`);
+        break;
+      }
+    }
+    setBulkBusy(false);
+    if (done) toast.success(`${done} scheduled, ${fmtDay(plan[0])} to ${fmtDay(plan[done - 1])}. They are in the scheduler now.`);
+  }
+
   function copyBankLink() {
     if (!bankLink) return;
     navigator.clipboard.writeText(bankLink);
@@ -140,6 +183,24 @@ export default function ClientBank() {
           )}
           <span className="text-sm text-muted-foreground ml-auto">{filtered.length} item{filtered.length !== 1 ? "s" : ""} in the Bank</span>
         </div>
+
+        {selectedPreset && queue.length > 0 && (
+          <div className="rounded-xl border border-pink-500/40 bg-pink-500/5 p-4 space-y-3">
+            <p className="text-sm font-semibold flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-pink-400" /> Schedule all {queue.length} for {selectedPreset.name}</p>
+            <p className="text-xs text-muted-foreground">Pick the date of the first post. The rest go out one at a time on Monday, Wednesday, Friday and Sunday, oldest first, and land in the scheduler.</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="text-xs space-y-1 block"><span className="text-muted-foreground">First post date</span>
+                <input type="date" value={firstDate} onChange={(e) => setFirstDate(e.target.value)} className="block bg-white/5 border border-border/50 rounded-lg px-3 py-2 text-sm" /></label>
+              <label className="text-xs space-y-1 block"><span className="text-muted-foreground">Time</span>
+                <input type="time" value={timeFor} onChange={(e) => setPostTime(e.target.value)} className="block bg-white/5 border border-border/50 rounded-lg px-3 py-2 text-sm" /></label>
+              <button disabled={!plan.length || bulkBusy} onClick={() => void scheduleAllFromDate()} className="px-4 py-2 rounded-lg bg-pink-500 text-white text-sm font-semibold flex items-center gap-1.5 hover:bg-pink-400 disabled:opacity-40">
+                {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />} Schedule all {queue.length}
+              </button>
+            </div>
+            {plan.length > 0 && <p className="text-xs text-white/70">First post {fmtDay(plan[0])}{new Date(firstDate + "T00:00:00").toDateString() !== plan[0].toDateString() ? " (the next posting day after the date you picked)" : ""}, last post {fmtDay(plan[plan.length - 1])}.</p>}
+          </div>
+        )}
+        {!selectedPreset && !loading && filtered.length > 0 && <p className="text-xs text-muted-foreground">Choose a client above to schedule all of their waiting posts in one go.</p>}
 
         {loading && (
           <div className="flex items-center gap-2 text-muted-foreground text-sm py-12 justify-center">
