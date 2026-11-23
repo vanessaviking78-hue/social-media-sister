@@ -285,6 +285,28 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     freehold: "Freehold Socials is 49 a month."
   };
 
+  var COMMENTS = [
+    "Best post I have seen all day.",
+    "Great to see you getting your face out there. It really works.",
+    "This made me smile. Thank you for sharing it.",
+    "Love this so much. Saving it for later.",
+    "Your page is gorgeous. Everything looks so welcoming.",
+    "I needed to see this today. Thank you.",
+    "Such a lovely way to put it. Well said.",
+    "The photos here are stunning. Who took them?",
+    "Brilliant idea. I am stealing this one.",
+    "You always show up so consistently. It really shows.",
+    "This is exactly the sort of thing I love seeing on my feed.",
+    "Honestly, one of the best pages I have come across this month.",
+    "Congratulations, this is well deserved.",
+    "Your clients are so lucky to have you.",
+    "Love the honesty in this. So refreshing.",
+    "What a transformation. Brilliant work.",
+    "This deserves so many more likes. Sharing it.",
+    "I love your style. Everything on your page feels like you.",
+    "Great tip. I did not know that. Thank you.",
+    "Happy Monday to you. Your posts always brighten my feed."
+  ];
   var S = { name: "", list: "", mode: {}, rec: null, root: null };
 
   function myLists() { return CT.cfg.lists && CT.cfg.lists.length ? CT.cfg.lists : ["sms"]; }
@@ -397,6 +419,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       ["today", "Today", v.today.length],
       ["followup", "Follow up", v.due.length],
       ["booked", "Call booked", bookedCount],
+      ["engage", "Engage", null],
       ["scripts", "Scripts", null],
       ["start", "Start here", null]
     ];
@@ -408,6 +431,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     if (P.tab === "today") body.innerHTML = todayHtml(v);
     else if (P.tab === "followup") body.innerHTML = followupHtml(v);
     else if (P.tab === "booked") body.innerHTML = bookedHtml(v);
+    else if (P.tab === "engage") body.innerHTML = engageHtml();
     else if (P.tab === "scripts") { var h = document.createElement("div"); body.appendChild(h); CT.scripts(h); }
     else body.innerHTML = startHtml();
   }
@@ -466,6 +490,15 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     return h + "</div>";
   }
 
+  function engageHtml() {
+    var h = '<div class="card"><h2>Engage</h2><p class="hint">Warm people up before you message them. Like and comment on 3 of their recent posts first, so your name is already familiar when your DM lands. Tap a comment to copy it, then paste it on their post. Change a word or two each time so it never looks copied.</p>' +
+      '<div class="ct-numbers"><b>Daily habit.</b> Comment on 10 posts before you start your 50 messages. Always comment as a person, never mention selling.</div>';
+    h += COMMENTS.map(function (c, i) {
+      return '<div class="ct-row"><div class="ct-who"><b>' + (i + 1) + '.</b> ' + esc(c) + '</div><div class="ct-acts"><button class="btn-copy" data-copyc="' + i + '">Copy</button></div></div>';
+    }).join("");
+    return h + "</div>";
+  }
+
   function startHtml() {
     var d = P.d, lists = d.me.lists;
     var links = lists.map(function (l) { return "<li><b>" + esc(LIST_NAMES[l]) + ":</b> " + esc(linkFor(l)) + "</li>"; }).join("");
@@ -479,6 +512,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       "<li><b>Follow up.</b> Three working days after you message someone, they appear in the Follow up tab. Send one friendly follow up, then tick <b>Followed up</b>. That is the only reminder they ever get, so you never chase twice.</li>" +
       "<li><b>Replies.</b> Check your Instagram inbox (the pink button at the top). When someone replies, tick <b>They replied</b> in the Follow up tab or find them in Call booked. Once a call is in the diary, tick <b>Call booked</b>.</li>" +
       "<li><b>Always use your own link</b> when you send one. That is how your sign ups are counted and how your commission is worked out.</li>" +
+      "<li><b>Engage.</b> Before you message people, like and comment on a few of their posts using the ready made comments in the Engage tab. It warms them up.</li>" +
       "<li><b>Scripts.</b> Every script has three versions: a message you copy, a voicenote script, and a phone call guide. Type their first name and everything fills in.</li>" +
       "</ol>" +
       "<h3 class=\"ct-h3\">Your links</h3><ul>" + links + "</ul>" +
@@ -513,6 +547,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       }, function (e) { t.disabled = false; toast(e.message); });
       return;
     }
+    var cc = t.getAttribute("data-copyc");
+    if (cc !== null) { copy(t, COMMENTS[parseInt(cc, 10)]); return; }
     var ln = t.getAttribute("data-list");
     if (ln) { S.list = ln; drawScripts(); return; }
     var m = t.getAttribute("data-mode");
