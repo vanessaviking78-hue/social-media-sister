@@ -981,6 +981,65 @@ export default function UniversalPage() {
     patch(post.id, { scheduling: false });
   };
 
+  // Everything they offer at once. Opens all six posts for every treatment on their filled in list, then writes the words for each.
+  const [theirIds, setTheirIds] = useState<string[]>([]);
+  useEffect(() => {
+    let live = true;
+    setTheirIds([]);
+    if (!preset) return;
+    fetch(`${BASE}/api/client-treatments/by-client?name=${encodeURIComponent(preset.name)}`)
+      .then((r) => r.json())
+      .then((d: { client?: { treatments?: string[] } | null }) => { if (live) setTheirIds(d.client?.treatments ?? []); })
+      .catch(() => undefined);
+    return () => { live = false; };
+  }, [preset?.id]);
+  const theirList = useMemo(() => {
+    const ids = forcedClient?.treatmentIds ?? theirIds;
+    return U_TREATMENTS.filter((x) => ids.includes(x.id));
+  }, [forcedClient, theirIds]);
+  const [allBusy, setAllBusy] = useState("");
+  const makeAll = async () => {
+    if (!preset) {
+      toast.error("Pick the client first");
+      return;
+    }
+    if (!area.trim()) {
+      toast.error("Type the clinic's area first, so the hashtags are local");
+      return;
+    }
+    const open = new Set(posts.map((p) => p.key));
+    const fresh: Post[] = [];
+    const noPhotos: string[] = [];
+    for (const x of theirList) {
+      if (!(libBy.get(x.id) ?? []).length) {
+        noPhotos.push(x.name);
+        continue;
+      }
+      for (const t of postTypesFor(x)) {
+        if (open.has(t.key) || scheduled[keyOf(t.key)]) continue;
+        fresh.push({ id: uid(), key: t.key, treatmentId: x.id, index: t.index, headline: t.headline, subtitle: "", slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3].map((i) => t.index * 4 + i), note: "", when: nextDay(preset.defaultPostTime ?? "09:00"), busy: false, scheduling: false });
+      }
+    }
+    if (!fresh.length) {
+      toast.info(noPhotos.length ? `Nothing to make. These have no photos yet: ${noPhotos.join(", ")}` : "Everything on their list is already open or scheduled");
+      return;
+    }
+    if (!window.confirm(`This opens ${fresh.length} posts across ${theirList.length - noPhotos.length} treatments and writes the words for every one. Carry on?`)) return;
+    setPosts((l) => [...fresh, ...l]);
+    setAllBusy(`0 of ${fresh.length}`);
+    let done = 0;
+    const queue = [...fresh];
+    const worker = async () => {
+      for (let p = queue.shift(); p; p = queue.shift()) {
+        await write(p);
+        done++;
+        setAllBusy(`${done} of ${fresh.length}`);
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setAllBusy("");
+    toast.success(`Done. ${fresh.length} posts are open below, ready to check.${noPhotos.length ? ` No photos yet for ${noPhotos.join(", ")}.` : ""}`);
+  };
   // Every open post that has its words written and is not already scheduled, one per day from the first date.
   const [bulkBusy, setBulkBusy] = useState("");
   const ready = posts.filter((p) => p.caption && !scheduled[keyOf(p.key)]);
@@ -1128,6 +1187,13 @@ export default function UniversalPage() {
               <Button variant="secondary" disabled={!!libBusy} onClick={() => folderRef.current?.click()}><FolderUp className="w-4 h-4 mr-2" />Upload my Universal images folder</Button>
             </div>
           </div>
+          {preset && theirList.length > 0 && (
+            <div className="rounded-lg border border-white/10 p-3 flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-white/70">{preset.name} has filled in their list: {theirList.length} treatment{theirList.length === 1 ? "" : "s"}</span>
+              <Button size="sm" disabled={!!allBusy || !!bulkBusy} onClick={makeAll}><Sparkles className="w-4 h-4 mr-2" />Do all their treatments at once</Button>
+              {allBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Writing {allBusy}</span>}
+            </div>
+          )}
           <div className="flex gap-2 flex-wrap">
             {offeredGroups.map((g) => (
               <button key={g.id} onClick={() => { setGroupId(g.id); setTreatmentId(offered.find((x) => x.group === g.id)!.id); }} className={`px-3 py-1.5 rounded-full text-sm border ${groupId === g.id ? "bg-white text-black border-white" : "border-white/20 text-white/80"}`}>{g.label}</button>
