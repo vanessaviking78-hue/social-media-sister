@@ -106,6 +106,14 @@ function ensureTables(): Promise<void> {
       )
     `);
     await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS crm_team_clicks (
+        id BIGSERIAL PRIMARY KEY,
+        slug TEXT NOT NULL,
+        target TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `);
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS crm_team_topup (
         slug TEXT NOT NULL,
         day DATE NOT NULL,
@@ -164,10 +172,25 @@ type Row = {
 };
 const dateOnly = (v: unknown) => (v ? (v instanceof Date ? v.toISOString() : String(v)).slice(0, 10) : null);
 
+// The Xmas photoshoot and free sample links go through /api/go so every open is counted against the person who sent it.
 const linksFor = (slug: string) => ({
+  xmas: `${SITE}/api/go/xmas/${slug}`,
+  sample: `${SITE}/api/go/sample/${slug}`,
   sms: `${SITE}/signup?ref=${slug}`,
   hammered: `${SITE}/hammeredfreebies?ref=${slug}`,
   freehold: `${SITE}/freeholdfreebies?ref=${slug}`,
+});
+
+const GO_TARGETS: Record<string, string> = { xmas: "/xmasshoot", sample: "/premiumfreebies" };
+router.get("/go/:target/:slug", async (req: Request, res: Response) => {
+  const target = GO_TARGETS[String(req.params.target)];
+  const slug = String(req.params.slug ?? "").toLowerCase();
+  if (!target) { res.status(404).send("Not found"); return; }
+  const known = TEAM.some((m) => m.slug === slug);
+  if (known) {
+    try { await ensureTables(); await db.execute(sql`INSERT INTO crm_team_clicks (slug, target) VALUES (${slug}, ${String(req.params.target)})`); } catch { /* a missed count must never stop the link working */ }
+  }
+  res.redirect(302, `${SITE}${target}${known ? `?ref=${encodeURIComponent(slug)}` : ""}`);
 });
 
 router.post("/crm-team/login", (req: Request, res: Response) => {
@@ -369,6 +392,9 @@ router.get("/crm-team/summary", requireAdmin, async (req: Request, res: Response
       data.filter((r) => r.assigned_to === slug && pick(r)).reduce((a, r) => a + r.n, 0);
     const taken = await db.execute(sql`SELECT list, COUNT(*)::int AS n FROM crm_team_leads GROUP BY list`);
     const takenBy = new Map((taken.rows as Array<{ list: string; n: number }>).map((r) => [r.list, r.n]));
+    const clickRows = await db.execute(sql`SELECT slug, target, COUNT(*)::int AS n FROM crm_team_clicks GROUP BY slug, target`);
+    const clicks = clickRows.rows as Array<{ slug: string; target: string; n: number }>;
+    const clickOf = (slug: string, target: string) => clicks.find((c) => c.slug === slug && c.target === target)?.n ?? 0;
     const all = await allLeads();
     const origin = `${req.header("x-forwarded-proto") || req.protocol}://${req.header("x-forwarded-host") || req.get("host")}`;
     res.json({
@@ -378,7 +404,7 @@ router.get("/crm-team/summary", requireAdmin, async (req: Request, res: Response
         return { list: l, total, left: Math.max(0, total - (takenBy.get(l) ?? 0)) };
       }),
       team: TEAM.map((m) => ({
-        slug: m.slug, name: m.name, lists: m.lists, password: passwordFor(m.slug),
+        slug: m.slug, name: m.name, lists: m.lists, password: passwordFor(m.slug), xmasOpens: clickOf(m.slug, "xmas"), sampleOpens: clickOf(m.slug, "sample"),
         messaged: tally(m.slug, (r) => r.status !== "New" && r.status !== "Not relevant"),
         followed: tally(m.slug, (r) => r.followed_up),
         replied: tally(m.slug, (r) => ["Replied", "Call booked", "Signed"].includes(r.status)),

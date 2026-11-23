@@ -164,11 +164,11 @@ export const CRM_TEAM_UI_JS: string = String.raw`
         ]
       },
       {
-        id: "blackfriday", title: "Black Friday offer", when: "Any warm lead. The offer runs until Black Friday, 27 November.",
-        msg: "Hi [name], quick one before Black Friday is over on 27 November. Social Media Sister has three offers on: 3 months for the price of 1 (500), 6 months for the price of 3 (1,500), or 12 months for the price of 6 (3,000). That is Vanessa looking after your social media while you get on with your clients. Have a look here and see what you think: [link]",
-        voice: "Hi [name], it's [my name] from Social Media Sister. I wanted you to hear about this before Black Friday ends on the 27th. We have 3 months for the price of 1, 6 months for the price of 3, or 12 months for the price of 6. It means Vanessa looks after your social media and you get your time back. I'll pop the link in a message so you can have a look. Have a lovely day.",
+        id: "blackfriday", title: "Black Friday offer", when: "Any warm lead. The offer runs until Black Friday, 30 November.",
+        msg: "Hi [name], quick one before it finishes on 30 November. Social Media Sister has three offers on: 3 months for the price of 1 (500), 6 months for the price of 3 (1,500), or 12 months for the price of 6 (3,000). That is Vanessa looking after your social media while you get on with your clients. Have a look here and see what you think: [link]",
+        voice: "Hi [name], it's [my name] from Social Media Sister. I wanted you to hear about this before it ends on the 30th. We have 3 months for the price of 1, 6 months for the price of 3, or 12 months for the price of 6. It means Vanessa looks after your social media and you get your time back. I'll pop the link in a message so you can have a look. Have a lovely day.",
         call: [
-          "Opener: Hi [name], it's [my name] from Social Media Sister. I'm ringing because our Black Friday offer finishes on the 27th and I didn't want you to miss it.",
+          "Opener: Hi [name], it's [my name] from Social Media Sister. I'm ringing because our offer finishes on the 30th and I didn't want you to miss it.",
           "Say it plainly: 3 months for the price of 1 (500), 6 months for the price of 3 (1,500), or 12 months for the price of 6 (3,000).",
           "Ask: Would having your social media taken off your plate be useful right now?",
           "Listen. If they say yes, go to the close. If they hesitate, ask what is holding them back.",
@@ -568,8 +568,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
         { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free." },
         { n: "3 months for the price of 1", p: "500", c: "125", note: "Two months free. A low risk way to start." },
         { n: "The 275 a month club", p: "275 a month", c: "68.75 on the first month", note: "For people who want to pay monthly. They join by messaging Vanessa on Instagram (@social_media_sister)." },
-        { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. A small easy yes that opens the door.", link: "https://www.thecybersuite.com/xmasshoot" },
-        { n: "Free sample", p: "free", c: "", note: "They fill in a form and Vanessa makes them free posts. The easiest first step for anyone unsure.", link: "https://www.thecybersuite.com/premiumfreebies" }
+        { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours. Your own tracked link:", key: "xmas" },
+        { n: "Free sample", p: "free", c: "", note: "They fill in a form and Vanessa makes them free posts. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours. Your own tracked link:", key: "sample" }
       ],
       comm: "You earn 25% of anything you bring in, at the time of sign up.",
       open: "Who looks after your social media at the moment, you or somebody else?"
@@ -595,7 +595,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   function offersHtml(x) {
     if (!x.offers) return "";
     return x.offers.map(function (o, i) {
-      return "\n" + (i + 1) + ". <b>" + esc(o.n) + "</b>, " + (o.p === "free" ? "free" : "\u00a3" + esc(o.p)) + (o.c ? ". You earn \u00a3" + esc(o.c) : "") + ". " + esc(o.note) + (o.link ? " Link: " + esc(o.link) : "");
+      return "\n" + (i + 1) + ". <b>" + esc(o.n) + "</b>, " + (o.p === "free" ? "free" : "\u00a3" + esc(o.p)) + (o.c ? ". You earn \u00a3" + esc(o.c) : "") + ". " + esc(o.note) + (o.key ? " " + esc((P.d.me.links && P.d.me.links[o.key]) || "") : "");
     }).join("");
   }
 
@@ -720,11 +720,11 @@ export const CRM_TEAM_UI_JS: string = String.raw`
         var teamLink = origin + "/api/crm-team?who=" + m.slug;
         return "<tr><td><b>" + esc(m.name) + "</b><div class=\"ct-by\">" + m.lists.map(function (l) { return esc(LIST_NAMES[l]); }).join(", ") + "</div></td>" +
           '<td><a class="profile-link" href="' + esc(teamLink) + '" target="_blank" rel="noopener">Team CRM link</a> <button class="btn-copy" data-cp="' + esc(teamLink) + '">Copy</button><div class="ct-by">Password: ' + esc(m.password || m.slug + "botox") + "</div></td>" +
-          "<td>" + m.messaged + "</td><td>" + m.followed + "</td><td>" + m.replied + "</td><td>" + m.booked + "</td><td>" + m.signed + "</td></tr>";
+          "<td>" + m.messaged + "</td><td>" + m.followed + "</td><td>" + m.replied + "</td><td>" + m.booked + "</td><td>" + m.signed + "</td><td>" + (m.xmasOpens || 0) + "</td><td>" + (m.sampleOpens || 0) + "</td></tr>";
       }).join("");
       var stock = d.stock.map(function (s) { return "<b>" + esc(LIST_NAMES[s.list]) + ":</b> " + s.total + " leads, " + s.left + " not given out yet"; }).join(" &nbsp;|&nbsp; ");
       root.querySelector("#ctt-body").innerHTML = '<div class="ct-numbers">' + stock + "</div>" +
-        '<table><thead><tr><th>Who</th><th>Their link</th><th>Messaged</th><th>Followed up</th><th>Replied</th><th>Call booked</th><th>Signed</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+        '<table><thead><tr><th>Who</th><th>Their link</th><th>Messaged</th><th>Followed up</th><th>Replied</th><th>Call booked</th><th>Signed</th><th>Xmas link opens</th><th>Sample link opens</th></tr></thead><tbody>' + rows + "</tbody></table>" +
         '<p class="hint" style="margin-top:12px;">Sign ups through their own links are counted on the sales dashboards. Signed is only counted once you have confirmed it there.</p>';
       root.querySelector("#ctt-body").className = "";
       root.querySelectorAll("[data-cp]").forEach(function (b) { b.onclick = function () { copy(b, b.getAttribute("data-cp")); }; });
