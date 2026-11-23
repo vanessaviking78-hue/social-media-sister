@@ -280,6 +280,7 @@ export default function ClientBank() {
 
       {scheduleTarget && (
         <ScheduleModal
+          allowBank={false}
           presetId={scheduleTarget.presetId}
           presetName={scheduleTarget.clientName}
           postType={scheduleTarget.postType}

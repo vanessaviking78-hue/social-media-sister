@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook, Download } from "lucide-react";
+import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook, Download, Archive } from "lucide-react";
 import { downloadAllImages, type DownloadItem } from "@/lib/download-images";
 import { nextOpenMWFSlots, nthPostingSlot, nthWeekendSlot, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
@@ -35,6 +35,8 @@ type AccountInfo = {
 };
 
 type Props = {
+  /** Show the "Add to Client Bank" button, which parks the post(s) with no date. On by default; the Client Bank page itself turns it off. */
+  allowBank?: boolean;
   presetId: number | null;
   presetName?: string;
   postType: string;
@@ -140,7 +142,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, weekendSlots, companionStories, onMoveStoryText }: Props) {
+export function ScheduleModal({ allowBank = true, presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, weekendSlots, companionStories, onMoveStoryText }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -259,6 +261,37 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   const effectivePresetId = activePresetId;
   const effectivePresetName = presetName ?? presets?.find((p) => p.id === activePresetId)?.name;
+
+  // Parks the post(s) in the Client Bank with no date, the same drafts the Client Bank page lists.
+  async function handleBank() {
+    const targets = broadcastMode ? Array.from(selectedPresetIds) : effectivePresetId === null ? [] : [effectivePresetId];
+    if (!targets.length) { toast.error(broadcastMode ? "Select at least one client" : "Select a client first"); return; }
+    setSaving(true);
+    let saved = 0;
+    try {
+      for (const targetPresetId of targets) {
+        for (const post of posts) {
+          const content: SchedulePostPayload = { caption: (perPostCaptions ? (post.caption ?? "") : caption).trim(), title: post.title, platforms: Array.from(platforms) };
+          if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
+          if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
+          if (!isReel && post.coverVideoUrl) content.coverVideoUrl = post.coverVideoUrl;
+          if (post.musicTrack) content.musicTrack = post.musicTrack;
+          if (post.firstComment) content.firstComment = post.firstComment;
+          if (sourceTool || post.sourceTool) content.sourceTool = sourceTool || post.sourceTool;
+          const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetPresetId, postType, content, status: "draft" }) });
+          if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Failed to save to the Client Bank"); }
+          saved++;
+        }
+      }
+      toast.success(`${saved} ${saved === 1 ? "post" : "posts"} added to the Client Bank, no date${companionStories?.length ? ". The stories were not added." : ""}`);
+      onSaved?.();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save to the Client Bank");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
@@ -677,6 +710,11 @@ const staggeredAt = (() => {
           <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white">
             Cancel
           </Button>
+          {allowBank && (
+            <Button variant="outline" onClick={handleBank} disabled={saving} className="border-zinc-700 text-zinc-200">
+              <Archive className="w-4 h-4 mr-1.5" />Add to Client Bank
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white">
             {saving ? "Scheduling..." : "Schedule"}
           </Button>
