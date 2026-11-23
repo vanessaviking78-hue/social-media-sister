@@ -564,8 +564,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       price: "The usual price is 500 a month. You can go down to 350 to win the deal.",
       offer: "Lead with the biggest package, because it earns you the most. If they hesitate, step down to the next one.",
       offers: [
-        { n: "12 months for the price of 6", p: "3,000", c: "750", note: "Best for you and best value for them. Six months free.", key: "m12" },
-        { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free.", key: "m6" },
+        { n: "12 months for the price of 6", p: "3,000", c: "750", note: "Best for you and best value for them. Six months free. If they are in West Yorkshire they also get a free content day with Vanessa.", key: "m12" },
+        { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free. If they are in West Yorkshire they also get a free content day with Vanessa.", key: "m6" },
         { n: "3 months for the price of 1", p: "500", c: "125", note: "Two months free. A low risk way to start.", key: "m3" },
         { n: "The 275 a month club", p: "275 a month", c: "68.75 on the first month", note: "For people who want to pay monthly. Their link opens the Black Friday page where this is the DIY portal option.", key: "club" },
         { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours.", key: "xmas" },
