@@ -469,6 +469,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       ["today", "Today", v.today.length],
       ["followup", "Follow up", v.due.length],
       ["booked", "Call booked", bookedCount],
+      ["sell", "What to sell", null],
       ["engage", "Engage", null],
       ["scripts", "Scripts", null],
       ["start", "Start here", null]
@@ -481,6 +482,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     if (P.tab === "today") body.innerHTML = todayHtml(v);
     else if (P.tab === "followup") body.innerHTML = followupHtml(v);
     else if (P.tab === "booked") body.innerHTML = bookedHtml(v);
+    else if (P.tab === "sell") body.innerHTML = sellHtml();
     else if (P.tab === "engage") body.innerHTML = engageHtml();
     else if (P.tab === "scripts") { var h = document.createElement("div"); body.appendChild(h); CT.scripts(h); }
     else body.innerHTML = startHtml();
@@ -555,6 +557,45 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     return h + "</div>";
   }
 
+  var SELL = {
+    sms: {
+      who: "Aesthetic clinics, injectors, dental and beauty businesses who post on Instagram.",
+      what: "Vanessa looks after their social media every week, so their page keeps going while they get on with their clients. She has seven years in aesthetics and has worked with over 500 businesses.",
+      price: "The usual price is 500 a month. You can go down to 350 to win the deal.",
+      offer: "Black Friday until 27 November: 6 months for the price of 4, or 12 months for the price of 6.",
+      comm: "You earn 25% of anything you bring in, at the time of sign up.",
+      open: "Who looks after your social media at the moment, you or somebody else?"
+    },
+    hammered: {
+      who: "Builders, plasterers, roofers and other tradespeople who want more work from social media.",
+      what: "Social media made for the building trade. They try a bundle of freebies first, then Hammered keeps their page going without it taking over their evenings. Vanessa has worked on a building site herself.",
+      price: "The usual price is 300 a month. You can go down to 250 to win the deal.",
+      offer: "Start them on the free bundle so they can see it working before they pay.",
+      comm: "You earn 20% of the first 3 months' fee, at the time of sign up.",
+      open: "Who looks after your social media at the moment? Does it bring you any work?"
+    },
+    freehold: {
+      who: "Pubs and bars with an Instagram page, and the landlords or managers who run it.",
+      what: "Ready to post content for pubs and bars, so there is always something good to share for the regulars and it stops being another job.",
+      price: "49 a month.",
+      offer: "Start them on the free pub posts so they can see what it looks like for their pub.",
+      comm: "Ask Vanessa for the commission on Freehold.",
+      open: "Who looks after your social media at the moment, you or somebody on the team?"
+    }
+  };
+
+  function sellHtml() {
+    var lists = P.d.me.lists;
+    var h = '<div class="card"><h2>What to sell</h2><p class="hint">Look at the person you are messaging, pick the business that fits them, and use that link. If you are not sure, ask who looks after their social media and take it from there.</p>';
+    h += lists.map(function (l) {
+      var x = SELL[l];
+      return '<div class="dm-card"><div class="dm-title">' + esc(LIST_NAMES[l]) + "</div>" +
+        '<div class="dm-body"><b>Who it is for:</b> ' + esc(x.who) + "\n<b>What they get:</b> " + esc(x.what) + "\n<b>Price:</b> " + esc(x.price) + "\n<b>Offer to use:</b> " + esc(x.offer) + "\n<b>Your commission:</b> " + esc(x.comm) + "\n<b>Good first question:</b> " + esc(x.open) + "\n<b>Your link:</b> " + esc(linkFor(l)) + "</div>" +
+        '<button class="btn-copy" data-copylink="' + l + '">Copy my link</button></div>';
+    }).join("");
+    return h + "</div>";
+  }
+
   function startHtml() {
     var d = P.d, lists = d.me.lists;
     var links = lists.map(function (l) { return "<li><b>" + esc(LIST_NAMES[l]) + ":</b> " + esc(linkFor(l)) + "</li>"; }).join("");
@@ -568,6 +609,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       "<li><b>Follow up.</b> Three working days after you message someone, they appear in the Follow up tab. Send one friendly follow up, then tick <b>Followed up</b>. That is the only reminder they ever get, so you never chase twice.</li>" +
       "<li><b>Replies.</b> Check your Instagram inbox (the pink button at the top). When someone replies, tick <b>They replied</b> in the Follow up tab or find them in Call booked. Once a call is in the diary, tick <b>Call booked</b>.</li>" +
       "<li><b>Always use your own link</b> when you send one. That is how your sign ups are counted and how your commission is worked out.</li>" +
+      "<li><b>What to sell.</b> Not sure what to say you are selling? Open the What to sell tab for who each business is for, the price, the offer and your commission.</li>" +
       "<li><b>Engage.</b> Before you message people, like and comment on a few of their posts using the ready made comments in the Engage tab. It warms them up.</li>" +
       "<li><b>Scripts.</b> Every script has three versions: a message you copy, a voicenote script, and a phone call guide. Type their first name and everything fills in.</li>" +
       "</ol>" +
@@ -607,6 +649,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     if (gl) { P.goal = parseInt(gl, 10); try { localStorage.setItem("ct-goal", gl); } catch (e) {} drawPortal(); return; }
     var el = t.getAttribute("data-elist");
     if (el) { E.list = el; drawPortal(); return; }
+    var cl2 = t.getAttribute("data-copylink");
+    if (cl2) { copy(t, linkFor(cl2)); return; }
     var cc = t.getAttribute("data-copyc");
     if (cc !== null) { copy(t, COMMENTS[E.list][parseInt(cc, 10)]); return; }
     var ln = t.getAttribute("data-list");
