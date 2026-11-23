@@ -203,7 +203,7 @@ export default function ClientBank() {
               <button onClick={() => setPicked(chosen.length === allQueue.length ? new Set() : new Set(allQueue.map((p) => p.id)))} className="px-3 py-2 rounded-lg border border-border/50 text-sm">{chosen.length === allQueue.length ? "Untick all" : "Tick all"}</button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {([["Mondays", [1]], ["Wednesdays", [3]], ["Fridays", [5]], ["Sundays", [0]]] as [string, number[]][]).map(([label, d]) => (
+              {([["Mondays", [1]], ["Tuesdays", [2]], ["Wednesdays", [3]], ["Thursdays", [4]], ["Fridays", [5]], ["Sundays", [0]]] as [string, number[]][]).map(([label, d]) => (
                 <button key={label} disabled={bulkBusy} onClick={() => void scheduleOn(d, label)} className="px-4 py-2 rounded-lg bg-pink-500 text-white text-sm font-semibold hover:bg-pink-400 disabled:opacity-40">{label}</button>
               ))}
               <button disabled={bulkBusy} onClick={() => void scheduleOn(POST_DAYS, "Monday, Wednesday, Friday and Sunday")} className="px-4 py-2 rounded-lg border border-pink-500/60 text-sm font-semibold hover:bg-pink-500/10 disabled:opacity-40 flex items-center gap-1.5">
