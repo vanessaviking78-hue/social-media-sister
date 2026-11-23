@@ -19,7 +19,7 @@ import { drawHammeredSlide, HAMMERED_YELLOW, type HammeredStyle, type SlideKind,
 const INK = "#111111";
 const KINDS: SlideKind[] = ["hook", "body", "cta"];
 const KIND_LABEL: Record<SlideKind, string> = { hook: "Slide 1: the hook", body: "Slide 2: the body", cta: "Slide 3: the closing line" };
-const STYLE_LABEL: Record<HammeredStyle, string> = { gradient: "Gradient", box: "Text box", block: "Block" };
+const STYLE_LABEL: Record<HammeredStyle, string> = { fade: "Faded page", gradient: "Gradient", block: "Block strip", box: "Text box" };
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const noDashes = (t: string) => (t ?? "").replace(/[–—]/g, ", ").replace(/\s+,/g, ",");
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -327,10 +327,10 @@ function StyleControls({ look, onChange }: { look: Omit<SlideLook, "bodyFamily">
       <label className="l">Layout</label>
       <div className="hm-row">
         {(Object.keys(STYLE_LABEL) as HammeredStyle[]).map((s) => (
-          <button key={s} className={`b ${look.style === s ? "on" : ""}`} onClick={() => onChange({ style: s, colour: s === "gradient" ? "#000000" : HAMMERED_YELLOW })}>{STYLE_LABEL[s]}</button>
+          <button key={s} className={`b ${look.style === s ? "on" : ""}`} onClick={() => onChange({ style: s, colour: s === "gradient" || s === "fade" ? "#000000" : HAMMERED_YELLOW })}>{STYLE_LABEL[s]}</button>
         ))}
       </div>
-      <label className="l">{look.style === "gradient" ? "Gradient colour" : look.style === "box" ? "Box colour" : "Block colour"}</label>
+      <label className="l">{look.style === "gradient" || look.style === "fade" ? (look.style === "fade" ? "Faded page colour" : "Gradient colour") : look.style === "box" ? "Box colour" : "Block colour"}</label>
       <div className="hm-row" style={{ alignItems: "center" }}>
         {swatches.map((c) => <button key={c} className="hm-sw" aria-label={c} style={{ background: c, outline: look.colour === c ? `3px solid ${HAMMERED_YELLOW}` : "none" }} onClick={() => onChange({ colour: c })} />)}
         <input type="color" className="hm-sw" value={look.colour} onChange={(e) => onChange({ colour: e.target.value })} aria-label="Pick any colour" />

@@ -1,5 +1,5 @@
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
-import { BoxControls } from "@/components/box-controls";
+import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
@@ -36,7 +36,7 @@ const WASHES: Record<WashColour, { rgb: string; bg: string; light: boolean }> = 
   gold: { rgb: "201,162,74", bg: "#c9a24a", light: false },
   silver: { rgb: "201,204,209", bg: "#c9ccd1", light: false },
 };
-type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "white"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "silver"; block?: boolean ; box?: CoverBox };
+type Look = { wash: WashColour; opacity: number; text: "auto" | "black" | "white"; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: "auto" | "silver"; block?: boolean; flat?: boolean; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "white", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -121,7 +121,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "box">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "flat" | "box">>; // this post only; empty means the page setting
 };
 
 const TEMPLATES = [{ id: "t1", name: "1. Photo with white wash" }];
@@ -188,13 +188,14 @@ const sheenFill = (ctx: CanvasRenderingContext2D, v: string, y0: number, y1: num
 };
 // A solid block along the bottom of the page instead of the gradient. It takes the wash colour, so metallic gold and silver work too.
 function blockAt(ctx: CanvasRenderingContext2D, top: number, look: Look) {
-  const y = Math.max(0, Math.min(Math.round(H * 0.75), Math.round(top)));
+  const y = Math.max(0, Math.min(Math.round(H * 0.85), Math.round(top)));
   ctx.fillStyle = isSheen(look.wash) ? sheenFill(ctx, look.wash, y, H) : (WASHES[look.wash] || WASHES.white).bg;
   ctx.fillRect(0, y, W, H - y);
 }
 
 // The white wash: clear at the top, solid white by the bottom third.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
+  if (look.flat) { ctx.save(); ctx.globalAlpha = FLAT_ALPHA * Math.max(0, Math.min(100, look.opacity)) / 100; blockAt(ctx, 0, look); ctx.restore(); return; }
   const o = Math.max(0, Math.min(100, look.opacity)) / 100;
   const c = (WASHES[look.wash] || WASHES.white).rgb;
   const g = ctx.createLinearGradient(0, H * from, 0, H);
@@ -277,25 +278,25 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
       let size = Math.round(120 * ts);
       let layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
-      while (size > Math.round(50 * ts) && titleHeight(layout) > 330 * Math.max(1, ts)) {
+      while (size > (look.block ? 24 : Math.round(50 * ts)) && titleHeight(layout) > (look.block ? BLOCK_TEXT_H : 330 * Math.max(1, ts))) {
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
-      const ty = H - 175 - titleHeight(layout);
-      if (look.block) blockAt(ctx, ty - 90, look);
+      const ty = (look.block ? H - 65 : H - 175) - titleHeight(layout);
+      if (look.block) blockAt(ctx, H * (1 - BLOCK_PCT), look);
       drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline === "silver" ? silver(ctx, ty, ty + titleHeight(layout)) : INKC);
     } else {
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
-      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 330 * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
+      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, (look.block ? BLOCK_TEXT_H : 330 * Math.max(1, ts)), Math.round(92 * ts), (look.block ? 24 : Math.round(46 * ts)), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
-      let y = H - 175 - total;
-      if (look.block) { blockAt(ctx, y - 90, look); ctx.fillStyle = INKC; }
+      let y = (look.block ? H - 65 : H - 175) - total;
+      if (look.block) { blockAt(ctx, H * (1 - BLOCK_PCT), look); ctx.fillStyle = INKC; }
       if (look.headline === "silver") ctx.fillStyle = silver(ctx, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
     }
-    clinicName(ctx, f, H - 100, "center", GREYC);
+    clinicName(ctx, f, H - (look.block ? 52 : 100), "center", GREYC);
     return;
   }
 
@@ -437,7 +438,7 @@ function RyderPage() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
-  // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
+  // Makes 40 posts across the sections, cycling the four styles in turn, then writes the words for each one.
   const [making, setMaking] = useState("");
   const make40 = async () => {
     if (!area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
@@ -447,14 +448,14 @@ function RyderPage() {
     const order: typeof allTypes = [];
     for (let r = 0; order.length < 40 && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= 40) break; order.push(g[r % g.length]); }
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: { block: i % 2 === 1 } }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, hook: t.label, slides: ["", "", ""], cta: "", caption: "", hashtags: [], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: nextDay(preset?.defaultPostTime ?? "09:00"), busy: false, scheduling: false, look: styleForNumber(i) }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
       setMaking(`Writing post ${i + 1} of ${made.length}`);
       await write(made[i]);
     }
     setMaking("");
-    toast.success("40 posts made: 20 with a block, 20 with the gradient");
+    toast.success("40 posts made, cycling faded page, gradient, block strip, text box");
   };
 
   const patch = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
@@ -601,12 +602,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
           <div className="grid md:grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
               <span className="text-white/60">Bottom of the page (the default for every post)</span>
-              <div className="flex gap-2">
-                {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v, box: undefined }))} className={`flex-1 rounded-md border px-2 py-2 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-                ))}
-              </div>
-              <BoxControls box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b, block: b ? false : l.block }))} />
+              <StylePicker look={look} onPick={(p) => setLook((l) => ({ ...l, ...p }))} />
             </div>
             <div className="space-y-1">
               <span className="text-white/60">Gradient colour (the default for every post)</span>
@@ -617,7 +613,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
               </div>
             </div>
             <label className="space-y-1 block">
-              <span className="text-white/60">Gradient strength: {look.opacity}%</span>
+              <span className="text-white/60">Wash strength: {look.opacity}%</span>
               <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
             </label>
             <div className="space-y-1">
@@ -688,7 +684,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
-            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (20 block, 20 gradient)</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (4 styles in turn)</>}</Button>
             <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</>}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -770,12 +766,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-4 gap-3 text-xs items-end">
                   <div className="space-y-1">
                     <span className="text-white/60">This post: bottom of the page</span>
-                    <div className="flex gap-1">
-                      {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v, box: undefined } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{label}</button>
-                      ))}
-                    </div>
-                    <BoxControls box={lookFor(post).box} onChange={(b) => patch(post.id, { look: { ...post.look, box: b, block: b ? false : lookFor(post).block } })} />
+                    <StylePicker look={lookFor(post)} onPick={(p) => patch(post.id, { look: { ...post.look, ...p } })} />
                   </div>
                   <div className="space-y-1">
                     <span className="text-white/60">This post: gradient</span>

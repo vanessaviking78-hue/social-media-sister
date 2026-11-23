@@ -4,7 +4,7 @@ import { paintFor, isHexColour, flatHexOf } from "./metal-colours";
 // A text box cover: the whole photo stays clear and the hook sits inside one coloured box that can go anywhere on the page.
 // Shared by every client tool so the look is the same everywhere. Colours are a hex or a metallic finish ("metal:gold").
 export type CoverBox = { fill: string; text?: string; x: number; y: number; w?: number };
-export const DEFAULT_BOX: CoverBox = { fill: "#ffffff", x: 0.5, y: 0.5, w: 780 };
+export const DEFAULT_BOX: CoverBox = { fill: "#ffffff", x: 0.5, y: 0.78, w: 780 }; // sits in the lower part of the post
 
 const lum = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {

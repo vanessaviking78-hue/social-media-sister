@@ -2,13 +2,15 @@ import { ColourPicker } from "@/components/colour-picker";
 import { DEFAULT_BOX, type CoverBox } from "@/lib/cover-box";
 
 // The text box cover controls shared by every client tool: switch it on, pick the box and text colours (metallic too), then place and size it.
-export function BoxControls({ box, onChange, label = "Text box on the cover" }: { box?: CoverBox; onChange: (b: CoverBox | undefined) => void; label?: string }) {
+export function BoxControls({ box, onChange, label = "Text box on the cover", bare = false }: { box?: CoverBox; onChange: (b: CoverBox | undefined) => void; label?: string; bare?: boolean }) {
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-white/60">{label}</span>
-        <button type="button" onClick={() => onChange(box ? undefined : { ...DEFAULT_BOX })} className={`rounded border px-2 py-1 ${box ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{box ? "On" : "Off"}</button>
-      </div>
+      {!bare && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-white/60">{label}</span>
+          <button type="button" onClick={() => onChange(box ? undefined : { ...DEFAULT_BOX })} className={`rounded border px-2 py-1 ${box ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{box ? "On" : "Off"}</button>
+        </div>
+      )}
       {box && (
         <div className="space-y-2 rounded border border-white/10 p-2">
           <p className="text-white/50 text-xs">The whole photo shows with the hook in a coloured box. The slides after the cover keep the gradient.</p>

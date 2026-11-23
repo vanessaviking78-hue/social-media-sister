@@ -6,7 +6,7 @@ export const HH = 1350;
 export const HAMMERED_YELLOW = "#ffd60a";
 export const HAMMERED_HIVIS = "#eeff00";
 
-export type HammeredStyle = "gradient" | "box" | "block";
+export type HammeredStyle = "fade" | "gradient" | "box" | "block"; // fade = the colour over the whole photo at reduced opacity; block = a strip 15% of the tile tall
 export type SlideKind = "hook" | "body" | "cta";
 
 export type SlideLook = {
@@ -98,8 +98,9 @@ export function drawHammeredSlide(canvas: HTMLCanvasElement, kind: SlideKind, te
   const lead = isHead ? 1.08 : 1.34;
 
   // text colour: on a block or box it follows the fill, on a gradient it follows the gradient
-  const fillForText = look.style === "gradient" ? look.colour : look.colour;
-  const autoText = look.style === "gradient" ? (lum(fillForText) > 0.5 ? "#111111" : "#ffffff") : lum(fillForText) > 0.4 ? "#111111" : "#ffffff";
+  const isWash = look.style === "gradient" || look.style === "fade";
+  const fillForText = look.colour;
+  const autoText = isWash ? (lum(fillForText) > 0.5 ? "#111111" : "#ffffff") : lum(fillForText) > 0.4 ? "#111111" : "#ffffff";
   // high vis yellow writing, but on a pale or yellow fill it would vanish, so it drops to black there
   const hiVis = lum(fillForText) > 0.4 ? "#111111" : HAMMERED_HIVIS;
   const textCol = look.textColour === "hivis" ? hiVis : look.textColour === "white" ? "#ffffff" : look.textColour === "black" ? "#111111" : autoText;
@@ -107,30 +108,41 @@ export function drawHammeredSlide(canvas: HTMLCanvasElement, kind: SlideKind, te
   ctx.textBaseline = "top";
   ctx.textAlign = "left";
 
-  if (look.style === "gradient") {
+  if (isWash) {
     const maxH = HH * 0.55;
     const f = fit(ctx, str, family, weight, HW - pad * 2, maxH, start, 28, lead);
     const textH = f.lines.length * f.size * f.lead;
     const top = HH - pad - textH - (kind === "cta" && handle ? 46 : 0);
-    const g = ctx.createLinearGradient(0, Math.max(0, top - 330), 0, HH);
-    g.addColorStop(0, rgba(look.colour, 0));
-    g.addColorStop(0.45, rgba(look.colour, 0.92));
-    g.addColorStop(1, rgba(look.colour, 1));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, Math.max(0, top - 330), HW, HH);
+    if (look.style === "fade") {
+      ctx.fillStyle = rgba(look.colour, 0.55);
+      ctx.fillRect(0, 0, HW, HH);
+    } else {
+      const g = ctx.createLinearGradient(0, Math.max(0, top - 330), 0, HH);
+      g.addColorStop(0, rgba(look.colour, 0));
+      g.addColorStop(0.45, rgba(look.colour, 0.92));
+      g.addColorStop(1, rgba(look.colour, 1));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, Math.max(0, top - 330), HW, HH);
+    }
     ctx.fillStyle = textCol;
     ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
     f.lines.forEach((l, i) => ctx.fillText(l, pad, top + i * f.size * f.lead));
   } else if (look.style === "block") {
-    const maxH = HH * 0.5;
-    const f = fit(ctx, str, family, weight, HW - pad * 2, maxH, start, 28, lead);
+    // hooks and closing lines sit in a strip 15% of the tile tall; body copy only grows the strip as far as it needs
+    const strip = kind !== "body";
+    const bpad = strip ? 26 : pad;
+    const handleH = kind === "cta" && handle ? 46 : 0;
+    const minBlock = Math.round(HH * 0.15);
+    const maxH = strip ? minBlock - bpad * 2 - handleH : HH * 0.5;
+    const f = fit(ctx, str, family, weight, HW - pad * 2, maxH, start, strip ? 20 : 28, lead);
     const textH = f.lines.length * f.size * f.lead;
-    const blockH = Math.min(HH, textH + pad * 2 + (kind === "cta" && handle ? 46 : 0));
+    const blockH = Math.max(minBlock, Math.min(HH, textH + bpad * 2 + handleH));
     ctx.fillStyle = look.colour;
     ctx.fillRect(0, HH - blockH, HW, blockH);
     ctx.fillStyle = textCol;
     ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
-    f.lines.forEach((l, i) => ctx.fillText(l, pad, HH - blockH + pad + i * f.size * f.lead));
+    const textTop = strip ? HH - blockH + Math.round((blockH - handleH - textH) / 2) : HH - blockH + pad;
+    f.lines.forEach((l, i) => ctx.fillText(l, pad, textTop + i * f.size * f.lead));
   } else {
     // text box: a solid box with a hard black edge, placed anywhere from top to bottom
     const boxW = HW - 120;
@@ -156,7 +168,7 @@ export function drawHammeredSlide(canvas: HTMLCanvasElement, kind: SlideKind, te
   if (kind === "cta" && handle) {
     ctx.font = `700 26px "Montserrat", sans-serif`;
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = look.style === "gradient" ? "#ffffff" : look.style === "block" ? textCol : "#ffffff";
+    ctx.fillStyle = isWash ? "#ffffff" : look.style === "block" ? textCol : "#ffffff";
     if (look.style === "box") {
       ctx.shadowColor = "rgba(0,0,0,0.7)";
       ctx.shadowBlur = 8;

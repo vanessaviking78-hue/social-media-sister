@@ -1,6 +1,6 @@
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
 import { TabBoundary } from "@/components/tab-boundary";
-import { BoxControls } from "@/components/box-controls";
+import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ForcedClientContext, useForcedClient, type ForcedClient } from "@/lib/forced-client";
 import { Link } from "wouter";
@@ -34,7 +34,7 @@ let CLINIC_KEY = "clare";
 let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
 let LOOK_KEY = "clare-look-v1";
 
-type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean ; box?: CoverBox };
+type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "metal:gold" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -233,7 +233,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "box">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "flat" | "box">>; // this post only; empty means the page setting
 };
 
 type LibImage = { id: number; groupId: string; name: string; url: string };
@@ -333,6 +333,7 @@ function spaced(ctx: CanvasRenderingContext2D, px: number) {
 
 // The wash: clear where the photo shows, solid where the writing sits. Solid colour or a metallic sheen.
 function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
+  if (look.flat) { ctx.save(); ctx.globalAlpha = FLAT_ALPHA * Math.max(0, Math.min(100, look.opacity)) / 100; blockAt(ctx, 0, look); ctx.restore(); return; }
   const l = normLook(look);
   const o = Math.max(0, Math.min(100, l.opacity)) / 100;
   const metal = metalOf(l.wash);
@@ -362,7 +363,7 @@ function wash(ctx: CanvasRenderingContext2D, from: number, look: Look) {
 // A solid block along the bottom of the page instead of the gradient. The block takes the wash colour, so metallic gold and silver work here too.
 function blockAt(ctx: CanvasRenderingContext2D, top: number, look: Look) {
   const l = normLook(look);
-  const y = Math.max(0, Math.min(Math.round(H * 0.75), Math.round(top)));
+  const y = Math.max(0, Math.min(Math.round(H * 0.85), Math.round(top)));
   const m = metalOf(l.wash);
   ctx.fillStyle = m ? metalFill(ctx, m, 0, y, W, H) : isHex(l.wash) ? l.wash : "#ffffff";
   ctx.fillRect(0, y, W, H - y);
@@ -448,28 +449,28 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       const sb = subtitleOf(ctx, f, post.sub);
       let size = Math.round(120 * ts);
       let layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
-      while (size > Math.round(50 * ts) && titleHeight(layout) > (post.one ? 560 : 330) * Math.max(1, ts)) {
+      while (size > (look.block ? 24 : Math.round(50 * ts)) && titleHeight(layout) > (look.block ? BLOCK_TEXT_H - sb.h : (post.one ? 560 : 330) * Math.max(1, ts))) {
         size -= 4;
         layout = layoutTitle(tf.lf, post.hook || "", tf.style, size, W - 200, 1.12);
       }
-      const ty = H - 175 - sb.h - titleHeight(layout) + cy;
-      if (look.block) blockAt(ctx, ty - 90 + by, look);
+      const ty = (look.block ? H - 65 : H - 175) - sb.h - titleHeight(layout) + cy;
+      if (look.block) blockAt(ctx, H * (1 - BLOCK_PCT), look);
       drawTitle(ctx, tf.lf, layout, tf.style, 100, ty, "center", W - 200, look.headline !== "auto" ? paintOf(ctx, look.headline, ty, ty + titleHeight(layout)) : INKC);
       drawSubtitle(ctx, f, sb.lines, ty + titleHeight(layout), INKC);
     } else {
       const sb = subtitleOf(ctx, f, post.sub);
       ctx.fillStyle = INKC;
       ctx.textAlign = "center";
-      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, (post.one ? 560 : 330) * Math.max(1, ts), Math.round(92 * ts), Math.round(46 * ts), 1.1);
+      const fit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, (look.block ? BLOCK_TEXT_H - sb.h : (post.one ? 560 : 330) * Math.max(1, ts)), Math.round(92 * ts), (look.block ? 24 : Math.round(46 * ts)), 1.1);
       const total = fit.lines.length * fit.px * 1.1;
-      let y = H - 175 - sb.h - total + cy;
-      if (look.block) { blockAt(ctx, y - 90 + by, look); ctx.fillStyle = INKC; }
+      let y = (look.block ? H - 65 : H - 175) - sb.h - total + cy;
+      if (look.block) { blockAt(ctx, H * (1 - BLOCK_PCT), look); ctx.fillStyle = INKC; }
       if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
       ctx.font = head(fit.px);
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
       drawSubtitle(ctx, f, sb.lines, y, INKC);
     }
-    clinicName(ctx, f, H - 100, "center", GREYC);
+    clinicName(ctx, f, H - (look.block ? 52 : 100), "center", GREYC);
     return;
   }
 
@@ -772,7 +773,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
   };
 
-  // Makes 40 posts across the sections, half with a block along the bottom and half with the gradient, then writes the words for each one.
+  // Makes 40 posts across the sections, cycling the four styles in turn, then writes the words for each one.
   const [making, setMaking] = useState("");
   const forced = useForcedClient();
   const isHooks = POSTS === HOOK_POSTS;
@@ -788,7 +789,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     const order: typeof allTypes = [];
     for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: { block: i % 2 === 1 }, ...nxFields(t) }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: styleForNumber(i), ...nxFields(t) }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
       if (made[i].four || made[i].one || TYPE_BY_ID.get(made[i].typeId)?.fixed) continue; // hooks and captions are already written
@@ -1046,15 +1047,10 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
             <ColourPicker label="Gradient colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
             <div className="space-y-1">
               <span className="text-white/60">Bottom of the page (the default for every post)</span>
-              <div className="flex gap-1">
-                {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                  <button key={label} onClick={() => setLook((l) => ({ ...l, block: v, box: undefined }))} className={`flex-1 rounded border px-1 py-1 ${!!look.block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
-                ))}
-              </div>
-              <BoxControls box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b, block: b ? false : l.block }))} />
+              <StylePicker look={look} onPick={(p) => setLook((l) => ({ ...l, ...p }))} />
             </div>
             <label className="space-y-1 block max-w-sm">
-              <span className="text-white/60">Gradient strength: {look.opacity}%</span>
+              <span className="text-white/60">Wash strength: {look.opacity}%</span>
               <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
             </label>
             <ColourPicker label="Writing colour" value={normLook(look).text} onChange={(v) => setLook((l) => ({ ...l, text: v }))} extra={[{ name: "Match gradient", hex: "auto" }]} />
@@ -1116,7 +1112,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
-            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS !== CLARE_SECTION_POSTS ? POSTS.length : 40} posts (half block, half gradient)</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS !== CLARE_SECTION_POSTS ? POSTS.length : 40} posts (4 styles in turn)</>}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {SECS.map((g) => (
@@ -1247,12 +1243,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   <ColourPicker small label="This post: gradient" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
                   <div className="space-y-1">
                     <span className="text-white/60">This post: bottom of the page</span>
-                    <div className="flex gap-1">
-                      {([[false, "Gradient"], [true, "Block"]] as const).map(([v, label]) => (
-                        <button key={label} onClick={() => patch(post.id, { look: { ...post.look, block: v, box: undefined } })} className={`flex-1 rounded border px-1 py-1 ${!!lookFor(post).block === v ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{label}</button>
-                      ))}
-                    </div>
-                    <BoxControls box={lookFor(post).box} onChange={(b) => patch(post.id, { look: { ...post.look, box: b, block: b ? false : lookFor(post).block } })} />
+                    <StylePicker look={lookFor(post)} onPick={(p) => patch(post.id, { look: { ...post.look, ...p } })} />
                   </div>
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
