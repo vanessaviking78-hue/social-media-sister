@@ -285,7 +285,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     freehold: "Freehold Socials is 49 a month."
   };
 
-  var COMMENTS = [
+  var COMMENTS = {
+    sms: [
     "Best post I have seen all day.",
     "Great to see you getting your face out there. It really works.",
     "This made me smile. Thank you for sharing it.",
@@ -306,7 +307,53 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     "I love your style. Everything on your page feels like you.",
     "Great tip. I did not know that. Thank you.",
     "Happy Monday to you. Your posts always brighten my feed."
-  ];
+    ],
+    hammered: [
+      "Cracking job. The finish on that is spot on.",
+      "That is some proper craftsmanship. Well done.",
+      "Best before and after I have seen all day.",
+      "Great to see you getting your face out there. Customers love seeing who is behind the work.",
+      "Neat as anything. Your attention to detail really shows.",
+      "Love a tidy site. That says a lot about you.",
+      "Now that is how it is done. Brilliant work.",
+      "The transformation is unreal. What a difference.",
+      "Nice to see a proper tradesperson showing the work. Keep them coming.",
+      "Your customers are going to be made up with that.",
+      "Stunning finish. Where was this one?",
+      "Great page. Everything looks so professional.",
+      "Class work. Saving this for ideas.",
+      "This is why I rate local trades. Brilliant job.",
+      "Cracking team photo. Looks like a great crew.",
+      "Another one ticked off. Congratulations on the finished job.",
+      "I love seeing the process as well as the result. Great post.",
+      "That took some skill. Proper impressed.",
+      "Good on you for sharing this. More builders should.",
+      "Looks like the sun came out for you. Great shot of the job."
+    ],
+    freehold: [
+      "Looks like the perfect pub. I want a pint right now.",
+      "Best looking pint I have seen all day.",
+      "Great to see the team getting out there on your page. It makes the place feel so welcoming.",
+      "What a cracking atmosphere. Looks like a brilliant night.",
+      "That menu sounds amazing. Adding it to my list.",
+      "Love the interior. So cosy.",
+      "This is the pub I want on my street.",
+      "Brilliant event idea. Wish I could be there.",
+      "Your Sunday roast looks unreal. Saving this for the weekend.",
+      "Great photo. You can almost smell the food.",
+      "Love that you support local. That is what makes a proper pub.",
+      "Looks like the best quiz night in town.",
+      "The garden looks lovely. Perfect for a sunny afternoon.",
+      "Cheers for sharing. Your page is a joy to scroll.",
+      "That cocktail looks incredible. What is in it?",
+      "Congratulations on the award. Well deserved.",
+      "The staff here are always so friendly. Great team.",
+      "Now that is a proper beer garden.",
+      "Live music sounds fantastic. See you there.",
+      "Your pub always looks so inviting. Brilliant page."
+    ]
+  };
+  var E = { list: "" };
   var S = { name: "", list: "", mode: {}, rec: null, root: null };
 
   function myLists() { return CT.cfg.lists && CT.cfg.lists.length ? CT.cfg.lists : ["sms"]; }
@@ -491,9 +538,13 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   }
 
   function engageHtml() {
+    var lists = P.d.me.lists;
+    if (!E.list || lists.indexOf(E.list) < 0) E.list = lists[0];
+    var arr = COMMENTS[E.list];
     var h = '<div class="card"><h2>Engage</h2><p class="hint">Warm people up before you message them. Like and comment on 3 of their recent posts first, so your name is already familiar when your DM lands. Tap a comment to copy it, then paste it on their post. Change a word or two each time so it never looks copied.</p>' +
-      '<div class="ct-numbers"><b>Daily habit.</b> Comment on 10 posts before you start your 50 messages. Always comment as a person, never mention selling.</div>';
-    h += COMMENTS.map(function (c, i) {
+      '<div class="ct-numbers"><b>Daily habit.</b> Comment on 10 posts before you start your 50 messages. Pick the business at the top so the comments suit who you are talking to. Always comment as a person, never mention selling.</div>';
+    if (lists.length > 1) h += '<div class="ct-modes">' + lists.map(function (l) { return '<button class="ct-mode' + (l === E.list ? " on" : "") + '" data-elist="' + l + '">' + esc(LIST_NAMES[l]) + "</button>"; }).join("") + "</div>";
+    h += arr.map(function (c, i) {
       return '<div class="ct-row"><div class="ct-who"><b>' + (i + 1) + '.</b> ' + esc(c) + '</div><div class="ct-acts"><button class="btn-copy" data-copyc="' + i + '">Copy</button></div></div>';
     }).join("");
     return h + "</div>";
@@ -547,8 +598,10 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       }, function (e) { t.disabled = false; toast(e.message); });
       return;
     }
+    var el = t.getAttribute("data-elist");
+    if (el) { E.list = el; drawPortal(); return; }
     var cc = t.getAttribute("data-copyc");
-    if (cc !== null) { copy(t, COMMENTS[parseInt(cc, 10)]); return; }
+    if (cc !== null) { copy(t, COMMENTS[E.list][parseInt(cc, 10)]); return; }
     var ln = t.getAttribute("data-list");
     if (ln) { S.list = ln; drawScripts(); return; }
     var m = t.getAttribute("data-mode");
