@@ -4555,3 +4555,130 @@ export const TWEAKED_XMAS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo dancing at a Christmas party under a huge leopard print and hot pink balloon arch and tinsel curtain, arms in the air with confetti falling, caught mid laugh. Black sparkly mini dress. Disco glow, motion in the confetti, high energy party editorial, sharp on her face. ${TWEAKED_XMAS_SUFFIX}`,
   },
 ];
+
+// TIMELESS XMAS: twenty elegant Christmas portraits. All clothes are black, every decoration and accent is white or silver.
+// No colour picker, the palette is fixed.
+const TIMELESS_XMAS_SUFFIX = ` Timeless, elegant and polished, a fixed palette of black, white and silver only. All her clothes are black. Every Christmas decoration (tree, baubles, tinsel, candles, wrapping, garlands) is white or silver. No red, no green and no gold anywhere. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const TIMELESS_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "tm-01",
+    name: "Silver Tree Elegance",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a tall slim white Christmas tree hung with silver baubles and a silver star on top, one hand resting lightly on a branch, a calm confident smile. Black silk blouse and black tailored trousers. Calm living room, soft warm lamp light, shallow depth of field, magazine quality. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-02",
+    name: "Silver Bauble Close Up",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding one large mirrored silver bauble beside her face, a soft knowing smile. Black roll neck. Plain light backdrop, white tinsel softly out of focus, crisp beauty lighting. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-03",
+    name: "Velvet And Candlelight",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a table dressed with a white linen cloth, silver candlesticks with white candles and a silver tray of baubles, looking at the camera with a warm glance. Black velvet dress. Soft candle glow, gentle bokeh, rich editorial quality. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-04",
+    name: "White Snow Window",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing at a frosted window with soft snow falling outside, a fine silver garland across the glass, gazing at the camera with a quiet smile. Black cashmere jumper. Cool bright daylight, calm and elegant. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-05",
+    name: "Silver Gift Wrap",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo kneeling on a white rug wrapping gifts in white paper with silver ribbon, a little silver bow stuck to her sleeve and a laugh breaking out. Black lounge set. A stack of white and silver presents beside her, soft natural light. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-06",
+    name: "Staircase Glamour",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing on a sweeping staircase wound with a white and silver garland and white flowers, one hand on the bannister, a poised look over her shoulder. Black floor length gown. Warm interior light, full length editorial. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-07",
+    name: "Champagne Toast",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a tall champagne flute at chest height, a warm knowing smile. Black satin dress. Warm silver and white bokeh lights behind, soft flattering light, tiny bubbles catching the glow. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-08",
+    name: "Fireside Black Coat",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a mantelpiece dressed with white pillar candles, silver baubles and a fine silver garland, a relaxed smile. Black tailored blazer over a black camisole. Gentle fire glow, moody room, editorial portrait. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-09",
+    name: "Snowy Street Tailored",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo walking along a quiet street at dusk lined with white fairy lights and silver lanterns, looking back at the camera with a soft smile. Black long wool coat, black boots and a black leather glove. Light snow falling, soft bokeh, fashion editorial. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-10",
+    name: "Silver Tinsel Halo",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo wearing a delicate crown of fine silver tinsel, eyes closed in a serene smile. Black strapless top. Soft dark backdrop with a gentle glow, a few silver baubles floating out of focus. Beauty editorial lighting, high detail. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-11",
+    name: "Armchair Reading",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up in a black armchair with a white cashmere throw over her knees, a book held loosely and a gentle glance up at the camera. Black knit dress. A small white tree with silver lights glowing in the corner, warm lamp light. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-12",
+    name: "Laughing In The Snow",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo laughing naturally in a garden dusted with fresh white snow, a silver bauble garland on the gate behind her. Black wool coat with a black scarf. Bright soft daylight, real laughter lines, candid and joyful. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-13",
+    name: "Table Setting Host",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo setting a long Christmas table laid with white plates, silver cutlery and silver napkin rings, lighting a white taper candle, a warm welcoming smile. Black apron over a black top. Soft evening light, calm and polished. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-14",
+    name: "Silver Sparkle Party",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a glass of fizz at a Christmas party, a soft curtain of silver tinsel behind her, caught mid laugh. Black sequin top. Silver and white disco glow, gentle motion in the lights, sharp on her face. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-15",
+    name: "Wreath Door Welcome",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo opening a glossy black front door with a large white and silver wreath, a warm welcome with one arm out. Black wool coat over black trousers. White fairy lights around the door frame, dusk blue sky, calm and inviting. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-16",
+    name: "Profile Rim Light",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in gentle three quarter profile, holding one silver bauble up to the light and looking at it with a soft smile. Black silk top. Dark neutral backdrop, one soft key light, fine rim light on her hair. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-17",
+    name: "Morning Pyjamas",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting cross legged on a white bed on Christmas morning in black silk pyjamas, unwrapping a present in white paper with silver ribbon with a delighted smile. White bedding, a silver garland along the headboard, soft morning light. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-18",
+    name: "Mirror Moment",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo checking her reflection in a tall mirror framed with a white and silver garland, a quiet confident smile caught in the glass. Black velvet jumpsuit. Soft glowing room behind, clean editorial look. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-19",
+    name: "Baking Day",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a black apron over a black top holding up a tray of white iced biscuits dusted with silver sugar, a little flour on her cheek and a proud grin. Kitchen counter with white candles and a silver garland, bright natural daylight. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tm-20",
+    name: "Midnight Finale",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a dark room beside a tall white tree glowing with silver lights, looking straight into the camera with a composed smile. Black satin gown. Cinematic low light, silver sparkle in the background, sharp detail on her face. ${TIMELESS_XMAS_SUFFIX}`,
+  },
+];
