@@ -22,6 +22,7 @@ export const TEAM: Array<{ slug: string; name: string; lists: ListId[] }> = [
   { slug: "rachel", name: "Rachel Dermaluxe", lists: ["sms", "hammered"] },
   { slug: "rob", name: "Rob Wormald", lists: ["sms", "hammered", "freehold"] },
   { slug: "vanessa", name: "Vanessa Wormald", lists: ["sms", "hammered", "freehold"] },
+  { slug: "scott", name: "Scott", lists: ["freehold"] },
 ];
 // Rob and Vanessa share their own password. Everyone else uses their name followed by botox.
 const OWN_PASSWORDS: Record<string, string> = { rob: "bonzo", vanessa: "bonzo" };
@@ -517,6 +518,12 @@ a.profile-link { color: var(--pink); text-decoration: underline; font-weight: 80
     $("login").style.display = "none"; $("main").style.display = "block";
     $("who-name").textContent = "Logged in as " + name;
     var st = document.createElement("style"); st.textContent = CT.css; document.head.appendChild(st);
+    if (slug === "scott") {
+      document.documentElement.style.setProperty("--pink", "#00e5ff");
+      var fh = document.createElement("style");
+      fh.textContent = "body{background:#000!important;color:#fff!important}.divider{background:#00e5ff!important}h1,.subtitle,.card h2,.card .hint,.who{color:#fff!important}.card,.dm-card{background:#111!important;border-color:#00e5ff!important;color:#fff!important}input,select,textarea{background:#111!important;color:#fff!important;border-color:#00e5ff!important}nav.tabs{border-color:#00e5ff!important}nav.tabs button{background:#000!important;color:#00e5ff!important;border-color:#00e5ff!important}nav.tabs button.active{background:#00e5ff!important;color:#000!important}.btn-primary,.btn-copy,.inbox-btn{background:#00e5ff!important;color:#000!important}.btn-ghost{background:#000!important;color:#00e5ff!important;border:2px solid #00e5ff}.ct-act,.ct-mode{background:#111!important;color:#fff!important;border-color:#00e5ff!important}.ct-act.go,.ct-mode.on{background:#00e5ff!important;color:#000!important}.ct-pill,.ct-tag,.ct-alert{background:#111!important;color:#00e5ff!important;border:1px solid #00e5ff}.ct-pill b{color:#fff!important}.empty-note,.ct-link{color:#9fe9f5!important}table,td,th{color:#fff!important;border-color:#00e5ff!important}";
+      document.head.appendChild(fh);
+    }
     CT.portal($("portal"));
   }
   $("logout").onclick = function () { try { localStorage.removeItem(KEY); } catch (e) {} location.reload(); };
