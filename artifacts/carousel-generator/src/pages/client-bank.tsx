@@ -30,12 +30,12 @@ type BankPost = {
 // Monday, Wednesday, Friday and Sunday are the posting days. The first date she gives is moved forward to the next one of those if it is not already.
 const POST_DAYS = [0, 1, 3, 5];
 const sameDayAt = (d: Date, hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const x = new Date(d); x.setHours(h || 9, m || 0, 0, 0); return x; };
-function postingDates(first: string, count: number, hhmm: string): Date[] {
+function postingDates(first: string, count: number, hhmm: string, days: number[] = POST_DAYS): Date[] {
   const [y, m, d] = first.split("-").map(Number);
   const cur = new Date(y, m - 1, d);
   const out: Date[] = [];
   while (out.length < count) {
-    if (POST_DAYS.includes(cur.getDay())) out.push(sameDayAt(cur, hhmm));
+    if (days.includes(cur.getDay())) out.push(sameDayAt(cur, hhmm));
     cur.setDate(cur.getDate() + 1);
   }
   return out;
@@ -54,6 +54,7 @@ export default function ClientBank() {
   const [firstDate, setFirstDate] = useState("");
   const [postTime, setPostTime] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [picked, setPicked] = useState<Set<number>>(new Set());
 
   const load = useCallback(() => {
     setLoading(true);
@@ -115,13 +116,18 @@ export default function ClientBank() {
     : "";
 
   // Everything waiting for this client goes out oldest first, on Monday, Wednesday, Friday and Sunday from the date she gives.
-  const queue = selectedPreset ? [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) : [];
+  const allQueue = selectedPreset ? [...filtered].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) : [];
+  const chosen = allQueue.filter((p) => picked.has(p.id));
+  const queue = chosen.length ? chosen : allQueue; // nothing ticked means every waiting post for this client
   const timeFor = postTime || selectedPreset?.defaultPostTime || "09:00";
-  const plan = firstDate && queue.length ? postingDates(firstDate, queue.length, timeFor) : [];
+  const tomorrowStr = (() => { const t = new Date(); t.setDate(t.getDate() + 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; })();
+  const startFrom = firstDate || tomorrowStr;
+  const togglePick = (id: number) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
-  async function scheduleAllFromDate() {
-    if (!selectedPreset || !plan.length) return;
-    if (!confirm(`Schedule ${queue.length} post${queue.length !== 1 ? "s" : ""} for ${selectedPreset.name}, from ${fmtDay(plan[0])} to ${fmtDay(plan[plan.length - 1])}, on Monday, Wednesday, Friday and Sunday?`)) return;
+  async function scheduleOn(days: number[], label: string) {
+    if (!selectedPreset || !queue.length) return;
+    const plan = postingDates(startFrom, queue.length, timeFor, days);
+    if (!confirm(`Schedule ${queue.length} post${queue.length !== 1 ? "s" : ""} for ${selectedPreset.name} on ${label}, from ${fmtDay(plan[0])} to ${fmtDay(plan[plan.length - 1])}?`)) return;
     setBulkBusy(true);
     let done = 0;
     for (const [n, post] of queue.entries()) {
@@ -130,6 +136,7 @@ export default function ClientBank() {
         if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Could not schedule it");
         done++;
         setPosts((prev) => prev.filter((p) => p.id !== post.id));
+        setPicked((s) => { const x = new Set(s); x.delete(post.id); return x; });
       } catch (e) {
         toast.error(`Stopped after ${done}: ${e instanceof Error ? e.message : "something failed"}`);
         break;
@@ -184,20 +191,26 @@ export default function ClientBank() {
           <span className="text-sm text-muted-foreground ml-auto">{filtered.length} item{filtered.length !== 1 ? "s" : ""} in the Bank</span>
         </div>
 
-        {selectedPreset && queue.length > 0 && (
+        {selectedPreset && allQueue.length > 0 && (
           <div className="rounded-xl border border-pink-500/40 bg-pink-500/5 p-4 space-y-3">
-            <p className="text-sm font-semibold flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-pink-400" /> Schedule all {queue.length} for {selectedPreset.name}</p>
-            <p className="text-xs text-muted-foreground">Pick the date of the first post. The rest go out one at a time on Monday, Wednesday, Friday and Sunday, oldest first, and land in the scheduler.</p>
+            <p className="text-sm font-semibold flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-pink-400" /> Schedule posts for {selectedPreset.name}</p>
+            <p className="text-xs text-muted-foreground">Tick the posts you want, or tick none to use all {allQueue.length}. Pick the date of the first post, then press a day button to put them on that day only, or the last button to spread them over Monday, Wednesday, Friday and Sunday. Oldest goes first and they land in the scheduler.</p>
             <div className="flex flex-wrap items-end gap-3">
               <label className="text-xs space-y-1 block"><span className="text-muted-foreground">First post date</span>
                 <input type="date" value={firstDate} onChange={(e) => setFirstDate(e.target.value)} className="block bg-white/5 border border-border/50 rounded-lg px-3 py-2 text-sm" /></label>
               <label className="text-xs space-y-1 block"><span className="text-muted-foreground">Time</span>
                 <input type="time" value={timeFor} onChange={(e) => setPostTime(e.target.value)} className="block bg-white/5 border border-border/50 rounded-lg px-3 py-2 text-sm" /></label>
-              <button disabled={!plan.length || bulkBusy} onClick={() => void scheduleAllFromDate()} className="px-4 py-2 rounded-lg bg-pink-500 text-white text-sm font-semibold flex items-center gap-1.5 hover:bg-pink-400 disabled:opacity-40">
-                {bulkBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarCheck className="w-4 h-4" />} Schedule all {queue.length}
+              <button onClick={() => setPicked(chosen.length === allQueue.length ? new Set() : new Set(allQueue.map((p) => p.id)))} className="px-3 py-2 rounded-lg border border-border/50 text-sm">{chosen.length === allQueue.length ? "Untick all" : "Tick all"}</button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {([["Mondays", [1]], ["Wednesdays", [3]], ["Fridays", [5]], ["Sundays", [0]]] as [string, number[]][]).map(([label, d]) => (
+                <button key={label} disabled={bulkBusy} onClick={() => void scheduleOn(d, label)} className="px-4 py-2 rounded-lg bg-pink-500 text-white text-sm font-semibold hover:bg-pink-400 disabled:opacity-40">{label}</button>
+              ))}
+              <button disabled={bulkBusy} onClick={() => void scheduleOn(POST_DAYS, "Monday, Wednesday, Friday and Sunday")} className="px-4 py-2 rounded-lg border border-pink-500/60 text-sm font-semibold hover:bg-pink-500/10 disabled:opacity-40 flex items-center gap-1.5">
+                {bulkBusy && <Loader2 className="w-4 h-4 animate-spin" />} Mon, Wed, Fri, Sun
               </button>
             </div>
-            {plan.length > 0 && <p className="text-xs text-white/70">First post {fmtDay(plan[0])}{new Date(firstDate + "T00:00:00").toDateString() !== plan[0].toDateString() ? " (the next posting day after the date you picked)" : ""}, last post {fmtDay(plan[plan.length - 1])}.</p>}
+            <p className="text-xs text-white/70">{queue.length} post{queue.length !== 1 ? "s" : ""} selected{chosen.length ? "" : " (all of them)"}, starting from {fmtDay(new Date(startFrom + "T00:00:00"))}{firstDate ? "" : " because no date is picked yet"}.</p>
           </div>
         )}
         {!selectedPreset && !loading && filtered.length > 0 && <p className="text-xs text-muted-foreground">Choose a client above to schedule all of their waiting posts in one go.</p>}
@@ -221,6 +234,7 @@ export default function ClientBank() {
             const thumb = c.imageUrls?.[0];
             return (
               <div key={post.id} className="flex items-center gap-4 rounded-xl border border-border/40 p-3">
+                {selectedPreset && <input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 shrink-0 accent-pink-500" aria-label="Select this post" />}
                 {thumb ? (
                   <img src={thumb} alt="" className="w-14 h-14 rounded-lg object-cover bg-black/30 shrink-0" />
                 ) : (
