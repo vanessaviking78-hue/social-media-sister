@@ -12,6 +12,7 @@ const FLOATER_NAMES = ["kahlo", "cantik", "craig hobson", "lotus room"];
 const MONTHLY_TARGET_DAYS = 28;
 
 router.get("/daily-focus", async (_req, res) => {
+res.set("Cache-Control", "no-store");
 try {
 const allPresets = await db.select().from(clientPresetsTable);
 const presets = allPresets.filter((p) => !FLOATER_NAMES.some((name) => (p.name || "").toLowerCase().includes(name)));

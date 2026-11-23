@@ -86,6 +86,7 @@ function saveMonthlyDoneSet(set: Set<number>) {
 export default function DailyFocus() {
   const [data, setData] = useState<DailyFocusData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [done, setDone] = useState<Set<number>>(() => loadDoneSet());
   const [monthlyDone, setMonthlyDone] = useState<Set<number>>(() => loadMonthlyDoneSet());
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -94,21 +95,50 @@ export default function DailyFocus() {
   const [justFinished, setJustFinished] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const res = await fetch(BASE + "api/daily-focus");
+      const res = await fetch(BASE + "api/daily-focus", { cache: "no-store" });
+      if (!res.ok) throw new Error("bad response");
       const json = await res.json();
       setData(json);
+      setLastUpdated(new Date());
     } catch {
-      setData(null);
+      // keep the last good numbers on screen if a background refresh fails
+      if (!silent) setData(null);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
+  const dayRef = useRef(todayKey());
+
   useEffect(() => {
     load();
+
+    const refresh = () => {
+      // a new day or month means the ticked-off lists start fresh
+      if (dayRef.current !== todayKey()) {
+        dayRef.current = todayKey();
+        setDone(loadDoneSet());
+        setMonthlyDone(loadMonthlyDoneSet());
+      }
+      load(true);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+
+    const poll = setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 30000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -195,10 +225,12 @@ export default function DailyFocus() {
         <Flame className="h-5 w-5 text-orange-400" />
         <div className="flex-1">
           <h1 className="font-semibold text-base leading-none">Daily Focus</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Live content gaps, sprint the ones on fire first</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Live content gaps, sprint the ones on fire first{lastUpdated ? " · updated " + lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}
+          </p>
         </div>
         <button
-          onClick={load}
+          onClick={() => load()}
           disabled={loading}
           className="text-xs rounded-full border border-border/50 px-3 py-1.5 hover:bg-muted/50 disabled:opacity-60"
         >
