@@ -134,12 +134,12 @@ export default function XmasShoot() {
         <div className="ps-k">Social Media Sister</div>
         {(stage === "form" || stage === "sending") && (<>
           <h1 className="ps-h1">CYBERSUITE <span>CHRISTMAS</span> SHOOT</h1>
-          <p className="ps-p">One selfie. Ten Christmas photos that look like you on a very good day. No photographer, no hat hair, and nobody asking you to hold a bauble for forty minutes.</p>
+          <p className="ps-p">One selfie. Ten luxurious Christmas portraits that look like you on a very good day, with no photographer to book and no hair to fix.</p>
           <Demo />
           <div className="ps-card">
             <div className="ps-k">The price</div>
             <div className="xs-price">{label === "free" ? "Free" : label}</div>
-            <p className="ps-p" style={{ marginTop: 10 }}>Ten photos in your colour: tinsel, bauble, hat and scarf. Got a code? Pop it in the box and the price changes before you pay anything.</p>
+            <p className="ps-p" style={{ marginTop: 10 }}>Ten luxurious photos in your colour, styled with a fine edge of tinsel and a beautiful scarf. Got a code? Pop it in the box and the price changes before you pay anything.</p>
           </div>
           <div className="ps-card">
             <label className="ps-l">Your name</label>
@@ -148,7 +148,7 @@ export default function XmasShoot() {
             <input className="ps-in" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             <label className="ps-l">Your WhatsApp number</label>
             <input className="ps-in" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" placeholder="07..." />
-            <label className="ps-l">Your Christmas colour (tinsel, bauble, hat and scarf all match)</label>
+            <label className="ps-l">Your Christmas colour (tinsel and scarf all match)</label>
             <div className="xs-sw">
               {COLOURS.map((c) => (
                 <button key={c.name} type="button" className={!typed.trim() && colour === c.name ? "on" : ""} onClick={() => { setColour(c.name); setTyped(""); }}>
