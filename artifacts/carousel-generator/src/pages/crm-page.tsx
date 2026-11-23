@@ -9,6 +9,24 @@ export default function CrmPage() {
   const [html, setHtml] = useState("");
   const [msg, setMsg] = useState("Opening your CRM...");
 
+  // The signed in tools flip the whole page with invert + hue rotate for the white theme. That turns hot pink
+  // into purple inside the CRM, which is already white, so the flip is switched off on this page only.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadFlip = root.classList.contains("cs-light");
+    const drop = () => {
+      if (root.classList.contains("cs-light")) root.classList.remove("cs-light");
+    };
+    drop();
+    // The sign in wrapper adds the class after this page mounts, so keep it off for as long as the CRM is open.
+    const watcher = new MutationObserver(drop);
+    watcher.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => {
+      watcher.disconnect();
+      if (hadFlip) root.classList.add("cs-light");
+    };
+  }, []);
+
   useEffect(() => {
     document.title = "CRM";
     const pw = localStorage.getItem("cybersuite-pw") || "";
