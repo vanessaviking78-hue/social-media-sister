@@ -6,7 +6,7 @@ export const HH = 1350;
 export const FREEHOUSE_BLUE = "#00e5ff";
 export const FREEHOUSE_HIVIS = "#00e5ff";
 
-export type FreehouseStyle = "fade" | "gradient" | "box" | "block"; // fade = the colour over the whole photo at reduced opacity; block = a strip 15% of the tile tall
+export type FreehouseStyle = "fade" | "gradient" | "box" | "block" | "float" | "column"; // fade = the colour over the whole photo at reduced opacity; block = a strip 15% of the tile tall
 export type SlideKind = "hook" | "body" | "cta";
 
 export type SlideLook = {
@@ -143,16 +143,32 @@ export function drawFreehouseSlide(canvas: HTMLCanvasElement, kind: SlideKind, t
     ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
     const textTop = strip ? HH - blockH + Math.round((blockH - handleH - textH) / 2) : HH - blockH + pad;
     f.lines.forEach((l, i) => ctx.fillText(l, pad, textTop + i * f.size * f.lead));
-  } else {
-    // text box: a solid box with a hard black edge, placed anywhere from top to bottom
-    const boxW = HW - 120;
-    const inner = boxW - 90;
-    const f = fit(ctx, str, family, weight, inner, HH * 0.5, start * 0.92, 26, lead);
+  } else if (look.style === "column") {
+    // column: a solid column down the left, the words fitted inside it
+    const colW = 450;
+    const cpad = 44;
+    const f = fit(ctx, str, family, weight, colW - cpad * 2, HH - 260, start * 0.7, 20, lead);
     const textH = f.lines.length * f.size * f.lead;
-    const boxH = textH + 90;
+    ctx.fillStyle = look.colour;
+    ctx.fillRect(0, 0, colW, HH);
+    ctx.fillStyle = textCol;
+    ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
+    const textTop = Math.round((HH - textH) / 2);
+    f.lines.forEach((l, i) => ctx.fillText(l, cpad, textTop + i * f.size * f.lead));
+  } else {
+    // text box: a solid box with a hard black edge, placed anywhere from top to bottom. The floating box is only as big as the words.
+    const floating = look.style === "float";
+    const wrapW = HW - 120;
+    const inner0 = wrapW - (floating ? 56 : 90);
+    const f = fit(ctx, str, family, weight, inner0, HH * 0.5, start * 0.92, 26, lead);
+    const textH = f.lines.length * f.size * f.lead;
+    ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
+    const widest = floating ? Math.max(...f.lines.map((l) => ctx.measureText(l).width)) : 0;
+    const boxW = floating ? Math.min(wrapW, Math.ceil(widest) + 56) : wrapW;
+    const boxH = textH + (floating ? 56 : 90);
     const maxTop = HH - 60 - boxH;
     const top = 60 + Math.max(0, maxTop - 60) * Math.min(1, Math.max(0, look.boxY));
-    const left = 60;
+    const left = floating ? Math.round((HW - boxW) / 2) : 60;
     ctx.fillStyle = "#111111";
     ctx.fillRect(left + 12, top + 12, boxW, boxH);
     ctx.fillStyle = look.colour;
@@ -162,14 +178,14 @@ export function drawFreehouseSlide(canvas: HTMLCanvasElement, kind: SlideKind, t
     ctx.strokeRect(left, top, boxW, boxH);
     ctx.fillStyle = textCol;
     ctx.font = `${weight} ${f.size}px "${family}", sans-serif`;
-    f.lines.forEach((l, i) => ctx.fillText(l, left + 45, top + 45 + i * f.size * f.lead));
+    f.lines.forEach((l, i) => ctx.fillText(l, left + (floating ? 28 : 45), top + (floating ? 28 : 45) + i * f.size * f.lead));
   }
 
   if (kind === "cta" && handle) {
     ctx.font = `700 26px "Montserrat", sans-serif`;
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = isWash ? "#ffffff" : look.style === "block" ? textCol : "#ffffff";
-    if (look.style === "box") {
+    if (look.style === "box" || look.style === "float") {
       ctx.shadowColor = "rgba(0,0,0,0.7)";
       ctx.shadowBlur = 8;
     }

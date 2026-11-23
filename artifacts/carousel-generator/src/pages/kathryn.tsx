@@ -1,4 +1,5 @@
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
+import { drawColumn } from "@/lib/column-block";
 import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
@@ -40,7 +41,7 @@ const CLINIC_KEY = "kathryn";
 const CLINIC_NAME = DENTAL_CLINICS[CLINIC_KEY].name;
 const LOOK_KEY = "kathryn-look-v1";
 
-type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; box?: CoverBox };
+type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "#ffffff", opacity: 100, text: "auto", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "auto" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -215,7 +216,7 @@ type Post = {
   busy: boolean;
   scheduling: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "flat" | "box">>; // this post only; empty means the page setting
+  look?: Partial<Pick<Look, "wash" | "opacity" | "text" | "headline" | "block" | "flat" | "col" | "box">>; // this post only; empty means the page setting
 };
 
 type LibImage = { id: number; groupId: string; name: string; url: string };
@@ -400,6 +401,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
 
   if (n === 0) {
+    if (look.col) { drawColumn(ctx, { text: post.hook || "", paint: () => blockAt(ctx, 0, look), ink: INKC, tf: tf as any, font: (px) => head(px), maxPx: Math.round(96 * ts), minPx: 28, lead: 1.12 }); return; }
     if (look.box) { drawCoverBox(ctx, { headline: post.hook || "", box: look.box, tf: tf as any, headFont: f.head, ts }); return; }
     if (!look.block) wash(ctx, 0.52, look);
     if (tf) {
@@ -428,6 +430,7 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     return;
   }
 
+  if (look.col) { drawColumn(ctx, { text: post.slides[n - 1] || "", paint: () => blockAt(ctx, 0, look), ink: INKC, tf: null, font: (px) => body(px), maxPx: Math.round(38 * bs), minPx: 18, lead: 1.5 }); return; }
   if (!look.block) wash(ctx, 0.3, look);
   const text = post.slides[n - 1] || "";
   ctx.fillStyle = INKC;

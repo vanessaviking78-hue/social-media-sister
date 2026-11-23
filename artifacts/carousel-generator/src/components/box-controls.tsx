@@ -18,7 +18,7 @@ export function BoxControls({ box, onChange, label = "Text box on the cover", ba
           <ColourPicker label="Box text colour" value={box.text} placeholder="Automatic" onChange={(v) => onChange({ ...box, text: v || undefined })} onReset={() => onChange({ ...box, text: undefined })} />
           {([["Left and right", "x", 0.1, 0.9, 0.01], ["Up and down", "y", 0.08, 0.92, 0.01], ["Box width", "w", 460, 980, 20]] as const).map(([lab, key, mn, mx, st]) => (
             <label key={key} className="flex items-center gap-3 text-xs"><span className="w-28 shrink-0 text-white/60">{lab}</span>
-              <input type="range" min={mn} max={mx} step={st} className="flex-1" value={(box as Record<string, number | string | undefined>)[key] as number ?? (key === "w" ? 780 : 0.5)} onChange={(e) => onChange({ ...box, [key]: Number(e.target.value) })} /></label>
+              <input type="range" min={mn} max={mx} step={st} className="flex-1" value={(box as unknown as Record<string, number | string | undefined>)[key] as number ?? (key === "w" ? 780 : 0.5)} onChange={(e) => onChange({ ...box, [key]: Number(e.target.value) })} /></label>
           ))}
         </div>
       )}

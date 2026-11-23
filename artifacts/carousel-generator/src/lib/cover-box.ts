@@ -3,7 +3,7 @@ import { paintFor, isHexColour, flatHexOf } from "./metal-colours";
 
 // A text box cover: the whole photo stays clear and the hook sits inside one coloured box that can go anywhere on the page.
 // Shared by every client tool so the look is the same everywhere. Colours are a hex or a metallic finish ("metal:gold").
-export type CoverBox = { fill: string; text?: string; x: number; y: number; w?: number };
+export type CoverBox = { fill: string; text?: string; x: number; y: number; w?: number; tight?: boolean }; // tight: a floating box only as big as the words
 export const DEFAULT_BOX: CoverBox = { fill: "#ffffff", x: 0.5, y: 0.78, w: 780 }; // sits in the lower part of the post
 
 const lum = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
@@ -22,9 +22,11 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
   const W = ctx.canvas.width, H = ctx.canvas.height;
   const b = o.box;
   const ts = o.ts ?? 1;
-  const bw = Math.max(460, Math.min(W - 80, b.w ?? 780));
-  const pad = 56;
-  const inner = bw - pad * 2;
+  const tight = !!b.tight;
+  const maxBw = Math.max(460, Math.min(W - 80, b.w ?? 780));
+  const pad = tight ? 26 : 56;
+  let bw = maxBw;
+  let inner = bw - pad * 2;
   const flat = flatHexOf(b.fill, "#ffffff");
   const t: string = String(b.text ?? "");
   const textVal = t && (isHexColour(t) || (t as string).startsWith("metal:")) ? t : lum(flat) > 0.45 ? "#111111" : "#ffffff";
@@ -47,6 +49,15 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
   const subPx = 34;
   if (o.sub) { ctx.font = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`; subLines = wrapLines(ctx, o.sub, inner); }
   const subH = subLines.length ? 28 + subLines.length * subPx * 1.35 : 0;
+  if (tight) {
+    // shrink the box round the widest line of words
+    let widest = 0;
+    if (o.tf && layout) widest = Math.max(...layout.lines.map((l) => l.width));
+    else { ctx.font = `400 ${size}px "${o.headFont}", serif`; widest = Math.max(0, ...lines.map((l) => ctx.measureText(l).width)); }
+    if (subLines.length) { ctx.font = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`; widest = Math.max(widest, ...subLines.map((l) => ctx.measureText(l).width)); }
+    bw = Math.min(maxBw, Math.ceil(widest) + pad * 2 + 4);
+    inner = bw - pad * 2;
+  }
   const bh = lineH + subH + pad * 2;
   const bl = Math.max(20, Math.min(W - bw - 20, Math.round(b.x * W - bw / 2)));
   const bt = Math.max(20, Math.min(H - bh - 20, Math.round(b.y * H - bh / 2)));

@@ -12,6 +12,7 @@ import { useForcedClient } from "@/lib/forced-client";
 import { uploadPngs } from "@/lib/month-engine";
 import { drawTitle, clientSlug, hasClientStyle, injectSuiteFontCss, layoutTitle, loadSuiteFont, readTitleStyle, titleHeight, type LoadedFont, type SwapRate, type TitleStyle } from "@/lib/suite-fonts";
 import { nextBankCta } from "@/lib/cta-bank";
+import { drawColumn } from "@/lib/column-block";
 import { StylePicker, BLOCK_PCT, FLAT_ALPHA } from "@/lib/post-style";
 import { POSTS_PER_TREATMENT, U_BY_ID, U_GROUPS, U_TREATMENTS, postTypesFor, type UGroupId, type UPostType, type UTreatment } from "@/lib/universal-treatments";
 
@@ -38,7 +39,7 @@ const RATES: { id: SwapRate; label: string }[] = [
 
 type Dir = "bottom" | "top";
 // grad is optional: when it is set, the closing slide is a soft diagonal gradient from wash to grad instead of one flat colour.
-export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; textX?: number; coverScale?: number; blockScale?: number; bgColour?: string; block?: string; flat?: boolean; strip?: boolean; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number } };
+export type Look = { wash: string; opacity: number; dir: Dir; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; bw: boolean; grad?: string; bodyFont?: string; left?: boolean; blockY?: number; noShade?: boolean; coverY?: number; textX?: number; coverScale?: number; blockScale?: number; bgColour?: string; block?: string; flat?: boolean; strip?: boolean; col?: boolean; noHead?: boolean; box?: { fill: string; text?: string; x: number; y: number; w?: number; tight?: boolean } };
 export const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, dir: "bottom", text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, bw: false };
 
 const lumHex = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
@@ -88,7 +89,7 @@ export type Post = {
   scheduling: boolean;
   banked?: boolean;
   rejected?: string;
-  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text" | "bw" | "box" | "flat" | "strip" | "block">>;
+  look?: Partial<Pick<Look, "wash" | "opacity" | "dir" | "text" | "bw" | "box" | "flat" | "strip" | "col" | "block">>;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -364,11 +365,19 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     ctx.fillRect(0, 0, W, H);
   }
 
+  if (look.col && n <= 3 && (isHex(look.wash) || metalOf(look.wash))) {
+    // Column block: a solid column down the left with the words fitted inside it.
+    const cm = metalOf(look.wash);
+    const first = n === 0;
+    drawColumn(ctx, { text: first ? post.headline || "" : post.slides[n - 1] || "", paint: () => { ctx.fillStyle = cm ? metalFill(ctx, cm, 0, 0, 450, H) : look.wash; ctx.fillRect(0, 0, 450, H); }, ink: inkPaint(ctx, ink, 0, H), tf: first ? (tf as any) : null, font: (px) => body(px), maxPx: first ? Math.round(96 * ts) : Math.round(38 * bs), minPx: first ? 28 : 18, lead: first ? 1.12 : 1.5, sub: first ? post.subtitle : undefined, subFont: (px) => body(px) });
+    drawLogo(ctx, logo, look);
+    return;
+  }
   if (n === 0 && look.box && (isHex(look.box.fill) || metalOf(look.box.fill))) {
     // Text box cover: the whole photo is left clear and the headline and subtitle sit inside one coloured box that can go anywhere on the page.
     const bx = look.box;
-    const bw = Math.max(460, Math.min(W - 80, bx.w ?? 780));
-    const pad = 56;
+    let bw = Math.max(460, Math.min(W - 80, bx.w ?? 780));
+    const pad = bx.tight ? 26 : 56;
     const boxText = bx.text && (isHex(bx.text) || metalOf(bx.text)) ? bx.text : (isHex(bx.fill) ? (lumHex(bx.fill) > 0.45 ? "#111111" : "#ffffff") : "#111111");
     const cs2 = look.coverScale || 1;
     const sub2 = fitText(ctx, post.subtitle || "", (px) => body(px), bw - pad * 2, 200 * cs2, Math.round(34 * bs * cs2), Math.round(22 * bs * cs2), 1.4);
@@ -377,6 +386,13 @@ export function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, 
     const mk = (sz: number) => (tf ? layoutTitle(tf.lf, post.headline || "", tf.style, sz, bw - pad * 2, 1.1) : null);
     let lay2 = mk(size2);
     while (lay2 && size2 > Math.round(40 * ts * cs2) && titleHeight(lay2) > 420 * Math.max(1, ts * cs2)) { size2 -= 4; lay2 = mk(size2); }
+    if (bx.tight) {
+      // floating box: shrink it round the widest line of words
+      let widest = lay2 ? Math.max(...lay2.lines.map((l) => l.width)) : 600;
+      ctx.font = body(sub2.px);
+      if (post.subtitle) widest = Math.max(widest, ...sub2.lines.map((l) => ctx.measureText(l).width));
+      bw = Math.min(bw, Math.ceil(widest) + pad * 2 + 4);
+    }
     const headH2 = lay2 ? titleHeight(lay2) : 100;
     const gap2 = subH2 ? 26 : 0;
     const bh = headH2 + gap2 + subH2 + pad * 2;
@@ -1061,7 +1077,7 @@ export default function UniversalPage() {
             <ColourPicker label="Gradient colour" value={look.wash} onChange={(hex) => setLook((l) => ({ ...l, wash: hex }))} swatches={washSwatches} />
             <ColourPicker label="Writing colour" value={look.text} onChange={(hex) => setLook((l) => ({ ...l, text: hex }))} swatches={textSwatches} />
           </div>
-          <StylePicker look={{ block: !!look.strip || !!look.block, flat: look.flat, box: look.box }} onPick={(p) => setLook((l) => ({ ...l, flat: p.flat, box: p.box, strip: p.block, block: undefined }))} />
+          <StylePicker look={{ block: !!look.strip || !!look.block, flat: look.flat, col: look.col, box: look.box }} onPick={(p) => setLook((l) => ({ ...l, flat: p.flat, col: p.col, box: p.box, strip: p.block, block: undefined }))} />
           <div className="grid md:grid-cols-4 gap-4 text-sm">
             <label className="space-y-1 block">
               <span className="text-white/60">Wash strength: {look.opacity}%</span>
@@ -1244,7 +1260,7 @@ export default function UniversalPage() {
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-2 gap-4 text-xs">
                   <ColourPicker label="This post: gradient colour" value={lk.wash} onChange={(hex) => patch(post.id, { look: { ...post.look, wash: hex } })} swatches={washSwatches} />
                   <ColourPicker label="This post: writing colour" value={lk.text} onChange={(hex) => patch(post.id, { look: { ...post.look, text: hex } })} swatches={textSwatches} />
-                  <div className="md:col-span-2 space-y-1"><span className="text-white/60">This post: style</span><StylePicker look={{ block: !!lk.strip || !!lk.block, flat: lk.flat, box: lk.box }} onPick={(p) => patch(post.id, { look: { ...post.look, flat: p.flat, box: p.box, strip: p.block, block: undefined } })} /></div>
+                  <div className="md:col-span-2 space-y-1"><span className="text-white/60">This post: style</span><StylePicker look={{ block: !!lk.strip || !!lk.block, flat: lk.flat, col: lk.col, box: lk.box }} onPick={(p) => patch(post.id, { look: { ...post.look, flat: p.flat, col: p.col, box: p.box, strip: p.block, block: undefined } })} /></div>
                   <label className="space-y-1 block">
                     <span className="text-white/60">Strength: {lk.opacity}%</span>
                     <input type="range" min={0} max={100} step={5} value={lk.opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
