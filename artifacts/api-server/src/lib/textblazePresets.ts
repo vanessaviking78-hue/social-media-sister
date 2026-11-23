@@ -4,8 +4,8 @@ import type { PhotoStudioPreset } from "./aiPortraitScenarios";
 // lifestyle, AI PHOTOSHOOTS TAYLOR ISAAC, CLINICAL JAN) in one tab, copied across 23 Nov 2026.
 // Her TextBlaze colour pickers became the colour box on each card. The colour is passed in as the
 // xmasColour prompt variable, so [XMAS COLOUR] below is simply "the colour picked on that card".
-// The face lock line is added to every prompt so the face always stays as the uploaded photo.
-const LOCK = ` Use the uploaded reference photo for the face and hair identity. DO NOT CHANGE FACIAL FEATURES.`;
+// The hyper realistic and face lock lines are added to every prompt so the face always stays as the uploaded photo.
+const LOCK = ` Hyper-realistic, true to life photograph with natural unretouched skin texture and visible pores, no airbrushing, no smoothing, no plastic or CGI look. STRICT FACELOCK: use the uploaded reference photo for the face and hair identity and preserve the exact face, facial proportions, bone structure, eyes, nose, lips and age. DO NOT CHANGE FACIAL FEATURES.`;
 
 export interface TextblazeMeta {
   group: string;
