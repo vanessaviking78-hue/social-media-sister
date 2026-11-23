@@ -165,11 +165,11 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       },
       {
         id: "blackfriday", title: "Black Friday offer", when: "Any warm lead. The offer runs until Black Friday, 27 November.",
-        msg: "Hi [name], quick one before Black Friday is over on 27 November. Social Media Sister has two offers on: 6 months for the price of 4, or 12 months for the price of 6. That is Vanessa looking after your social media while you get on with your clients. Have a look here and see what you think: [link]",
-        voice: "Hi [name], it's [my name] from Social Media Sister. I wanted you to hear about this before Black Friday ends on the 27th. We have 6 months for the price of 4, or 12 months for the price of 6. It means Vanessa looks after your social media and you get your time back. I'll pop the link in a message so you can have a look. Have a lovely day.",
+        msg: "Hi [name], quick one before Black Friday is over on 27 November. Social Media Sister has three offers on: 3 months for the price of 1 (500), 6 months for the price of 3 (1,500), or 12 months for the price of 6 (3,000). That is Vanessa looking after your social media while you get on with your clients. Have a look here and see what you think: [link]",
+        voice: "Hi [name], it's [my name] from Social Media Sister. I wanted you to hear about this before Black Friday ends on the 27th. We have 3 months for the price of 1, 6 months for the price of 3, or 12 months for the price of 6. It means Vanessa looks after your social media and you get your time back. I'll pop the link in a message so you can have a look. Have a lovely day.",
         call: [
           "Opener: Hi [name], it's [my name] from Social Media Sister. I'm ringing because our Black Friday offer finishes on the 27th and I didn't want you to miss it.",
-          "Say it plainly: 6 months for the price of 4, or 12 months for the price of 6.",
+          "Say it plainly: 3 months for the price of 1 (500), 6 months for the price of 3 (1,500), or 12 months for the price of 6 (3,000).",
           "Ask: Would having your social media taken off your plate be useful right now?",
           "Listen. If they say yes, go to the close. If they hesitate, ask what is holding them back.",
           "Close: I'll text you the link now. It takes two minutes to fill in and then we book a call to get you started."
@@ -183,7 +183,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
           "Acknowledge: That is fair, [name]. Thank you for being honest with me.",
           "Ask: What number would feel comfortable for you each month?",
           "Reframe: What is one new client worth to your clinic? Your posts are there to bring those in.",
-          "Your room to move: the usual price is 500 a month and you can go down to 350 to win the deal. Black Friday packages are 6 for 4 and 12 for 6.",
+          "Your room to move: the usual price is 500 a month and you can go down to 350 to win the deal. Packages are 3 for 1, 6 for 3 and 12 for 6.",
           "Close: If I can get it to a place that works, would you be ready to start this week?"
         ]
       },
@@ -280,7 +280,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     ]
   };
   var NUMBERS = {
-    sms: "The usual price is 500 a month and you can go down to 350 to win the deal. Black Friday packages are 6 months for the price of 4 and 12 months for the price of 6. You earn 25% of anything you bring in, at the time of sign up.",
+    sms: "The usual price is 500 a month and you can go down to 350 to win the deal. Packages are 3 months for the price of 1 (500), 6 months for the price of 3 (1,500) and 12 months for the price of 6 (3,000). You earn 25% of anything you bring in, at the time of sign up.",
     hammered: "The usual price is 300 a month and you can go down to 250 to win the deal. You earn 20% of the first 3 months' fee, at the time of sign up.",
     freehold: "Freehold Socials is 49 a month."
   };
@@ -562,7 +562,15 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       who: "Aesthetic clinics, injectors, dental and beauty businesses who post on Instagram.",
       what: "Vanessa looks after their social media every week, so their page keeps going while they get on with their clients. She has seven years in aesthetics and has worked with over 500 businesses.",
       price: "The usual price is 500 a month. You can go down to 350 to win the deal.",
-      offer: "Black Friday until 27 November: 6 months for the price of 4, or 12 months for the price of 6.",
+      offer: "Lead with the biggest package, because it earns you the most. If they hesitate, step down to the next one.",
+      offers: [
+        { n: "12 months for the price of 6", p: "3,000", c: "750", note: "Best for you and best value for them. Six months free." },
+        { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free." },
+        { n: "3 months for the price of 1", p: "500", c: "125", note: "Two months free. A low risk way to start." },
+        { n: "The 275 a month club", p: "275 a month", c: "68.75 on the first month", note: "For people who want to pay monthly. They join by messaging Vanessa on Instagram (@social_media_sister)." },
+        { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. A small easy yes that opens the door.", link: "https://www.thecybersuite.com/xmasshoot" },
+        { n: "Free sample", p: "free", c: "", note: "They fill in a form and Vanessa makes them free posts. The easiest first step for anyone unsure.", link: "https://www.thecybersuite.com/premiumfreebies" }
+      ],
       comm: "You earn 25% of anything you bring in, at the time of sign up.",
       open: "Who looks after your social media at the moment, you or somebody else?"
     },
@@ -584,13 +592,20 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     }
   };
 
+  function offersHtml(x) {
+    if (!x.offers) return "";
+    return x.offers.map(function (o, i) {
+      return "\n" + (i + 1) + ". <b>" + esc(o.n) + "</b>, " + (o.p === "free" ? "free" : "\u00a3" + esc(o.p)) + (o.c ? ". You earn \u00a3" + esc(o.c) : "") + ". " + esc(o.note) + (o.link ? " Link: " + esc(o.link) : "");
+    }).join("");
+  }
+
   function sellHtml() {
     var lists = P.d.me.lists;
     var h = '<div class="card"><h2>What to sell</h2><p class="hint">Look at the person you are messaging, pick the business that fits them, and use that link. If you are not sure, ask who looks after their social media and take it from there.</p>';
     h += lists.map(function (l) {
       var x = SELL[l];
       return '<div class="dm-card"><div class="dm-title">' + esc(LIST_NAMES[l]) + "</div>" +
-        '<div class="dm-body"><b>Who it is for:</b> ' + esc(x.who) + "\n<b>What they get:</b> " + esc(x.what) + "\n<b>Price:</b> " + esc(x.price) + "\n<b>Offer to use:</b> " + esc(x.offer) + "\n<b>Your commission:</b> " + esc(x.comm) + "\n<b>Good first question:</b> " + esc(x.open) + "\n<b>Your link:</b> " + esc(linkFor(l)) + "</div>" +
+        '<div class="dm-body"><b>Who it is for:</b> ' + esc(x.who) + "\n<b>What they get:</b> " + esc(x.what) + "\n<b>Price:</b> " + esc(x.price) + "\n<b>Offers, biggest commission first:</b> " + esc(x.offer) + offersHtml(x) + "\n<b>Your commission:</b> " + esc(x.comm) + "\n<b>Good first question:</b> " + esc(x.open) + "\n<b>Your link:</b> " + esc(linkFor(l)) + "</div>" +
         '<button class="btn-copy" data-copylink="' + l + '">Copy my link</button></div>';
     }).join("");
     return h + "</div>";
