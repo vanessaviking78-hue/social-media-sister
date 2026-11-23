@@ -187,7 +187,6 @@ const linksFor = (slug: string) => ({
 
 // Every offer link goes through here so each open is counted against the person who sent it. The package links open the Black Friday page
 // with the person and offer in its ?src= tag, so they also show up on the /linkstats page.
-const WHATSAPP = "447301059304";
 function goTarget(target: string, slug: string, name: string): string | null {
   switch (target) {
     case "xmas": return `${SITE}/xmasshoot?ref=${slug}`;
@@ -195,8 +194,7 @@ function goTarget(target: string, slug: string, name: string): string | null {
     case "12m": return `${SITE}/blackfriday26?src=${slug}-12m`;
     case "6m": return `${SITE}/blackfriday26?src=${slug}-6m`;
     case "club": return `${SITE}/blackfriday26?src=${slug}-club`;
-    // 3 months for the price of 1 is not on the Black Friday page, so this one opens a WhatsApp chat with the offer already typed.
-    case "3m": return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hi Vanessa, I'd like to know more about the 3 months for the price of 1 (500 pounds). I was sent by ${name}.`)}`;
+    case "3m": return `${SITE}/blackfriday26?src=${slug}-3m`;
     default: return null;
   }
 }
