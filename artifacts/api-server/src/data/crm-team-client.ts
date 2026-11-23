@@ -634,7 +634,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
 
   /* ====================== SALES TEAM (Vanessa only) ====================== */
   CT.team = function (root) {
-    root.innerHTML = '<div class="card"><h2>Sales team</h2><p class="hint">Each person has their own link to the team CRM and their own password (their name in lower case followed by botox). Dean sells Hammered and Freehold. Isabella, Leah, Kelly and Rachel sell Social Media Sister and Hammered.</p><div id="ctt-body" class="empty-note">Loading...</div></div>' +
+    root.innerHTML = '<div class="card"><h2>Sales team</h2><p class="hint">Each person has their own link to the team CRM and their own password (their name in lower case followed by botox). Dean sells Hammered and Freehold. Isabella, Leah, Kelly and Rachel sell Social Media Sister and Hammered. Rob and Vanessa can work all three.</p><div id="ctt-body" class="empty-note">Loading...</div></div>' +
       '<div class="card"><h2>Add leads</h2><p class="hint">Paste usernames, one per line (with or without the @), and choose which business they are for. Each person is then handed 50 a day from their own businesses.</p>' +
       '<div class="form-row"><label class="field">Business<select id="cti-list"><option value="hammered">Hammered</option><option value="freehold">Freehold</option><option value="sms">Social Media Sister</option></select></label>' +
       '<label class="field">Where from<select id="cti-source"><option value="instagram">Instagram</option><option value="tiktok">TikTok</option></select></label></div>' +
@@ -653,7 +653,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       var rows = d.team.map(function (m) {
         var teamLink = origin + "/api/crm-team?who=" + m.slug;
         return "<tr><td><b>" + esc(m.name) + "</b><div class=\"ct-by\">" + m.lists.map(function (l) { return esc(LIST_NAMES[l]); }).join(", ") + "</div></td>" +
-          '<td><a class="profile-link" href="' + esc(teamLink) + '" target="_blank" rel="noopener">Team CRM link</a> <button class="btn-copy" data-cp="' + esc(teamLink) + '">Copy</button><div class="ct-by">Password: ' + esc(m.slug) + "botox</div></td>" +
+          '<td><a class="profile-link" href="' + esc(teamLink) + '" target="_blank" rel="noopener">Team CRM link</a> <button class="btn-copy" data-cp="' + esc(teamLink) + '">Copy</button><div class="ct-by">Password: ' + esc(m.password || m.slug + "botox") + "</div></td>" +
           "<td>" + m.messaged + "</td><td>" + m.followed + "</td><td>" + m.replied + "</td><td>" + m.booked + "</td><td>" + m.signed + "</td></tr>";
       }).join("");
       var stock = d.stock.map(function (s) { return "<b>" + esc(LIST_NAMES[s.list]) + ":</b> " + s.total + " leads, " + s.left + " not given out yet"; }).join(" &nbsp;|&nbsp; ");

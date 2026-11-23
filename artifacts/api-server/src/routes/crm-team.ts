@@ -20,7 +20,11 @@ export const TEAM: Array<{ slug: string; name: string; lists: ListId[] }> = [
   { slug: "leah", name: "Leah Wood", lists: ["sms", "hammered"] },
   { slug: "kelly", name: "Kelly Harvey", lists: ["sms", "hammered"] },
   { slug: "rachel", name: "Rachel Dermaluxe", lists: ["sms", "hammered"] },
+  { slug: "rob", name: "Rob Wormald", lists: ["sms", "hammered", "freehold"] },
+  { slug: "vanessa", name: "Vanessa Wormald", lists: ["sms", "hammered", "freehold"] },
 ];
+// Rob and Vanessa share their own password. Everyone else uses their name followed by botox.
+const OWN_PASSWORDS: Record<string, string> = { rob: "bonzo", vanessa: "bonzo" };
 const STATUSES = ["New", "Messaged", "Followed up", "Replied", "Call booked", "Signed", "Not relevant"];
 const PER_PAGE = 50;
 const PER_DAY = 50;
@@ -29,7 +33,7 @@ const SITE = "https://www.thecybersuite.com";
 // Each person's password is their name in lower case followed by botox (for example isabellabotox). The ending can be changed
 // with the CRM_TEAM_SUFFIX variable on Railway.
 const suffix = () => (process.env.CRM_TEAM_SUFFIX || "botox").trim().toLowerCase();
-const passwordFor = (slug: string) => slug + suffix();
+const passwordFor = (slug: string) => OWN_PASSWORDS[slug] ?? slug + suffix();
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
 const todayStr = () => new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
@@ -374,7 +378,7 @@ router.get("/crm-team/summary", requireAdmin, async (req: Request, res: Response
         return { list: l, total, left: Math.max(0, total - (takenBy.get(l) ?? 0)) };
       }),
       team: TEAM.map((m) => ({
-        slug: m.slug, name: m.name, lists: m.lists,
+        slug: m.slug, name: m.name, lists: m.lists, password: passwordFor(m.slug),
         messaged: tally(m.slug, (r) => r.status !== "New" && r.status !== "Not relevant"),
         followed: tally(m.slug, (r) => r.followed_up),
         replied: tally(m.slug, (r) => ["Replied", "Call booked", "Signed"].includes(r.status)),
