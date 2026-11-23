@@ -47,7 +47,7 @@ export const CRM_INSTAGRAM_JS: string = String.raw`
       if (p.comments) bits.push(pill("Commented " + p.comments + "x", "#e6007e"));
       if (p.dm === "replied") bits.push(pill("Replied to your DM", "#0a8f5a"));
       else if (p.dm === "sent") bits.push(pill("DM sent, no reply", "#6b6b6b"));
-      else if (p.dm === "inbound") bits.push(pill(p.dmLastFrom === "them" ? "Messaged you, waiting" : "Chatting", "#7B2FF7"));
+      else if (p.dm === "inbound") bits.push(pill(p.dmLastFrom === "them" ? "Messaged you, waiting" : "Chatting", "#E6007E"));
     }
     var opened = ls(OPEN_KEY, {})[u];
     if (opened && (!p || p.dm === "none")) bits.push(pill("DM opened " + ago(opened), "#999"));
