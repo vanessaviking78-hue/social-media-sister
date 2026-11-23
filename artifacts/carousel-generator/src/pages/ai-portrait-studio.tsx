@@ -261,16 +261,16 @@ const NEW_XMAS_PRESETS: PhotoStudioPreset[] = [
 ];
 
 const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
-  { id: "rx-01", name: "Bauble In Hand Knit Hat", hasColour: false },
-  { id: "rx-02", name: "Two Hands Bauble Scarf Close Up", hasColour: false },
-  { id: "rx-03", name: "Santa Hat Bauble Laugh", hasColour: false },
-  { id: "rx-04", name: "Snowy Street Bauble Walk", hasColour: false },
-  { id: "rx-05", name: "Cosy Jumper Bauble By The Tree", hasColour: false },
+  { id: "rx-01", name: "Cashmere Wrap Studio", hasColour: false },
+  { id: "rx-02", name: "Single Bauble Close Up", hasColour: false },
+  { id: "rx-03", name: "Velvet And Candlelight", hasColour: false },
+  { id: "rx-04", name: "Snowy Street Tailored Coat", hasColour: false },
+  { id: "rx-05", name: "Grand Staircase Glamour", hasColour: false },
   { id: "rx-06", name: "Bauble Reflection Portrait", hasColour: false },
-  { id: "rx-07", name: "Window Seat Hat And Scarf", hasColour: false },
-  { id: "rx-08", name: "Hot Drink And Bauble", hasColour: false },
-  { id: "rx-09", name: "Santa Hat Profile Bauble", hasColour: false },
-  { id: "rx-10", name: "Bauble Toss Candid", hasColour: false },
+  { id: "rx-07", name: "Window Seat Cashmere", hasColour: false },
+  { id: "rx-08", name: "Champagne Toast", hasColour: false },
+  { id: "rx-09", name: "Profile Rim Light", hasColour: false },
+  { id: "rx-10", name: "Laughing In Ivory", hasColour: false },
 ];
 
 const NEW_XMAS_SWATCHES: { name: string; hex: string }[] = [
@@ -2659,9 +2659,9 @@ export default function AiPortraitStudio() {
 {activeSection === "realxmas" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">REALISTIC XMAS</p>
-<p className="text-xs text-muted-foreground mb-3">Ten natural, true to life Christmas portraits. A thin tinsel border, a bauble in hand, a knitted hat and a scarf. Pick one colour and the tinsel, bauble, hat and scarf all match it.</p>
+<p className="text-xs text-muted-foreground mb-3">Ten natural, true to life Christmas portraits. A fine strip of tinsel and a beautiful scarf, no hat, and one bauble at most. Pick one colour and the tinsel, scarf and bauble all match it.</p>
 <div className="mb-4 space-y-2" onClick={(e) => e.stopPropagation()}>
-  <Label className="text-xs">Christmas colour for tinsel, bauble, hat and scarf</Label>
+  <Label className="text-xs">Christmas colour for tinsel, scarf and bauble</Label>
   <div className="flex flex-wrap gap-2">
     {NEW_XMAS_SWATCHES.map((sw) => (
       <button
