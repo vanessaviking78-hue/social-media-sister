@@ -196,7 +196,7 @@ const fetchServerFonts = () => (serverFonts ??= fetch(`${BASE}/api/client-fonts`
 async function serverStyleFor(client: string): Promise<TitleStyle | null> {
   const me = clientSlug(client);
   const near = (n: string) => { const o = clientSlug(n || ""); return !!o && (o === me || (Math.min(o.length, me.length) >= 5 && (o.includes(me) || me.includes(o)))); };
-  const row = (await fetchServerFonts()).find((c) => near(c.clientName) || near(c.typedName));
+  const row = (await fetchServerFonts()).find((c: { clientName: string; typedName: string }) => near(c.clientName) || near(c.typedName));
   return row ? { ...DEFAULT_TITLE_STYLE, fontId: row.fontId, upper: row.upper, swaps: {}, rate: "first", ligatures: true } : null;
 }
 
