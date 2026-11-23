@@ -15,7 +15,7 @@ const SHORT = ["Chat", "Trial", "Follow", "Call", "Signed"];
 const MONTHS = 3;
 const RATE = 0.2;
 const FLOOR = 250;
-const SLOTS = [1, 2, 3, 4];
+const SLOTS = [1, 2, 3, 4, 5];
 const LINK = "https://www.thecybersuite.com/hammeredfreebies?ref=";
 const slug = (n: string) => n.toLowerCase().replace(/[^a-z0-9]+/g, "");
 

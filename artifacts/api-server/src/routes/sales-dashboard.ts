@@ -107,8 +107,8 @@ function ensureTables(): Promise<void> {
     if (hasDeanos.rows.length === 0) {
       await db.execute(sql`UPDATE sales_partners SET name = 'Deanos' WHERE slot = (SELECT slot FROM sales_partners WHERE name = '' ORDER BY slot LIMIT 1)`);
     }
-    // Isabella and Leah join the sales team the same way, each taking the next open slot (only if they are not already there).
-    for (const member of ["Isabella", "Leah"]) {
+    // Isabella, Leah and Rachel join the sales team the same way, each taking the next open slot (only if they are not already there).
+    for (const member of ["Isabella", "Leah", "Rachel"]) {
       const has = await db.execute(sql`SELECT 1 FROM sales_partners WHERE lower(name) LIKE ${member.toLowerCase() + "%"} LIMIT 1`);
       if (has.rows.length === 0) {
         await db.execute(sql`UPDATE sales_partners SET name = ${member} WHERE slot = (SELECT slot FROM sales_partners WHERE name = '' ORDER BY slot LIMIT 1)`);

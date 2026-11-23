@@ -9,7 +9,7 @@ import { db } from "@workspace/db";
 const router: IRouter = Router();
 
 const STAGES = ["Chatting", "Trial sent", "Followed up", "Call booked", "Signed"];
-const SLOTS = [1, 2, 3, 4];
+const SLOTS = [1, 2, 3, 4, 5];
 
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
@@ -76,6 +76,13 @@ function ensureTables(): Promise<void> {
     const hasDeanos = await db.execute(sql`SELECT 1 FROM hammered_partners WHERE lower(name) LIKE 'deanos%' LIMIT 1`);
     if (hasDeanos.rows.length === 0) {
       await db.execute(sql`UPDATE hammered_partners SET name = 'Deanos' WHERE slot = (SELECT slot FROM hammered_partners WHERE name = '' ORDER BY slot LIMIT 1)`);
+    }
+    // The girls sell Hammered too, each taking the next open slot (only if they are not already there).
+    for (const member of ["Isabella", "Leah", "Kelly", "Rachel"]) {
+      const has = await db.execute(sql`SELECT 1 FROM hammered_partners WHERE lower(name) LIKE ${member.toLowerCase() + "%"} LIMIT 1`);
+      if (has.rows.length === 0) {
+        await db.execute(sql`UPDATE hammered_partners SET name = ${member} WHERE slot = (SELECT slot FROM hammered_partners WHERE name = '' ORDER BY slot LIMIT 1)`);
+      }
     }
   })().catch((e) => {
     ready = null;
