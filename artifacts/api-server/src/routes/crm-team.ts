@@ -174,6 +174,10 @@ const dateOnly = (v: unknown) => (v ? (v instanceof Date ? v.toISOString() : Str
 
 // The Xmas photoshoot and free sample links go through /api/go so every open is counted against the person who sent it.
 const linksFor = (slug: string) => ({
+  m12: `${SITE}/api/go/12m/${slug}`,
+  m6: `${SITE}/api/go/6m/${slug}`,
+  m3: `${SITE}/api/go/3m/${slug}`,
+  club: `${SITE}/api/go/club/${slug}`,
   xmas: `${SITE}/api/go/xmas/${slug}`,
   sample: `${SITE}/api/go/sample/${slug}`,
   sms: `${SITE}/signup?ref=${slug}`,
@@ -181,16 +185,31 @@ const linksFor = (slug: string) => ({
   freehold: `${SITE}/freeholdfreebies?ref=${slug}`,
 });
 
-const GO_TARGETS: Record<string, string> = { xmas: "/xmasshoot", sample: "/premiumfreebies" };
-router.get("/go/:target/:slug", async (req: Request, res: Response) => {
-  const target = GO_TARGETS[String(req.params.target)];
-  const slug = String(req.params.slug ?? "").toLowerCase();
-  if (!target) { res.status(404).send("Not found"); return; }
-  const known = TEAM.some((m) => m.slug === slug);
-  if (known) {
-    try { await ensureTables(); await db.execute(sql`INSERT INTO crm_team_clicks (slug, target) VALUES (${slug}, ${String(req.params.target)})`); } catch { /* a missed count must never stop the link working */ }
+// Every offer link goes through here so each open is counted against the person who sent it. The package links open the Black Friday page
+// with the person and offer in its ?src= tag, so they also show up on the /linkstats page.
+const WHATSAPP = "447301059304";
+function goTarget(target: string, slug: string, name: string): string | null {
+  switch (target) {
+    case "xmas": return `${SITE}/xmasshoot?ref=${slug}`;
+    case "sample": return `${SITE}/premiumfreebies?ref=${slug}`;
+    case "12m": return `${SITE}/blackfriday26?src=${slug}-12m`;
+    case "6m": return `${SITE}/blackfriday26?src=${slug}-6m`;
+    case "club": return `${SITE}/blackfriday26?src=${slug}-club`;
+    // 3 months for the price of 1 is not on the Black Friday page, so this one opens a WhatsApp chat with the offer already typed.
+    case "3m": return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hi Vanessa, I'd like to know more about the 3 months for the price of 1 (500 pounds). I was sent by ${name}.`)}`;
+    default: return null;
   }
-  res.redirect(302, `${SITE}${target}${known ? `?ref=${encodeURIComponent(slug)}` : ""}`);
+}
+router.get("/go/:target/:slug", async (req: Request, res: Response) => {
+  const target = String(req.params.target);
+  const slug = String(req.params.slug ?? "").toLowerCase();
+  const member = TEAM.find((m) => m.slug === slug);
+  const dest = goTarget(target, member ? slug : "direct", member ? member.name : "the team");
+  if (!dest) { res.status(404).send("Not found"); return; }
+  if (member) {
+    try { await ensureTables(); await db.execute(sql`INSERT INTO crm_team_clicks (slug, target) VALUES (${slug}, ${target})`); } catch { /* a missed count must never stop the link working */ }
+  }
+  res.redirect(302, dest);
 });
 
 router.post("/crm-team/login", (req: Request, res: Response) => {
@@ -404,7 +423,7 @@ router.get("/crm-team/summary", requireAdmin, async (req: Request, res: Response
         return { list: l, total, left: Math.max(0, total - (takenBy.get(l) ?? 0)) };
       }),
       team: TEAM.map((m) => ({
-        slug: m.slug, name: m.name, lists: m.lists, password: passwordFor(m.slug), xmasOpens: clickOf(m.slug, "xmas"), sampleOpens: clickOf(m.slug, "sample"),
+        slug: m.slug, name: m.name, lists: m.lists, password: passwordFor(m.slug), xmasOpens: clickOf(m.slug, "xmas"), sampleOpens: clickOf(m.slug, "sample"), packageOpens: ["12m", "6m", "3m", "club"].reduce((a, t) => a + clickOf(m.slug, t), 0),
         messaged: tally(m.slug, (r) => r.status !== "New" && r.status !== "Not relevant"),
         followed: tally(m.slug, (r) => r.followed_up),
         replied: tally(m.slug, (r) => ["Replied", "Call booked", "Signed"].includes(r.status)),

@@ -564,12 +564,12 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       price: "The usual price is 500 a month. You can go down to 350 to win the deal.",
       offer: "Lead with the biggest package, because it earns you the most. If they hesitate, step down to the next one.",
       offers: [
-        { n: "12 months for the price of 6", p: "3,000", c: "750", note: "Best for you and best value for them. Six months free." },
-        { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free." },
-        { n: "3 months for the price of 1", p: "500", c: "125", note: "Two months free. A low risk way to start." },
-        { n: "The 275 a month club", p: "275 a month", c: "68.75 on the first month", note: "For people who want to pay monthly. They join by messaging Vanessa on Instagram (@social_media_sister)." },
-        { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours. Your own tracked link:", key: "xmas" },
-        { n: "Free sample", p: "free", c: "", note: "They fill in a form and Vanessa makes them free posts. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours. Your own tracked link:", key: "sample" }
+        { n: "12 months for the price of 6", p: "3,000", c: "750", note: "Best for you and best value for them. Six months free.", key: "m12" },
+        { n: "6 months for the price of 3", p: "1,500", c: "375", note: "Three months free.", key: "m6" },
+        { n: "3 months for the price of 1", p: "500", c: "125", note: "Two months free. A low risk way to start. This link opens WhatsApp to Vanessa with the offer already typed.", key: "m3" },
+        { n: "The 275 a month club", p: "275 a month", c: "68.75 on the first month", note: "For people who want to pay monthly. Their link opens the Black Friday page where this is the DIY portal option.", key: "club" },
+        { n: "Xmas photoshoot", p: "49", c: "", note: "A selfie in, 10 Xmas photos back. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours.", key: "xmas" },
+        { n: "Free sample", p: "free", c: "", note: "They fill in a form and Vanessa makes them free posts. You earn nothing on this one, but chase them up afterwards and if you sell them a package, the commission is yours.", key: "sample" }
       ],
       comm: "You earn 25% of anything you bring in, at the time of sign up.",
       open: "Who looks after your social media at the moment, you or somebody else?"
@@ -595,7 +595,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   function offersHtml(x) {
     if (!x.offers) return "";
     return x.offers.map(function (o, i) {
-      return "\n" + (i + 1) + ". <b>" + esc(o.n) + "</b>, " + (o.p === "free" ? "free" : "\u00a3" + esc(o.p)) + (o.c ? ". You earn \u00a3" + esc(o.c) : "") + ". " + esc(o.note) + (o.key ? " " + esc((P.d.me.links && P.d.me.links[o.key]) || "") : "");
+      return "\n" + (i + 1) + ". <b>" + esc(o.n) + "</b>, " + (o.p === "free" ? "free" : "\u00a3" + esc(o.p)) + (o.c ? ". You earn \u00a3" + esc(o.c) : "") + ". " + esc(o.note) + (o.key ? " Your link: " + esc((P.d.me.links && P.d.me.links[o.key]) || "") : "");
     }).join("");
   }
 
@@ -720,11 +720,11 @@ export const CRM_TEAM_UI_JS: string = String.raw`
         var teamLink = origin + "/api/crm-team?who=" + m.slug;
         return "<tr><td><b>" + esc(m.name) + "</b><div class=\"ct-by\">" + m.lists.map(function (l) { return esc(LIST_NAMES[l]); }).join(", ") + "</div></td>" +
           '<td><a class="profile-link" href="' + esc(teamLink) + '" target="_blank" rel="noopener">Team CRM link</a> <button class="btn-copy" data-cp="' + esc(teamLink) + '">Copy</button><div class="ct-by">Password: ' + esc(m.password || m.slug + "botox") + "</div></td>" +
-          "<td>" + m.messaged + "</td><td>" + m.followed + "</td><td>" + m.replied + "</td><td>" + m.booked + "</td><td>" + m.signed + "</td><td>" + (m.xmasOpens || 0) + "</td><td>" + (m.sampleOpens || 0) + "</td></tr>";
+          "<td>" + m.messaged + "</td><td>" + m.followed + "</td><td>" + m.replied + "</td><td>" + m.booked + "</td><td>" + m.signed + "</td><td>" + (m.packageOpens || 0) + "</td><td>" + (m.xmasOpens || 0) + "</td><td>" + (m.sampleOpens || 0) + "</td></tr>";
       }).join("");
       var stock = d.stock.map(function (s) { return "<b>" + esc(LIST_NAMES[s.list]) + ":</b> " + s.total + " leads, " + s.left + " not given out yet"; }).join(" &nbsp;|&nbsp; ");
       root.querySelector("#ctt-body").innerHTML = '<div class="ct-numbers">' + stock + "</div>" +
-        '<table><thead><tr><th>Who</th><th>Their link</th><th>Messaged</th><th>Followed up</th><th>Replied</th><th>Call booked</th><th>Signed</th><th>Xmas link opens</th><th>Sample link opens</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+        '<table><thead><tr><th>Who</th><th>Their link</th><th>Messaged</th><th>Followed up</th><th>Replied</th><th>Call booked</th><th>Signed</th><th>Package link opens</th><th>Xmas link opens</th><th>Sample link opens</th></tr></thead><tbody>' + rows + "</tbody></table>" +
         '<p class="hint" style="margin-top:12px;">Sign ups through their own links are counted on the sales dashboards. Signed is only counted once you have confirmed it there.</p>';
       root.querySelector("#ctt-body").className = "";
       root.querySelectorAll("[data-cp]").forEach(function (b) { b.onclick = function () { copy(b, b.getAttribute("data-cp")); }; });
