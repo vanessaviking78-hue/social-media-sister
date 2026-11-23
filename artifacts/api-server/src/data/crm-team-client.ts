@@ -500,11 +500,9 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   function todayHtml(v) {
     var d = P.d, quota = d.quota, done = d.messagedToday;
     var pct = Math.min(100, Math.round((done / quota) * 100));
-    var h = '<div class="card"><h2>Today</h2>' +
-      '<div class="ct-prog"><b>' + done + " of " + quota + "</b> messaged today<div class=\"ct-bar\"><div style=\"width:" + pct + '%"></div></div></div>' +
-      (v.due.length ? '<div class="ct-alert">You have ' + v.due.length + ' follow up' + (v.due.length === 1 ? "" : "s") + ' due. <button class="ct-link" data-ptab="followup">Do those first</button></div>' : "") +
-      emptyListsNote() +
-      '<p class="hint">Open the DM, send your message from the Scripts tab, then tick Messaged. Tick every one, even if you do not hear back. Skip anyone who is not a good fit.</p>';
+    var h = '<div class="card"><h2>To do today</h2>' +
+      '<div class="ct-prog"><b>' + done + " of " + quota + "</b> messaged<div class=\"ct-bar\"><div style=\"width:" + pct + '%"></div></div></div>' +
+      '<div class="ct-row"><div class="ct-who"><b>Engage:</b> like and comment on 10 posts first</div><div class="ct-acts"><button class="ct-act go" data-ptab="engage">Open comments</button></div></div>';
     if (!v.today.length) h += '<div class="empty-note">' + (done ? "All done for today. Brilliant work. New leads arrive tomorrow." : "No leads yet. Check back soon.") + "</div>";
     h += v.today.map(function (r) { return rowHtml(r, actBtn(r, "Messaged", "Messaged", "go") + actBtn(r, "Not relevant", "Skip", "quiet")); }).join("");
     return h + "</div>";
