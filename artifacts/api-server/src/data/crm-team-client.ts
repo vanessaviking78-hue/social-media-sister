@@ -272,7 +272,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
         call: [
           "Congratulate them: That's great news, [name].",
           "Say what happens next: I'll send you a link, you pop your details in, and we get you set up.",
-          "Your numbers: Freehold Socials is 49 a month.",
+          "Your numbers: Freehold Socials is 99 a month.",
           "Send the link straight away while you are still on the phone.",
           "End warmly: Thank you, we'll look after you."
         ]
@@ -282,7 +282,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   var NUMBERS = {
     sms: "The usual price is 500 a month and you can go down to 350 to win the deal. Packages are 3 months for the price of 1 (500), 6 months for the price of 3 (1,500) and 12 months for the price of 6 (3,000). You earn 25% of anything you bring in, at the time of sign up.",
     hammered: "The usual price is 300 a month and you can go down to 250 to win the deal. You earn 20% of the first 3 months' fee, at the time of sign up.",
-    freehold: "Freehold Socials is 49 a month."
+    freehold: "Freehold Socials is 99 a month."
   };
 
   var COMMENTS = {
@@ -585,7 +585,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
     freehold: {
       who: "Pubs and bars with an Instagram page, and the landlords or managers who run it.",
       what: "Ready to post content for pubs and bars, so there is always something good to share for the regulars and it stops being another job.",
-      price: "49 a month.",
+      price: "99 a month.",
       offer: "Start them on the free pub posts so they can see what it looks like for their pub.",
       comm: "Ask Vanessa for the commission on Freehold.",
       open: "Who looks after your social media at the moment, you or somebody on the team?"
