@@ -4361,70 +4361,69 @@ export const NEW_XMAS_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-// REALISTIC XMAS: ten natural, true to life Christmas portraits. A thin border
-// of tinsel along the edges, the client holding a bauble, a knitted hat and a
-// scarf. One colour is chosen in the studio and fills every [XMAS COLOUR].
-const REALISTIC_XMAS_SUFFIX = ` A thin border of real tinsel runs along the edges of the frame, only a narrow strip so the whole face and upper body stay clear. The tinsel border, the bauble, the knitted hat and the scarf are all in the same single colour, [XMAS COLOUR], and no other festive colour appears. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Realistic photography, not an illustration. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+// REALISTIC XMAS: ten luxurious, true to life Christmas portraits. No hat, very few props. A fine strip of tinsel along the
+// edges, a scarf and, in some shots, one single bauble. One colour is chosen in the studio and fills every [XMAS COLOUR].
+const REALISTIC_XMAS_SUFFIX = ` A delicate, fine strip of tinsel runs along the very edge of the frame, only a narrow border so the whole face and upper body stay clear. The tinsel, the scarf and the single bauble where one appears are all in the same single colour, [XMAS COLOUR], and no other festive colour appears. No hat of any kind, no Santa hat, no bobble hat, no beanie, nothing on her head, her hair beautifully styled and fully visible. Very few festive props, restrained, minimal and elegant, never cluttered, never more than one bauble. Luxury editorial photography, rich quality fabrics such as silk, cashmere and velvet, soft expensive looking light, refined and polished. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. Realistic photography, not an illustration. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
 
 export const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "rx-01",
-    name: "Bauble In Hand Knit Hat",
+    name: "Cashmere Wrap Studio",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo holding one glass Christmas bauble in her open palm at chest height, wearing a chunky knitted bobble hat and a soft wool scarf, smiling warmly at the camera. Plain light grey studio backdrop, soft window light from the left, shallow depth of field, visible wool texture.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo standing against a soft stone grey seamless studio backdrop, a long cashmere scarf draped elegantly over a black tailored coat, a composed warm smile. Soft window light from the left, shallow depth of field, visible fine wool texture, an expensive quiet mood.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-02",
-    name: "Two Hands Bauble Scarf Close Up",
+    name: "Single Bauble Close Up",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo in a close portrait holding a bauble in both hands just below her chin, a thick cosy scarf wrapped twice around her neck and a knitted hat pulled down to her brows. A gentle closed mouth smile, soft diffused daylight, creamy blurred background.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo in a close beauty portrait holding one glass bauble delicately between her fingertips at collarbone height, a black silk blouse and a fine silk scarf at her neck. A gentle closed mouth smile, soft diffused daylight, creamy blurred background.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-03",
-    name: "Santa Hat Bauble Laugh",
+    name: "Velvet And Candlelight",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo laughing naturally while holding up a shiny bauble between finger and thumb, wearing a classic Santa hat and a chunky scarf. Candid but polished, plain cream backdrop, soft natural light, genuine delight, real laughter lines.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo seated at a marble console table in a black velvet dress, a silk scarf loosely draped over one shoulder, warm candlelight glow and soft golden bokeh behind her, no visible props on the table. Intimate low key lighting, rich velvet texture, a quiet confident look.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-04",
-    name: "Snowy Street Bauble Walk",
+    name: "Snowy Street Tailored Coat",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo standing on a quiet winter street with light snowfall, wearing a wool coat, a knitted hat and a long scarf, holding a single bauble up in a gloved hand and looking at the camera over it. Soft overcast daylight, gentle bokeh of shop lights behind, realistic snowflakes.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo on a quiet winter street with light snowfall, wearing a beautifully tailored wool coat and a long cashmere scarf, a few real snowflakes in her hair. Soft overcast daylight, gentle bokeh of warm shop lights behind, looking at the camera with a serene smile.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-05",
-    name: "Cosy Jumper Bauble By The Tree",
+    name: "Grand Staircase Glamour",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo beside a real Christmas tree with warm white fairy lights softly blurred behind her, holding a bauble she is about to hang, wearing a cable knit jumper, a beanie hat and a loose scarf. Warm lamp light mixed with soft window light, a relaxed natural smile.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo on a grand marble staircase in a black evening dress with a silk stole in the chosen colour across her arms, warm white fairy lights glowing softly out of focus far behind her. Cinematic low key lighting, a gentle rim light on her hair and shoulders, an elegant poised stance.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-06",
     name: "Bauble Reflection Portrait",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo holding a large glossy glass bauble in front of one eye, her reflection curved in the glass, with her other eye and smile visible beside it. She wears a knitted hat and a scarf. Plain studio backdrop, soft beauty lighting, fine detail on the glossy bauble.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo holding one large glossy glass bauble in front of one eye, her reflection curved in the glass, with her other eye and smile visible beside it. She wears a black cashmere polo neck. Plain studio backdrop, soft beauty lighting, fine detail on the glossy bauble.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-07",
-    name: "Window Seat Hat And Scarf",
+    name: "Window Seat Cashmere",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo sitting on a window seat with a bauble resting in her lap, wearing a woollen hat and a thick scarf, glancing at the camera with a calm smile. Cool daylight from the window on her face, a soft frosted pane behind her, quiet cosy mood.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo sitting on a window seat in a soft cream cashmere jumper with a fine scarf loosely knotted at her neck, glancing at the camera with a calm smile. Cool daylight from the window on her face, a softly frosted pane behind her, a quiet luxurious mood.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-08",
-    name: "Hot Drink And Bauble",
+    name: "Champagne Toast",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo holding a bauble in one hand and a plain ceramic mug in the other, wearing a bobble hat and a chunky scarf, breath just visible in the cold air outside a doorway. Soft winter light, shallow depth of field, a warm relaxed expression.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo holding a tall champagne flute at chest height in a black silk dress with a silk scarf draped at her shoulders, a warm knowing smile. Warm golden bokeh of lights behind, soft flattering light, tiny bubbles catching the light in the glass.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-09",
-    name: "Santa Hat Profile Bauble",
+    name: "Profile Rim Light",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo in gentle three quarter profile, wearing a Santa hat and a soft scarf, holding a bauble up to the light and looking at it with a soft smile. Dark neutral backdrop, one soft key light, fine rim light on her hair, realistic wool and glass textures.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo in gentle three quarter profile, holding one bauble up to the light and looking at it with a soft smile, a silk scarf at her neck. Dark neutral backdrop, one soft key light, fine rim light on her hair, realistic silk and glass textures.${REALISTIC_XMAS_SUFFIX}`,
   },
   {
     id: "rx-10",
-    name: "Bauble Toss Candid",
+    name: "Laughing In Ivory",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo caught mid moment gently tossing a bauble from one hand to the other, wearing a knitted hat and a long scarf, looking straight at the camera with a cheeky grin. Plain light backdrop, bright soft daylight, crisp detail, natural movement in the scarf ends.${REALISTIC_XMAS_SUFFIX}`,
+    promptTemplate: `A woman from the reference photo laughing naturally in an ivory knit with a soft scarf, one hand resting lightly at her collar, looking straight at the camera. Plain light backdrop, bright soft daylight, crisp detail, real laughter lines, relaxed and glowing.${REALISTIC_XMAS_SUFFIX}`,
   },
 ];
