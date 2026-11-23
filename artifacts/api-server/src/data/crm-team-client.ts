@@ -392,6 +392,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       var mode = S.mode[s.id] || "msg", body;
       if (mode === "msg") {
         body = '<div class="dm-body">' + esc(fill(s.msg)) + '</div><button class="btn-copy" data-copy="' + s.id + '">Copy message</button> <span class="ct-by">Paste it into Instagram, TikTok or WhatsApp.</span>';
+      } else if (mode === "email") {
+        body = '<div class="ct-by">Subject: Hello from ' + esc(firstName()) + ' at ' + esc(LIST_NAMES[S.list]) + '</div><div class="dm-body">' + esc(fill(s.msg)) + '</div><button class="btn-copy" data-copy="' + s.id + '">Copy email</button> <span class="ct-by">Paste it into a new email with that subject line.</span>';
       } else if (mode === "voice") {
         body = '<div class="dm-body">' + esc(fill(s.voice)) + '</div>' +
           '<div class="ct-rec"><button class="btn-primary" data-rec="' + s.id + '">' + (S.rec && S.rec.id === s.id ? "Stop recording" : "Record a voicenote") + '</button>' +
@@ -403,7 +405,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
           '<a class="btn-primary ct-open" data-call="' + s.id + '" href="#" style="text-decoration:none;">Call</a></div>';
       }
       return '<div class="dm-card"><div class="dm-title">' + esc(s.title) + '</div><div class="ct-by" style="margin-bottom:8px;">' + esc(s.when) + '</div>' +
-        '<div class="ct-modes">' + [["msg", "Message"], ["voice", "Voicenote"], ["call", "Phone call"]].map(function (m) {
+        '<div class="ct-modes">' + [["msg", "Message"], ["email", "Email"], ["voice", "Voicenote"], ["call", "Phone call"]].map(function (m) {
           return '<button class="ct-mode' + (m[0] === mode ? " on" : "") + '" data-mode="' + s.id + '|' + m[0] + '">' + m[1] + "</button>";
         }).join("") + "</div>" + body + "</div>";
     }).join("");
@@ -434,7 +436,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   }
 
   /* ====================== THE DAILY PORTAL (team) ====================== */
-  var P = { root: null, d: null, tab: "today" };
+  var P = { root: null, d: null, tab: "today", goal: 50 };
+  try { var g0 = parseInt(localStorage.getItem("ct-goal"), 10); if (g0 === 5 || g0 === 25 || g0 === 50) P.goal = g0; } catch (e) {}
 
   CT.portal = function (root) {
     P.root = root;
@@ -498,13 +501,17 @@ export const CRM_TEAM_UI_JS: string = String.raw`
   }
 
   function todayHtml(v) {
-    var d = P.d, quota = d.quota, done = d.messagedToday;
-    var pct = Math.min(100, Math.round((done / quota) * 100));
+    var d = P.d, goal = P.goal, done = d.messagedToday;
+    var pct = Math.min(100, Math.round((done / goal) * 100));
     var h = '<div class="card"><h2>To do today</h2>' +
-      '<div class="ct-prog"><b>' + done + " of " + quota + "</b> messaged<div class=\"ct-bar\"><div style=\"width:" + pct + '%"></div></div></div>' +
-      '<div class="ct-row"><div class="ct-who"><b>Engage:</b> like and comment on 10 posts first</div><div class="ct-acts"><button class="ct-act go" data-ptab="engage">Open comments</button></div></div>';
+      '<div class="ct-modes"><span class="ct-by" style="align-self:center;">Today I will do</span>' + [5, 25, 50].map(function (n) {
+        return '<button class="ct-mode' + (n === goal ? " on" : "") + '" data-goal="' + n + '">' + n + "</button>";
+      }).join("") + "</div>" +
+      '<div class="ct-prog"><b>' + done + " of " + goal + "</b> done<div class=\"ct-bar\"><div style=\"width:" + pct + '%"></div></div></div>' +
+      '<div class="ct-numbers">Reach them by <b>message, email, phone call or voicenote</b>, whichever suits you. You will get much further if you like and comment on a few of their posts first, using the suggested comments.' +
+      ' <button class="ct-link" style="color:#000;" data-ptab="engage">Open the comments</button></div>';
     if (!v.today.length) h += '<div class="empty-note">' + (done ? "All done for today. Brilliant work. New leads arrive tomorrow." : "No leads yet. Check back soon.") + "</div>";
-    h += v.today.map(function (r) { return rowHtml(r, actBtn(r, "Messaged", "Messaged", "go") + actBtn(r, "Not relevant", "Skip", "quiet")); }).join("");
+    h += v.today.map(function (r) { return rowHtml(r, actBtn(r, "Messaged", "Done", "go") + actBtn(r, "Not relevant", "Skip", "quiet")); }).join("");
     return h + "</div>";
   }
 
@@ -556,7 +563,7 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       '<p class="hint">Welcome, ' + esc(firstName()) + ". This takes about five minutes to learn, then it is the same routine every day.</p>" +
       "<ol>" +
       "<li><b>Log in</b> with your name and your password. Your password is your name in lower case followed by botox, for example isabellabotox.</li>" +
-      "<li><b>Today.</b> You get 50 new people every morning. Each one has an Open DM button. Open it, send a message from the Scripts tab, then tick <b>Messaged</b>.</li>" +
+      "<li><b>Today.</b> You get 50 new people every morning and you choose how many to do: 5, 25 or 50. Each one has an Open DM button. Reach them by message, email, phone call or voicenote using the Scripts tab, then tick <b>Done</b>.</li>" +
       "<li><b>Tick every one,</b> even if you do not hear back. If someone is not a good fit, tick <b>Skip</b> and they disappear.</li>" +
       "<li><b>Follow up.</b> Three working days after you message someone, they appear in the Follow up tab. Send one friendly follow up, then tick <b>Followed up</b>. That is the only reminder they ever get, so you never chase twice.</li>" +
       "<li><b>Replies.</b> Check your Instagram inbox (the pink button at the top). When someone replies, tick <b>They replied</b> in the Follow up tab or find them in Call booked. Once a call is in the diary, tick <b>Call booked</b>.</li>" +
@@ -596,6 +603,8 @@ export const CRM_TEAM_UI_JS: string = String.raw`
       }, function (e) { t.disabled = false; toast(e.message); });
       return;
     }
+    var gl = t.getAttribute("data-goal");
+    if (gl) { P.goal = parseInt(gl, 10); try { localStorage.setItem("ct-goal", gl); } catch (e) {} drawPortal(); return; }
     var el = t.getAttribute("data-elist");
     if (el) { E.list = el; drawPortal(); return; }
     var cc = t.getAttribute("data-copyc");
