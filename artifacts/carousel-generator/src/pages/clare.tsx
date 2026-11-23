@@ -474,8 +474,12 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
 }
 
-function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick, onBoxMove }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void; onBoxMove?: (x: number, y: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const drag = useRef<{ id: number; sx: number; sy: number; bx: number; by: number; moved: boolean } | null>(null);
+  const moveRef = useRef(onBoxMove);
+  moveRef.current = onBoxMove;
+  const justDragged = useRef(false);
   useEffect(() => {
     let live = true;
     (async () => {
@@ -487,7 +491,47 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
     })();
     return () => { live = false; };
   }, [post, n, photo, fonts, tf, look, logo]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+  // Drag the text box on the cover with the mouse (or a finger): it follows the pointer from wherever you grab it.
+  const canDrag = !!onBoxMove && !!look.box && n === 0;
+  const down = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canDrag || !look.box || (e.pointerType === "mouse" && e.button !== 0)) return;
+    drag.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, bx: look.box.x, by: look.box.y, moved: false };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* older browsers: the move still works while over the canvas */ }
+    e.preventDefault();
+  };
+  const move = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved && Math.hypot(dx, dy) < 4) return;
+    d.moved = true;
+    const clamp = (v: number) => Math.max(0.05, Math.min(0.95, v));
+    moveRef.current?.(Math.round(clamp(d.bx + dx / r.width) * 1000) / 1000, Math.round(clamp(d.by + dy / r.height) * 1000) / 1000);
+  };
+  const up = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    drag.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    if (d.moved) { justDragged.current = true; setTimeout(() => { justDragged.current = false; }, 0); }
+  };
+  return (
+    <canvas
+      ref={ref}
+      width={W}
+      height={H}
+      onClick={() => { if (justDragged.current) return; onClick?.(); }}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      style={canDrag ? { touchAction: "none" } : undefined}
+      className={`w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 ${canDrag ? "cursor-grab active:cursor-grabbing select-none" : "cursor-pointer"}`}
+      title={canDrag ? "Drag to move the text box" + (onClick ? ". Click without dragging to swap the photo" : "") : n < 4 && onClick ? "Click to swap the photo" : undefined}
+    />
+  );
 }
 
 const nextDay = (hhmm: string) => {
@@ -1255,7 +1299,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {(post.one ? [0] : post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} onBoxMove={n === 0 && lookFor(post).box ? (x, y) => patch(post.id, { look: { ...post.look, box: { ...lookFor(post).box!, x, y } } }) : undefined} />
                   ))}
                 </div>
                 {(() => {
