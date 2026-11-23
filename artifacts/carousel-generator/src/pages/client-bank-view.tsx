@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Copy, Check, Download, Loader2 } from "lucide-react";
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -54,6 +54,7 @@ async function downloadAllForItem(item: BankItem, clientName: string) {
 
 function BankCard({ item, clientName }: { item: BankItem; clientName: string }) {
   const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const thumb = item.imageUrls[0] || null;
 
   const handleDownload = async () => {
@@ -62,6 +63,16 @@ function BankCard({ item, clientName }: { item: BankItem; clientName: string }) 
       await downloadAllForItem(item, clientName);
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(item.caption);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard blocked: caption is still shown in full on the card
     }
   };
 
@@ -78,7 +89,16 @@ function BankCard({ item, clientName }: { item: BankItem; clientName: string }) 
           <p className="font-medium text-sm text-zinc-900 truncate mb-1">{item.title}</p>
         )}
         {item.caption && (
-          <p className="text-xs text-zinc-400 line-clamp-2 mb-3">{item.caption}</p>
+          <p className="text-xs text-zinc-500 whitespace-pre-line mb-3">{item.caption}</p>
+        )}
+        {item.caption && (
+          <button
+            onClick={handleCopy}
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-zinc-900 text-zinc-900 rounded-lg py-2 mb-2 hover:bg-zinc-50 transition-colors"
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+            {copied ? "Caption copied" : "Copy caption"}
+          </button>
         )}
         <button
           onClick={handleDownload}
@@ -97,7 +117,13 @@ function BankCard({ item, clientName }: { item: BankItem; clientName: string }) 
   );
 }
 
-export default function ClientBankView({ clientSlug }: { clientSlug: string }) {
+export default function ClientBankView({
+  clientSlug,
+  extraLinks = [],
+}: {
+  clientSlug: string;
+  extraLinks?: { label: string; href: string }[];
+}) {
   const [data, setData] = useState<BankData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +182,19 @@ export default function ClientBankView({ clientSlug }: { clientSlug: string }) {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
+        {extraLinks.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-6">
+            {extraLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                className="text-xs font-medium border border-zinc-900 text-zinc-900 rounded-lg px-4 py-2 hover:bg-zinc-50 transition-colors"
+              >
+                {l.label}
+              </a>
+            ))}
+          </div>
+        )}
         {data.posts.length === 0 ? (
           <p className="text-sm text-zinc-400 text-center py-16">
             No content in the bank yet.

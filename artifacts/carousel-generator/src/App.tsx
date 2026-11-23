@@ -436,6 +436,7 @@ function AppContent() {
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
   const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
+  const [isJuliePawson] = useRoute("/juliepawson");
   const [isSamplePublic, samplePublicParams] = useRoute("/sample/:slug");
   const [isSampleRequest] = useRoute("/getmysample");
   const [isPackPublic, packPublicParams] = useRoute("/pack/:slug");
@@ -640,6 +641,14 @@ function AppContent() {
   }
   if (isClientBankView && clientBankViewParams?.clientSlug) {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
+  }
+  if (isJuliePawson) {
+    return (
+      <ClientBankView
+        clientSlug="julie-pawson-aesthetics-ltd"
+        extraLinks={[{ label: "Your Christmas shoot photos", href: "/julie2xmas" }]}
+      />
+    );
   }
   if (isNo1Client) {
     return <PackPublic slug="no1-body-sculpting-posts" />;
