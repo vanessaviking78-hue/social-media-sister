@@ -17,7 +17,7 @@ import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { newxmasHashtags, areaFromPreset } from "@/lib/newxmas";
 import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
-import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
+import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { clinicTags } from "@/lib/sixteen-posts";
 import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
@@ -190,12 +190,23 @@ type Photo = { id: string; bmp: ImageBitmap; url: string };
 type Fonts = { head: string; body: string };
 type TitleFont = { lf: LoadedFont; style: TitleStyle } | null;
 
+// The font a client picked on the Font Lab form lives on the server, so any device can find it.
+let serverFonts: Promise<{ clientName: string; typedName: string; fontId: string; upper: boolean }[]> | null = null;
+const fetchServerFonts = () => (serverFonts ??= fetch(`${BASE}/api/client-fonts`).then((r) => r.json()).then((d) => d.clients ?? []).catch(() => { serverFonts = null; return []; }));
+async function serverStyleFor(client: string): Promise<TitleStyle | null> {
+  const me = clientSlug(client);
+  const near = (n: string) => { const o = clientSlug(n || ""); return !!o && (o === me || (Math.min(o.length, me.length) >= 5 && (o.includes(me) || me.includes(o)))); };
+  const row = (await fetchServerFonts()).find((c) => near(c.clientName) || near(c.typedName));
+  return row ? { ...DEFAULT_TITLE_STYLE, fontId: row.fontId, upper: row.upper, swaps: {}, rate: "first", ligatures: true } : null;
+}
+
 async function loadTitleFont(client?: string): Promise<TitleFont> {
-  // a client who chose their own font on the Font Lab form (or in Font Lab) gets it, everyone else keeps Hatcher
-  if (client && hasClientStyle(clientSlug(client))) {
+  // a client who chose their own font (in Font Lab on this device, or on the Font Lab form) gets it, everyone else keeps Hatcher
+  if (client) {
     try {
-      const style = readTitleStyle(clientSlug(client));
-      if (style.fontId !== "hatcher") return { lf: await loadSuiteFont(style.fontId), style };
+      const slug = clientSlug(client);
+      const style = hasClientStyle(slug) ? readTitleStyle(slug) : await serverStyleFor(client);
+      if (style && style.fontId !== "hatcher") return { lf: await loadSuiteFont(style.fontId), style };
     } catch { /* fall back to Hatcher */ }
   }
   return loadHatcherTitle();
@@ -606,7 +617,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   // the cover title is always Hatcher with a curly first letter
   useEffect(() => {
     let live = true;
-    const load = () => loadTitleFont(CLINIC_KEY === "clare" ? undefined : CLINIC_NAME).then((t) => live && setTf(t));
+    const load = () => loadTitleFont(preset?.name ?? CLINIC_NAME).then((t) => live && setTf(t));
     void load();
     window.addEventListener("suite-client-font", load);
     return () => { live = false; window.removeEventListener("suite-client-font", load); };
@@ -816,7 +827,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
 
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
-    const tfNow = await loadTitleFont(CLINIC_KEY === "clare" ? undefined : CLINIC_NAME);
+    const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < (post.one ? 1 : post.four ? 4 : 5); n++) {
       const c = document.createElement("canvas");
