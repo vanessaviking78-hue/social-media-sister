@@ -133,6 +133,9 @@ function inks(look: Look) {
   const grey = l.text === "auto" ? (dark ? "#cfcfcf" : GREY) : l.text;
   return { ink, grey, bg: l.wash };
 }
+// STATIC - quotes: fonts that suit a painted or written quote. "Different font on every post" cycles through these.
+const QUOTE_FONT_IDS = ["permanent-marker", "naleni", "honey-biscuit", "stoner-bold", "bordie-unfocus", "verstep", "blushade-regular", "glowgirl", "slightly-moon-regular", "mitchaella-modern-unique", "clovenia", "claudia", "behind", "rolive", "miera", "graze", "annyra", "syora"];
+const QUOTE_FONTS = QUOTE_FONT_IDS.map((id) => SUITE_FONTS.find((f) => f.id === id)).filter((f): f is NonNullable<typeof f> => !!f);
 // STATIC - quotes: the one writing colour shown in the picker (the headline colour, or the writing colour when the headline follows it).
 const quoteText = (l: Look) => (l.headline && l.headline !== "auto" ? l.headline : l.text && l.text !== "auto" ? l.text : washIsDark(l.wash) ? "#ffffff" : "#1b1b1b");
 // Turn a colour into something a canvas can paint with, shining across the band it covers.
@@ -229,6 +232,7 @@ type Post = {
   sub?: string; // NEWXMAS cover subtitle
   four?: boolean; // NEWXMAS posts have 4 slides: cover, two body slides, then the CTA
   one?: boolean; // XMAS FEELS posts are a single image: her line on the picture, nothing else
+  font?: string; // STATIC - quotes: this post's own font (a suite font family), empty means the page heading font
   quote?: boolean; // STATIC - quotes: a single image, her line on a plain colour or metallic background, no photo
   slides: string[];
   cta: string;
@@ -286,7 +290,7 @@ const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
-async function ensureFonts(f: Fonts) {
+async function ensureFonts(f: Fonts, extra = "") {
   loadGoogleFonts();
   injectSuiteFontCss();
   if (!document.getElementById("hatcher-face")) {
@@ -296,7 +300,7 @@ async function ensureFonts(f: Fonts) {
     document.head.appendChild(el);
   }
   try {
-    await Promise.all([document.fonts.load('400 60px "Hatcher"'), document.fonts.load(`400 60px "${f.head}"`), document.fonts.load(`600 60px "${f.head}"`), document.fonts.load(`400 30px "${f.body}"`), document.fonts.load(`600 30px "${f.body}"`)]);
+    await Promise.all([document.fonts.load('400 60px "Hatcher"'), document.fonts.load(`400 60px "${f.head}"`), document.fonts.load(`600 60px "${f.head}"`), document.fonts.load(`400 30px "${f.body}"`), document.fonts.load(`600 30px "${f.body}"`), ...(extra ? [document.fonts.load(`400 60px "${extra}"`)] : [])]);
   } catch {
     /* falls back to a serif */
   }
@@ -433,11 +437,12 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     ctx.fillStyle = BGC;
     ctx.fillRect(0, 0, W, H);
     ctx.textAlign = "center";
-    const qfit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 860 * Math.max(1, ts), Math.round(150 * ts), Math.round(56 * ts), 1.12);
+    const qhead = (px: number) => `400 ${px}px "${post.font || f.head}", serif`;
+    const qfit = fitText(ctx, post.hook || "", qhead, W - 200, 860 * Math.max(1, ts), Math.round(150 * ts), Math.round(56 * ts), 1.12);
     const qtotal = qfit.lines.length * qfit.px * 1.12;
     let qy = (H - qtotal) / 2 + cy;
     ctx.fillStyle = look.headline !== "auto" ? paintOf(ctx, look.headline, qy, qy + qtotal) : INKC;
-    ctx.font = head(qfit.px);
+    ctx.font = qhead(qfit.px);
     for (const l of qfit.lines) { ctx.fillText(l, W / 2, qy); qy += qfit.px * 1.12; }
     return;
   }
@@ -515,7 +520,7 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
   useEffect(() => {
     let live = true;
     (async () => {
-      await ensureFonts(fonts);
+      await ensureFonts(fonts, post.font);
       const c = ref.current;
       if (!c || !live) return;
       const ctx = c.getContext("2d");
@@ -869,7 +874,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   };
 
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
-    await ensureFonts(fonts);
+    await ensureFonts(fonts, post.font);
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < (post.one ? 1 : post.four ? 4 : 5); n++) {
@@ -1205,6 +1210,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
             ))}
           </div>
           <div className="text-sm text-white/60">{isQuote ? "Template: plain colour quote board, her line painted in the middle. Pick the background and text colour above, metallics included." : "Template: 1. Photo with gradient wash."}</div>
+          {isQuote && (
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <Button size="sm" variant="secondary" onClick={() => { setPosts((l) => l.map((p, i) => (p.quote ? { ...p, font: QUOTE_FONTS[i % QUOTE_FONTS.length].family } : p))); toast.success("Every quote has its own font now. Change any of them on the post."); }}>Different font on every post</Button>
+              <Button size="sm" variant="outline" onClick={() => setPosts((l) => l.map((p) => (p.quote ? { ...p, font: undefined } : p)))}>Back to the page font</Button>
+              <span className="text-white/50">The heading font above is the default. Each post can also pick its own.</span>
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
@@ -1364,6 +1376,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   {post.quote ? (
                     <>
                       <ColourPicker small label="This post: background" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
+                      <label className="space-y-1 block">
+                        <span className="text-white/60">This post: font</span>
+                        <select className="w-full bg-white/5 rounded p-1.5" value={post.font ?? ""} onChange={(e) => patch(post.id, { font: e.target.value || undefined })}>
+                          <option value="" className="text-black">Page font</option>
+                          {SUITE_FONTS.map((f) => <option key={f.id} value={f.family} className="text-black">{f.name}</option>)}
+                        </select>
+                      </label>
                       <div className="space-y-1">
                         <ColourPicker small label="This post: text colour" value={quoteText(lookFor(post))} onChange={(v) => patch(post.id, { look: { ...post.look, text: v, headline: v } })} />
                         {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
