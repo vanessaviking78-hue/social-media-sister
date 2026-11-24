@@ -23,7 +23,7 @@ import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBo
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { clinicTags } from "@/lib/sixteen-posts";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, STATICQ_SECTIONS, STATICQ_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
@@ -35,7 +35,7 @@ const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
 let CLINIC_KEY = "clare";
 let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
-// Sparkle buttons show on the Christmas tabs only (Xmas, NEWXMAS, XMAS FEELS).
+// Sparkle buttons show on the Christmas tabs (Xmas, NEWXMAS, XMAS FEELS) and on STATIC - quotes.
 let SPARKLE_ON = false;
 let LOOK_KEY = "clare-look-v1";
 
@@ -133,6 +133,8 @@ function inks(look: Look) {
   const grey = l.text === "auto" ? (dark ? "#cfcfcf" : GREY) : l.text;
   return { ink, grey, bg: l.wash };
 }
+// STATIC - quotes: the one writing colour shown in the picker (the headline colour, or the writing colour when the headline follows it).
+const quoteText = (l: Look) => (l.headline && l.headline !== "auto" ? l.headline : l.text && l.text !== "auto" ? l.text : washIsDark(l.wash) ? "#ffffff" : "#1b1b1b");
 // Turn a colour into something a canvas can paint with, shining across the band it covers.
 function paintOf(ctx: CanvasRenderingContext2D, v: string, y0: number, y1: number): string | CanvasGradient {
   const m = metalOf(v);
@@ -227,6 +229,7 @@ type Post = {
   sub?: string; // NEWXMAS cover subtitle
   four?: boolean; // NEWXMAS posts have 4 slides: cover, two body slides, then the CTA
   one?: boolean; // XMAS FEELS posts are a single image: her line on the picture, nothing else
+  quote?: boolean; // STATIC - quotes: a single image, her line on a plain colour or metallic background, no photo
   slides: string[];
   cta: string;
   caption: string;
@@ -279,7 +282,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...XMASFEELS_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...XMASFEELS_POSTS, ...STATICQ_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -425,6 +428,20 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
   const body = (px: number, w = 400) => `${w} ${px}px "${f.body}", sans-serif`;
 
+  // STATIC - quotes: a plain colour (or metallic) board with her line painted across the middle in the picked writing colour. No photo, no wash.
+  if (post.quote) {
+    ctx.fillStyle = BGC;
+    ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    const qfit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 860 * Math.max(1, ts), Math.round(150 * ts), Math.round(56 * ts), 1.12);
+    const qtotal = qfit.lines.length * qfit.px * 1.12;
+    let qy = (H - qtotal) / 2 + cy;
+    ctx.fillStyle = look.headline !== "auto" ? paintOf(ctx, look.headline, qy, qy + qtotal) : INKC;
+    ctx.font = head(qfit.px);
+    for (const l of qfit.lines) { ctx.fillText(l, W / 2, qy); qy += qfit.px * 1.12; }
+    return;
+  }
+
   const LEFT = 100;
   if (n === 4) {
     ctx.fillStyle = BGC;
@@ -531,7 +548,7 @@ function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?:
 }
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xmasfeels" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xmasfeels" | "staticq" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -541,11 +558,11 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xma
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
   const own = isClare ? { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS } : sectionsForTreatments(forced?.treatmentIds);
-  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
-  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
-  SPARKLE_ON = mode === "xmas" || mode === "smxmas" || mode === "newxmas" || mode === "xmasfeels";
-  LOOK_KEY = `clare-look-v1${sfx}`;
-  FONT_KEY = `clare-fonts-v1${sfx}`;
+  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "staticq" ? STATICQ_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
+  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "staticq" ? STATICQ_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
+  SPARKLE_ON = mode === "xmas" || mode === "smxmas" || mode === "newxmas" || mode === "xmasfeels" || mode === "staticq";
+  LOOK_KEY = `clare-look-v1${sfx}${mode === "staticq" ? "-staticq" : ""}`;
+  FONT_KEY = `clare-fonts-v1${sfx}${mode === "staticq" ? "-staticq" : ""}`;
   AREA_KEY = `clare-area-v1${sfx}`;
   SCHED_KEY = `clare-scheduled-v1${sfx}`;
   return <ClareOwnInner key={`${preset?.id ?? "clare"}-${mode ?? ""}-${own.posts.length}`} preset={preset} />;
@@ -596,7 +613,8 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const [group, setGroup] = useState(SECS[0].id);
   const [typeId, setTypeId] = useState(POSTS[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
-  const [fonts, setFonts] = useState<Fonts>({ head: "Hatcher", body: "Montserrat" });
+  const isQuote = POSTS === STATICQ_POSTS; // the STATIC - quotes tab: plain colour boards, painted marker writing
+  const [fonts, setFonts] = useState<Fonts>({ head: isQuote ? "SuitePermanentMarker" : "Hatcher", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
   const [look, setLook] = useState<Look>(() => {
     try {
@@ -767,8 +785,8 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   };
 
   const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
-  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : {});
-  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xf ? t.xf.line : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
+  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : t.sq ? { one: true, quote: true, caption: t.sq.caption } : {});
+  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xf ? t.xf.line : t.sq ? t.sq.line : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   // The 16 posts tab arrives with hooks, captions and hashtags already written. Clinic hashtags are built from the area typed on the page.
   const seed = (t: ClareSectionPost): Pick<Post, "hook" | "cta" | "caption" | "hashtags"> => t.fixed
     ? { hook: t.fixed.hook, cta: t.fixed.cta, caption: t.fixed.caption, hashtags: t.fixed.tags ?? clinicTags(area) }
@@ -795,7 +813,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const chosenCount = POSTS.filter((t) => chosen.has(t.id)).length;
   const makeFrom = async (order: typeof POSTS, doneMsg: (n: number) => string) => {
     const base = posts.length * 5;
-    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: styleForNumber(i), ...nxFields(t) }));
+    const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: isQuote ? undefined : styleForNumber(i), ...nxFields(t) }));
     setPosts((l) => [...made, ...l]);
     for (let i = 0; i < made.length; i++) {
       if (made[i].four || made[i].one || TYPE_BY_ID.get(made[i].typeId)?.fixed) continue; // hooks and captions are already written
@@ -1115,17 +1133,26 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="space-y-4 text-sm">
-            <ColourPicker label="Gradient colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
-            <div className="space-y-1">
-              <span className="text-white/60">Bottom of the page (the default for every post)</span>
-              <StylePicker look={look} onPick={(p) => setLook((l) => ({ ...l, ...p }))} />
-            </div>
-            <label className="space-y-1 block max-w-sm">
-              <span className="text-white/60">Wash strength: {look.opacity}%</span>
-              <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
-            </label>
-            <ColourPicker label="Writing colour" value={normLook(look).text} onChange={(v) => setLook((l) => ({ ...l, text: v }))} extra={[{ name: "Match gradient", hex: "auto" }]} />
-            <ColourPicker label="Headline colour" value={normLook(look).headline} onChange={(v) => setLook((l) => ({ ...l, headline: v }))} extra={[{ name: "Same as writing", hex: "auto" }]} />
+            {isQuote ? (
+              <>
+                <ColourPicker label="Background colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
+                <ColourPicker label="Text colour (the default for every post)" value={quoteText(normLook(look))} onChange={(v) => setLook((l) => ({ ...l, text: v, headline: v }))} />
+              </>
+            ) : (
+              <>
+                <ColourPicker label="Gradient colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
+                <div className="space-y-1">
+                  <span className="text-white/60">Bottom of the page (the default for every post)</span>
+                  <StylePicker look={look} onPick={(p) => setLook((l) => ({ ...l, ...p }))} />
+                </div>
+                <label className="space-y-1 block max-w-sm">
+                  <span className="text-white/60">Wash strength: {look.opacity}%</span>
+                  <input type="range" min={0} max={100} step={5} value={look.opacity} onChange={(e) => setLook((l) => ({ ...l, opacity: Number(e.target.value) }))} className="w-full" />
+                </label>
+                <ColourPicker label="Writing colour" value={normLook(look).text} onChange={(v) => setLook((l) => ({ ...l, text: v }))} extra={[{ name: "Match gradient", hex: "auto" }]} />
+                <ColourPicker label="Headline colour" value={normLook(look).headline} onChange={(v) => setLook((l) => ({ ...l, headline: v }))} extra={[{ name: "Same as writing", hex: "auto" }]} />
+              </>
+            )}
             <div className="rounded border border-white/15 p-3 space-y-2">
               <div className="text-sm font-semibold">Change all colours at once</div>
               <p className="text-xs text-white/60">The colours above already apply to every post. If you changed colours on single posts, this puts every post back on them.</p>
@@ -1177,7 +1204,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
               </div>
             ))}
           </div>
-          <div className="text-sm text-white/60">Template: 1. Photo with gradient wash.</div>
+          <div className="text-sm text-white/60">{isQuote ? "Template: plain colour quote board, her line painted in the middle. Pick the background and text colour above, metallics included." : "Template: 1. Photo with gradient wash."}</div>
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
@@ -1334,24 +1361,36 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   </div>
                 )}
                 <div className="rounded-lg border border-white/10 p-3 grid md:grid-cols-2 gap-3 text-xs items-start">
-                  <ColourPicker small label="This post: gradient" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
-                  <div className="space-y-1">
-                    <span className="text-white/60">This post: bottom of the page</span>
-                    <StylePicker look={lookFor(post)} onPick={(p) => patch(post.id, { look: { ...post.look, ...p } })} />
-                  </div>
-                  <label className="space-y-1 block">
-                    <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
-                    <input type="range" min={0} max={100} step={5} value={lookFor(post).opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
-                  </label>
-                  <ColourPicker small label="Writing" value={lookFor(post).text} onChange={(v) => patch(post.id, { look: { ...post.look, text: v } })} extra={[{ name: "Match", hex: "auto" }]} />
-                  <div className="space-y-1">
-                    <ColourPicker small label="Headline" value={lookFor(post).headline} onChange={(v) => patch(post.id, { look: { ...post.look, headline: v } })} extra={[{ name: "Writing colour", hex: "auto" }]} />
-                    {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
-                  </div>
+                  {post.quote ? (
+                    <>
+                      <ColourPicker small label="This post: background" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
+                      <div className="space-y-1">
+                        <ColourPicker small label="This post: text colour" value={quoteText(lookFor(post))} onChange={(v) => patch(post.id, { look: { ...post.look, text: v, headline: v } })} />
+                        {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ColourPicker small label="This post: gradient" value={lookFor(post).wash} onChange={(v) => patch(post.id, { look: { ...post.look, wash: v } })} />
+                      <div className="space-y-1">
+                        <span className="text-white/60">This post: bottom of the page</span>
+                        <StylePicker look={lookFor(post)} onPick={(p) => patch(post.id, { look: { ...post.look, ...p } })} />
+                      </div>
+                      <label className="space-y-1 block">
+                        <span className="text-white/60">Strength: {lookFor(post).opacity}%</span>
+                        <input type="range" min={0} max={100} step={5} value={lookFor(post).opacity} onChange={(e) => patch(post.id, { look: { ...post.look, opacity: Number(e.target.value) } })} className="w-full" />
+                      </label>
+                      <ColourPicker small label="Writing" value={lookFor(post).text} onChange={(v) => patch(post.id, { look: { ...post.look, text: v } })} extra={[{ name: "Match", hex: "auto" }]} />
+                      <div className="space-y-1">
+                        <ColourPicker small label="Headline" value={lookFor(post).headline} onChange={(v) => patch(post.id, { look: { ...post.look, headline: v } })} extra={[{ name: "Writing colour", hex: "auto" }]} />
+                        {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {(post.one ? [0] : post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={!post.quote && n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 {(() => {
@@ -1451,6 +1490,7 @@ const CLARE_TABS: { id: string; label: string; Comp: React.ComponentType | null 
   { id: "november", label: "November", Comp: lazyTab(() => import("./november-posts")) },
   { id: "newxmas", label: "NEWXMAS", Comp: lazyTab(() => import("./newxmas-tab")) },
   { id: "xmasfeels", label: "XMAS FEELS", Comp: lazyTab(() => import("./xmasfeels-tab")) },
+  { id: "staticq", label: "STATIC - quotes", Comp: lazyTab(() => import("./staticq-tab")) },
   { id: "xmas", label: "Xmas", Comp: lazyTab(() => import("./xmas-tab")) },
   { id: "lux", label: "LUX", Comp: lazyTab(() => import("./lux")) },
   { id: "basic", label: "Basic posts", Comp: lazyTab(() => import("./basic-posts")) },
