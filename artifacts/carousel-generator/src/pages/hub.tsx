@@ -1502,7 +1502,7 @@ const OWN_PAGES: [RegExp, string][] = [[/ryder/i, "/ryder"], [/lisa.*academy|aca
 function ClientsGrid() {
   const { presets, loading } = usePresets();
   // Club members' pages stay in the Club tab, except the members named here, who also get an icon among the clients (favour extras).
-  const CLUB_ICONS_TOO = /natasha|lhd/i;
+  const CLUB_ICONS_TOO = /natasha|l\.?h\.?d/i;
   const list = [...presets].filter((p) => !/\(club\)$/i.test(p.name) || CLUB_ICONS_TOO.test(p.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   if (loading) return <p style={{ fontWeight: 800 }}>Loading...</p>;
   return (
