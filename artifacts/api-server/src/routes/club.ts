@@ -324,8 +324,13 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
       if (last) extraRows = (await db.execute(sql`SELECT * FROM club_extras WHERE month = ${last.month}`)).rows as any[];
     }
     const extras = extraRows.filter((r) => r.title || r.body || r.image_url).map((r) => ({ kind: r.kind, title: r.title, body: r.body, imageUrl: r.image_url }));
+    // Posts Vanessa has sent to this member's Client Bank (drafts on her client page), for her to collect.
+    const presetId = Number((m as any).preset_id) || 0;
+    const bankRows = presetId ? (await db.execute(sql`SELECT id, post_type, content, created_at FROM scheduled_posts WHERE preset_id = ${presetId} AND status = 'draft' ORDER BY created_at DESC LIMIT 200`)).rows as any[] : [];
+    const bank = bankRows.map((r) => ({ id: r.id, postType: r.post_type, title: str(r.content?.title, 120), caption: str(r.content?.caption, 4000), imageUrls: Array.isArray(r.content?.imageUrls) ? r.content.imageUrls.filter((u: any) => typeof u === "string") : [], videoUrl: typeof r.content?.videoUrl === "string" ? r.content.videoUrl : null, createdAt: r.created_at }));
     res.set("Cache-Control", "private, no-store");
     res.json({
+      bank,
       extras,
       challengeHooks: REELS_CHALLENGE_ITEMS,
       member: publicMember(m),

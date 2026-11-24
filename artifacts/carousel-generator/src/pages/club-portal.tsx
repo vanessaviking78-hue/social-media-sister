@@ -74,6 +74,7 @@ type Portal = {
   member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   challengeHooks?: string[];
+  bank?: { id: number; postType: string; title: string; caption: string; imageUrls: string[]; videoUrl: string | null; createdAt: string }[];
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; choose?: { cap: number; deadline: string | null; posts: { n: number; label: string; images: string[] }[] }; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
 };
@@ -433,12 +434,37 @@ function ChallengeHooks({ hooks, token }: { hooks: string[]; token: string }) {
   );
 }
 
+// Posts Vanessa has sent to this member's Client Bank, waiting for her to download and upload herself.
+function BankPosts({ posts }: { posts: NonNullable<Portal["bank"]> }) {
+  return (
+    <div style={{ marginTop: 18 }}>
+      <h2>Ready for you to collect</h2>
+      <p className="cp-sub">I have popped these here for you. Download the images, copy the captions and post when you like.</p>
+      {posts.map((p, n) => (
+        <div key={p.id} style={{ padding: "26px 0", borderBottom: "1px solid #e5e5e5" }}>
+          <div className="cp-pink" style={{ fontWeight: 900, letterSpacing: ".2em", fontSize: 12, textTransform: "uppercase" }}>{p.title || `Post ${n + 1}`}</div>
+          {p.imageUrls.length > 0 && <div className="cp-strip" style={{ marginTop: 10 }}>{p.imageUrls.map((u, i) => <img key={u + i} src={u} alt={`${p.title || "Post"} image ${i + 1}`} loading="lazy" />)}</div>}
+          {p.videoUrl && <video src={p.videoUrl} controls style={{ width: "100%", maxWidth: 360, marginTop: 10 }} />}
+          {p.caption && <p className="bd" style={{ whiteSpace: "pre-wrap", marginTop: 10 }}>{p.caption}</p>}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+            {p.caption && <button className="cp-btn k" onClick={() => navigator.clipboard?.writeText(p.caption)}>Copy caption</button>}
+            {p.imageUrls.map((u, i) => <button key={u + i} className="cp-btn" onClick={() => download(u, `post-${p.id}-${i + 1}.jpg`)}>Download {p.imageUrls.length > 1 ? i + 1 : "image"}</button>)}
+            {p.videoUrl && <button className="cp-btn" onClick={() => download(p.videoUrl as string, `post-${p.id}.mp4`)}>Download video</button>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Content({ data, plan, token, reload }: { data: Portal; plan: "69" | "222"; token: string; reload: () => void }) {
   const [open, setOpen] = useState<string>(data.months[0]?.month ?? "");
-  if (!data.months.length) return <div className="cp-box"><b>Nothing here yet.</b><p className="cp-sub">Once I have built and checked your {monthName(data.cycle.month)} content it will appear here, ready to download and upload yourself.</p></div>;
+  const bankEl = data.bank?.length ? <BankPosts posts={data.bank} /> : null;
+  if (!data.months.length) return <div>{bankEl}<div className="cp-box"><b>Nothing here yet.</b><p className="cp-sub">Once I have built and checked your {monthName(data.cycle.month)} content it will appear here, ready to download and upload yourself.</p></div></div>;
   const m = data.months.find((x) => x.month === open) ?? data.months[0];
   return (
     <div>
+      {bankEl}
       <div className="cp-chips" style={{ margin: "18px 0" }}>
         {data.months.map((x) => <button key={x.month} className={`cp-chip ${x.month === m.month ? "on" : ""}`} onClick={() => setOpen(x.month)}>{monthName(x.month)}</button>)}
       </div>
