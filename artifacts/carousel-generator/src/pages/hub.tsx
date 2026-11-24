@@ -1501,7 +1501,9 @@ function ClubMemberTiles() {
 const OWN_PAGES: [RegExp, string][] = [[/ryder/i, "/ryder"], [/lisa.*academy|academy.*lisa/i, "/lisa"], [/clare/i, "/clare"], [/castle/i, "/castle"], [/kathryn/i, "/kathryn"]];
 function ClientsGrid() {
   const { presets, loading } = usePresets();
-  const list = [...presets].filter((p) => !/\(club\)$/i.test(p.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
+  // Club members' pages stay in the Club tab, except the members named here, who also get an icon among the clients (favour extras).
+  const CLUB_ICONS_TOO = /natasha|lhd/i;
+  const list = [...presets].filter((p) => !/\(club\)$/i.test(p.name) || CLUB_ICONS_TOO.test(p.name)).sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
   if (loading) return <p style={{ fontWeight: 800 }}>Loading...</p>;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
