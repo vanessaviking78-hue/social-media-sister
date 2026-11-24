@@ -4808,3 +4808,69 @@ export const HAPPYFACE_XMAS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo standing in a dark art deco room beside a tall black Christmas tree with tiny gold lights, arms loosely folded, looking straight into the camera. She wears a bright fuchsia tailored suit with a crisp white shirt open at the neck. Cinematic low key lighting, a fine rim light on her hair and shoulders, glossy black floor reflecting the tree. ${HAPPYFACE_XMAS_SUFFIX}`,
   },
 ];
+
+// TEVIOT XMAS: ten luxury Christmas portraits for Teviot Dental Face in a fixed turquoise and purple palette.
+const TEVIOT_XMAS_SUFFIX = ` Luxury Christmas editorial in a fixed palette of turquoise and deep purple only. Every Christmas decoration (tree, baubles, ribbon, wrapping, garlands, candles, flowers) is turquoise or purple, with a very fine touch of silver or pearl at most. Her clothes are rich quality fabric in deep purple, turquoise or black. No red, no green and no gold anywhere. STRICT FACELOCK: use the uploaded reference photo as the sole source of identity and preserve the exact face, facial proportions, bone structure, eyes, nose, lips, jawline, age, hairstyle and natural expression. Do not alter, beautify, reshape or reinterpret the face. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. A real photograph with real fabric weave, real glass and real reflections, expensive and refined.`;
+
+export const TEVIOT_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "tv-01",
+    name: "Turquoise Tree Glamour",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a tall elegant Christmas tree dressed entirely in turquoise and purple glass baubles with a wide purple velvet bow on top, one hand resting lightly on a branch, a calm confident smile. She wears a deep purple silk blouse and black tailored trousers. Calm luxurious living room, soft window light, shallow depth of field, magazine quality. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-02",
+    name: "Purple Velvet Close Up",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a tight beauty close up holding one large glossy turquoise bauble beside her face, a soft knowing smile. She wears a deep purple velvet polo neck. Plain softly graded purple backdrop, a few turquoise baubles creamy out of focus, crisp beauty lighting. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-03",
+    name: "Marble Gift Wrapping",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo at a white marble table tying a wide turquoise satin ribbon around a purple gift box, a stack of beautifully wrapped turquoise and purple presents beside her. She wears a black silk shirt. Soft daylight from a tall window, a genuine delighted expression, shallow depth of field. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-04",
+    name: "Staircase Evening Gown",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo on a grand marble staircase in a floor length deep purple satin evening gown, a garland of turquoise and purple baubles and orchids winding along the banister. Cinematic low key light, a gentle rim light on her hair and shoulders, an elegant poised stance. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-05",
+    name: "Champagne Toast",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a tall champagne flute at chest height in a turquoise silk dress, a warm knowing smile. Warm soft bokeh of purple and turquoise lights behind her, tiny bubbles catching the light in the glass, flattering luxurious light. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-06",
+    name: "Fireside Cashmere",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed in a leather armchair beside a marble fireplace, a mantel garland of turquoise and purple baubles and pillar candles in the same colours. She wears a soft purple cashmere jumper. Gentle firelight on her skin balanced with neutral light, a warm amused expression, luxury magazine feel. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-07",
+    name: "Snowy Window Dusk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing at a tall frosted window at dusk with light snowfall outside, a turquoise and purple wreath with a large bow hanging on the glass behind her. She wears a tailored black wool coat with a turquoise silk scarf. Soft blue evening light mixed with candle glow, a serene closed mouth smile. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-08",
+    name: "Velvet Ribbon Couture",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo styled as high fashion, wrapped in flowing turquoise and purple satin ribbon draped over her shoulders and arms like couture, against a seamless deep purple backdrop. Sculpted soft light, ribbon catching highlights with believable folds, a poised editorial stance, black clothing underneath. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-09",
+    name: "Laughing With Presents",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo laughing as she lifts the lid off a turquoise gift box with purple tissue paper spilling out, seated on a pale velvet sofa. She wears a turquoise silk blouse. Candid but polished, soft natural window light, shallow depth of field, genuine delight. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+  {
+    id: "tv-10",
+    name: "Midnight Finale",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a dark elegant room in front of a tall tree glowing with tiny turquoise and purple lights, arms loosely folded, looking straight into the camera. She wears a deep purple satin dress. Cinematic low key lighting, a fine rim light on her hair and shoulders, glossy floor reflecting the lights. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+];
