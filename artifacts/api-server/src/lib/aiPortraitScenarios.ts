@@ -4682,3 +4682,129 @@ export const TIMELESS_XMAS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo standing in a dark room beside a tall white tree glowing with silver lights, looking straight into the camera with a composed smile. Black satin gown. Cinematic low light, silver sparkle in the background, sharp detail on her face. ${TIMELESS_XMAS_SUFFIX}`,
   },
 ];
+
+// HAPPYFACEXMAS: twenty art deco Christmas portraits. Black sets with subtle gold, bright bold tailored suits, tattoos reproduced from the reference.
+const HAPPYFACE_XMAS_SUFFIX = ` Black and subtle gold art deco world: rich black surfaces with fine gold line details used sparingly, never gold everywhere. The only bright colour in the whole image is her suit, which is bold, saturated and sharply tailored with a crisp structured fit. Every Christmas detail (tree, baubles, ribbon, garlands, candles, wrapping) is black with a touch of fine gold, and no red or green decorations appear. STRICT FACELOCK: use the uploaded reference photo as the sole source of identity and preserve the exact face, facial proportions, bone structure, eyes, nose, lips, jawline, age, hairstyle and natural expression. Do not alter, beautify, reshape or reinterpret the face. TATTOOS: she has tattoos in the reference photo. Reproduce every tattoo accurately, with the same design, the same placement, the same size, the same line quality and the same ink colour as the reference, on the same part of the body. Do not invent new tattoos, remove them, blur them, move them or simplify them. Her hands, wrists, neck and any open collar or turned back cuff are shown naturally so that tattoos sitting there are clearly visible. Hyper-realistic unretouched skin texture with visible pores, crisp fine detail in the ink, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. A real photograph with real fabric weave and real reflections.`;
+
+export const HAPPYFACE_XMAS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "hf-01",
+    name: "Gold Fan Tree",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a tall slim black Christmas tree hung with a few small gold baubles, in front of a black lacquer wall inlaid with fine gold art deco fan motifs. She wears a fuchsia pink tailored suit with a crisp white shirt open at the collar, one hand resting on her hip, a confident knowing smile. Soft neutral key light, shallow depth of field, glossy fashion editorial. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-02",
+    name: "Marble Staircase",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a sweeping black marble staircase with a slim gold art deco balustrade, black garland winding along the rail. She wears an emerald green tailored suit with a black silk shirt, jacket sleeves relaxed, forearms resting on her knees, looking straight at the camera with a warm amused expression. Cinematic light, rich reflections in the polished stone. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-03",
+    name: "Deco Bar Cocktail",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning against a black lacquer art deco bar trimmed with a fine gold line, holding a champagne coupe at chest height, a small black and gold Christmas wreath on the mirror behind her. She wears a cobalt blue tailored suit and a white shirt with the cuffs turned back. A playful half smile, soft neutral light, gentle bokeh. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-04",
+    name: "Sunburst Mirror",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in front of a large gold sunburst mirror on a deep black wall, adjusting one cuff, a black tinsel garland draped along the mirror edge. She wears a tangerine orange tailored suit with a cream silk shirt. Poised and glamorous, crisp studio style light, her reflection sharp in the glass. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-05",
+    name: "Velvet Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a black velvet art deco armchair with gold piping, legs crossed, one hand relaxed on her knee with the wrist clearly visible, a black bauble in the other hand. She wears a ruby red tailored suit with a black shirt. A calm self assured look, low key soft light, a stack of black wrapped gifts with fine gold ribbon at her feet. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-06",
+    name: "Elevator Doors",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in front of black art deco lift doors engraved with fine gold geometric lines, hands in her trouser pockets, a small black and gold wreath on the doors. She wears a canary yellow tailored suit with a black polo neck. A cheeky confident grin, symmetrical composition, clean cinematic light. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-07",
+    name: "Bauble Beauty",
+    hasColour: false,
+    promptTemplate: `A tight beauty close up of a woman from the reference photo holding one large glossy black bauble with a thin gold band beside her face, her fingers and wrist clearly visible. The collar and lapel of an electric violet tailored suit frame the shot over a white shirt. Plain black backdrop with a single fine gold art deco line at the edge, soft diffused beauty lighting, direct gaze. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-08",
+    name: "Gift Wrapping",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo at a black marble table tying a fine gold ribbon around a black gift box, sleeves of her turquoise tailored suit jacket turned back at the cuff, a few black wrapped presents and a pair of gold scissors on the table. Art deco stepped arch wall behind her, a laugh breaking out, soft window style light. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-09",
+    name: "Champagne Tower",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo pouring champagne over a small pyramid of gold rimmed coupes on a black lacquer table, laughing. She wears a hot magenta tailored suit with a black silk shirt open at the neck. Black and gold art deco panelled wall behind her, tiny sparkles of light in the glasses, glossy and celebratory. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-10",
+    name: "Arched Window Dusk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in front of a tall black framed art deco arched window at dusk with light snow falling over a softly blurred city skyline, a black wreath with fine gold ribbon hanging on the glass. She wears a royal blue tailored suit and a white shirt. A serene closed mouth smile, cool blue evening light balanced with soft interior light. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-11",
+    name: "Grand Piano",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning one elbow on a black grand piano with fine gold inlay, a black garland and a few gold baubles along the lid. She wears a bright coral tailored suit with a black shirt, one hand resting on the keys so the fingers are clearly visible. A relaxed charming smile, deep black background, soft key light with a fine rim light. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-12",
+    name: "Laughing On The Stairs",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo mid laugh on a black marble art deco staircase, one hand on the gold handrail, head tipped back slightly, natural and joyful. She wears a vivid aqua teal tailored suit with a white shirt. Candid but polished, a black tree with gold lights softly out of focus behind her. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-13",
+    name: "Fireside Deco",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a black marble fireplace inlaid with a gold art deco geometric pattern, black velvet stockings with gold cuffs hanging along the mantel. She wears a cerise tailored suit with a black silk shirt, one arm resting on the mantel. Soft firelight accents balanced with neutral light, a quietly confident expression. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-14",
+    name: "Christmas Table Host",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing at the head of a long black lacquer dining table laid for Christmas dinner with black candles, black napkins and gold cutlery, raising a glass in a toast. She wears a marigold yellow tailored suit with a black shirt. Art deco gold lined panels behind her, warm hosting energy, shallow depth of field. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-15",
+    name: "Stepped Arch Entrance",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a stepped art deco archway with fine gold line detail, a black wreath tied with a thin gold ribbon on the dark door behind her. She wears an electric blue tailored suit with a white shirt, one hand on the door frame. A welcoming smile, symmetrical framing, crisp clean light. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-16",
+    name: "Profile Rim Light",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in gentle three quarter profile against a deep black backdrop with one thin gold geometric line along the edge of the frame, holding a single black bauble up to the light. She wears a raspberry pink tailored suit with a black shirt. One soft sculpted key light and a fine rim light on her hair and jawline, a thoughtful soft smile. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-17",
+    name: "Velvet Sofa",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed on a black velvet art deco sofa with one arm stretched along the back, scattered black wrapped gifts tied with fine gold ribbon around her, laughing at someone off camera. She wears a jade green tailored suit with a black polo neck. Soft natural light, gold fan pattern wallpaper out of focus behind. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-18",
+    name: "Cracker Pull",
+    hasColour: false,
+    promptTemplate: `A close up of a woman from the reference photo pulling a black and gold Christmas cracker in a mid laugh, both hands and wrists clearly in frame, cuffs of a vivid orchid purple tailored suit just visible. Black lacquer table, a hint of gold art deco trim behind, bright soft light, real delight on her face. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-19",
+    name: "Marble Corridor Stride",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo striding towards the camera down a black marble art deco corridor with gold inlaid lines in the floor, a black garland along the walls. She wears a cherry red tailored suit with a black shirt and the jacket open, hands swinging naturally. Wide stride, confident fashion editorial energy, soft symmetrical lighting. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+  {
+    id: "hf-20",
+    name: "Midnight Finale",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a dark art deco room beside a tall black Christmas tree with tiny gold lights, arms loosely folded, looking straight into the camera. She wears a bright fuchsia tailored suit with a crisp white shirt open at the neck. Cinematic low key lighting, a fine rim light on her hair and shoulders, glossy black floor reflecting the tree. ${HAPPYFACE_XMAS_SUFFIX}`,
+  },
+];

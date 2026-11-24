@@ -8,7 +8,7 @@ import { randomBytes } from "crypto";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { geminiOk, geminiFailed } from "./aiCreditAlert";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, SAME_ROOM_WITH_ROOM_BASE, SAME_ROOM_BASE, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS, TWEAKED_XMAS_PRESETS, TIMELESS_XMAS_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, SAME_ROOM_WITH_ROOM_BASE, SAME_ROOM_BASE, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS, TWEAKED_XMAS_PRESETS, TIMELESS_XMAS_PRESETS, HAPPYFACE_XMAS_PRESETS } from "./aiPortraitScenarios";
 import { TEXTBLAZE_PRESETS } from "./textblazePresets";
 
 // Every photo shoot image goes straight into that client's approved photos, so it shows up under
@@ -261,6 +261,7 @@ export async function processPortraitJob(
         REALISTIC_XMAS_PRESETS.find((p) => p.id === cfg.id) ??
         TWEAKED_XMAS_PRESETS.find((p) => p.id === cfg.id) ??
         TIMELESS_XMAS_PRESETS.find((p) => p.id === cfg.id) ??
+        HAPPYFACE_XMAS_PRESETS.find((p) => p.id === cfg.id) ??
         TEXTBLAZE_PRESETS.find((p) => p.id === cfg.id) ??
         RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
     } catch (err: unknown) {

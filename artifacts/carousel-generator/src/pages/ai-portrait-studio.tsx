@@ -306,6 +306,29 @@ const TIMELESS_XMAS_PRESETS: PhotoStudioPreset[] = [
   { id: "tm-20", name: "Midnight Finale", hasColour: false },
 ];
 
+const HAPPYFACE_XMAS_PRESETS: PhotoStudioPreset[] = [
+  { id: "hf-01", name: "Gold Fan Tree", hasColour: false },
+  { id: "hf-02", name: "Marble Staircase", hasColour: false },
+  { id: "hf-03", name: "Deco Bar Cocktail", hasColour: false },
+  { id: "hf-04", name: "Sunburst Mirror", hasColour: false },
+  { id: "hf-05", name: "Velvet Armchair", hasColour: false },
+  { id: "hf-06", name: "Elevator Doors", hasColour: false },
+  { id: "hf-07", name: "Bauble Beauty", hasColour: false },
+  { id: "hf-08", name: "Gift Wrapping", hasColour: false },
+  { id: "hf-09", name: "Champagne Tower", hasColour: false },
+  { id: "hf-10", name: "Arched Window Dusk", hasColour: false },
+  { id: "hf-11", name: "Grand Piano", hasColour: false },
+  { id: "hf-12", name: "Laughing On The Stairs", hasColour: false },
+  { id: "hf-13", name: "Fireside Deco", hasColour: false },
+  { id: "hf-14", name: "Christmas Table Host", hasColour: false },
+  { id: "hf-15", name: "Stepped Arch Entrance", hasColour: false },
+  { id: "hf-16", name: "Profile Rim Light", hasColour: false },
+  { id: "hf-17", name: "Velvet Sofa", hasColour: false },
+  { id: "hf-18", name: "Cracker Pull", hasColour: false },
+  { id: "hf-19", name: "Marble Corridor Stride", hasColour: false },
+  { id: "hf-20", name: "Midnight Finale", hasColour: false },
+];
+
 const REALISTIC_XMAS_PRESETS: PhotoStudioPreset[] = [
   { id: "rx-01", name: "Cashmere Wrap Studio", hasColour: false },
   { id: "rx-02", name: "Single Bauble Close Up", hasColour: false },
@@ -936,7 +959,7 @@ const TEXTBLAZE_PRESETS: (PhotoStudioPreset & { group: string; defaultColour?: s
 ];
 const TEXTBLAZE_GROUPS = ["LUXURY XMAS", "CLIENT SHOTS", "DAVID BAILEY-ESQUE", "LIFESTYLE", "AI PHOTOSHOOTS", "CLINICAL JAN"];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...TWEAKED_XMAS_PRESETS, ...TIMELESS_XMAS_PRESETS, ...TEXTBLAZE_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...TWEAKED_XMAS_PRESETS, ...TIMELESS_XMAS_PRESETS, ...HAPPYFACE_XMAS_PRESETS, ...TEXTBLAZE_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -1162,7 +1185,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "tweakedxmas" | "timelessxmas" | "textblaze" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "tweakedxmas" | "timelessxmas" | "happyfacexmas" | "textblaze" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1948,6 +1971,7 @@ export default function AiPortraitStudio() {
                 { key: "tweaked", label: "TWEAKED" },
                 { key: "tweakedxmas", label: "TWEAKED XMAS" },
                 { key: "timelessxmas", label: "TIMELESS XMAS" },
+                { key: "happyfacexmas", label: "HAPPYFACEXMAS" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
                 { key: "newxmas", label: "NEW XMAS" },
@@ -2816,6 +2840,45 @@ export default function AiPortraitStudio() {
 </div>
 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
   {TIMELESS_XMAS_PRESETS.map((preset) => {
+    const isSelected = selectedPresets.has(preset.id);
+    return (
+      <div
+        key={preset.id}
+        className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+          isSelected ? "border-violet-500/70 bg-violet-500/10" : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+        }`}
+        onClick={() => togglePreset(preset.id)}
+      >
+        <div className="flex items-start gap-2.5">
+          <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+            isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+          }`}>
+            {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+          </div>
+          <p className="text-sm font-medium leading-snug">{preset.name}</p>
+        </div>
+      </div>
+    );
+  })}
+</div>
+</>
+)}
+
+{activeSection === "happyfacexmas" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">HAPPYFACEXMAS</p>
+<p className="text-xs text-muted-foreground mb-3">Twenty art deco Christmas portraits. Black sets with subtle gold and a bright bold tailored suit in every shot. Face lock and hyper realism are on for every one, and tattoos are picked up from the photo exactly as they are.</p>
+<div className="mb-4" onClick={(e) => e.stopPropagation()}>
+  <button
+    type="button"
+    className="text-[11px] underline text-muted-foreground"
+    onClick={() => setSelectedPresets((prev) => { const n = new Set(prev); HAPPYFACE_XMAS_PRESETS.forEach((p) => n.add(p.id)); return n; })}
+  >
+    Select all 20
+  </button>
+</div>
+<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+  {HAPPYFACE_XMAS_PRESETS.map((preset) => {
     const isSelected = selectedPresets.has(preset.id);
     return (
       <div
