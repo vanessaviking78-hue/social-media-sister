@@ -1326,7 +1326,7 @@ export default function AiPortraitStudio() {
         ...(id.startsWith("tb-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || TEXTBLAZE_PRESETS.find((p) => p.id === id)?.defaultColour || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
-      if (id.startsWith("sr-") && roomPhotoUrl) {
+      if ((id.startsWith("sr-") || id.startsWith("ic-")) && roomPhotoUrl) {
         scenario.backgroundImageUrl = roomPhotoUrl;
       }
       if (globalBgColour.trim()) {
@@ -3418,6 +3418,43 @@ export default function AiPortraitStudio() {
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(INJECTOR_COLLECTION_PRESETS.map((p) => p.id))}>Clear all</button>
               </div>
               <p className="text-xs text-muted-foreground mb-4">100 presets across 10 categories. Select up to 30 per generation run.</p>
+
+              <div className="mb-4 rounded-lg border border-dashed border-border/50 p-3">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/60 font-medium mb-2">Clinic room photo (optional)</p>
+                {roomPreview ? (
+                  <div className="flex items-center gap-3">
+                    <img src={roomPreview} alt="Clinic room" className="h-20 w-28 object-cover rounded border border-border/40" />
+                    <div className="text-xs text-muted-foreground">
+                      {roomUploading ? "Uploading room photo..." : "Every ticked shot will be set in this room."}
+                      {!roomUploading && (
+                        <button
+                          type="button"
+                          className="block mt-1 text-violet-400 hover:underline"
+                          onClick={() => { setRoomPreview(null); setRoomPhotoUrl(null); }}
+                        >
+                          Remove room photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-xs px-3 py-2 rounded border border-border/50 hover:border-violet-500/50 hover:bg-violet-500/10 transition-colors"
+                    onClick={() => roomInputRef.current?.click()}
+                  >
+                    Upload the clinic room photo
+                  </button>
+                )}
+                <input
+                  ref={roomInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleRoomFile(f); e.target.value = ""; }}
+                />
+                <p className="text-[11px] text-muted-foreground/70 mt-2">Her outfit and pose stay as the preset, but she is placed into your room. Leave it empty and the shots use the preset backgrounds as before.</p>
+              </div>
 
               <div className="space-y-5">
                 {INJECTOR_COLLECTION_CATEGORIES.map((cat) => {

@@ -228,10 +228,12 @@ export async function processPortraitJob(
     let prompt: string;
     let backgroundImageUrl = cfg.backgroundImageUrl;
     // Same Room shots remember their room photo in outfitStyle ("room:<url>") so a regenerate keeps the same room
-    if (cfg.id.startsWith("sr-") && !backgroundImageUrl && cfg.outfitStyle?.startsWith("room:")) {
+    // Injector Collection shots (ic-) can also carry an optional clinic room photo the same way
+    const usesRoomPhoto = cfg.id.startsWith("sr-") || cfg.id.startsWith("ic-");
+    if (usesRoomPhoto && !backgroundImageUrl && cfg.outfitStyle?.startsWith("room:")) {
       backgroundImageUrl = cfg.outfitStyle.slice(5);
     }
-    const sameRoomStyle = cfg.id.startsWith("sr-") && backgroundImageUrl ? `room:${backgroundImageUrl}` : undefined;
+    const sameRoomStyle = usesRoomPhoto && backgroundImageUrl ? `room:${backgroundImageUrl}` : undefined;
 
     let photoStudioPreset;
     try {
@@ -323,6 +325,10 @@ export async function processPortraitJob(
     // Same Room shots with an uploaded room photo: place the clinician into that room instead of keeping her own background.
     if (cfg.id.startsWith("sr-") && backgroundImageUrl && !cfg.textOnly) {
       prompt = prompt.replace(SAME_ROOM_BASE, SAME_ROOM_WITH_ROOM_BASE);
+    }
+    // Injector Collection shots with an uploaded clinic room photo: keep her outfit and pose from the preset but set her in that room.
+    if (cfg.id.startsWith("ic-") && backgroundImageUrl && !cfg.textOnly) {
+      prompt = `You are given two reference photos. The FIRST photo is the clinician. The SECOND photo is her own clinic room. Create one new photograph of the clinician from the first photo inside the room from the second photo. Keep the second photo's room, walls, floor, furniture, objects, window light, colours and atmosphere exactly as they are, with nothing added to or removed from the room, and match its camera angle, perspective, scale and lighting so she looks genuinely photographed there, with correct shadows and grounding. Wherever the description below mentions a location, corridor, treatment room, set or background, use the room from the second photo instead and ignore the first photo's background completely. Keep the outfit, pose, expression, props and mood described below, and keep her face, skin tone, freckles, eye colour, hairstyle and body shape exactly the same as the first photo.\n\n${prompt}`;
     }
 
     // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly.
