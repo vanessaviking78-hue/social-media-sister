@@ -783,14 +783,11 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const [hookTreatment, setHookTreatment] = useState("");
   const hookOptions = useMemo(() => (forced?.treatmentIds?.length ? U_TREATMENTS.filter((t) => forced.treatmentIds!.includes(t.id)) : U_TREATMENTS), [forced]);
   useEffect(() => { if (!hookTreatment && hookOptions[0]) setHookTreatment(hookOptions[0].name); }, [hookOptions, hookTreatment]);
-  const make40 = async () => {
-    if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
-    const allTypes = [...POSTS];
-    const N = POSTS === HOOK_POSTS ? 40 : POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
-    const byGroup = new Map<string, typeof allTypes>();
-    for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
-    const order: typeof allTypes = [];
-    for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
+  // The post types ticked in the list, kept across sections. When some are ticked, only those get made.
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const toggleChosen = (id: string) => setChosen((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const chosenCount = POSTS.filter((t) => chosen.has(t.id)).length;
+  const makeFrom = async (order: typeof POSTS, doneMsg: (n: number) => string) => {
     const base = posts.length * 5;
     const made: Post[] = order.map((t, i) => ({ id: uid(), typeId: t.id, ...seed(t), slides: ["", "", ""], photos: [0, 1, 2, 3, 4].map((k) => base + i * 5 + k), note: "", when: initWhen(t), busy: false, scheduling: false, look: styleForNumber(i), ...nxFields(t) }));
     setPosts((l) => [...made, ...l]);
@@ -800,7 +797,25 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
       await write(made[i]);
     }
     setMaking("");
-    toast.success(`${made.length} posts made, half with a block and half with the gradient`);
+    toast.success(doneMsg(made.length));
+  };
+  const makeChosen = async () => {
+    if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    const order = POSTS.filter((t) => chosen.has(t.id));
+    if (!order.length) { toast.error("Tick the posts you want first"); return; }
+    await makeFrom(order, (n) => `${n} post${n === 1 ? "" : "s"} made, the ones you picked`);
+    setChosen(new Set());
+  };
+  // Makes 40 posts across the sections, cycling the four styles in turn, then writes the words for each one.
+  const make40 = async () => {
+    if (needsArea && !area.trim()) { toast.error("Type her area first, so the hashtags are local"); return; }
+    const allTypes = [...POSTS];
+    const N = POSTS === HOOK_POSTS ? 40 : POSTS !== CLARE_SECTION_POSTS ? allTypes.length : 40;
+    const byGroup = new Map<string, typeof allTypes>();
+    for (const t of allTypes) byGroup.set(t.group, [...(byGroup.get(t.group) ?? []), t]);
+    const order: typeof allTypes = [];
+    for (let r = 0; order.length < N && r < 40; r++) for (const g of byGroup.values()) { if (order.length >= N) break; order.push(g[r % g.length]); }
+    await makeFrom(order, (n) => `${n} posts made, half with a block and half with the gradient`);
   };
 
   const [adjSlide, setAdjSlide] = useState<Record<string, number>>({});
@@ -1115,7 +1130,15 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
-            <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make {POSTS !== CLARE_SECTION_POSTS ? POSTS.length : 40} posts (4 styles in turn)</>}</Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" disabled={!!making || chosenCount === 0} onClick={() => void makeChosen()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make the {chosenCount} I ticked</>}</Button>
+              <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>Make all {POSTS !== CLARE_SECTION_POSTS ? POSTS.length : 40}</Button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-white/70 flex-wrap">
+            <span>Tick the posts you want, then press "Make the ones I ticked". Pressing a post name still opens just that one.</span>
+            <button className="underline" onClick={() => setChosen((c) => { const n = new Set(c); typesInGroup.forEach((t) => n.add(t.id)); return n; })}>Tick this whole section</button>
+            <button className="underline" onClick={() => setChosen(new Set())}>Clear ticks</button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {SECS.map((g) => (
@@ -1149,11 +1172,16 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
             {typesInGroup.map((t) => {
               const when = scheduled[t.id];
               return (
-                <button key={t.id} onClick={() => addPost(t)} className={`text-left px-3 py-2 rounded-lg border text-sm flex items-center gap-2 ${typeId === t.id ? "border-white bg-white/10" : "border-white/15"}`}>
-                  {when ? <CalendarCheck className="w-4 h-4 text-green-400 shrink-0" /> : <Plus className="w-4 h-4 text-white/40 shrink-0" />}
-                  <span className={when ? "line-through decoration-2 opacity-50" : ""}>{t.label}</span>
-                  {when && <span className="ml-auto text-xs text-green-300/80 whitespace-nowrap">{dateLabel(when)}</span>}
-                </button>
+                <div key={t.id} className={`flex items-center rounded-lg border text-sm ${chosen.has(t.id) ? "border-pink-400 bg-pink-400/10" : typeId === t.id ? "border-white bg-white/10" : "border-white/15"}`}>
+                  <label className="pl-3 pr-1 py-2 cursor-pointer" aria-label={`Tick ${t.label}`}>
+                    <input type="checkbox" checked={chosen.has(t.id)} onChange={() => toggleChosen(t.id)} />
+                  </label>
+                  <button onClick={() => addPost(t)} className="flex-1 text-left px-2 py-2 flex items-center gap-2 min-w-0">
+                    {when ? <CalendarCheck className="w-4 h-4 text-green-400 shrink-0" /> : <Plus className="w-4 h-4 text-white/40 shrink-0" />}
+                    <span className={when ? "line-through decoration-2 opacity-50" : ""}>{t.label}</span>
+                    {when && <span className="ml-auto text-xs text-green-300/80 whitespace-nowrap">{dateLabel(when)}</span>}
+                  </button>
+                </div>
               );
             })}
           </div>

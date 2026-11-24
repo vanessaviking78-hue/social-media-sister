@@ -998,6 +998,9 @@ export default function UniversalPage() {
     return U_TREATMENTS.filter((x) => ids.includes(x.id));
   }, [forcedClient, theirIds]);
   const [allBusy, setAllBusy] = useState("");
+  // The treatments ticked in their list. Only those get made.
+  const [pickedT, setPickedT] = useState<Set<string>>(new Set());
+  const togglePickedT = (id: string) => setPickedT((c) => { const n = new Set(c); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const makeAll = async () => {
     if (!preset) {
       toast.error("Pick the client first");
@@ -1010,7 +1013,12 @@ export default function UniversalPage() {
     const open = new Set(posts.map((p) => p.key));
     const fresh: Post[] = [];
     const noPhotos: string[] = [];
-    for (const x of theirList) {
+    const wanted = theirList.filter((x) => pickedT.has(x.id));
+    if (!wanted.length) {
+      toast.error("Tick the treatments you want first");
+      return;
+    }
+    for (const x of wanted) {
       if (!(libBy.get(x.id) ?? []).length) {
         noPhotos.push(x.name);
         continue;
@@ -1024,7 +1032,7 @@ export default function UniversalPage() {
       toast.info(noPhotos.length ? `Nothing to make. These have no photos yet: ${noPhotos.join(", ")}` : "Everything on their list is already open or scheduled");
       return;
     }
-    if (!window.confirm(`This opens ${fresh.length} posts across ${theirList.length - noPhotos.length} treatments and writes the words for every one. Carry on?`)) return;
+    if (!window.confirm(`This opens ${fresh.length} posts across ${wanted.length - noPhotos.length} treatments and writes the words for every one. Carry on?`)) return;
     setPosts((l) => [...fresh, ...l]);
     setAllBusy(`0 of ${fresh.length}`);
     let done = 0;
@@ -1190,8 +1198,17 @@ export default function UniversalPage() {
           {preset && theirList.length > 0 && (
             <div className="rounded-lg border border-white/10 p-3 flex items-center gap-3 flex-wrap">
               <span className="text-sm text-white/70">{preset.name} has filled in their list: {theirList.length} treatment{theirList.length === 1 ? "" : "s"}</span>
-              <Button size="sm" disabled={!!allBusy || !!bulkBusy} onClick={makeAll}><Sparkles className="w-4 h-4 mr-2" />Do all their treatments at once</Button>
+              <Button size="sm" disabled={!!allBusy || !!bulkBusy || pickedT.size === 0} onClick={makeAll}><Sparkles className="w-4 h-4 mr-2" />Make the {theirList.filter((x) => pickedT.has(x.id)).length} treatments I ticked</Button>
+              <button className="text-sm underline text-white/70" onClick={() => setPickedT(new Set(theirList.map((x) => x.id)))}>Tick all</button>
+              <button className="text-sm underline text-white/70" onClick={() => setPickedT(new Set())}>Clear ticks</button>
               {allBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Writing {allBusy}</span>}
+              <div className="w-full flex gap-2 flex-wrap">
+                {theirList.map((x) => (
+                  <label key={x.id} className={`flex items-center gap-2 rounded-full border px-3 py-1 text-sm cursor-pointer ${pickedT.has(x.id) ? "border-pink-400 bg-pink-400/10" : "border-white/20"}`}>
+                    <input type="checkbox" checked={pickedT.has(x.id)} onChange={() => togglePickedT(x.id)} />{x.name}
+                  </label>
+                ))}
+              </div>
             </div>
           )}
           <div className="flex gap-2 flex-wrap">
