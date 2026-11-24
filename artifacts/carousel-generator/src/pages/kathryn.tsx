@@ -786,9 +786,13 @@ function KathrynPage() {
   // Every open post that has its words written and is not already scheduled, one every 2 days from the earliest date.
   const [bulkBusy, setBulkBusy] = useState("");
   const ready = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  // Tick the posts you want and only those go; tick none and every written post goes.
+  const chosenReady = picked.size ? ready.filter((p) => picked.has(p.id)) : ready;
   const bulk = async (mode: "schedule" | "bank") => {
     if (!preset) { toast.error("I cannot find her client preset"); return; }
-    const list = mode === "bank" ? ready.filter((p) => !p.banked) : ready;
+    const list = mode === "bank" ? chosenReady.filter((p) => !p.banked) : chosenReady;
     if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
     const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
     let done = 0;
@@ -955,11 +959,13 @@ function KathrynPage() {
           {posts.length === 0 && <p className="text-white/50 text-sm">Press a post name above and it opens here.</p>}
           {posts.length > 0 && (
             <div className="rounded-xl border border-white/10 p-4 flex items-center gap-3 flex-wrap">
-              <span className="text-sm text-white/70">{ready.length} written and waiting</span>
+              <span className="text-sm text-white/70">{ready.length} written and waiting{picked.size ? `, ${picked.size} ticked` : ""}</span>
               {bulkBusy && <span className="text-sm text-white/70 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />{bulkBusy}</span>}
               <div className="ml-auto flex gap-2 flex-wrap">
-                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</Button>
-                <Button size="sm" variant="secondary" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("bank")}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPicked(new Set(ready.map((p) => p.id)))} disabled={!ready.length}>Tick all written</Button>
+                <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())} disabled={!picked.size}>Clear ticks</Button>
+                <Button size="sm" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("schedule")}><CalendarClock className="w-4 h-4 mr-2" />{picked.size ? "Schedule ticked, one every 2 days" : "Schedule all, one every 2 days"}</Button>
+                <Button size="sm" variant="secondary" disabled={!!bulkBusy || !ready.length} onClick={() => bulk("bank")}><Archive className="w-4 h-4 mr-2" />{picked.size ? "Add ticked to Client Bank" : "Add all to Client Bank"}</Button>
               </div>
             </div>
           )}
@@ -968,7 +974,7 @@ function KathrynPage() {
             return (
               <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <h3 className="font-semibold">{t.label}</h3>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 accent-pink-500" aria-label="Tick this post" /><h3 className="font-semibold">{t.label}</h3></label>
                   <div className="flex gap-2 items-center flex-wrap">
                     <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it

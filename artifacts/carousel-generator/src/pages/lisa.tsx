@@ -4,7 +4,7 @@ import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -527,7 +527,11 @@ function LisaPage() {
     else toast.success("Rejected, with your reason saved on the post");
   };
 
-  const schedule = async (post: Post, whenOverride?: string): Promise<boolean> => {
+  const [banked, setBanked] = useState<Record<string, boolean>>({});
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const ready = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+  const schedule = async (post: Post, whenOverride?: string, toBank = false): Promise<boolean> => {
     if (!preset) { toast.error("I cannot find her client preset. It needs a name with Lisa in it"); return false; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     if (!pool.length) { toast.error("Add her photo first"); return false; }
@@ -535,16 +539,19 @@ function LisaPage() {
     try {
       const cs = await render(post);
       const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `lisa-${t.id}-${i + 1}-${Date.now()}.png`));
-      const body = {
-        postType: "carousel",
-        content: { caption: fullCaption(post), title: `${t.label} · ${LISA_ACADEMY}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "lisa" },
-        scheduledAt: new Date(whenOverride ?? post.when).toISOString(),
-        isTrial: false,
-        notes: "",
-        presetId: preset.id,
-      };
+      const content = { caption: fullCaption(post), title: `${t.label} · ${LISA_ACADEMY}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "lisa" };
+      // The Client Bank parks the post with no date, as a draft, until she schedules it from the Bank.
+      const body = toBank
+        ? { postType: "carousel", content, status: "draft", presetId: preset.id }
+        : { postType: "carousel", content, scheduledAt: new Date(whenOverride ?? post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
       const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Failed to schedule"); }
+      if (toBank) {
+        patch(post.id, { scheduling: false });
+        setBanked((b) => ({ ...b, [post.id]: true }));
+        toast.success("Saved to the Client Bank");
+        return true;
+      }
       setScheduled((s) => ({ ...s, [t.id]: new Date(whenOverride ?? post.when).toISOString() }));
       patch(post.id, { scheduling: false });
       if (!whenOverride) toast.success("Scheduled, and crossed off her list");
@@ -558,8 +565,20 @@ function LisaPage() {
 
     // Every written post that is not scheduled yet, one every 2 days from the earliest date.
   const [bulkBusy, setBulkBusy] = useState("");
+  const bankAll = async () => {
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && !banked[p.id] && (!picked.size || picked.has(p.id)));
+    if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
+    let done = 0;
+    for (const post of list) {
+      setBulkBusy(`${done + 1} of ${list.length}`);
+      if (!(await schedule(post, undefined, true))) break;
+      done++;
+    }
+    setBulkBusy("");
+    if (done) toast.success(`${done} saved to the Client Bank`);
+  };
   const scheduleAll = async () => {
-    const list = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && (!picked.size || picked.has(p.id)));
     if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
     const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
     let done = 0;
@@ -688,7 +707,10 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
             <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (4 styles in turn)</>}</Button>
-            <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</>}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set(ready.map((p) => p.id)))} disabled={!ready.length}>Tick all written</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())} disabled={!picked.size}>Clear ticks</Button>
+            <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />{picked.size ? "Schedule ticked, one every 2 days" : "Schedule all, one every 2 days"}</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!bulkBusy || !!making} onClick={() => void bankAll()}><Archive className="w-4 h-4 mr-2" />{picked.size ? "Add ticked to Client Bank" : "Add all to Client Bank"}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {LISA_GROUPS.map((g) => (
@@ -718,7 +740,7 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
             return (
               <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <h3 className="font-semibold">{t.label}</h3>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 accent-pink-500" aria-label="Tick this post" /><h3 className="font-semibold">{t.label}</h3></label>
                   <div className="flex gap-2 items-center flex-wrap">
                     <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
@@ -727,6 +749,7 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
                     <Button size="sm" onClick={() => setReview({ id: post.id, reason: "", rejecting: false })} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
+                    <Button size="sm" variant="secondary" onClick={() => void schedule(post, undefined, true)} disabled={!post.caption || post.scheduling || !!banked[post.id]}><Archive className="w-4 h-4 mr-2" />{banked[post.id] ? "In the Client Bank" : "Add to Client Bank"}</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
