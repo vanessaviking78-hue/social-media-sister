@@ -528,6 +528,9 @@ function LisaPage() {
   };
 
   const [banked, setBanked] = useState<Record<string, boolean>>({});
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const ready = posts.filter((p) => p.caption && !scheduled[p.typeId]);
   const schedule = async (post: Post, whenOverride?: string, toBank = false): Promise<boolean> => {
     if (!preset) { toast.error("I cannot find her client preset. It needs a name with Lisa in it"); return false; }
     const t = TYPE_BY_ID.get(post.typeId)!;
@@ -563,7 +566,7 @@ function LisaPage() {
     // Every written post that is not scheduled yet, one every 2 days from the earliest date.
   const [bulkBusy, setBulkBusy] = useState("");
   const bankAll = async () => {
-    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && !banked[p.id]);
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && !banked[p.id] && (!picked.size || picked.has(p.id)));
     if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
     let done = 0;
     for (const post of list) {
@@ -575,7 +578,7 @@ function LisaPage() {
     if (done) toast.success(`${done} saved to the Client Bank`);
   };
   const scheduleAll = async () => {
-    const list = posts.filter((p) => p.caption && !scheduled[p.typeId]);
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && (!picked.size || picked.has(p.id)));
     if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
     const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
     let done = 0;
@@ -704,8 +707,10 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h2 className="font-semibold">2. Pick a post</h2>
             <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (4 styles in turn)</>}</Button>
-            <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</>}</Button>
-            <Button size="sm" variant="secondary" disabled={!!bulkBusy || !!making} onClick={() => void bankAll()}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set(ready.map((p) => p.id)))} disabled={!ready.length}>Tick all written</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())} disabled={!picked.size}>Clear ticks</Button>
+            <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />{picked.size ? "Schedule ticked, one every 2 days" : "Schedule all, one every 2 days"}</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!bulkBusy || !!making} onClick={() => void bankAll()}><Archive className="w-4 h-4 mr-2" />{picked.size ? "Add ticked to Client Bank" : "Add all to Client Bank"}</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {LISA_GROUPS.map((g) => (
@@ -735,7 +740,7 @@ const doneIn = (g: string) => LISA_POST_TYPES.filter((t) => t.group === g && sch
             return (
               <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <h3 className="font-semibold">{t.label}</h3>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 accent-pink-500" aria-label="Tick this post" /><h3 className="font-semibold">{t.label}</h3></label>
                   <div className="flex gap-2 items-center flex-wrap">
                     <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
