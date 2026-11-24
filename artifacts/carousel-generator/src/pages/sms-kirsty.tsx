@@ -116,6 +116,13 @@ export default function SmsKirsty() {
           </p>
         </div>
 
+        <div className="sk-price" style={{ background: "#fff", border: `3px solid ${INK}`, color: INK }}>
+          <b style={{ color: PINK, fontSize: "clamp(34px,8vw,58px)" }}>Half price content day</b>
+          <p style={{ color: INK }}>
+            In West Yorkshire? You also get 50% off one of my in-person content days. The full price is £1,500, so for you it is £750, and you can take it at any time in your 12 months.
+          </p>
+        </div>
+
         {done ? (
           <div className="sk-done">
             <h2>Got it, thank you</h2>

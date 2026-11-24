@@ -227,6 +227,14 @@
   function = "link-og"
 
 [[edge_functions]]
+  path = "/kirstyproposal"
+  function = "link-og"
+
+[[edge_functions]]
+  path = "/smskirsty"
+  function = "link-og"
+
+[[edge_functions]]
   path = "/youreinvited"
   function = "link-og"
 

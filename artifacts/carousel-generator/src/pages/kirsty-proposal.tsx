@@ -69,6 +69,13 @@ export default function KirstyProposal() {
           </div>
         </div>
 
+        <div className="kp-box kp-ink">
+          <h2>A voucher for West Yorkshire clinics</h2>
+          <p>
+            Any clinic in West Yorkshire gets <strong>50% off one of my in-person content days.</strong> The full price is £1,500. For Kirsty's clinics it is <strong>£750</strong>, and it can be taken at any time during the 12 months.
+          </p>
+        </div>
+
         <h2 className="kp-h">Why there is an application</h2>
         <p>
           I would rather work with fewer clinics who show up than lots who vanish. The development rate is a partnership, so every clinic fills in a short form first and then we have a proper chat. The form asks four things:
