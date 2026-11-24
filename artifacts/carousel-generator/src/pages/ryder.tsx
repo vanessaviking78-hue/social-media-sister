@@ -4,7 +4,7 @@ import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -527,7 +527,8 @@ function RyderPage() {
     else toast.success("Rejected, with your reason saved on the post");
   };
 
-  const schedule = async (post: Post, whenOverride?: string): Promise<boolean> => {
+  const [banked, setBanked] = useState<Record<string, boolean>>({});
+  const schedule = async (post: Post, whenOverride?: string, toBank = false): Promise<boolean> => {
     if (!preset) { toast.error("I cannot find her client preset. It needs a name with Ryder in it"); return false; }
     const t = TYPE_BY_ID.get(post.typeId)!;
     if (!pool.length) { toast.error("Add her photo first"); return false; }
@@ -535,16 +536,26 @@ function RyderPage() {
     try {
       const cs = await render(post);
       const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, i) => `ryder-${t.id}-${i + 1}-${Date.now()}.png`));
-      const body = {
-        postType: "carousel",
-        content: { caption: fullCaption(post), title: `${t.label} · ${RYDER_CLINIC}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "ryder" },
-        scheduledAt: new Date(whenOverride ?? post.when).toISOString(),
-        isTrial: false,
-        notes: "",
-        presetId: preset.id,
-      };
+      const content = { caption: fullCaption(post), title: `${t.label} · ${RYDER_CLINIC}`, platforms: ["instagram"], imageUrls: urls, sourceTool: "ryder" };
+      // The Client Bank parks the post with no date, as a draft, until she schedules it from the Bank.
+      const body = toBank
+        ? { postType: "carousel", content, status: "draft", presetId: preset.id }
+        : {
+          postType: "carousel",
+          content,
+          scheduledAt: new Date(whenOverride ?? post.when).toISOString(),
+          isTrial: false,
+          notes: "",
+          presetId: preset.id,
+        };
       const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Failed to schedule"); }
+      if (toBank) {
+        patch(post.id, { scheduling: false });
+        setBanked((b) => ({ ...b, [post.id]: true }));
+        toast.success("Saved to the Client Bank");
+        return true;
+      }
       setScheduled((s) => ({ ...s, [t.id]: new Date(whenOverride ?? post.when).toISOString() }));
       patch(post.id, { scheduling: false });
       if (!whenOverride) toast.success("Scheduled, and crossed off her list");
@@ -572,6 +583,20 @@ function RyderPage() {
     }
     setBulkBusy("");
     if (done) toast.success(`${done} scheduled, one every 2 days from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+  };
+
+// Every written post that is not scheduled yet goes into the Client Bank with no date.
+  const bankAll = async () => {
+    const list = posts.filter((p) => p.caption && !scheduled[p.typeId] && !banked[p.id]);
+    if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
+    let done = 0;
+    for (const post of list) {
+      setBulkBusy(`${done + 1} of ${list.length}`);
+      if (!(await schedule(post, undefined, true))) break;
+      done++;
+    }
+    setBulkBusy("");
+    if (done) toast.success(`${done} saved to the Client Bank`);
   };
 
 const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;
@@ -689,6 +714,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
             <h2 className="font-semibold">2. Pick a post</h2>
             <Button size="sm" variant="secondary" disabled={!!making} onClick={() => void make40()}>{making ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{making}</> : <><Sparkles className="w-4 h-4 mr-2" />Make 40 posts (4 styles in turn)</>}</Button>
             <Button size="sm" disabled={!!bulkBusy || !!making} onClick={() => void scheduleAll()}>{bulkBusy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkBusy}</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule all, one every 2 days</>}</Button>
+            <Button size="sm" variant="secondary" disabled={!!bulkBusy || !!making} onClick={() => void bankAll()}><Archive className="w-4 h-4 mr-2" />Add all to Client Bank</Button>
           </div>
           <div className="flex gap-2 flex-wrap">
             {RYDER_GROUPS.map((g) => (
@@ -727,6 +753,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
                     <Button size="sm" onClick={() => setReview({ id: post.id, reason: "", rejecting: false })} disabled={!post.caption || post.scheduling}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
+                    <Button size="sm" variant="secondary" onClick={() => void schedule(post, undefined, true)} disabled={!post.caption || post.scheduling || !!banked[post.id]}><Archive className="w-4 h-4 mr-2" />{banked[post.id] ? "In the Client Bank" : "Add to Client Bank"}</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
@@ -744,6 +771,7 @@ const doneIn = (g: string) => RYDER_POST_TYPES.filter((t) => t.group === g && sc
                         <p className="font-medium">Happy with this post?</p>
                         <div className="flex gap-2 flex-wrap">
                           <Button size="sm" onClick={() => { setReview(null); schedule(post); }}><CalendarCheck className="w-4 h-4 mr-2" />Yes, schedule it</Button>
+                          <Button size="sm" variant="secondary" onClick={() => { setReview(null); void schedule(post, undefined, true); }}><Archive className="w-4 h-4 mr-2" />Add to Client Bank instead</Button>
                           <Button size="sm" variant="outline" className="border-red-400/50 text-red-300" onClick={() => setReview({ ...review, rejecting: true })}>Reject it with a reason</Button>
                           <Button size="sm" variant="ghost" onClick={() => setReview(null)}>Cancel</Button>
                         </div>
