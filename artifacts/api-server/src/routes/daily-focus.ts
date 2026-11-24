@@ -11,6 +11,15 @@ const TASK_TYPES = ["seamless carousel", "bulk carousel", "animated carousel", "
 const FLOATER_NAMES = ["kahlo", "cantik", "craig hobson", "lotus room"];
 const MONTHLY_TARGET_DAYS = 28;
 
+// Neediest first: fewest scheduled posts at the top, then least days covered, then name
+const neediestFirst = (
+  a: { postsScheduled: number; daysCovered: number; clientName: string },
+  b: { postsScheduled: number; daysCovered: number; clientName: string },
+) =>
+  a.postsScheduled - b.postsScheduled ||
+  a.daysCovered - b.daysCovered ||
+  (a.clientName || "").localeCompare(b.clientName || "");
+
 router.get("/daily-focus", async (_req, res) => {
 res.set("Cache-Control", "no-store");
 try {
@@ -53,18 +62,19 @@ urgent: daysCovered < TARGET_DAYS,
 };
 });
 
-const urgentClients = clients.filter((c) => c.urgent).sort((a, b) => a.daysCovered - b.daysCovered);
+const urgentClients = clients.filter((c) => c.urgent).sort(neediestFirst);
 const onTrackCount = clients.length - urgentClients.length;
 
 const thirtyDayClients = clients.filter((c) => c.daysCovered >= THIRTY_TARGET_DAYS);
 const thirtyDayOnTrackCount = thirtyDayClients.length;
 const thirtyDayLagging = clients
 .filter((c) => c.daysCovered < THIRTY_TARGET_DAYS)
-.sort((a, b) => a.daysCovered - b.daysCovered)
+.sort(neediestFirst)
 .map((c) => ({
 presetId: c.presetId,
 clientName: c.clientName,
 daysCovered: c.daysCovered,
+postsScheduled: c.postsScheduled,
 daysNeeded: THIRTY_TARGET_DAYS - c.daysCovered,
 }));
 
@@ -72,6 +82,7 @@ const monthlyClients = clients.map((c) => ({
 presetId: c.presetId,
 clientName: c.clientName,
 daysCovered: c.daysCovered,
+postsScheduled: c.postsScheduled,
 pct: Math.min(100, Math.round((c.daysCovered / MONTHLY_TARGET_DAYS) * 100)),
 }));
 const monthlyPercent = monthlyClients.length > 0
@@ -79,7 +90,7 @@ const monthlyPercent = monthlyClients.length > 0
 : 100;
 const monthlyIncomplete = monthlyClients
 .filter((c) => c.daysCovered < MONTHLY_TARGET_DAYS)
-.sort((a, b) => (MONTHLY_TARGET_DAYS - a.daysCovered) - (MONTHLY_TARGET_DAYS - b.daysCovered));
+.sort(neediestFirst);
 const nextClient = monthlyIncomplete.length > 0
 ? {
 presetId: monthlyIncomplete[0].presetId,
@@ -101,7 +112,7 @@ thirtyDayLagging,
 monthlyTargetDays: MONTHLY_TARGET_DAYS,
 monthlyPercent,
 nextClient,
-monthlyClients: monthlyClients.sort((a, b) => (MONTHLY_TARGET_DAYS - a.daysCovered) - (MONTHLY_TARGET_DAYS - b.daysCovered)),
+monthlyClients: monthlyClients.sort(neediestFirst),
 });
 } catch (err: any) {
 res.status(500).json({ error: err.message || "Failed to build daily focus" });
