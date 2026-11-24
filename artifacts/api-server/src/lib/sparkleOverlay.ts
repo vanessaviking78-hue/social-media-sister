@@ -46,17 +46,31 @@ const pick = <T,>(r: () => number, list: T[]): T => list[Math.floor(r() * list.l
 const between = (r: () => number, a: number, b: number) => a + r() * (b - a);
 const whole = (r: () => number, a: number, b: number) => Math.round(between(r, a, b));
 
-function makeParticles(style: SparkleStyle, amount: SparkleAmount): Particle[] {
+// A picked colour becomes four tones: the colour itself, two lighter tints and a slightly deeper one, so the sparkle still has depth.
+export function normaliseSparkleColor(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const m = raw.trim().replace(/^#/, "").toLowerCase();
+  return /^[0-9a-f]{6}$/.test(m) ? m : null;
+}
+
+function tonesFrom(hex: string): [number, number, number][] {
+  const c: [number, number, number] = [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+  const mix = (t: number, to: number): [number, number, number] => [Math.round(c[0] + (to - c[0]) * t), Math.round(c[1] + (to - c[1]) * t), Math.round(c[2] + (to - c[2]) * t)];
+  return [c, mix(0.35, 255), mix(0.7, 255), mix(0.2, 0)];
+}
+
+function makeParticles(style: SparkleStyle, amount: SparkleAmount, color?: string | null): Particle[] {
   const r = rng(style.length * 7919 + style.charCodeAt(0) * 104729);
   const f = AMOUNT_FACTOR[amount];
   const out: Particle[] = [];
+  const custom = color ? tonesFrom(color) : null;
   const add = (p: Partial<Particle> & Pick<Particle, "kind" | "rgb" | "r">) =>
     out.push({
       x: r() * SPARKLE_W, y: r() * SPARKLE_H, twinkle: 1, phase: r(), swayX: 0, swayY: 0, swayCycles: 1, swayPhase: r(), fall: 0, base: 1, ...p,
     });
 
   if (style === "gold") {
-    const golds: [number, number, number][] = [[255, 214, 120], [255, 232, 160], [245, 190, 90], [255, 246, 214]];
+    const golds: [number, number, number][] = custom ?? [[255, 214, 120], [255, 232, 160], [245, 190, 90], [255, 246, 214]];
     for (let i = 0; i < Math.round(58 * f); i++) {
       add({ kind: "star", r: between(r, 9, 30), rgb: pick(r, golds), twinkle: whole(r, 1, 3), swayX: between(r, 6, 22), swayY: between(r, 6, 22), swayCycles: 1, base: between(r, 0.75, 1) });
     }
@@ -64,7 +78,7 @@ function makeParticles(style: SparkleStyle, amount: SparkleAmount): Particle[] {
       add({ kind: "dot", r: between(r, 2, 5.5), rgb: pick(r, golds), twinkle: whole(r, 2, 4), swayX: between(r, 4, 16), swayY: between(r, 4, 16), base: between(r, 0.6, 0.95) });
     }
   } else if (style === "snow") {
-    const whites: [number, number, number][] = [[255, 255, 255], [240, 248, 255], [255, 250, 250]];
+    const whites: [number, number, number][] = custom ?? [[255, 255, 255], [240, 248, 255], [255, 250, 250]];
     for (let i = 0; i < Math.round(70 * f); i++) {
       add({ kind: "dot", r: between(r, 3, 8), rgb: pick(r, whites), twinkle: 0, fall: 1, swayX: between(r, 14, 46), swayCycles: whole(r, 1, 2), base: between(r, 0.55, 0.92) });
     }
@@ -75,7 +89,7 @@ function makeParticles(style: SparkleStyle, amount: SparkleAmount): Particle[] {
       add({ kind: "dot", r: between(r, 1.5, 3.5), rgb: [255, 255, 255], twinkle: 0, fall: 2, swayX: between(r, 8, 24), swayCycles: 2, base: between(r, 0.5, 0.85) });
     }
   } else if (style === "twinkle") {
-    const cools: [number, number, number][] = [[255, 255, 255], [255, 236, 245], [236, 244, 255], [255, 248, 220]];
+    const cools: [number, number, number][] = custom ?? [[255, 255, 255], [255, 236, 245], [236, 244, 255], [255, 248, 220]];
     for (let i = 0; i < Math.round(30 * f); i++) {
       add({ kind: "star", r: between(r, 16, 40), rgb: pick(r, cools), twinkle: whole(r, 2, 4), swayX: between(r, 3, 12), swayY: between(r, 3, 12), base: 1 });
     }
@@ -84,7 +98,7 @@ function makeParticles(style: SparkleStyle, amount: SparkleAmount): Particle[] {
     }
   } else {
     // pink: hot pink glitter with white hearts of light
-    const pinks: [number, number, number][] = [[255, 45, 149], [255, 105, 180], [255, 160, 205], [255, 255, 255]];
+    const pinks: [number, number, number][] = custom ?? [[255, 45, 149], [255, 105, 180], [255, 160, 205], [255, 255, 255]];
     for (let i = 0; i < Math.round(44 * f); i++) {
       add({ kind: "star", r: between(r, 10, 32), rgb: pick(r, pinks), twinkle: whole(r, 1, 3), swayX: between(r, 6, 20), swayY: between(r, 6, 20), base: between(r, 0.8, 1) });
     }
@@ -179,10 +193,13 @@ function runFfmpegFromFrames(outPath: string, total: number, draw: (n: number, b
 }
 
 const cache = new Map<string, Promise<string>>();
+// Overlays in a picked colour are kept too, but only the most recent few, so the disk never fills up with one file per client colour.
+const MAX_CUSTOM = 8;
+const customKeys: string[] = [];
 
 // One overlay file per style and amount, made the first time it is asked for and kept for the life of the server.
-export function sparkleOverlayFile(style: SparkleStyle, amount: SparkleAmount): Promise<string> {
-  const key = `${style}-${amount}`;
+export function sparkleOverlayFile(style: SparkleStyle, amount: SparkleAmount, color?: string | null): Promise<string> {
+  const key = color ? `${style}-${amount}-${color}` : `${style}-${amount}`;
   const hit = cache.get(key);
   if (hit) return hit;
   const job = (async () => {
@@ -193,7 +210,7 @@ export function sparkleOverlayFile(style: SparkleStyle, amount: SparkleAmount): 
       const s = await stat(file);
       if (s.size > 10_000) return file;
     } catch { /* not made yet */ }
-    const parts = makeParticles(style, amount);
+    const parts = makeParticles(style, amount, color);
     const total = SPARKLE_FPS * SPARKLE_SECONDS;
     const tmp = join(dir, `${key}.${process.pid}.part.mov`);
     await runFfmpegFromFrames(tmp, total, (n, buf) => frameAt(buf, parts, n / total));
@@ -203,5 +220,13 @@ export function sparkleOverlayFile(style: SparkleStyle, amount: SparkleAmount): 
   })();
   cache.set(key, job);
   job.catch(() => cache.delete(key));
+  if (color) {
+    customKeys.push(key);
+    while (customKeys.length > MAX_CUSTOM) {
+      const old = customKeys.shift()!;
+      cache.delete(old);
+      import("fs/promises").then((fs) => fs.rm(join(tmpdir(), "sparkle-overlays-v1", `${old}.mov`), { force: true })).catch(() => {});
+    }
+  }
   return job;
 }

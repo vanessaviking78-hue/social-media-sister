@@ -19,18 +19,21 @@ export const SPARKLE_AMOUNT_LABELS: Record<SparkleAmount, string> = { light: "Li
 
 const KEY = "sparkle-choice-v1";
 
-export function loadSparkleChoice(): { style: SparkleStyle; amount: SparkleAmount } {
+export type SparkleChoice = { style: SparkleStyle; amount: SparkleAmount; color: string }; // color is a hex like #ff2d95, or "" to use the style's own colours
+
+export function loadSparkleChoice(): SparkleChoice {
   try {
     const r = JSON.parse(localStorage.getItem(KEY) || "{}");
     const style = r.style in SPARKLE_STYLE_LABELS ? r.style : "gold";
     const amount = r.amount in SPARKLE_AMOUNT_LABELS ? r.amount : "medium";
-    return { style, amount };
+    const color = typeof r.color === "string" && /^#[0-9a-f]{6}$/i.test(r.color) ? r.color.toLowerCase() : "";
+    return { style, amount, color };
   } catch {
-    return { style: "gold", amount: "medium" };
+    return { style: "gold", amount: "medium", color: "" };
   }
 }
 
-export function saveSparkleChoice(c: { style: SparkleStyle; amount: SparkleAmount }) {
+export function saveSparkleChoice(c: SparkleChoice) {
   try { localStorage.setItem(KEY, JSON.stringify(c)); } catch { /* ignore */ }
 }
 
@@ -41,12 +44,13 @@ async function canvasBlob(c: HTMLCanvasElement): Promise<Blob> {
 }
 
 // One MP4 per slide, in the same order as the slides. Sent a few at a time so a big post never times out.
-export async function sparkleSlides(slides: HTMLCanvasElement[], style: SparkleStyle, amount: SparkleAmount): Promise<string[]> {
+export async function sparkleSlides(slides: HTMLCanvasElement[], style: SparkleStyle, amount: SparkleAmount, color = ""): Promise<string[]> {
   const urls: string[] = [];
   for (let i = 0; i < slides.length; i += 3) {
     const fd = new FormData();
     fd.append("style", style);
     fd.append("amount", amount);
+    if (color) fd.append("color", color);
     for (let k = i; k < Math.min(slides.length, i + 3); k++) fd.append("slides", await canvasBlob(slides[k]), `slide-${k + 1}.png`);
     const r = await fetch(`${BASE}/api/sparkle`, { method: "POST", body: fd });
     const data = await r.json().catch(() => ({}));

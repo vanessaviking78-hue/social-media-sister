@@ -982,7 +982,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const changeSparkle = (c: typeof sparkle) => { setSparkle(c); saveSparkleChoice(c); };
   const sparkleMade = async (post: Post): Promise<string[]> => {
     const cs = await render(post);
-    return sparkleSlides(cs, sparkle.style, sparkle.amount);
+    return sparkleSlides(cs, sparkle.style, sparkle.amount, sparkle.color);
   };
   const sparkleDownload = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
@@ -1289,7 +1289,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     {SPARKLE_ON && !freebie && (
                       <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">
-                        <SparkleControls style={sparkle.style} amount={sparkle.amount} onChange={changeSparkle} />
+                        <SparkleControls style={sparkle.style} amount={sparkle.amount} color={sparkle.color} onChange={changeSparkle} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
                         <Button size="sm" variant="secondary" onClick={() => sparkleDownload(post)} disabled={!post.caption || post.scheduling}><Download className="w-4 h-4 mr-2" />Sparkle download</Button>
                         <Button size="sm" variant="secondary" onClick={() => sparkleSend(post, "bank")} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />Sparkle to bank</Button>
                         <Button size="sm" variant="secondary" onClick={() => sparkleSend(post, "schedule")} disabled={!post.caption || post.scheduling}><CalendarCheck className="w-4 h-4 mr-2" />Sparkle schedule</Button>

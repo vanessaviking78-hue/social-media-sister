@@ -9,7 +9,7 @@ import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import {
   SPARKLE_AMOUNTS, SPARKLE_STYLES, SPARKLE_H, SPARKLE_SECONDS, SPARKLE_W,
-  sparkleOverlayFile, type SparkleAmount, type SparkleStyle,
+  normaliseSparkleColor, sparkleOverlayFile, type SparkleAmount, type SparkleStyle,
 } from "../lib/sparkleOverlay";
 
 // Sparkle: takes the finished slides of a Christmas post and gives back one short looping MP4 per slide,
@@ -41,10 +41,11 @@ router.post("/sparkle", upload.array("slides", 8), async (req, res) => {
 
   const style = (SPARKLE_STYLES as string[]).includes(req.body?.style) ? (req.body.style as SparkleStyle) : "gold";
   const amount = (SPARKLE_AMOUNTS as string[]).includes(req.body?.amount) ? (req.body.amount as SparkleAmount) : "medium";
-  // Slides the person wants to keep still (for example the cover) can be named by position, starting at 0.
+  // An optional picked colour (six digit hex) replaces the style's own colours.
+  const color = normaliseSparkleColor(req.body?.color);
   const dir = await mkdtemp(join(tmpdir(), "sparkle-"));
   try {
-    const overlay = await sparkleOverlayFile(style, amount);
+    const overlay = await sparkleOverlayFile(style, amount, color);
     const urls: string[] = [];
     for (let i = 0; i < files.length; i++) {
       const slide = join(dir, `s${i}.png`);
@@ -71,7 +72,7 @@ router.post("/sparkle", upload.array("slides", 8), async (req, res) => {
       });
       urls.push(`/api/media/${objectPath}`);
     }
-    res.json({ videoUrls: urls, seconds: SPARKLE_SECONDS, style, amount });
+    res.json({ videoUrls: urls, seconds: SPARKLE_SECONDS, style, amount, color });
   } catch (err) {
     logger.error({ err }, "sparkle failed");
     res.status(500).json({ error: "Could not add the sparkle" });

@@ -630,7 +630,7 @@ export default function XmasPosts() {
         toast.loading(`Adding sparkle to post ${k + 1} of ${selected.length}, about a minute each`, { id: toastId });
         const cs: HTMLCanvasElement[] = [];
         for (let n = 0; n < SLIDES; n++) cs.push(await renderFull(post, n));
-        made.push({ post, name: `${String(posts.indexOf(post) + 1).padStart(2, "0")}-${post.design}`, urls: await sparkleSlides(cs, sparkle.style, sparkle.amount) });
+        made.push({ post, name: `${String(posts.indexOf(post) + 1).padStart(2, "0")}-${post.design}`, urls: await sparkleSlides(cs, sparkle.style, sparkle.amount, sparkle.color) });
       }
       if (mode === "zip") {
         await downloadSparkleZip(made.map((m) => ({ prefix: `sparkle-${m.name}`, urls: m.urls, caption: fullCaption(m.post) })), `xmas-sparkle-${(clinic || "client").replace(/\s+/g, "")}-${Date.now()}.zip`);
@@ -800,7 +800,7 @@ export default function XmasPosts() {
           </div>
           <div className="w-full flex flex-wrap items-center gap-3 rounded-lg border border-pink-400/40 px-3 py-2">
             <span className="text-sm font-semibold">Sparkle</span>
-            <SparkleControls style={sparkle.style} amount={sparkle.amount} onChange={changeSparkle} />
+            <SparkleControls style={sparkle.style} amount={sparkle.amount} color={sparkle.color} onChange={changeSparkle} brand={[(preset as unknown as { accentColor?: string } | null)?.accentColor ?? "", (preset as unknown as { pageColor?: string } | null)?.pageColor ?? ""]} />
             <Button variant="outline" onClick={() => sparkleRun("zip")} disabled={!!busy || !selected.length}>
               {busy === "sparkle" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />} Sparkle download ticked
             </Button>
