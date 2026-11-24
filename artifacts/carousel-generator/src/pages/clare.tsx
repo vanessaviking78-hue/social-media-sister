@@ -18,6 +18,8 @@ import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { newxmasHashtags, areaFromPreset } from "@/lib/newxmas";
 import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
+import { SparkleControls } from "@/components/sparkle-controls";
+import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { clinicTags } from "@/lib/sixteen-posts";
@@ -33,6 +35,8 @@ const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
 let CLINIC_KEY = "clare";
 let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
+// Sparkle buttons show on the Christmas tabs only (Xmas, NEWXMAS, XMAS FEELS).
+let SPARKLE_ON = false;
 let LOOK_KEY = "clare-look-v1";
 
 type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
@@ -539,6 +543,7 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xma
   const own = isClare ? { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS } : sectionsForTreatments(forced?.treatmentIds);
   SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
   POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
+  SPARKLE_ON = mode === "xmas" || mode === "smxmas" || mode === "newxmas" || mode === "xmasfeels";
   LOOK_KEY = `clare-look-v1${sfx}`;
   FONT_KEY = `clare-fonts-v1${sfx}`;
   AREA_KEY = `clare-area-v1${sfx}`;
@@ -556,6 +561,7 @@ export function ClareFreebie({ req }: { req: FreebieReq }) {
   CLINIC_NAME = req.clinicName;
   SECS = NEWXMAS_SECTIONS;
   POSTS = NEWXMAS_POSTS;
+  SPARKLE_ON = false;
   LOOK_KEY = `clare-look-v1-xmasfree-${req.id}`;
   FONT_KEY = `clare-fonts-v1-xmasfree-${req.id}`;
   AREA_KEY = `clare-area-v1-xmasfree-${req.id}`;
@@ -971,6 +977,49 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     if (mode === "schedule") setScheduled((s) => ({ ...s, [t.id]: new Date(whenIso || post.when).toISOString() }));
   };
 
+  // SPARKLE: the same slides, with snow, glitter or stars drifting over them, as short looping videos.
+  const [sparkle, setSparkle] = useState(loadSparkleChoice);
+  const changeSparkle = (c: typeof sparkle) => { setSparkle(c); saveSparkleChoice(c); };
+  const sparkleMade = async (post: Post): Promise<string[]> => {
+    const cs = await render(post);
+    return sparkleSlides(cs, sparkle.style, sparkle.amount);
+  };
+  const sparkleDownload = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Adding the sparkle, this takes about a minute");
+    try {
+      const urls = await sparkleMade(post);
+      await downloadSparkleZip([{ prefix: `sparkle-${t.id}`, urls, caption: fullCaption(post) }], `sparkle-${t.id}.zip`);
+      toast.success(`${urls.length} sparkly slide${urls.length > 1 ? "s" : ""} downloaded`, { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add the sparkle", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
+  const sparkleSend = async (post: Post, mode: "schedule" | "bank") => {
+    if (!preset) { toast.error("I cannot find the client preset for this page"); return; }
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    if (!photoCount(post)) { toast.error("Add photos for this section first"); return; }
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Adding the sparkle, this takes about a minute");
+    try {
+      const urls = await sparkleMade(post);
+      const { postType, content } = sparklePostBody(urls, fullCaption(post), `${t.label} · ${CLINIC_NAME} · sparkle`, "clare");
+      const body = mode === "bank"
+        ? { postType, content, status: "draft", presetId: preset.id }
+        : { postType, content, scheduledAt: new Date(post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
+      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Could not save the sparkle post"); }
+      if (mode === "schedule") setScheduled((s) => ({ ...s, [t.id]: new Date(post.when).toISOString() }));
+      else patch(post.id, { banked: true });
+      toast.success(mode === "bank" ? `Sparkle post added to ${preset.name || CLINIC_NAME}'s Client Bank, no date` : "Sparkle post scheduled", { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add the sparkle", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
+
   const schedule = async (post: Post) => {
     patch(post.id, { scheduling: true });
     try {
@@ -1238,6 +1287,14 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     </Button>}
                     {!freebie && <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    {SPARKLE_ON && !freebie && (
+                      <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">
+                        <SparkleControls style={sparkle.style} amount={sparkle.amount} onChange={changeSparkle} />
+                        <Button size="sm" variant="secondary" onClick={() => sparkleDownload(post)} disabled={!post.caption || post.scheduling}><Download className="w-4 h-4 mr-2" />Sparkle download</Button>
+                        <Button size="sm" variant="secondary" onClick={() => sparkleSend(post, "bank")} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />Sparkle to bank</Button>
+                        <Button size="sm" variant="secondary" onClick={() => sparkleSend(post, "schedule")} disabled={!post.caption || post.scheduling}><CalendarCheck className="w-4 h-4 mr-2" />Sparkle schedule</Button>
+                      </div>
+                    )}
                     {t.feral && <Button size="sm" variant="secondary" onClick={() => downloadStories(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Stories 1080 x 1920</Button>}
                     <Button size="sm" variant="outline" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Delete post"><Trash2 className="w-4 h-4 mr-2" />Delete</Button>
                   </div>

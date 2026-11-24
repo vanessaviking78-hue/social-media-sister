@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { SparkleControls } from "@/components/sparkle-controls";
+import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import { useForcedClient } from "@/lib/forced-client";
@@ -603,6 +605,51 @@ export default function XmasPosts() {
     }
   };
 
+  // SPARKLE: every ticked post as short looping videos with snow, glitter or stars drifting over each slide.
+  const [sparkle, setSparkle] = useState(loadSparkleChoice);
+  const changeSparkle = (c: typeof sparkle) => { setSparkle(c); saveSparkleChoice(c); };
+  const sparkleReady = (): boolean => {
+    if (!selected.length) { toast.error("Tick at least one post first"); return false; }
+    if (!clinic.trim() || !area.trim()) { toast.error("Fill in the business name and area first, so no placeholder goes out."); return false; }
+    const noWords = selected.filter((p) => !p.caption.trim() || p.slides.some((x) => !x.trim()));
+    if (noWords.length) { toast.error(`${noWords.length} ticked post${noWords.length > 1 ? "s have" : " has"} no caption or slide words yet. Press Write first.`); return false; }
+    const noPhoto = selected.filter((p) => p.photo == null || p.more.some((m) => m == null));
+    if (noPhoto.length) { toast.error(`${noPhoto.length} ticked post${noPhoto.length > 1 ? "s have" : " has"} no photo yet. Add approved photos first.`); return false; }
+    const left = selected.filter((p) => placeholdersIn(p).length);
+    if (left.length) { toast.error(`"${DESIGN_BY_ID[left[0].design].name}" still has ${placeholdersIn(left[0]).join(" ")} to fill in. Change it in the boxes first.`); return false; }
+    return true;
+  };
+  const sparkleRun = async (mode: "zip" | "bank") => {
+    if (!sparkleReady()) return;
+    if (mode === "bank" && !preset) { toast.error("Choose a client first"); return; }
+    setBusy("sparkle");
+    const toastId = toast.loading("Adding the sparkle");
+    try {
+      const made: { post: Post; name: string; urls: string[] }[] = [];
+      for (const [k, post] of selected.entries()) {
+        toast.loading(`Adding sparkle to post ${k + 1} of ${selected.length}, about a minute each`, { id: toastId });
+        const cs: HTMLCanvasElement[] = [];
+        for (let n = 0; n < SLIDES; n++) cs.push(await renderFull(post, n));
+        made.push({ post, name: `${String(posts.indexOf(post) + 1).padStart(2, "0")}-${post.design}`, urls: await sparkleSlides(cs, sparkle.style, sparkle.amount) });
+      }
+      if (mode === "zip") {
+        await downloadSparkleZip(made.map((m) => ({ prefix: `sparkle-${m.name}`, urls: m.urls, caption: fullCaption(m.post) })), `xmas-sparkle-${(clinic || "client").replace(/\s+/g, "")}-${Date.now()}.zip`);
+        toast.success(`${made.length} sparkly post${made.length !== 1 ? "s" : ""} downloaded, 3 video slides each`, { id: toastId });
+      } else {
+        for (const m of made) {
+          const { postType, content } = sparklePostBody(m.urls, fullCaption(m.post), `${DESIGN_BY_ID[m.post.design].name} · ${clinic} · sparkle`, "xmas-posts");
+          const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ postType, content, status: "draft", presetId: preset!.id }) });
+          if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Could not save to the Client Bank"); }
+        }
+        toast.success(`${made.length} sparkle post${made.length !== 1 ? "s" : ""} added to the Client Bank, no dates`, { id: toastId });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not add the sparkle", { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const chooserPost = chooser ? posts.find((p) => p.id === chooser.id) : null;
   const cardFont = { fontFamily: "inherit" };
 
@@ -750,6 +797,17 @@ export default function XmasPosts() {
             <Button onClick={schedule} disabled={!!busy || !selected.length}>
               {busy === "schedule" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule ticked
             </Button>
+          </div>
+          <div className="w-full flex flex-wrap items-center gap-3 rounded-lg border border-pink-400/40 px-3 py-2">
+            <span className="text-sm font-semibold">Sparkle</span>
+            <SparkleControls style={sparkle.style} amount={sparkle.amount} onChange={changeSparkle} />
+            <Button variant="outline" onClick={() => sparkleRun("zip")} disabled={!!busy || !selected.length}>
+              {busy === "sparkle" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />} Sparkle download ticked
+            </Button>
+            <Button onClick={() => sparkleRun("bank")} disabled={!!busy || !selected.length}>
+              {busy === "sparkle" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />} Sparkle to Client Bank
+            </Button>
+            <span className="text-xs text-muted-foreground">Snow, glitter or stars drift over every slide as a looping video. Instagram plays them as a swipe through video carousel.</span>
           </div>
         </section>
 
