@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -1848,6 +1849,17 @@ export default function AiPortraitStudio() {
             </div>
 
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f); }} />
+
+            <div className="mt-2">
+              <ApprovedImagesPicker
+                clientName={clientName}
+                mode="single"
+                skipBackgroundRemoval
+                large
+                label="Choose from approved photos"
+                onAddImages={(files) => { if (files[0]) handleFileDrop(files[0]); }}
+              />
+            </div>
 
             <button
               className="mt-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
