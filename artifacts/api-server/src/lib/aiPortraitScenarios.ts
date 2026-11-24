@@ -2806,6 +2806,7 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     outfitEmphasis = `\n\nThe outfit is critical: she must be wearing ${chosenOutfit}, and the outfit must be entirely black, true jet black with no other colour, no logos and no prints. Do not swap it for a different garment.${resolvedBgColour ? "" : " Only the office and background are hot pink, her clothing stays black."}`;
   }
   const ratioDescription =
+    preset.id.startsWith("rw-") || aspectRatio === "3:2" ? "a landscape 3:2 orientation (wider than tall)" :
     aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
     aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
     "a square 1:1 format";
@@ -4872,5 +4873,113 @@ export const TEVIOT_XMAS_PRESETS: PhotoStudioPreset[] = [
     name: "Midnight Finale",
     hasColour: false,
     promptTemplate: `A woman from the reference photo standing in a dark elegant room in front of a tall tree glowing with tiny turquoise and purple lights, arms loosely folded, looking straight into the camera. She wears a deep purple satin dress. Cinematic low key lighting, a fine rim light on her hair and shoulders, glossy floor reflecting the lights. ${TEVIOT_XMAS_SUFFIX}`,
+  },
+];
+
+// RYDERWEB: seventeen 3:2 landscape blog header images for The Ryder Clinic website, each with the doctor and a scene that matches the topic.
+const RYDERWEB_SUFFIX = ` Landscape 3:2 website blog header for a high end private medical clinic. The doctor is placed on one side of the frame with calm clear space on the other side for a title. A softly lit luxury consulting room in cream, ivory and warm stone with a touch of soft brown, uncluttered, expensive and refined. Natural window light with a gentle fill, shallow depth of field. Any other person in the picture is a fully invented, realistic person and is never a copy of the reference photo. All products, bottles, vials and devices are plain, generic and completely unbranded, with no logos and no readable text anywhere. Needles never touch or point at a face. Results look natural, nothing exaggerated. STRICT FACELOCK for the doctor: use the uploaded reference photo as the sole source of identity and preserve the exact face, facial proportions, bone structure, eyes, nose, lips, jawline, age, hairstyle and natural expression. Do not alter, beautify, reshape or reinterpret the face. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Natural true to life skin tone with neutral white balance, no warm tint, no orange cast, no filter. A real photograph with real fabric weave and real reflections.`;
+
+export const RYDERWEB_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "rw-01",
+    name: "SPF",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo standing by a bright window holding a plain white unbranded sunscreen pump bottle in one hand, a warm reassuring smile, her skin luminous. She wears a tailored salmon pink suit with a crisp ivory shell top. Sunlit cream room, soft glow on her face. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-02",
+    name: "Hands",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo waist up, smoothing a pearl of serum over the back of one hand and holding both hands gently towards the camera so they are clearly visible, a friendly knowing smile. She wears a soft floral blouse with plain tailored cream trousers. Cream consulting room, natural window light, a small plain dispenser on a marble side table. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-03",
+    name: "The Busy Woman",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo seated at an elegant cream desk with an open diary, a laptop and a skin analysis tablet, relaxed and in control, glancing up with a warm smile as if mid conversation. She wears a tailored bottle green suit with an ivory camisole. Calm consulting room, soft window light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-04",
+    name: "Medical Grade vs High Street",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo standing at a clean clinic shelf holding two plain unbranded skincare bottles, one in each hand, comparing them with a thoughtful half smile, as if weighing them for the viewer. She wears a tailored brown suit with an ivory blouse. Cream shelving with neatly arranged plain clinical skincare behind her, soft natural light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-05",
+    name: "Lymphatic System",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo standing beside a seated patient and performing a gentle lymphatic massage with her fingertips along the patient's jaw and neck, the patient shown from behind or in soft side profile with her eyes closed, the doctor looking down with a calm kind expression. The doctor wears a salmon pink suit with the sleeves neatly in place. Quiet cream treatment room, soft diffused light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-06",
+    name: "Exosomes",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo holding a small plain unlabelled glass vial up towards the window light between finger and thumb, looking at it with quiet fascination and then a gentle smile towards the camera. She wears a tailored bottle green suit with an ivory silk blouse. Pale cream clinic with a clean glass shelf behind her, a refined scientific feel, soft cool daylight. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-07",
+    name: "Polynucleotides",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo wearing fine blue nitrile gloves at a spotless treatment tray, one hand resting beside a sealed sterile pack and a plain prepared syringe lying on the tray, looking up at the camera with a calm reassuring expression. She wears a tailored brown suit with an ivory top. Cream treatment room, soft clean light, nothing pointed at anyone. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-08",
+    name: "Thread Veins On The Legs",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo seated on a stool in a consulting room checking a patient's calf with a small handheld vein viewing light, the patient seated on the couch with only her bare lower legs and knees in frame and her face out of shot, the doctor looking up with a reassuring smile. She wears a floral blouse with plain tailored trousers. Cream room, soft natural light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-09",
+    name: "Why Doctor Led Matters",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo standing with her arms loosely folded, a stethoscope draped round her neck, a confident warm expression of quiet authority, softly blurred framed certificates on the cream wall behind her. She wears a tailored salmon pink suit with an ivory blouse. Elegant consulting room, soft window light, a calm trustworthy mood. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-10",
+    name: "Sun Damage, Age Spots And Melasma",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo leaning in to examine a patient's cheek with a handheld dermatoscope, the patient seated in profile with her face softly out of focus, the doctor attentive and kind. She wears a floral blouse with plain tailored trousers. Bright cream consulting room, clear even light that shows skin detail. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-11",
+    name: "Less Is More",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo seated at a clean cream table holding a small hand mirror loosely in her lap, a single plain item on an otherwise empty tray in front of her, lots of calm negative space, a serene, gently amused expression. She wears a tailored brown suit with an ivory top. Minimal cream room with soft natural light, a quiet uncluttered feel. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-12",
+    name: "Living With Rosacea",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo holding a plain unbranded gentle cleanser bottle and smiling reassuringly towards a patient seated beside her, the patient with calm, softly flushed cheeks and a relaxed expression. The doctor wears a tailored bottle green suit with an ivory blouse. Cool, soft, cream and sage toned room, diffused daylight, a soothing atmosphere. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-13",
+    name: "Low Testosterone",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo seated at her desk across from a man in his late forties, holding a plain blood test form and speaking to him with warm, unhurried reassurance while he listens and nods, relaxed. She wears a tailored brown suit with an ivory blouse. Calm cream consulting room, soft window light, a respectful, trusting mood. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-14",
+    name: "Scalp And Hair Growth",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo gently parting a patient's hair with one hand and examining the scalp with a handheld trichoscope in the other, the patient seated in front of her and seen from behind, the doctor focused and kind. She wears a tailored salmon pink suit with an ivory top. Bright cream clinic room, clear even light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-15",
+    name: "IV Vitamin Therapy",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo standing beside a reclining patient in a comfortable treatment chair, adjusting a drip bag on an IV stand with one hand, smiling warmly at the patient who rests under a soft cream blanket looking relaxed and comfortable. The doctor wears a floral blouse with plain tailored trousers. Calm cream treatment room, soft daylight, a luxurious spa like but clinical feel. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-16",
+    name: "Microneedling",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo wearing fine gloves holding a plain generic microneedling pen upright beside her face, tip pointing safely upwards, looking at the camera with a confident reassuring smile, a patient lying back on a treatment couch softly out of focus behind her. She wears a tailored bottle green suit with an ivory top. Cream treatment room, soft clean light. ${RYDERWEB_SUFFIX}`,
+  },
+  {
+    id: "rw-17",
+    name: "Laser Genesis",
+    hasColour: false,
+    promptTemplate: `A woman doctor from the reference photo passing a plain handheld laser device a few centimetres above a patient's cheek, the patient lying back wearing eye shields and a soft cream headband, the doctor looking down with calm concentration and a gentle smile. She wears a tailored brown suit with an ivory top. Cream treatment room, soft even light, a serene mood. ${RYDERWEB_SUFFIX}`,
   },
 ];
