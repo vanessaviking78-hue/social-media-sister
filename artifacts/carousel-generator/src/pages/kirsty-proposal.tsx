@@ -35,7 +35,7 @@ export default function KirstyProposal() {
       <style>{CSS}</style>
       <div className="kp-w">
         <div className="kp-top">
-          <span>A proposal for Kirsty</span>
+          <span>The AestheticShift Community</span>
           <span>From Vanessa</span>
         </div>
 
