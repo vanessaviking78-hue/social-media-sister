@@ -39,6 +39,7 @@ import metaAuthRouter from "./meta-auth";
 import videoOverlayRouter from "./video-overlay";
 import portalRouter from "./portal";
 import schedulerRouter from "./scheduler";
+import storysellRouter from "./storysell";
 import libraryRouter from "./library";
 import onboardingRouter from "./onboarding";
 import aboutMeRouter from "./about-me";
@@ -131,6 +132,7 @@ import xmasshootRouter from "./xmasshoot";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(storysellRouter);
 router.use(freeSamplesRouter);
 router.use(postPacksRouter);
 router.use(tenFreeRouter);
