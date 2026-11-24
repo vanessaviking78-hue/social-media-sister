@@ -27,6 +27,7 @@ type MonthlyClient = {
   presetId: number;
   clientName: string;
   daysCovered: number;
+  postsScheduled: number;
   pct: number;
 };
 
@@ -226,7 +227,7 @@ export default function DailyFocus() {
         <div className="flex-1">
           <h1 className="font-semibold text-base leading-none">Daily Focus</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Live content gaps, sprint the ones on fire first{lastUpdated ? " · updated " + lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}
+            Live content gaps, fewest posts at the top{lastUpdated ? " · updated " + lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""}
           </p>
         </div>
         <button
@@ -318,7 +319,7 @@ export default function DailyFocus() {
                         )}
                         <span className={isDone || isComplete ? "line-through text-muted-foreground" : ""}>{c.clientName}</span>
                       </span>
-                      <span className="text-xs text-muted-foreground shrink-0">{c.daysCovered}/{data.monthlyTargetDays} days</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{c.postsScheduled} post{c.postsScheduled === 1 ? "" : "s"} · {c.daysCovered}/{data.monthlyTargetDays} days</span>
                     </button>
                   );
                 })}
