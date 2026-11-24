@@ -195,7 +195,7 @@ export async function renderPackSlide(post: PackPost, n: number, c: PackClient, 
   const last = n === LUX_SLIDES - 1;
   drawLuxPhotoSlide(ctx, {
     text: fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? fillTokens(post.cta, c.fill) : "", palette, bodyFont: packFonts.body,
-    photo: await bmp(c.pool, post.photos[n]), focus, scrim: 35, logo: c.logo, logoPos: "tr", arrow: !last,
+    photo: await bmp(c.pool, post.photos[n]), focus, scrim: 35, logo: c.logo, logoPos: "tr", arrow: false,
   });
 }
 

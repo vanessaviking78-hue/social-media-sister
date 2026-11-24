@@ -493,7 +493,6 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       for (const l of fit.lines) { ctx.fillText(l, W / 2, y); y += fit.px * 1.1; }
       drawSubtitle(ctx, f, sb.lines, y, INKC);
     }
-    clinicName(ctx, f, H - (look.block ? 52 : 100), "center", GREYC);
     return;
   }
 

@@ -331,12 +331,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
     ctaLines.forEach((l, i) => ctx.fillText(l, W / 2, y + 28 + i * ctaLh));
   }
   ctx.restore();
-  if (d.arrow) {
-    ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    const ay = H - 96;
-    ctx.beginPath(); ctx.moveTo(W - 168, ay); ctx.lineTo(W - 88, ay); ctx.moveTo(W - 104, ay - 13); ctx.lineTo(W - 88, ay); ctx.lineTo(W - 104, ay + 13); ctx.stroke();
-  }
-  drawCornerLogo(ctx, d.logo, d.logoCorner, W, H, d.arrow ? 110 : 0);
+  drawCornerLogo(ctx, d.logo, d.logoCorner, W, H, 0);
   ctx.restore();
   return slots;
 }

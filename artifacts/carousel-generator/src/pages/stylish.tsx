@@ -2611,16 +2611,6 @@ async function renderSlide(
     setSpacing(ctx, 0);
     ctx.textBaseline = "top";
   }
-  if (style.arrow && meta.index < meta.total - 1) {
-    const ay = H - 100;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(W - M - 76, ay); ctx.lineTo(W - M, ay);
-    ctx.moveTo(W - M - 14, ay - 11); ctx.lineTo(W - M, ay); ctx.lineTo(W - M - 14, ay + 11);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
 
   if (logo && style.showLogo && preset) {
     drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
@@ -4996,10 +4986,6 @@ export default function Stylish() {
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.brandMark} onChange={e => patch({ brandMark: e.target.checked })} className="accent-sky-500" />
               Client name in the corner
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={style.arrow} onChange={e => patch({ arrow: e.target.checked })} className="accent-sky-500" />
-              Swipe arrow
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.showLogo} onChange={e => patch({ showLogo: e.target.checked })} className="accent-sky-500" />

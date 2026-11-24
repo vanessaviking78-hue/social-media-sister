@@ -81,7 +81,6 @@ function footer(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, na
     ctx.fillStyle = ink;
     ctx.font = "600 30px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(name.toUpperCase(), W / 2, H - 90);
   }
 }
 
@@ -112,7 +111,6 @@ function draw(
     drawLines(ctx, ls, W / 2, 1090, 62);
     ctx.fillStyle = GOLD;
     ctx.font = "600 26px Arial";
-    ctx.fillText(salon.toUpperCase(), W / 2, H - 36);
     return;
   }
 

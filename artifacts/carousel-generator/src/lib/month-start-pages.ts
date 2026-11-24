@@ -251,7 +251,6 @@ function footer(ctx: CanvasRenderingContext2D, brand: MonthBrand, page: number, 
   ctx.font = `600 22px ${SANS}`;
   (ctx as any).letterSpacing = "3px";
   ctx.textAlign = "left";
-  ctx.fillText(brand.clinicName.toUpperCase().slice(0, 34), 80, MS_H - 56);
   ctx.textAlign = "right";
   ctx.fillText(`${brand.monthLabel.toUpperCase()}   ${page}`, MS_W - 80, MS_H - 56);
   (ctx as any).letterSpacing = "0px";

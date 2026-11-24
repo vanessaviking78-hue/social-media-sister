@@ -266,7 +266,6 @@ export function footer(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page
   ctx.font = `600 22px ${SANS}`;
   (ctx as any).letterSpacing = "3px";
   ctx.textAlign = "left";
-  ctx.fillText(brand.clinicName.toUpperCase(), 80, PAGE_H - 60);
   ctx.textAlign = "right";
   ctx.fillText(String(page), PAGE_W - 80, PAGE_H - 60);
   (ctx as any).letterSpacing = "0px";
