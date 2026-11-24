@@ -210,6 +210,19 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
   }
 });
 
+// Removes one approved image for good, from the Approved Photos picker.
+router.delete("/approval/images/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid image id" });
+    const deleted = await db.delete(approvalImagesTable).where(eq(approvalImagesTable.id, id)).returning();
+    if (!deleted.length) return res.status(404).json({ error: "Image not found" });
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to delete image" });
+  }
+});
+
 router.patch("/approval/batches/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);

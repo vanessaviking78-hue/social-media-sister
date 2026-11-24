@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, Loader2, X, CheckCircle2, Maximize2 } from "lucide-react";
+import { ShieldCheck, Loader2, X, CheckCircle2, Maximize2, Trash2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { useApprovedImages, sameClientName } from "@/lib/use-approval";
+import { useApprovedImages, sameClientName, authHeaders } from "@/lib/use-approval";
 import { toast } from "sonner";
 import ExportToCanvaButton from "@/components/export-to-canva";
 
@@ -101,6 +102,22 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
   const [preview, setPreview] = useState<string | null>(null);
 
   const { data: allImages = [] } = useApprovedImages("");
+  const qc = useQueryClient();
+  // Two taps to delete a photo for good: the first asks, the second does it.
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
+  const deleteImage = async (id: number) => {
+    try {
+      const res = await fetch(`${BASE}/api/approval/images/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (!res.ok) throw new Error();
+      setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      setSelectedOrder((prev) => prev.filter((x) => x !== id));
+      setConfirmDelete(null);
+      await qc.invalidateQueries({ queryKey: ["approved-images"] });
+      toast.success("Photo deleted");
+    } catch {
+      toast.error("Could not delete that photo");
+    }
+  };
 
   const clients = Array.from(new Set(allImages.map((img) => img.clientName))).sort();
 
@@ -292,6 +309,18 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
                       className="h-6 w-6 bg-black/60 hover:bg-black/80 rounded-full p-0"
                       label=""
                     />
+                  </div>
+                  <div className="absolute bottom-5 right-1 z-10" onClick={(e) => e.stopPropagation()}>
+                    {confirmDelete === img.id ? (
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => deleteImage(img.id)} className="rounded-full bg-red-600 px-2 py-1 text-[11px] font-bold text-white" aria-label="Confirm delete this photo">Delete?</button>
+                        <button type="button" onClick={() => setConfirmDelete(null)} className="rounded-full bg-black/70 px-2 py-1 text-[11px] font-bold text-white" aria-label="Keep this photo">Keep</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmDelete(img.id)} className="h-6 w-6 rounded-full bg-black/60 hover:bg-red-600 flex items-center justify-center" aria-label="Delete this photo" title="Delete this photo">
+                        <Trash2 className="w-3 h-3 text-white" />
+                      </button>
+                    )}
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
                     <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
