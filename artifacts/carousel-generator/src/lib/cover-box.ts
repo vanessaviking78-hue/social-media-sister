@@ -49,6 +49,7 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
   const subPx = 34;
   if (o.sub) { ctx.font = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`; subLines = wrapLines(ctx, o.sub, inner); }
   const subH = subLines.length ? 28 + subLines.length * subPx * 1.35 : 0;
+  if (tight) { drawTightBox(ctx, { W, H, b, size, ts, layout, lines, subLines, subPx, o, textVal, pad: Math.round(30 * ts) }); return; }
   if (tight) {
     // shrink the box round the widest line of words
     let widest = 0;
@@ -84,4 +85,95 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
     subLines.forEach((l, i) => ctx.fillText(l, bl + pad, ty + lineH + 28 + i * subPx * 1.35));
   }
   ctx.textAlign = "left";
+}
+
+// Floating box: behaves like a Canva text box. The box is the real ink size of the words plus the same gap on every side,
+// sitting directly behind the text (no extra line height, no shadow), so nothing looks off centre or justified.
+function drawTightBox(ctx: CanvasRenderingContext2D, a: { W: number; H: number; b: CoverBox; size: number; ts: number; layout: ReturnType<typeof layoutTitle> | null; lines: string[]; subLines: string[]; subPx: number; o: { headline: string; tf: { lf: any; style: any } | null; headFont: string; subFont?: string }; textVal: string; pad: number }) {
+  const { W, H, b, size, layout, lines, subLines, subPx, o, textVal, pad } = a;
+  const subFont = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`;
+  const headFont = `400 ${size}px "${o.headFont}", serif`;
+  // ink bounds of the headline, relative to the point it is drawn from (x = left, y = top of first line)
+  let iL = 0, iR = 0, iT = 0, iB = 0;
+  if (o.tf && layout) {
+    const lf = o.tf.lf, st = o.tf.style;
+    const scale = layout.size / lf.font.unitsPerEm;
+    const asc = (lf.font.ascender || lf.font.unitsPerEm * 0.8) * scale;
+    const trackPx = (st.tracking / 1000) * layout.size;
+    const space = (lf.font.charToGlyph(" ").advanceWidth || lf.font.unitsPerEm * 0.3) * scale + trackPx;
+    iL = Infinity; iR = -Infinity; iT = Infinity; iB = -Infinity;
+    layout.lines.forEach((line, li) => {
+      const base = li * layout.size * layout.lineHeight + asc * 0.92;
+      let cx = 0;
+      for (const w of line.words) {
+        for (const it of w.items) {
+          const bb = it.g.getBoundingBox();
+          if (!isFinite(bb.x1) || bb.x2 - bb.x1 <= 0) continue; // spaces and empty glyphs
+          iL = Math.min(iL, cx + it.x + bb.x1 * scale);
+          iR = Math.max(iR, cx + it.x + bb.x2 * scale);
+          iT = Math.min(iT, base - bb.y2 * scale);
+          iB = Math.max(iB, base - bb.y1 * scale);
+        }
+        cx += w.width + space;
+      }
+    });
+    if (!isFinite(iL)) { iL = 0; iR = layout.lines[0]?.width ?? 0; iT = 0; iB = titleHeight(layout); }
+  } else {
+    ctx.font = headFont;
+    iL = Infinity; iR = -Infinity;
+    lines.forEach((l) => { const m = ctx.measureText(l); iL = Math.min(iL, -m.actualBoundingBoxLeft); iR = Math.max(iR, m.actualBoundingBoxRight); });
+    if (!isFinite(iL)) { iL = 0; iR = 0; }
+    ctx.textBaseline = "alphabetic";
+    const m0 = ctx.measureText(lines[0] ?? "M");
+    const lh = size * 1.1;
+    iT = lh * 0.8 - m0.actualBoundingBoxAscent;
+    const mLast = ctx.measureText(lines[lines.length - 1] ?? "M");
+    iB = (lines.length - 1) * lh + lh * 0.8 + mLast.actualBoundingBoxDescent;
+  }
+  let headW = iR - iL, headH = iB - iT;
+  // optional subtitle, sitting a small gap under the headline
+  let subW = 0, subTop = 0, subH = 0, subL = 0;
+  const sGap = subLines.length ? Math.round(subPx * 0.6) : 0;
+  if (subLines.length) {
+    ctx.font = subFont;
+    subL = Infinity; let r = -Infinity;
+    subLines.forEach((l) => { const m = ctx.measureText(l); subL = Math.min(subL, -m.actualBoundingBoxLeft); r = Math.max(r, m.actualBoundingBoxRight); });
+    subW = r - subL;
+    subTop = headH + sGap;
+    subH = (subLines.length - 1) * subPx * 1.35 + subPx * 0.75;
+  }
+  const contentW = Math.max(headW, subW);
+  const contentH = headH + (subLines.length ? sGap + subH : 0);
+  const bw = Math.ceil(contentW + pad * 2);
+  const bh = Math.ceil(contentH + pad * 2);
+  const bl = Math.max(20, Math.min(W - bw - 20, Math.round(b.x * W - bw / 2)));
+  const bt = Math.max(20, Math.min(H - bh - 20, Math.round(b.y * H - bh / 2)));
+  ctx.save();
+  ctx.fillStyle = paintFor(ctx, b.fill, bl, bt, bw, bh);
+  ctx.fillRect(bl, bt, bw, bh);
+  ctx.restore();
+  // words sit dead centre in the box: equal gap left and right, top and bottom
+  const hx = bl + pad + (contentW - headW) / 2 - iL; // draw origin x for the headline
+  const hy = bt + pad - iT; // draw origin y (top of first line)
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  const headPaint = paintFor(ctx, textVal, bl + pad, bt + pad, contentW, headH);
+  if (o.tf && layout) {
+    drawTitle(ctx, o.tf.lf, layout, o.tf.style, hx, hy, "left", contentW, headPaint);
+  } else {
+    ctx.fillStyle = headPaint;
+    ctx.font = headFont;
+    ctx.textBaseline = "alphabetic";
+    lines.forEach((l, i) => ctx.fillText(l, hx, hy + i * size * 1.1 + size * 1.1 * 0.8));
+  }
+  if (subLines.length) {
+    const sx = bl + pad + (contentW - subW) / 2 - subL;
+    const sTop = bt + pad + subTop;
+    ctx.font = subFont;
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = paintFor(ctx, textVal, bl + pad, sTop, contentW, subH);
+    subLines.forEach((l, i) => ctx.fillText(l, sx, sTop + subPx * 0.75 + i * subPx * 1.35));
+  }
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
 }
