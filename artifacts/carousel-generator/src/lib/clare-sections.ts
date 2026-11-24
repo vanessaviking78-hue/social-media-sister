@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "newxmas" | "xmasfeels" | "feral" | "blackfriday";
+export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "newxmas" | "xmasfeels" | "xmasfinal" | "feral" | "blackfriday";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -139,6 +139,11 @@ export const NEWXMAS_POSTS: ClareSectionPost[] = NEWXMAS_ROWS.map((r, i) => ({ i
 import { XMASFEELS_ROWS, type XmasFeelsRow } from "./xmasfeels";
 export const XMASFEELS_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "xmasfeels", label: "XMAS FEELS", word: "" }];
 export const XMASFEELS_POSTS: ClareSectionPost[] = XMASFEELS_ROWS.map((r, i) => ({ id: `xfp-${r.id}`, group: "xmasfeels" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", xf: r }));
+
+// XMAS FINAL: 8 hand picked single image Christmas posts, her line on the picture word for word, caption already written.
+import { XMASFINAL_ROWS } from "./xmasfinal";
+export const XMASFINAL_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "xmasfinal", label: "XMAS FINAL", word: "" }];
+export const XMASFINAL_POSTS: ClareSectionPost[] = XMASFINAL_ROWS.map((r, i) => ({ id: `xfinp-${r.id}`, group: "xmasfinal" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", xf: r }));
 
 // XMAS: one carousel for each of the 32 hooks (8 weeks of 4). The cover hook is fixed to the version she picks, colloquial or professional.
 import { XMAS_WEEKS } from "./xmas-weeks";
