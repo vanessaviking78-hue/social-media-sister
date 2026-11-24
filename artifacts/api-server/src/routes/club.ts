@@ -30,6 +30,13 @@ export const CLUB_PLANS = {
   "222": { price: 275, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
+// A few members get more than their plan as a favour. A member named here gets all of the built posts to use, with nothing held back to choose between.
+const POST_CAP_OVERRIDES: Record<string, number> = { "natasha lhd": 20 };
+const capsFor = (m: { plan: PlanId; name: string }) => {
+  const base = CLUB_PLANS[m.plan];
+  const o = POST_CAP_OVERRIDES[String(m.name ?? "").trim().toLowerCase()];
+  return o ? { ...base, posts: o } : base;
+};
 export const PLACES = { "69": 5, "222": 7 } as const;
 const MAX_PHOTOS = 20;
 const PICK_HOURS = 48; // a member has 48 hours after approval to choose her posts
@@ -194,7 +201,7 @@ async function emailVanessa(subject: string, lines: string[]): Promise<boolean> 
 const publicMember = (m: Member) => ({
   name: m.name,
   plan: m.plan,
-  caps: CLUB_PLANS[m.plan],
+  caps: capsFor(m),
   detailsDone: m.details_done,
   details: m.details,
   logoUrl: m.logo_url,
@@ -331,7 +338,7 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
         choices: cur.choices,
       },
       months: (approved.rows as any[]).map((r) => {
-        const ps = pickState(r.content, r.approved_at, CLUB_PLANS[m.plan].posts);
+        const ps = pickState(r.content, r.approved_at, capsFor(m).posts);
         return { month: r.month, content: { ...(r.content ?? {}), posts: ps.shown, bank: undefined, picked: undefined }, aiUrls: r.ai_urls, approvedAt: r.approved_at, feedback: r.feedback ?? {},
           ...(ps.phase === "choose" ? { choose: { cap: ps.cap, deadline: ps.deadline, posts: ps.all.map((p: any) => ({ n: p.n, label: p.label, images: p.images })) } } : {}) };
       }),
@@ -443,7 +450,7 @@ router.post("/club/me/:token/pick", async (req: Request, res: Response) => {
     const month = str(b.month, 10);
     const x = (await db.execute(sql`SELECT id, content, approved_at FROM club_months WHERE member_id = ${m.id} AND month = ${month} AND status = 'approved'`)).rows[0] as any;
     if (!x) { res.status(404).json({ error: "That month is not ready yet" }); return; }
-    const cap = CLUB_PLANS[m.plan].posts;
+    const cap = capsFor(m).posts;
     const ps = pickState(x.content, x.approved_at, cap);
     if (ps.phase !== "choose") { res.status(409).json({ error: "Your posts for this month are already chosen" }); return; }
     const valid = new Set(ps.all.map((p: any) => Number(p.n)));
@@ -497,7 +504,7 @@ router.post("/club/me/:token/choices", async (req: Request, res: Response) => {
       res.status(400).json({ error: "This month's choices have closed because I have started on your content. Message me if something has changed." });
       return;
     }
-    const caps = CLUB_PLANS[m.plan];
+    const caps = capsFor(m);
     const b = req.body as { treatments?: unknown; note?: unknown };
     const treatments = (Array.isArray(b.treatments) ? b.treatments : []).map((t) => str(t, 60)).filter(Boolean).slice(0, caps.treatmentPosts);
     // The other posts are chosen by Vanessa, so whatever she has set is kept.
@@ -553,17 +560,17 @@ async function writeStories(m: Member, month: MonthRow): Promise<Story[]> {
     temperature: 0.95,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write Instagram stories for a UK aesthetics clinician, in HER first person. Write exactly ${CLUB_PLANS[m.plan].stories}. Each has a short line for the story itself (max 25 words, warm, funny, never salesy) and a suggested poll sticker: a question under 12 words with two short answers (max 3 words each) that women over 35 will tap without thinking. Spread them: a few about her life and the clinic, a few about common beauty myths, a few light this or that questions, and at most 3 that nudge towards her treatments. Never mention a website, Botox, anti-wrinkle or prescription treatments, never promise a result, no emojis, no em dashes, no negative parallelism, no AI patter. British spelling. Return JSON: {"stories":[{"text":string,"question":string,"a":string,"b":string}]}` },
+      { role: "system", content: `${HOUSE_VOICE}\n${HOUSE_RULES}\n\nYou write Instagram stories for a UK aesthetics clinician, in HER first person. Write exactly ${capsFor(m).stories}. Each has a short line for the story itself (max 25 words, warm, funny, never salesy) and a suggested poll sticker: a question under 12 words with two short answers (max 3 words each) that women over 35 will tap without thinking. Spread them: a few about her life and the clinic, a few about common beauty myths, a few light this or that questions, and at most 3 that nudge towards her treatments. Never mention a website, Botox, anti-wrinkle or prescription treatments, never promise a result, no emojis, no em dashes, no negative parallelism, no AI patter. British spelling. Return JSON: {"stories":[{"text":string,"question":string,"a":string,"b":string}]}` },
       { role: "user", content: profile },
     ],
   });
   let list: any[] = [];
   try { list = JSON.parse(r.choices[0]?.message?.content ?? "{}").stories ?? []; } catch { list = []; }
-  return list.slice(0, CLUB_PLANS[m.plan].stories).map((x, i) => ({ n: i + 1, text: noDashes(x.text).slice(0, 200), poll: { question: noDashes(x.question).slice(0, 90), a: noDashes(x.a).slice(0, 24), b: noDashes(x.b).slice(0, 24) } })).filter((x) => x.text && x.poll.question);
+  return list.slice(0, capsFor(m).stories).map((x, i) => ({ n: i + 1, text: noDashes(x.text).slice(0, 200), poll: { question: noDashes(x.question).slice(0, 90), a: noDashes(x.a).slice(0, 24), b: noDashes(x.b).slice(0, 24) } })).filter((x) => x.text && x.poll.question);
 }
 
 async function writeReels(m: Member, month: MonthRow): Promise<Reel[]> {
-  const caps = CLUB_PLANS[m.plan];
+  const caps = capsFor(m);
   const d = m.details;
   const treatments: string[] = (month.choices?.treatments as string[]) ?? [];
   const tailored = treatments.length ? caps.tailoredReels : 0;
@@ -832,8 +839,8 @@ router.get("/club/members", requireAuth, async (_req: Request, res: Response) =>
           months: months.filter((x) => x.member_id === m.id).map((x) => ({
             id: x.id, month: x.month, status: x.status, choices: x.choices, reelCount: ((x.content?.reels as any[]) ?? []).length, postCount: ((x.content?.posts as any[]) ?? []).length,
             aiUrls: x.ai_urls, aiStatus: x.ai_status, aiError: x.ai_error ?? "", reelsStatus: x.reels_status, note: x.admin_note,
-            feedback: (x as any).feedback ?? {}, pick: (() => { const ps = pickState(x.content, x.approved_at, CLUB_PLANS[m.plan].posts); return { phase: ps.phase, picked: ps.picked, deadline: ps.deadline, cap: ps.cap, total: ps.all.length }; })(),
-            bank: (() => { const ps = pickState(x.content, x.approved_at, CLUB_PLANS[m.plan].posts); const left = ps.phase === "done" && ps.all.length > ps.cap ? ps.all.filter((p: any) => !ps.picked.includes(p.n)) : []; return [...(((x.content?.bank as any[]) ?? [])), ...left]; })(), postsList: ((x.content?.posts as any[]) ?? []).map((p: any) => ({ n: p.n, label: p.label, image: (p.images ?? [])[0] ?? "" })),
+            feedback: (x as any).feedback ?? {}, pick: (() => { const ps = pickState(x.content, x.approved_at, capsFor(m).posts); return { phase: ps.phase, picked: ps.picked, deadline: ps.deadline, cap: ps.cap, total: ps.all.length }; })(),
+            bank: (() => { const ps = pickState(x.content, x.approved_at, capsFor(m).posts); const left = ps.phase === "done" && ps.all.length > ps.cap ? ps.all.filter((p: any) => !ps.picked.includes(p.n)) : []; return [...(((x.content?.bank as any[]) ?? [])), ...left]; })(), postsList: ((x.content?.posts as any[]) ?? []).map((p: any) => ({ n: p.n, label: p.label, image: (p.images ?? [])[0] ?? "" })),
           })),
         };
       }),
@@ -995,7 +1002,7 @@ router.get("/club/months/:id", requireAuth, async (req: Request, res: Response) 
     const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member;
     res.json({
       id: x.id, month: x.month, status: x.status, choices: x.choices, content: x.content, aiUrls: x.ai_urls, aiStatus: x.ai_status, reelsStatus: x.reels_status, note: x.admin_note,
-      member: { id: m.id, name: m.name, plan: m.plan, caps: CLUB_PLANS[m.plan], details: m.details, logoUrl: m.logo_url, photoUrls: m.photo_urls, clinicPhotoUrl: m.clinic_photo_url },
+      member: { id: m.id, name: m.name, plan: m.plan, caps: capsFor(m), details: m.details, logoUrl: m.logo_url, photoUrls: m.photo_urls, clinicPhotoUrl: m.clinic_photo_url },
     });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Could not load the month" });
@@ -1050,7 +1057,7 @@ async function ensureBuildRequest(monthId: string): Promise<string | null> {
   if (!x) return null;
   const m = (await db.execute(sql`SELECT * FROM club_members WHERE id = ${x.member_id}`)).rows[0] as unknown as Member;
   const d = m.details ?? {};
-  const caps = CLUB_PLANS[m.plan];
+  const caps = capsFor(m);
   const picks = ((x.choices?.picks as any[]) ?? []);
   // The same treatment can come round again in a later month, but never with the same hook as before.
   const earlier = (await db.execute(sql`SELECT content FROM club_months WHERE member_id = ${m.id} AND id <> ${x.id}`)).rows as any[];
