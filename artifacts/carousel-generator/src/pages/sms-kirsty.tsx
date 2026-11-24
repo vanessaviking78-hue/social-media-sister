@@ -107,7 +107,7 @@ export default function SmsKirsty() {
 
         <div className="sk-price">
           <b>£222</b>
-          <p>a month for a whole year. The price is fixed, so it will not go up while you are with me.</p>
+          <p>a month for a whole year. The price is fixed, so it will not go up while you are with me. My full price is £650 a month, so you save £428 every month.</p>
         </div>
 
         <div className="sk-ask">

@@ -52,6 +52,9 @@ export default function KirstyProposal() {
             Any clinic you send my way can apply for my development rate: <strong>£222 a month for twelve months, price fixed.</strong> It will not creep up halfway through the year and there are no surprise extras.
           </p>
           <p>
+            My full price is <strong>£650 a month</strong>, so the development rate saves a clinic £428 a month, which is £5,136 across the year.
+          </p>
+          <p>
             I am Vanessa, the aesthetic angel, digital demon and compliance queen. Seven years in UK aesthetics, around 400 clinics worked with, and a very large pile of knowledge about what gets a clinic noticed and what gets it into bother with the ASA.
           </p>
         </div>
