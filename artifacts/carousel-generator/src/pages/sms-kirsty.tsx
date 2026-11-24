@@ -94,7 +94,7 @@ export default function SmsKirsty() {
       <style>{CSS}</style>
       <div className="sk-w">
         <div className="sk-top">
-          <span>Social Media Sister</span>
+          <span>The Aesthetic Shift Community</span>
           <span>By application</span>
         </div>
 
@@ -181,6 +181,9 @@ export default function SmsKirsty() {
             </p>
           </>
         )}
+        <p className="sk-sm" style={{ marginTop: 40, fontWeight: 900, letterSpacing: ".12em", textTransform: "uppercase" }}>
+          Social Media Sister, part of the Very Vanessa Media Group
+        </p>
       </div>
     </div>
   );

@@ -35,8 +35,8 @@ export default function KirstyProposal() {
       <style>{CSS}</style>
       <div className="kp-w">
         <div className="kp-top">
-          <span>The AestheticShift Community</span>
-          <span>From Vanessa</span>
+          <span>The Aesthetic Shift Community</span>
+          <span>For Kirsty</span>
         </div>
 
         <h1>
@@ -105,7 +105,7 @@ export default function KirstyProposal() {
           </p>
         </div>
 
-        <div className="kp-foot">Very Vanessa Media Group &middot; Social Media Sister</div>
+        <div className="kp-foot">Social Media Sister, part of the Very Vanessa Media Group</div>
       </div>
     </div>
   );
