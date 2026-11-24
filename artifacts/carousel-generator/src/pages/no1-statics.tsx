@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { withAboutTab } from "@/lib/with-about-tab";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarCheck, CalendarClock, Download, Eye, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, Eye, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { saveAs } from "file-saver";
 import { Button } from "@/components/ui/button";
@@ -665,28 +665,41 @@ function No1StaticsPage() {
   };
 
   // Sends one post to the scheduler as a single image. Returns when it is in.
-  const send = async (post: Post, when: string) => {
+  const send = async (post: Post, when: string, toBank = false) => {
     if (!preset) throw new Error("I cannot find her client preset. It needs No 1 in its name");
     const t = TYPE_BY_ID.get(post.typeId)!;
     const c = await render(post);
     const [url] = await uploadPngs([c.toDataURL("image/png")], [`no1-${t.id}-${Date.now()}.png`]);
-    const body = {
-      postType: "single-image",
-      content: { caption: fullCaption(post), title: `${t.label} · static`, platforms: ["instagram"], imageUrls: [url], sourceTool: "no1-statics" },
-      scheduledAt: new Date(when).toISOString(),
-      isTrial: false,
-      notes: "",
-      presetId: preset.id,
-    };
+    const content = { caption: fullCaption(post), title: `${t.label} · static`, platforms: ["instagram"], imageUrls: [url], sourceTool: "no1-statics" };
+    // The Client Bank parks the post with no date, as a draft, until she schedules it from the Bank.
+    const body = toBank
+      ? { postType: "single-image", content, status: "draft", presetId: preset.id }
+      : { postType: "single-image", content, scheduledAt: new Date(when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
     const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) {
       const err = await r.json().catch(() => ({ error: "Failed" }));
       throw new Error(err.error || "Failed to schedule");
     }
+    if (toBank) { setBanked((b) => ({ ...b, [post.id]: true })); return; }
     setScheduled((s) => ({ ...s, [t.id]: new Date(when).toISOString() }));
   };
+  const [banked, setBanked] = useState<Record<string, boolean>>({});
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const togglePick = (id: string) => setPicked((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const lacksPhoto = (post: Post) => (post.uni ? !!uniOf(post.typeId)?.photo : true) && photosFor(post).length === 0;
+  const bank = async (post: Post) => {
+    if (lacksPhoto(post)) { toast.error("Add her photos first"); return; }
+    patch(post.id, { scheduling: true });
+    try {
+      await send(post, post.when, true);
+      patch(post.id, { scheduling: false });
+      toast.success("Saved to the Client Bank");
+    } catch (e) {
+      patch(post.id, { scheduling: false });
+      toast.error(e instanceof Error ? e.message : "Could not save to the Client Bank");
+    }
+  };
   const schedule = async (post: Post) => {
     if (lacksPhoto(post)) {
       toast.error("Add her photos first");
@@ -704,7 +717,25 @@ function No1StaticsPage() {
   };
 
   // Every written post that is not yet scheduled, oldest first, one a night at 7pm from tomorrow.
-  const ready = useMemo(() => [...posts].reverse().filter((p) => p.caption && !scheduled[p.typeId]), [posts, scheduled]);
+  const allReady = useMemo(() => [...posts].reverse().filter((p) => p.caption && !scheduled[p.typeId]), [posts, scheduled]);
+  // Tick the posts you want and only those go; tick none and every written post goes.
+  const ready = picked.size ? allReady.filter((p) => picked.has(p.id)) : allReady;
+  const bankAll = async () => {
+    const list = ready.filter((p) => !banked[p.id]);
+    if (list.some(lacksPhoto)) { toast.error("Add her photos first"); return; }
+    if (!list.length) { toast.error("Nothing written and waiting yet"); return; }
+    setBulkBusy(true);
+    let done = 0;
+    try {
+      for (const p of list) { patch(p.id, { scheduling: true }); await send(p, p.when, true); patch(p.id, { scheduling: false }); done++; }
+      toast.success(`${done} saved to the Client Bank`);
+    } catch (e) {
+      toast.error(`${done} saved, then it stopped: ${e instanceof Error ? e.message : "could not save"}`);
+      setPosts((l) => l.map((p) => ({ ...p, scheduling: false })));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
   const scheduleAll = async () => {
     if (ready.some(lacksPhoto)) {
       toast.error("Add her photos first");
@@ -890,8 +921,11 @@ function No1StaticsPage() {
             <Button size="sm" variant="ghost" onClick={clearFeed}>Clear feed</Button>
             <Button size="sm" variant="secondary" onClick={writeAllInSection}><Sparkles className="w-4 h-4 mr-2" />Open and write all 6 in this section</Button>
             <Button size="sm" onClick={scheduleAll} disabled={bulkBusy || ready.length === 0}>
-              {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}Schedule all written ({ready.length}), one a night at {slotTime}
+              {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}{picked.size ? "Schedule ticked" : "Schedule all written"} ({ready.length}), one a night at {slotTime}
             </Button>
+            <Button size="sm" variant="secondary" onClick={bankAll} disabled={bulkBusy || ready.length === 0}><Archive className="w-4 h-4 mr-2" />{picked.size ? "Add ticked to Client Bank" : "Add all to Client Bank"}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set(allReady.map((p) => p.id)))} disabled={!allReady.length}>Tick all written</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())} disabled={!picked.size}>Clear ticks</Button>
           </div>
         </section>
 
@@ -903,7 +937,7 @@ function No1StaticsPage() {
             return (
               <div key={post.id} className="rounded-xl border border-white/10 p-4 space-y-4">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <h3 className="font-semibold">{t.label}</h3>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 accent-pink-500" aria-label="Tick this post" /><h3 className="font-semibold">{t.label}</h3></label>
                   <div className="flex gap-2 items-center flex-wrap">
                     <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
@@ -912,6 +946,7 @@ function No1StaticsPage() {
                     <Button size="sm" onClick={() => schedule(post)} disabled={!post.caption || post.scheduling || bulkBusy}>
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>
+                    <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!post.caption || post.scheduling || bulkBusy || !!banked[post.id]}><Archive className="w-4 h-4 mr-2" />{banked[post.id] ? "In the Client Bank" : "Client Bank"}</Button>
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!post.caption}><Download className="w-4 h-4 mr-2" />Download</Button>
                     <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((p) => p.id !== post.id))} aria-label="Remove post"><Trash2 className="w-4 h-4" /></Button>
                   </div>
