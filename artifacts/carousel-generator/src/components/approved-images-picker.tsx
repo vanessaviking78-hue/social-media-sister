@@ -37,9 +37,47 @@ async function removeBackground(url: string): Promise<string> {
   }
 }
 
+// Some AI photos come back with black bars across the top and bottom (or down both sides). When an
+// image has bars on BOTH opposite edges, they are trimmed off as it is pulled through, so posts never
+// show a black strip. A black studio backdrop is left alone because the subject touches one of the edges.
+async function trimBlackBars(blob: Blob): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const w = bmp.width, h = bmp.height;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return blob;
+    ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(0, 0, w, h).data;
+    const dark = (x: number, y: number) => { const i = (y * w + x) * 4; return d[i + 3] > 200 && d[i] <= 14 && d[i + 1] <= 14 && d[i + 2] <= 14; };
+    // A line counts as bar when at least 98% of its pixels are near black.
+    const rowBar = (y: number) => { let n = 0; for (let x = 0; x < w; x += 2) if (dark(x, y)) n++; return n >= Math.ceil(w / 2) * 0.98; };
+    const colBar = (x: number) => { let n = 0; for (let y = 0; y < h; y += 2) if (dark(x, y)) n++; return n >= Math.ceil(h / 2) * 0.98; };
+    let top = 0; while (top < h * 0.4 && rowBar(top)) top++;
+    let bottom = 0; while (bottom < h * 0.4 && rowBar(h - 1 - bottom)) bottom++;
+    let left = 0; while (left < w * 0.4 && colBar(left)) left++;
+    let right = 0; while (right < w * 0.4 && colBar(w - 1 - right)) right++;
+    const vertical = top >= h * 0.02 && bottom >= h * 0.02;
+    const horizontal = left >= w * 0.02 && right >= w * 0.02;
+    if (!vertical && !horizontal) return blob;
+    const sx = horizontal ? left : 0, sy = vertical ? top : 0;
+    const sw = w - (horizontal ? left + right : 0), sh = h - (vertical ? top + bottom : 0);
+    if (sw < w * 0.3 || sh < h * 0.3) return blob;
+    const out = document.createElement("canvas");
+    out.width = sw; out.height = sh;
+    out.getContext("2d")!.drawImage(bmp, sx, sy, sw, sh, 0, 0, sw, sh);
+    const type = blob.type.includes("png") ? "image/png" : "image/jpeg";
+    const trimmed = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, type, 0.95));
+    return trimmed ?? blob;
+  } catch {
+    return blob;
+  }
+}
+
 async function urlToFile(url: string, index: number): Promise<File> {
   const res = await fetch(url);
-  const blob = await res.blob();
+  const blob = await trimBlackBars(await res.blob());
   const ext = blob.type.includes("png") ? "png" : "jpg";
   return new File([blob], `approved-${index + 1}.${ext}`, { type: blob.type });
 }
