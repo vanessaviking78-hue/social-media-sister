@@ -5,6 +5,7 @@ import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ForcedClientContext, useForcedClient, type ForcedClient } from "@/lib/forced-client";
 import { Link } from "wouter";
+import { ClientScheduleLink } from "@/components/client-schedule-link";
 import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
@@ -1506,6 +1507,7 @@ export default function ClarePage() {
           {CLARE_TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-sm border ${tab === t.id ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{t.label}</button>
           ))}
+          <ClientScheduleLink pattern={/clare/i} />
         </div>
       </div>
       <Suspense fallback={null}><ClientInfoByPattern pattern={/clare/i} /></Suspense>

@@ -4,6 +4,7 @@ import { ForcedClientContext, type ForcedClient } from "@/lib/forced-client";
 import { U_TREATMENTS } from "@/lib/universal-treatments";
 import { usePresets } from "@/lib/use-presets";
 import { ClientInfoPanel } from "./client-extras";
+import { ClientScheduleLink } from "@/components/client-schedule-link";
 import { clientSlug, readTitleStyle, saveTitleStyle } from "@/lib/suite-fonts";
 
 // A CLIENT'S OWN PAGE, the same set of tools as Clare's page, every one opened on that client.
@@ -101,6 +102,7 @@ export function ClientHub({ label, pattern }: { label: string; pattern: RegExp }
           {tabs.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className={`shrink-0 px-3 py-1.5 rounded-full text-sm border ${tab === t.id ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{t.label}</button>
           ))}
+          {<ClientScheduleLink pattern={pattern} label={label} />}
         </div>
       </div>
       {!isSms && !isHammered && !isFreehouse && <ClientInfoPanel clientName={label} treatmentIds={ids} />}
