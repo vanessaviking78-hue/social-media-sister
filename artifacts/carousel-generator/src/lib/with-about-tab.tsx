@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, type ComponentType } from "react";
 import { TabBoundary } from "@/components/tab-boundary";
 import { ForcedClientContext } from "@/lib/forced-client";
+import { ClientScheduleLink } from "@/components/client-schedule-link";
 
 // Wraps a client's own page with a second tab, "About me", the two About me templates from the free tools opened on that client.
 const About = lazy(() => import("@/pages/client-about"));
@@ -23,6 +24,7 @@ export function withAboutTab(Own: ComponentType, pattern: RegExp, ownLabel: stri
             {([["new", "NEW"], ["own", ownLabel], ["hooks", "My first hooks"], ["fillers", "Fillers"], ["newxmas", "NEWXMAS"], ["xmasfeels", "XMAS FEELS"], ["staticq", "STATIC - quotes"], ["xmas", "Xmas"], ["about", "About me"]] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTab(id)} className={`shrink-0 px-3 py-1.5 rounded-full text-sm border ${tab === id ? "bg-white text-black border-white" : "border-white/20 text-white/80 hover:bg-white/10"}`}>{label}</button>
             ))}
+            <ClientScheduleLink pattern={pattern} />
           </div>
         </div>
         <Suspense fallback={null}><Info pattern={pattern} /></Suspense>

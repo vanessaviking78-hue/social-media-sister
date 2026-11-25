@@ -433,11 +433,13 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
 export default function Scheduler() {
   const { presets } = usePresets();
-  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid" | "waitingroom" | "doubleposting">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid" | "waitingroom" | "doubleposting">(typeof window !== "undefined" && new URLSearchParams(window.location.search).get("client") ? "feed" : "upcoming");
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [filterClient, setFilterClient] = useState("all");
+  // Arriving from a client's own page (?client=Name): open on that client, on the Preview Feed with their Client Bank showing.
+  const arrivedFor = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("client") : null;
+  const [filterClient, setFilterClient] = useState(arrivedFor || "all");
   // Calendar-sourced posts (from Broadcasts/Calendar tool) for the selected
   // client — merged into the Client Grid tab so it matches exactly what the
   // client sees on their content-preview feed (which merges both tables).
@@ -455,7 +457,7 @@ export default function Scheduler() {
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const [rescheduling, setRescheduling] = useState(false);
   // The Client Bank panel beside the Preview Feed: parked posts with no date, dragged onto a day to schedule them.
-  const [bankOpen, setBankOpen] = useState(false);
+  const [bankOpen, setBankOpen] = useState(!!arrivedFor);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -650,7 +652,7 @@ export default function Scheduler() {
     }
   };
 
-  const clientNames = Array.from(new Set(posts.map((p) => p.clientName))).sort();
+  const clientNames = Array.from(new Set([...posts.map((p) => p.clientName), ...(arrivedFor ? [arrivedFor] : [])])).sort();
 
   const filtered = posts.filter((p) => {
     if (filterClient !== "all" && p.clientName !== filterClient) return false;
