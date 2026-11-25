@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
 import { drawColumn } from "@/lib/column-block";
 import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
@@ -795,26 +796,26 @@ function KathrynPage() {
     if (!list.length) { toast.error("Nothing written and waiting. Press Write it on the posts first"); return; }
     const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
     let done = 0;
-    let failed = "";
+    const failures: string[] = [];
     for (const [i, post] of list.entries()) {
       setBulkBusy(`${done + 1} of ${list.length}`);
       patch(post.id, { scheduling: true });
       try {
         const d = new Date(first);
         d.setDate(d.getDate() + i * 2);
-        await send(post, mode, d.toISOString());
+        await withTimeout(send(post, mode, d.toISOString()), 90000, TYPE_BY_ID.get(post.typeId)?.label || "A post");
         if (mode === "bank") patch(post.id, { banked: true });
         done++;
       } catch (e) {
-        failed = e instanceof Error ? e.message : "Something failed";
+        failures.push(`${TYPE_BY_ID.get(post.typeId)?.label || "A post"}: ${e instanceof Error ? e.message : "Something failed"}`);
         patch(post.id, { scheduling: false });
-        break;
+        continue;
       }
       patch(post.id, { scheduling: false });
     }
     setBulkBusy("");
     if (done) toast.success(mode === "bank" ? `${done} added to the Client Bank` : `${done} scheduled, one every 2 days from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
-    if (failed) toast.error(`Stopped after ${done}: ${failed}`);
+    if (failures.length) toast.error(`${failures.length} skipped, the rest carried on. Skipped: ${failures.join(" | ")}`, { duration: 60000 });
   };
 
   const doneIn = (g: string) => DENTAL_POST_TYPES.filter((t) => t.group === g && scheduled[t.id]).length;

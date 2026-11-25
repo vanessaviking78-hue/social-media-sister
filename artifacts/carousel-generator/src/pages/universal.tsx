@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { Archive, ArrowLeft, CalendarCheck, CalendarClock, Download, FolderUp, ImagePlus, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
@@ -1067,26 +1068,26 @@ export default function UniversalPage() {
     }
     const first = new Date([...list].sort((a, b) => a.when.localeCompare(b.when))[0].when);
     let done = 0;
-    let failed = "";
+    const failures: string[] = [];
     for (const [i, post] of list.entries()) {
       setBulkBusy(`${done + 1} of ${list.length}`);
       patch(post.id, { scheduling: true });
       try {
         const d = new Date(first);
         d.setDate(d.getDate() + i);
-        await send(post, mode, d.toISOString());
+        await withTimeout(send(post, mode, d.toISOString()), 90000, post.headline || "A post");
         if (mode === "bank") patch(post.id, { banked: true });
         done++;
       } catch (e) {
-        failed = e instanceof Error ? e.message : "Something failed";
+        failures.push(`${post.headline || "A post"}: ${e instanceof Error ? e.message : "Something failed"}`);
         patch(post.id, { scheduling: false });
-        break;
+        continue;
       }
       patch(post.id, { scheduling: false });
     }
     setBulkBusy("");
     if (done) toast.success(mode === "bank" ? `${done} added to ${preset.name}'s Client Bank` : `${done} scheduled, one a day from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
-    if (failed) toast.error(`Stopped after ${done}: ${failed}`);
+    if (failures.length) toast.error(`${failures.length} skipped, the rest carried on. Skipped: ${failures.join(" | ")}`, { duration: 60000 });
   };
 
   const doneFor = (x: UTreatment) => postTypesFor(x).filter((t) => scheduled[keyOf(t.key)]).length;

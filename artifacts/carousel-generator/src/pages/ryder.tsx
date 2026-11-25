@@ -1,3 +1,4 @@
+import { withTimeout } from "@/lib/with-timeout";
 import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
 import { drawColumn } from "@/lib/column-block";
 import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
@@ -580,8 +581,9 @@ function RyderPage() {
       setBulkBusy(`${done + 1} of ${list.length}`);
       const d = new Date(first);
       d.setDate(d.getDate() + i * 2);
-      if (!(await schedule(post, d.toISOString()))) break;
-      done++;
+      let ok = false;
+      try { ok = await withTimeout(schedule(post, d.toISOString()), 90000); } catch (e) { patch(post.id, { scheduling: false }); toast.error(e instanceof Error ? e.message : "A post was skipped"); }
+      if (ok) done++;
     }
     setBulkBusy("");
     if (done) toast.success(`${done} scheduled, one every 2 days from ${first.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
@@ -594,8 +596,9 @@ function RyderPage() {
     let done = 0;
     for (const post of list) {
       setBulkBusy(`${done + 1} of ${list.length}`);
-      if (!(await schedule(post, undefined, true))) break;
-      done++;
+      let ok = false;
+      try { ok = await withTimeout(schedule(post, undefined, true), 90000); } catch (e) { patch(post.id, { scheduling: false }); toast.error(e instanceof Error ? e.message : "A post was skipped"); }
+      if (ok) done++;
     }
     setBulkBusy("");
     if (done) toast.success(`${done} saved to the Client Bank`);
