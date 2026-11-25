@@ -192,6 +192,7 @@ import SmsPerformance from "@/pages/sms-performance";
 import FreehouseFreebies from "@/pages/freehouse-freebies";
 import FreehouseHome from "@/pages/freehouse-home";
 import FreehouseTool from "@/pages/freehouse";
+import FreeholdTextPosts from "@/pages/freehouse-text-posts";
 import FreehouseLinks from "@/pages/freehouse-links";
 import FreehousePerformance from "@/pages/freehouse-performance";
 import FreehouseSales from "@/pages/freehouse-sales";
@@ -272,6 +273,7 @@ function ProtectedRouter() {
       <Route path="/hammeredperformance" component={HammeredPerformance} />
       <Route path="/smsperformance" component={SmsPerformance} />
       <Route path="/freehouseposts" component={FreehouseTool} />
+      <Route path="/freeholdtext" component={FreeholdTextPosts} />
       <Route path="/freehouselinks" component={FreehouseLinks} />
       <Route path="/freehouseperformance" component={FreehousePerformance} />
       <Route path="/inbox" component={InboxPage} />

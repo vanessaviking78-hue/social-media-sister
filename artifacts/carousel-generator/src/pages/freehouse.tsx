@@ -234,7 +234,7 @@ export default function FreehousePage() {
               <label className="l">Name</label>
               <input type="text" value={clientName} onChange={(e) => setClientName(e.target.value)} />
               <label className="l">Instagram handle (shows on the last slide)</label>
-              <input type="text" placeholder="freehousesocials" value={handle} onChange={(e) => setHandle(e.target.value)} />
+              <input type="text" placeholder="freehold_socials" value={handle} onChange={(e) => setHandle(e.target.value)} />
               <label className="l">Logo (a see through PNG works best)</label>
               <div className="hm-row">
                 <button className="b" onClick={() => logoRef.current?.click()}>{logo ? "Change logo" : "Add logo"}</button>
