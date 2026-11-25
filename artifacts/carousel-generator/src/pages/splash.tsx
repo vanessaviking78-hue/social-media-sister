@@ -234,7 +234,7 @@ export default function Splash() {
         }
       `}</style>
       <div className="name">
-        <h1>
+        <h1 onClick={() => { window.location.href = "/choose"; }} style={{ cursor: "pointer" }}>
           <span>The</span>
           <span>Cyber</span>
           <span>Suite<span style={{ display: "inline", color: PINK }}>.</span></span>

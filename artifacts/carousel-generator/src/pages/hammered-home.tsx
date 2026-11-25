@@ -77,6 +77,12 @@ export default function HammeredHome() {
         ) : (
           <div className="soon">{loading ? "Loading Hammered..." : "I cannot find a preset called Hammered"}</div>
         )}
+        {preset && (
+          <a href={`/scheduler?client=${encodeURIComponent(preset.name)}`} className="tile">
+            <h3>Scheduler</h3>
+            <p>Your Client Bank and the calendar for this business only.</p>
+          </a>
+        )}
         {TILES.map((t) => (
           <Link key={t.href} href={t.href} className="tile">
             <h3>{t.name}</h3>

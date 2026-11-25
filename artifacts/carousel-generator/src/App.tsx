@@ -192,6 +192,7 @@ import HammeredProposal from "@/pages/hammered-proposal";
 import SmsPerformance from "@/pages/sms-performance";
 import FreehouseFreebies from "@/pages/freehouse-freebies";
 import FreehouseHome from "@/pages/freehouse-home";
+import SuitsHome from "@/pages/suits-home";
 import FreehouseTool from "@/pages/freehouse";
 import FreeholdTextPosts from "@/pages/freehouse-text-posts";
 import FreehouseLinks from "@/pages/freehouse-links";
@@ -480,6 +481,7 @@ function AppContent() {
   const isChoose = location === "/choose";
   const isHammered = location === "/hammered";
   const isFreehouse = location === "/freehouse";
+  const isSuitsHome = location === "/suits";
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -549,6 +551,9 @@ function AppContent() {
   }
   if (isHammered) {
     return <HammeredHome />;
+  }
+  if (isSuitsHome) {
+    return <SuitsHome />;
   }
   if (isFreehouse) {
     return <FreehouseHome />;
