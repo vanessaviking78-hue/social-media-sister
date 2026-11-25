@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 // cybersuite.com/smskirsty: the page Kirsty hands to her clinics. They apply for Vanessa's £222 a month development rate (fixed for a year).
 // Submitting saves the application and emails Vanessa.
@@ -7,6 +7,19 @@ const PINK = "#ff1f8e";
 const INK = "#111";
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const API = `${BASE}/api`;
+
+function getVisitor(): string {
+  try {
+    let v = localStorage.getItem("pt-v");
+    if (!v) {
+      v = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem("pt-v", v);
+    }
+    return v;
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;700;900&display=swap');
@@ -67,6 +80,29 @@ export default function SmsKirsty() {
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
 
+  // Visit tracking. Vanessa's own visits (signed in to the tools) are not counted.
+  const visitor = useMemo(getVisitor, []);
+  const src = useMemo(() => {
+    try { return (new URLSearchParams(window.location.search).get("src") || "direct").slice(0, 30); } catch { return "direct"; }
+  }, []);
+  const mine = useMemo(() => {
+    try { return localStorage.getItem("cybersuite-auth") === "true"; } catch { return false; }
+  }, []);
+  const started = useRef(false);
+  const track = (event: string) => {
+    if (mine) return;
+    try {
+      fetch(`${API}/page-track`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ page: "smskirsty", visitor, event, src }), keepalive: true }).catch(() => {});
+    } catch { /* tracking must never break the page */ }
+  };
+  useEffect(() => { track("view"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!started.current && (name || clinic || email || phone || notes || Object.keys(ans).length)) {
+      started.current = true;
+      track("form_start");
+    }
+  }, [name, clinic, email, phone, notes, ans]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const ready = name.trim() && clinic.trim() && email.trim() && QUESTIONS.every((q) => ans[q.key]);
 
   async function submit() {
@@ -80,6 +116,7 @@ export default function SmsKirsty() {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Something went wrong. Please try again.");
+      track("applied");
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {

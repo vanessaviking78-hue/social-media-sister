@@ -184,6 +184,7 @@ import CrmPage from "@/pages/crm-page";
 import BlackFriday26 from "@/pages/blackfriday26";
 import HammeredBlackFriday from "@/pages/hammered-blackfriday";
 import BlackFriday26Stats from "@/pages/blackfriday26-stats";
+import SmsKirstyStats from "@/pages/sms-kirsty-stats";
 import HammeredSales from "@/pages/hammered-sales";
 import HammeredProposal18 from "@/pages/hammered-proposal18";
 import HammeredProposal from "@/pages/hammered-proposal";
@@ -241,6 +242,7 @@ function ProtectedRouter() {
       <Route path="/hub" component={Hub} />
       <Route path="/crmpage" component={CrmPage} />
       <Route path="/blackfriday26/stats" component={BlackFriday26Stats} />
+      <Route path="/smskirsty/stats" component={SmsKirstyStats} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
       <Route path="/xmas-build" component={XmasBuild} />
       <Route path="/club-admin" component={ClubAdmin} />
