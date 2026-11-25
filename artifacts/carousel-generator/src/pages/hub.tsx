@@ -39,7 +39,7 @@ border: "hover:border-fuchsia-500/50",
 iconColor: "text-fuchsia-400",
 },
 {
-href: "https://stories.thecybersuite.com",
+href: "https://stories-that-sell-beta.up.railway.app",
 group: "today",
 icon: Smartphone,
 name: "Stories That Sell",
