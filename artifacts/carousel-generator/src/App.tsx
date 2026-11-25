@@ -181,6 +181,7 @@ import SalesDashboard from "@/pages/sales-dashboard";
 import SalesSignup from "@/pages/sales-signup";
 import LinkStats from "@/pages/link-stats";
 import CrmPage from "@/pages/crm-page";
+import SuitsCrmPage from "@/pages/suits-crm-page";
 import BlackFriday26 from "@/pages/blackfriday26";
 import HammeredBlackFriday from "@/pages/hammered-blackfriday";
 import BlackFriday26Stats from "@/pages/blackfriday26-stats";
@@ -242,6 +243,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/crmpage" component={CrmPage} />
+      <Route path="/suitscrm" component={SuitsCrmPage} />
       <Route path="/blackfriday26/stats" component={BlackFriday26Stats} />
       <Route path="/smskirsty/stats" component={SmsKirstyStats} />
       <Route path="/10free-admin" component={TenFreeAdmin} />
