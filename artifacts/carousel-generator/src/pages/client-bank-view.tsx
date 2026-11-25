@@ -68,7 +68,7 @@ function BankCard({ item, clientName }: { item: BankItem; clientName: string }) 
   return (
     <div className="border border-zinc-100 rounded-xl overflow-hidden bg-white">
       {thumb && (
-        <img src={thumb} alt="" className="w-full aspect-square object-cover bg-zinc-50" />
+        <img src={thumb} alt="" className="w-full aspect-[4/5] object-contain bg-black" />
       )}
       {item.videoUrl && !thumb && (
         <video src={item.videoUrl} className="w-full aspect-square object-cover bg-zinc-50" controls />
