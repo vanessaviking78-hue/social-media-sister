@@ -15,6 +15,12 @@ const TILES: { href: string; name: string; description: string; live: boolean }[
     live: true,
   },
   {
+    href: "/freeholdtext",
+    name: "Text posts",
+    description: "Eight outlandish text only posts in black, cyan and white for the public and for pub, restaurant and hotel owners, with captions, scheduled at 12 noon daily.",
+    live: true,
+  },
+  {
     href: "/freehouselinks",
     name: "Links",
     description: "A tracking link each for Rob, Isaac and Vanessa. See who has opened, started and finished the free sample form.",
