@@ -469,6 +469,7 @@ function AppContent() {
   const [isYoureInvited] = useRoute("/youreinvited");
   const [isSmsKirsty] = useRoute("/smskirsty");
   const [isKirstyProposal] = useRoute("/kirstyproposal");
+  const [isSuitsCrm] = useRoute("/suitscrm");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
   const [isNo1Client] = useRoute("/no1bodypostsready");
@@ -713,6 +714,7 @@ function AppContent() {
   if (isYoureInvited) return <ClubInvite />;
   if (isSmsKirsty) return <SmsKirsty />;
   if (isKirstyProposal) return <KirstyProposal />;
+  if (isSuitsCrm) return <SuitsCrmPage />;
   if (isClubPortal && clubParams?.token) {
     return <ClubPortal token={clubParams.token} />;
   }
