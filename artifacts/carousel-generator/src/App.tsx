@@ -223,6 +223,7 @@ import XmasShoot, { XmasShootView } from "@/pages/xmasshoot";
 import XmasShootAdmin from "@/pages/xmasshoot-admin";
 import BfDec, { BfDecView } from "@/pages/bfdec";
 import BfDecAdmin from "@/pages/bfdec-admin";
+import VoucherOrder from "@/pages/voucher-order";
 
 const queryClient = new QueryClient();
 
@@ -460,6 +461,7 @@ function AppContent() {
   const [isPhotoshoot] = useRoute("/photoshoot");
   const [isXmasShoot] = useRoute("/xmasshoot");
   const [isBfDec] = useRoute("/bfdec");
+  const [isVoucherOrder] = useRoute("/voucher-order");
   const [isShop] = useRoute("/shop");
   const [isSecretShop] = useRoute("/secretshop");
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
@@ -691,6 +693,9 @@ function AppContent() {
   }
   if (isBfDec) {
     return <BfDec />;
+  }
+  if (isVoucherOrder) {
+    return <VoucherOrder />;
   }
   // DECEMBER BUNDLE private portals, made from the person's first name: /vanessadecbundle, /vanessa2decbundle
   const bfdecSlug = /^\/([a-z0-9]+decbundle)$/.exec(location)?.[1];

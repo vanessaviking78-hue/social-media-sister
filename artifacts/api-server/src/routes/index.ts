@@ -134,6 +134,7 @@ import freehouseSalesRouter from "./freehouse-sales";
 import photoshootRouter from "./photoshoot";
 import xmasshootRouter from "./xmasshoot";
 import bfdecRouter from "./bfdec";
+import voucherOrdersRouter from "./voucher-orders";
 
 const router: IRouter = Router();
 
@@ -167,6 +168,7 @@ router.use(freehouseSalesRouter);
 router.use(photoshootRouter);
 router.use(xmasshootRouter);
 router.use(bfdecRouter);
+router.use(voucherOrdersRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
 router.use(magazinePostRouter);
