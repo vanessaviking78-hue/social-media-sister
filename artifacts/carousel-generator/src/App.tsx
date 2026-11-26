@@ -42,6 +42,7 @@ import DecemberNew from "@/pages/december-new";
 import Empower from "@/pages/empower";
 import Lux from "@/pages/lux";
 import HalloweenPosts from "@/pages/halloween-posts";
+import VouchersPage from "@/pages/vouchers";
 import YetToPost from "@/pages/yet-to-post";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -304,6 +305,7 @@ function ProtectedRouter() {
       <Route path="/empower" component={Empower} />
       <Route path="/lux" component={Lux} />
       <Route path="/halloween-posts" component={HalloweenPosts} />
+      <Route path="/vouchers" component={VouchersPage} />
       <Route path="/yet-to-post" component={YetToPost} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
