@@ -1390,6 +1390,9 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     {!freebie && (() => { const bowOn = post.bow ?? bow.on; return (
                       <button type="button" aria-pressed={bowOn} title="Put the bow on or off for this post only. Pick the ribbon and colour in the Bows box at the top." onClick={() => patch(post.id, { bow: !bowOn })} className={`rounded border px-3 py-1.5 text-sm ${bowOn ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>Bow: {bowOn ? "On" : "Off"}</button>
                     ); })()}
+                    {!freebie && (
+                      <button type="button" title="Give every post on this page this post's bow: on or off, size and position" className="rounded border border-pink-400/60 px-3 py-1.5 text-sm hover:bg-pink-400/15" onClick={() => { const on = post.bow ?? bow.on; const pos = post.bowPos; setPosts((l) => l.map((p) => ({ ...p, bow: on, bowPos: pos ? { ...pos } : undefined }))); toast.success(on ? "Every post now has the bow, placed like this one" : "The bow is off on every post"); }}>Change all</button>
+                    )}
                     {!freebie && (post.bow ?? bow.on) && (() => { const pos = post.bowPos ?? { dx: bow.dx, dy: bow.dy, size: bow.size }; return (
                       <div className="flex items-center gap-3 flex-wrap rounded-lg border border-pink-400/40 px-3 py-1.5 w-full">
                         <span className="text-sm font-semibold">Move the bow</span>
