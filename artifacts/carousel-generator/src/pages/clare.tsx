@@ -22,7 +22,9 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SparkleControls } from "@/components/sparkle-controls";
 import { BowControls } from "@/components/bow-controls";
-import { drawBow, loadBowChoice, prepareBow, type ReadyBow } from "@/lib/bows";
+import { drawBow, loadBowChoice, prepareBow, saveBowChoice, type ReadyBow } from "@/lib/bows";
+import { ColourPicker as BrandColourPicker } from "@/components/colour-picker";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { makeRiseReel } from "@/lib/reel";
 import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
@@ -955,6 +957,43 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     prepareBow({ ...bow, on: true }).then((r) => { if (!live) return; BOW_STYLE = r; CURRENT_BOW = bow.on ? r : null; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
     return () => { live = false; };
   }, [bow]);
+  // COLOUR QUESTIONS: the first time a client's page opens it asks for the five colours, remembers them for that client, and uses them on every tab.
+  type ColourAnswers = { text: string; box: string; outline: string; gradient: string; bow: string };
+  const COLOURS_KEY = `clare-colours-v1-${CLINIC_KEY}`;
+  const [askColours, setAskColours] = useState(false);
+  const [ans, setAns] = useState<ColourAnswers>({ text: "#ffffff", box: "#ffffff", outline: "", gradient: "#0d0d0d", bow: "#c1121f" });
+  const applyColours = (a: ColourAnswers) => {
+    setLook((l) => {
+      const useBox = !!l.box || isVoucher || POSTS === DECEMBERNEW_POSTS;
+      return { ...l, text: a.text, headline: a.text, wash: a.gradient, ...(useBox ? { box: { ...(l.box ?? DEFAULT_BOX), fill: a.box, outline: a.outline || undefined, tight: true, y: l.box ? l.box.y : 0.5 } } : {}) };
+    });
+    setBow((b) => { const n = { ...b, color: a.bow }; saveBowChoice(n); return n; });
+  };
+  const openColours = () => {
+    const nl = normLook(look);
+    let saved: Partial<ColourAnswers> = {};
+    try { saved = JSON.parse(localStorage.getItem(COLOURS_KEY) || "{}"); } catch { /* ignore */ }
+    setAns({ text: saved.text ?? quoteText(nl), box: saved.box ?? look.box?.fill ?? "#ffffff", outline: saved.outline ?? look.box?.outline ?? "", gradient: saved.gradient ?? nl.wash, bow: saved.bow ?? bow.color });
+    setAskColours(true);
+  };
+  useEffect(() => {
+    if (!preset) return;
+    try {
+      const saved = localStorage.getItem(COLOURS_KEY);
+      if (!saved) { openColours(); return; }
+      const done = `${LOOK_KEY}-colours-applied`;
+      if (!localStorage.getItem(done)) { applyColours(JSON.parse(saved) as ColourAnswers); localStorage.setItem(done, "1"); }
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [COLOURS_KEY, preset?.id]);
+  const saveColours = (skip: boolean) => {
+    try {
+      localStorage.setItem(COLOURS_KEY, JSON.stringify(ans));
+      localStorage.setItem(`${LOOK_KEY}-colours-applied`, "1");
+    } catch { /* ignore */ }
+    if (!skip) applyColours(ans);
+    setAskColours(false);
+  };
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
     BOW_STYLE = await prepareBow({ ...bow, on: true });
@@ -1257,6 +1296,25 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
 
   return (
     <div className="min-h-screen bg-[#161616] text-white">
+      <Dialog open={askColours} onOpenChange={(o) => { if (!o) saveColours(true); }}>
+        <DialogContent className="bg-[#1c1c1c] text-white border-white/20 max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Colours for {CLINIC_NAME}</DialogTitle>
+            <DialogDescription className="text-white/60">Five quick questions. They are remembered for this client and used on every tab. You can change them any time with the Change this client's colours button.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <BrandColourPicker label="1. Text colour" value={ans.text} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? ""]} onChange={(v) => setAns((a) => ({ ...a, text: v }))} />
+            <BrandColourPicker label="2. Floating box colour" value={ans.box} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? ""]} onChange={(v) => setAns((a) => ({ ...a, box: v }))} />
+            <BrandColourPicker label="3. Outline colour (leave empty for no outline)" value={ans.outline} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? ""]} onChange={(v) => setAns((a) => ({ ...a, outline: v }))} onReset={() => setAns((a) => ({ ...a, outline: "" }))} />
+            <BrandColourPicker label="4. Gradient colour" value={ans.gradient} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? ""]} onChange={(v) => setAns((a) => ({ ...a, gradient: v }))} />
+            <BrandColourPicker label="5. Bow colour" value={ans.bow} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? ""]} onChange={(v) => setAns((a) => ({ ...a, bow: v }))} />
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="secondary" onClick={() => saveColours(true)}>Skip for now</Button>
+            <Button onClick={() => saveColours(false)}>Save and use these</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-3">
           <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
@@ -1284,7 +1342,8 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
               </label>
             )}
           </div>
-          <div className="rounded-lg border border-pink-400/40 px-3 py-2">
+          <div className="rounded-lg border border-pink-400/40 px-3 py-2 space-y-2">
+            <Button size="sm" variant="secondary" onClick={openColours}>Change this client's colours</Button>
             <BowControls showStyle value={bow} onChange={setBow} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
