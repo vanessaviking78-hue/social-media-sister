@@ -11,6 +11,7 @@ import { notifyOwner } from "../lib/notify";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import { runBfdecPhotos, BFDEC_PHOTO_COUNT } from "../lib/bfdecWorker";
+import { renderBfdecOg } from "../lib/bfdecOg";
 
 // DECEMBER BUNDLE at /bfdec. Black Friday offer: 20 Christmas pieces of content and 10 Christmas photos, delivered in the person's own portal.
 // Full price 699 pounds. Code BFDEC makes it 149 pounds, from the evening of Thu 26 Nov 2026 (open from the moment it went live) until 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
@@ -132,6 +133,16 @@ const clean = (buf: Buffer, size: number) => sharp(buf).rotate().resize({ width:
 // What the page needs to know: the prices, the code and whether the offer is on.
 router.get("/bfdec/offer", (_req: Request, res: Response) => {
   res.json({ state: windowState(), opensAt: new Date(OPENS_AT).toISOString(), closesAt: new Date(CLOSES_AT).toISOString(), fullLabel: pounds(FULL_PENCE), dealLabel: pounds(DEAL_PENCE), serverNow: new Date().toISOString() });
+});
+
+// The link preview picture (WhatsApp, Instagram DMs): says how long the offer has left, drawn fresh each time.
+router.get("/bfdec/og.jpg", async (_req: Request, res: Response) => {
+  try {
+    const jpg = await renderBfdecOg(CLOSES_AT);
+    res.set("Content-Type", "image/jpeg").set("Cache-Control", "public, max-age=300").send(jpg);
+  } catch {
+    res.status(500).end();
+  }
 });
 
 router.post("/bfdec/check-code", (req: Request, res: Response) => {

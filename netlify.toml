@@ -129,6 +129,10 @@
   path = "/xmasshoot"
   function = "link-og"
 
+[[edge_functions]]
+  path = "/bfdec"
+  function = "link-og"
+
 # private links like /izzyxmas: one single-segment pattern, the function only acts on names ending in xmas
 [[edge_functions]]
   path = "/:slug"

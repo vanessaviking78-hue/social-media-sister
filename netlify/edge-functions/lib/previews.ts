@@ -327,6 +327,15 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
   "desc": "Tap to see and download your posts."
  },
  {
+  "id": "bfdec",
+  "paths": [
+   "/bfdec"
+  ],
+  "title": "December Bundle",
+  "desc": "20 Christmas posts and 10 Christmas photos in your own portal. Black Friday price with code BFDEC.",
+  "img": "/api/bfdec/og.jpg"
+ },
+ {
   "id": "xmasshoot",
   "paths": [
    "/xmasshoot"
