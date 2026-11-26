@@ -225,6 +225,7 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
 
 type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number; tScale?: number[]; tY?: number[]; bY?: number[] };
 type Post = {
+  bow?: boolean; // this post only: true puts the bow on, false takes it off, unset follows the page-wide Bows switch
   id: string;
   pick?: boolean; // chosen for a gift (Xmas freebies)
   adj?: Adj; // photo zoom and pan per slide, headline size and position, block position: this post only
@@ -413,14 +414,15 @@ function drawSubtitle(ctx: CanvasRenderingContext2D, f: Fonts, lines: string[], 
 }
 
 // BOWS: the bow that is switched on is loaded and recoloured once, then laid over each slide as it is drawn (preview, download, Sparkle and scheduling all use the same drawing).
-let CURRENT_BOW: ReadyBow | null = null;
+let CURRENT_BOW: ReadyBow | null = null; // the page-wide bow (null when the page switch is off)
+let BOW_STYLE: ReadyBow | null = null; // the chosen ribbon and colour, ready even when the page switch is off, for posts that switch the bow on themselves
 let BOW_VERSION = 0;
 
 function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK, logo: HTMLImageElement | null = null) {
   const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
   drawSlideBody(ctx, fixed, post.four && n === 3 ? 4 : n, photo, f, tf, look);
   drawLogo(ctx, logo, look);
-  drawBow(ctx, CURRENT_BOW, n);
+  drawBow(ctx, post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null, n);
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
@@ -907,12 +909,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const [, setBowTick] = useState(0);
   useEffect(() => {
     let live = true;
-    prepareBow(bow).then((r) => { if (!live) return; CURRENT_BOW = r; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
+    prepareBow({ ...bow, on: true }).then((r) => { if (!live) return; BOW_STYLE = r; CURRENT_BOW = bow.on ? r : null; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
     return () => { live = false; };
   }, [bow]);
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
-    CURRENT_BOW = await prepareBow(bow);
+    BOW_STYLE = await prepareBow({ ...bow, on: true });
+    CURRENT_BOW = bow.on ? BOW_STYLE : null;
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < (post.vstory ? 3 : post.one ? 1 : post.four ? 4 : 5); n++) {
@@ -1191,7 +1194,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
             )}
           </div>
           <div className="rounded-lg border border-pink-400/40 px-3 py-2">
-            <BowControls value={bow} onChange={setBow} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
+            <BowControls showStyle value={bow} onChange={setBow} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="space-y-4 text-sm">
@@ -1382,6 +1385,9 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                       {post.scheduling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarCheck className="w-4 h-4 mr-2" />}Schedule
                     </Button>}
                     {!freebie && <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!(post.caption || post.vstory) || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>}
+                    {!freebie && (() => { const bowOn = post.bow ?? bow.on; return (
+                      <button type="button" aria-pressed={bowOn} title="Put the bow on or off for this post only. Pick the ribbon and colour in the Bows box at the top." onClick={() => patch(post.id, { bow: !bowOn })} className={`rounded border px-3 py-1.5 text-sm ${bowOn ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>Bow: {bowOn ? "On" : "Off"}</button>
+                    ); })()}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!(post.caption || post.vstory)}><Download className="w-4 h-4 mr-2" />Download</Button>
                     {SPARKLE_ON && !freebie && (
                       <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">

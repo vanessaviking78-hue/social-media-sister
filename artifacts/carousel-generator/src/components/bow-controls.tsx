@@ -4,7 +4,7 @@ import { RIBBON_IDS, RIBBON_LABELS, ribbonUrl, saveBowChoice, type BowChoice } f
 
 // The Bows switch that sits next to Sparkle on every tool: on or off, which ribbon, what colour, and where it sits on the post.
 // brand lists the client's own colours as quick swatches, when the page knows them.
-export function BowControls({ value, onChange, brand = [] }: { value: BowChoice; onChange: (c: BowChoice) => void; brand?: string[] }) {
+export function BowControls({ value, onChange, brand = [], showStyle = false }: { value: BowChoice; onChange: (c: BowChoice) => void; brand?: string[]; showStyle?: boolean }) {
   const set = (p: Partial<BowChoice>) => { const n = { ...value, ...p }; saveBowChoice(n); onChange(n); };
   return (
     <div className="space-y-2">
@@ -13,7 +13,7 @@ export function BowControls({ value, onChange, brand = [] }: { value: BowChoice;
         <span className="text-sm font-semibold">Bows</span>
         <button type="button" aria-pressed={value.on} onClick={() => set({ on: !value.on })} className={`rounded border px-3 py-1 text-sm ${value.on ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>{value.on ? "On" : "Off"}</button>
       </div>
-      {value.on && (
+      {(value.on || showStyle) && (
         <div className="space-y-2 rounded border border-white/10 p-2">
           <div className="flex gap-2 flex-wrap">
             {RIBBON_IDS.map((id) => (
