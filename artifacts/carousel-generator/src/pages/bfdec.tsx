@@ -77,7 +77,8 @@ function Results() {
 
 export default function BfDec() {
   const resume = new URLSearchParams(window.location.search).get("order") || "";
-  const [stage, setStage] = useState<"form" | "sending" | "pay" | "claimed" | "ready">(resume ? "pay" : "form");
+  const [stage, setStage] = useState<"form" | "sending" | "pay" | "claimed" | "free" | "ready">(resume ? "pay" : "form");
+  const preCode = (new URLSearchParams(window.location.search).get("code") || "").trim().toUpperCase();
   const [offer, setOffer] = useState<{ state: "before" | "open" | "closed"; opensAt: string; closesAt: string; fullLabel: string; dealLabel: string; skew: number } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [msg, setMsg] = useState("");
@@ -88,9 +89,10 @@ export default function BfDec() {
   const [area, setArea] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [typed, setTyped] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(preCode === "LEDZEP" ? "LEDZEP" : "");
   const [codeNote, setCodeNote] = useState("");
   const [applied, setApplied] = useState(false);
+  const [isFree, setIsFree] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
@@ -118,7 +120,7 @@ export default function BfDec() {
       setOwed(String(r.body.label || ""));
       setPayUrl(String(r.body.payUrl || ""));
       if (r.body.slug) { setSlug(String(r.body.slug)); setStage("ready"); return; }
-      setStage(r.body.payState === "claimed" || r.body.payState === "seen" ? "claimed" : "pay");
+      setStage(r.body.payState === "free" ? "free" : r.body.payState === "claimed" || r.body.payState === "seen" ? "claimed" : "pay");
     }).catch(() => undefined);
 
   useEffect(() => {
@@ -129,11 +131,13 @@ export default function BfDec() {
   }, [resume]);
 
   const checkCode = async () => {
-    setCodeNote(""); setApplied(false);
+    setCodeNote(""); setApplied(false); setIsFree(false);
     const c = code.trim();
     if (!c) return;
     const r = await j(await fetch(`${API}/bfdec/check-code`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: c }) }));
     const k = r.body.kind;
+    if (k === "free") { setApplied(true); setIsFree(true); setCodeNote("Code applied. This one is on me."); return; }
+    setIsFree(false);
     if (k === "deal") { setApplied(true); setCodeNote(`Code applied. Your price is ${r.body.label}.`); loadOffer(); }
     else if (k === "early") setCodeNote("That code wakes up at 8pm tonight. Pop back then.");
     else if (k === "ended") setCodeNote("That code has finished. Message me and I will see what I can do.");
@@ -163,7 +167,7 @@ export default function BfDec() {
       const r = await j(await fetch(`${API}/bfdec/start`, { method: "POST", body: fd }));
       if (!r.ok) { setMsg(String(r.body.error || "Something went wrong")); setStage("form"); loadOffer(); return; }
       setToken(String(r.body.token)); setWho(name); setOwed(String(r.body.label)); setPayUrl(String(r.body.payUrl || ""));
-      setStage("pay");
+      setStage(r.body.free ? "free" : "pay");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch { setMsg("That did not send, please try again"); setStage("form"); }
   };
@@ -176,7 +180,9 @@ export default function BfDec() {
   const serverNow = now + (offer?.skew || 0);
   const toOpen = offer ? new Date(offer.opensAt).getTime() - serverNow : 0;
   const toClose = offer ? new Date(offer.closesAt).getTime() - serverNow : 0;
-  const state = offer ? (toOpen > 0 ? "before" : toClose <= 0 ? "closed" : "open") : null;
+  const windowState = offer ? (toOpen > 0 ? "before" : toClose <= 0 ? "closed" : "open") : null;
+  // The LEDZEP link (/bfdec?code=LEDZEP) opens the form at any time.
+  const state = preCode === "LEDZEP" && windowState !== "open" ? "open" : windowState;
 
   return (
     <div className="ps"><style>{PS_CSS}{XS_CSS}</style>
@@ -189,7 +195,7 @@ export default function BfDec() {
           <div className="ps-card">
             <div className="ps-k">Black Friday price</div>
             <div className="xs-was">{offer?.fullLabel || "£699"}</div>
-            <div className="xs-price">{offer?.dealLabel || "£149"}</div>
+            <div className="xs-price">{isFree ? "Free" : offer?.dealLabel || "£149"}</div>
             <p className="ps-p" style={{ marginTop: 10 }}>Use code BFDEC. It covers the whole of your December content: 20 Christmas pieces of content and 10 Christmas photos, in your colours, for your area.</p>
             {state === "before" && <><div className="ps-k" style={{ marginTop: 16 }}>Opens at 8pm tonight</div><div className="xs-clock">{clock(toOpen)}</div></>}
             {state === "open" && <><div className="ps-k" style={{ marginTop: 16 }}>Ends 8pm tomorrow, Friday 27 November</div><div className="xs-clock">{clock(toClose)}</div></>}
@@ -253,6 +259,11 @@ export default function BfDec() {
             <button className="ps-btn alt" onClick={paid}>I have paid</button>
             <p style={{ fontSize: 14, color: "#555", marginTop: 14 }}>Keep this page. If you close it, the link in your browser history brings you back.</p>
           </div>
+        </>)}
+
+        {stage === "free" && (<>
+          <h1 className="ps-h1">You are <span>in</span>. This one is on me</h1>
+          <p className="ps-p">I will make your 20 Christmas posts and 10 Christmas photos and send you your own private portal link. This page updates by itself, so pop back when you like.</p>
         </>)}
 
         {stage === "claimed" && (<>

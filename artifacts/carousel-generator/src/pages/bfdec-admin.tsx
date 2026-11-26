@@ -29,7 +29,7 @@ const wa = (phone: string) => {
   return d;
 };
 const PHOTO: Record<string, string> = { idle: "photos waiting for payment", working: "making the photos now", done: "photos done", partial: "some photos missing", failed: "photos failed" };
-const PAY: Record<string, string> = { unpaid: "not paid yet", claimed: "says paid, check Monzo", seen: "payment seen" };
+const PAY: Record<string, string> = { unpaid: "not paid yet", claimed: "says paid, check Monzo", seen: "payment seen", free: "free code LEDZEP" };
 
 export default function BfDecAdmin() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -79,7 +79,8 @@ export default function BfDecAdmin() {
           const posts = r.items.filter((i) => i.kind === "post");
           const photos = r.items.filter((i) => i.kind === "photo").sort((a, b) => (a.n ?? 99) - (b.n ?? 99));
           const isOpen = open === r.id;
-          const canPublish = r.pay_state === "seen" && r.items.length > 0;
+          const paidUp = r.pay_state === "seen" || r.pay_state === "free";
+          const canPublish = paidUp && r.items.length > 0;
           return (
             <div key={r.id} className="ps-card" style={{ marginTop: 12 }}>
               <div style={{ display: "flex", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -98,12 +99,14 @@ export default function BfDecAdmin() {
                 </div>
               </div>
               <div style={{ marginTop: 10 }}>
-                <label style={{ display: "inline-flex", gap: 8, alignItems: "center", marginRight: 16, fontSize: 15 }}>
-                  <input type="checkbox" checked={r.pay_state === "seen"} onChange={async (e) => { await act(`/bfdec/orders/${r.id}/payment-seen`, "POST", { seen: e.target.checked }); loadList(); }} style={{ width: 22, height: 22 }} />
-                  Payment seen in Monzo
-                </label>
+                {r.pay_state !== "free" && (
+                  <label style={{ display: "inline-flex", gap: 8, alignItems: "center", marginRight: 16, fontSize: 15 }}>
+                    <input type="checkbox" checked={r.pay_state === "seen"} onChange={async (e) => { await act(`/bfdec/orders/${r.id}/payment-seen`, "POST", { seen: e.target.checked }); loadList(); }} style={{ width: 22, height: 22 }} />
+                    Payment seen in Monzo
+                  </label>
+                )}
                 <button className="ps-btn alt" onClick={() => { setOpen(isOpen ? "" : r.id); }}>{isOpen ? "Hide files" : "Posts and photos"}</button>
-                {r.pay_state === "seen" && r.photo_state !== "working" && photos.length < photosTarget && (
+                {paidUp && r.photo_state !== "working" && photos.length < photosTarget && (
                   <button className="ps-btn alt" onClick={async () => { const x = await act(`/bfdec/orders/${r.id}/photos`); if (!x.ok) { toast.error(x.error || "Could not start"); return; } toast.success("Making the Christmas photos"); loadList(); }}>Make missing photos</button>
                 )}
                 {r.status !== "ready" ? (

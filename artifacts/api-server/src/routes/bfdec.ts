@@ -13,7 +13,7 @@ import { logger } from "../lib/logger";
 import { runBfdecPhotos, BFDEC_PHOTO_COUNT } from "../lib/bfdecWorker";
 
 // DECEMBER BUNDLE at /bfdec. Black Friday offer: 20 Christmas pieces of content and 10 Christmas photos, delivered in the person's own portal.
-// Full price 699 pounds. Code BFDEC makes it 149 pounds, only between 8pm Thu 26 Nov 2026 and 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
+// Full price 699 pounds. Code BFDEC makes it 149 pounds, from the evening of Thu 26 Nov 2026 (open from the moment it went live) until 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
 // Payment is by Monzo link. Monzo cannot tell the site who has paid, so the person taps "I have paid", Vanessa sees it in her inbox, checks Monzo
 // and ticks "payment seen". She makes the work, uploads it into the order, and the site gives the person a private portal link (/<name>decbundle).
 
@@ -26,7 +26,8 @@ const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 const FULL_PENCE = 69900;
 const DEAL_PENCE = 14900;
 const CODE = "BFDEC";
-const OPENS_AT = new Date(process.env.BFDEC_OPENS_AT || "2026-11-26T20:00:00Z").getTime();
+const FREE_CODE = "LEDZEP"; // free for whoever Vanessa gives it to, works any time, no payment needed
+const OPENS_AT = new Date(process.env.BFDEC_OPENS_AT || "2026-11-26T18:00:00Z").getTime();
 const CLOSES_AT = new Date(process.env.BFDEC_CLOSES_AT || "2026-11-27T20:00:00Z").getTime();
 const MONZO_LINK = process.env.BFDEC_MONZO || "https://monzo.com/pay/r/the-cyber-suite_d4YOpp0fx9iPkj";
 const POSTS_TARGET = 20;
@@ -137,6 +138,7 @@ router.post("/bfdec/check-code", (req: Request, res: Response) => {
   const state = windowState();
   const code = str(req.body?.code, 30).toUpperCase();
   if (!code) { res.json({ kind: "none", label: pounds(FULL_PENCE), state }); return; }
+  if (code === FREE_CODE) { res.json({ kind: "free", label: "free", state }); return; }
   if (code !== CODE) { res.json({ kind: "bad", label: pounds(FULL_PENCE), state }); return; }
   if (state !== "open") { res.json({ kind: state === "before" ? "early" : "ended", label: pounds(FULL_PENCE), state }); return; }
   res.json({ kind: "deal", label: pounds(DEAL_PENCE), state });
@@ -147,9 +149,10 @@ router.post("/bfdec/start", upload.fields([{ name: "photo", maxCount: 1 }, { nam
     await ensureTable();
     if (tooMany(String(req.ip))) { res.status(429).json({ error: "That is a lot of goes in a short time. Please try again in a bit, or message me." }); return; }
     const state = windowState();
-    if (state === "before") { res.status(403).json({ error: "The offer opens at 8pm tonight. Pop back then." }); return; }
-    if (state === "closed") { res.status(403).json({ error: "This offer has now ended. Message me and I will tell you what I can do." }); return; }
     const b = req.body as Record<string, string>;
+    const free = str(b.code, 30).toUpperCase() === FREE_CODE;
+    if (!free && state === "before") { res.status(403).json({ error: "The offer opens at 8pm tonight. Pop back then." }); return; }
+    if (!free && state === "closed") { res.status(403).json({ error: "This offer has now ended. Message me and I will tell you what I can do." }); return; }
     const name = str(b.name, 80);
     const email = str(b.email, 160);
     const phone = str(b.phone, 30);
@@ -170,7 +173,7 @@ router.post("/bfdec/start", upload.fields([{ name: "photo", maxCount: 1 }, { nam
     if (!IMAGE_MIMES.includes(photo.mimetype)) { res.status(400).json({ error: "Please upload a JPG, PNG or WebP photo. If your phone saves photos as HEIC, take a screenshot of your photo and upload that instead." }); return; }
     if (logo && !IMAGE_MIMES.includes(logo.mimetype)) { res.status(400).json({ error: "Your logo needs to be a JPG, PNG or WebP file." }); return; }
     if (b.consent !== "yes") { res.status(400).json({ error: "Please tick the box so I know you are happy for me to make your content" }); return; }
-    if (code !== CODE) { res.status(400).json({ error: `Pop the code ${CODE} in the code box to unlock the ${pounds(DEAL_PENCE)} price.` }); return; }
+    if (code !== CODE && !free) { res.status(400).json({ error: `Pop the code ${CODE} in the code box to unlock the ${pounds(DEAL_PENCE)} price.` }); return; }
 
     let photoJpg: Buffer;
     try {
@@ -192,14 +195,17 @@ router.post("/bfdec/start", upload.fields([{ name: "photo", maxCount: 1 }, { nam
     const photoKey = await saveObject(photoJpg, "image/jpeg", "bfdec-photo");
     const id = uuid();
     const token = randomBytes(12).toString("hex");
-    await db.execute(sql`INSERT INTO bfdec_orders (id, token, name, email, phone, insta, area, colours, amount_pence, photo_key, logo_key, marketing)
-      VALUES (${id}, ${token}, ${name}, ${email}, ${phone}, ${insta}, ${area}, ${colours}, ${DEAL_PENCE}, ${photoKey}, ${logoKey}, ${b.marketing === "yes"})`);
+    const amount = free ? 0 : DEAL_PENCE;
+    await db.execute(sql`INSERT INTO bfdec_orders (id, token, name, email, phone, insta, area, colours, amount_pence, pay_state, photo_key, logo_key, marketing)
+      VALUES (${id}, ${token}, ${name}, ${email}, ${phone}, ${insta}, ${area}, ${colours}, ${amount}, ${free ? "free" : "unpaid"}, ${photoKey}, ${logoKey}, ${b.marketing === "yes"})`);
+    // A free order has nothing to wait for, so the ten Christmas photos start now.
+    if (free) void runBfdecPhotos(id);
 
     void notifyOwner(
       `December Bundle: ${name} is waiting`,
       [
-        `${name} has filled in the DECEMBER BUNDLE form (code ${CODE}).`,
-        `They owe ${pounds(DEAL_PENCE)}. Look for ${name} in your Monzo feed.`,
+        `${name} has filled in the DECEMBER BUNDLE form (code ${free ? FREE_CODE : CODE}).`,
+        free ? "Code LEDZEP: free, no payment needed. Their ten Christmas photos have started by themselves." : `They owe ${pounds(DEAL_PENCE)}. Look for ${name} in your Monzo feed.`,
         `Area: ${area}`,
         `Colour scheme: ${colours}`,
         `Instagram: @${insta}`,
@@ -207,11 +213,11 @@ router.post("/bfdec/start", upload.fields([{ name: "photo", maxCount: 1 }, { nam
         `Email: ${email}`,
         logoKey ? "Logo: uploaded" : "Logo: none uploaded",
         "",
-        "Open your inbox, check the payment, tick payment seen, make their 20 pieces and 10 photos and send the portal link:",
+        free ? "Open your inbox, upload their 20 posts and send the portal link:" : "Open your inbox, check the payment, tick payment seen, upload their 20 posts and send the portal link:",
         appLink("/bfdec-admin"),
       ].join("\n"),
     );
-    res.json({ ok: true, token, label: pounds(DEAL_PENCE), payUrl: MONZO_LINK });
+    res.json({ ok: true, token, label: free ? "free" : pounds(DEAL_PENCE), payUrl: free ? "" : MONZO_LINK, free });
   } catch {
     res.status(500).json({ error: "Something went wrong, please try again" });
   }
@@ -240,7 +246,7 @@ router.post("/bfdec/order/:token/paid", async (req: Request, res: Response) => {
       | { id: string; name: string; amount_pence: number; pay_state: string; phone: string; email: string; insta: string }
       | undefined;
     if (!r) { res.status(404).json({ error: "That link does not look right." }); return; }
-    if (r.pay_state === "seen") { res.json({ ok: true }); return; }
+    if (r.pay_state === "seen" || r.pay_state === "free") { res.json({ ok: true }); return; }
     const last = paidHits.get(r.id) ?? 0;
     if (Date.now() - last < 60_000) { res.json({ ok: true }); return; }
     paidHits.set(r.id, Date.now());
@@ -304,7 +310,7 @@ router.post("/bfdec/orders/:id/payment-seen", requireAuth, async (req: Request, 
   await ensureTable();
   const seen = req.body?.seen !== false;
   const id = str(req.params.id, 60);
-  await db.execute(sql`UPDATE bfdec_orders SET pay_state = ${seen ? "seen" : "claimed"}, updated_at = now() WHERE id = ${id}`);
+  await db.execute(sql`UPDATE bfdec_orders SET pay_state = ${seen ? "seen" : "claimed"}, updated_at = now() WHERE id = ${id} AND pay_state <> 'free'`);
   // Payment seen starts the ten Christmas photos by itself, in the person's colours. Only the first time.
   if (seen) {
     const r = (await db.execute(sql`SELECT photo_state FROM bfdec_orders WHERE id = ${id}`)).rows[0] as { photo_state: string } | undefined;
@@ -362,7 +368,7 @@ router.post("/bfdec/orders/:id/publish", requireAuth, async (req: Request, res: 
     | { name: string; pay_state: string; slug: string | null; status: string; items: Item[] }
     | undefined;
   if (!r) { res.status(404).json({ error: "Not found" }); return; }
-  if (r.pay_state !== "seen") { res.status(402).json({ error: "Tick payment seen first" }); return; }
+  if (r.pay_state !== "seen" && r.pay_state !== "free") { res.status(402).json({ error: "Tick payment seen first" }); return; }
   if (r.status === "expired") { res.status(410).json({ error: "This one has expired and the files are deleted" }); return; }
   if (!(r.items ?? []).length) { res.status(409).json({ error: "Upload their posts and photos first" }); return; }
   const slug = r.slug || (await makeSlug(r.name));
@@ -376,7 +382,7 @@ router.post("/bfdec/orders/:id/photos", requireAuth, async (req: Request, res: R
   const id = str(req.params.id, 60);
   const r = (await db.execute(sql`SELECT pay_state, status FROM bfdec_orders WHERE id = ${id}`)).rows[0] as { pay_state: string; status: string } | undefined;
   if (!r) { res.status(404).json({ error: "Not found" }); return; }
-  if (r.pay_state !== "seen") { res.status(402).json({ error: "Tick payment seen first" }); return; }
+  if (r.pay_state !== "seen" && r.pay_state !== "free") { res.status(402).json({ error: "Tick payment seen first" }); return; }
   if (r.status === "expired") { res.status(410).json({ error: "This one has expired and the files are deleted" }); return; }
   const only = Array.isArray(req.body?.only) ? (req.body.only as unknown[]).map(Number).filter((n) => n >= 1 && n <= BFDEC_PHOTO_COUNT) : undefined;
   void runBfdecPhotos(id, only && only.length ? only : undefined);
