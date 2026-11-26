@@ -15,6 +15,7 @@ import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import { TEXTBLAZE_PRESETS } from "../lib/textblazePresets";
+import { DECNEW_PRESETS } from "../lib/decnewPresets";
 import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS, TWEAKED_XMAS_PRESETS, TIMELESS_XMAS_PRESETS, HAPPYFACE_XMAS_PRESETS, TEVIOT_XMAS_PRESETS, RYDERWEB_PRESETS } from "../lib/aiPortraitScenarios";
 import {
   createJob,
@@ -404,6 +405,7 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
         ?? TEVIOT_XMAS_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? RYDERWEB_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? TEXTBLAZE_PRESETS.find((s) => s.id === portrait.scenarioId)
+        ?? DECNEW_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? RANDOM_PROMPT_PRESETS.find((s) => s.id === portrait.scenarioId);
       const scenarioName = scenario?.name ?? portrait.scenarioId;
 

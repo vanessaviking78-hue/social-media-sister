@@ -991,9 +991,25 @@ const TEXTBLAZE_PRESETS: (PhotoStudioPreset & { group: string; defaultColour?: s
   { id: "tb-74", name: "Female Patient Pre-Treatment", hasColour: false, group: "CLINICAL JAN" },
   { id: "tb-75", name: "Male Patient Pre-Treatment", hasColour: false, group: "CLINICAL JAN" },
 ];
+const DECNEW_PRESETS: (PhotoStudioPreset & { defaultColour?: string })[] = [
+  { id: "dn-01", name: "Winter Editorial Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-02", name: "Golden Hour Glow Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-03", name: "Monochrome Power Shot", hasColour: false },
+  { id: "dn-04", name: "Icy Toned Winter Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-05", name: "Skincare Technique Close-Up", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-06", name: "Polaroid Knit Jumper Moment", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-07", name: "Old-School Magazine Beauty Shot", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-08", name: "Tree Glow Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-09", name: "Snowfall Motion Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-10", name: "Minimalist Festive Flat Lay", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-11", name: "Candlelit Red Lip Shot", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-12", name: "Winter Desk Workspace", hasColour: false, defaultColour: "navy blue" },
+  { id: "dn-13", name: "Frosted Editorial Look", hasColour: false },
+];
+
 const TEXTBLAZE_GROUPS = ["LUXURY XMAS", "CLIENT SHOTS", "DAVID BAILEY-ESQUE", "LIFESTYLE", "AI PHOTOSHOOTS", "CLINICAL JAN"];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...TWEAKED_XMAS_PRESETS, ...TIMELESS_XMAS_PRESETS, ...HAPPYFACE_XMAS_PRESETS, ...TEVIOT_XMAS_PRESETS, ...RYDERWEB_PRESETS, ...TEXTBLAZE_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...NEW_XMAS_PRESETS, ...REALISTIC_XMAS_PRESETS, ...TWEAKED_XMAS_PRESETS, ...TIMELESS_XMAS_PRESETS, ...HAPPYFACE_XMAS_PRESETS, ...TEVIOT_XMAS_PRESETS, ...RYDERWEB_PRESETS, ...TEXTBLAZE_PRESETS, ...DECNEW_PRESETS, ...XMAS_PRESETS, ...XMAS_COUPLES_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...BAILEY_PRESETS, ...ACADEMY_PRESETS, ...ROCK_GRANNY_PRESETS, ...ROCK_GRANNY_COLOUR_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -1219,7 +1235,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "tweakedxmas" | "timelessxmas" | "happyfacexmas" | "teviotxmas" | "ryderweb" | "textblaze" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "newxmas" | "realxmas" | "tweakedxmas" | "timelessxmas" | "happyfacexmas" | "teviotxmas" | "ryderweb" | "textblaze" | "decnew" | "xmas" | "xmascouples" | "casual" | "mix" | "dinleys" | "sameroom" | "bailey" | "academy" | "rockgranny" | "rockgrannycolour">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1323,6 +1339,7 @@ export default function AiPortraitStudio() {
         ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("nx-") ? { promptVars: { xmasColour: newXmasColour.trim() || "red" } } : {}),
         ...(id.startsWith("rx-") ? { promptVars: { xmasColour: realXmasColour.trim() || "red" } } : {}),
+        ...(id.startsWith("dn-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || DECNEW_PRESETS.find((p) => p.id === id)?.defaultColour || "navy blue" } } : {}),
         ...(id.startsWith("tb-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || TEXTBLAZE_PRESETS.find((p) => p.id === id)?.defaultColour || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
@@ -2024,6 +2041,7 @@ export default function AiPortraitStudio() {
                 { key: "newxmas", label: "NEW XMAS" },
                 { key: "realxmas", label: "REALISTIC XMAS" },
                 { key: "textblaze", label: "TEXTBLAZE" },
+                { key: "decnew", label: "DECNEW" },
                 { key: "xmas", label: "XMAS" },
                 { key: "xmascouples", label: "XMAS COUPLES" },
                 { key: "casual", label: "CASUAL" },
@@ -3087,6 +3105,63 @@ export default function AiPortraitStudio() {
     </div>
   </div>
 ))}
+</>
+)}
+
+{activeSection === "decnew" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">DECNEW</p>
+<p className="text-xs text-muted-foreground mb-3">Your 13 TextBlaze December prompts (/DE001 to /DE013). Face lock and hyper realism are on for every one that features her. Where a prompt has a colour, tick it and type the colour you want (blank uses navy blue).</p>
+<div className="mb-4" onClick={(e) => e.stopPropagation()}>
+  <button
+    type="button"
+    className="text-[11px] underline text-muted-foreground"
+    onClick={() => setSelectedPresets((prev) => { const n = new Set(prev); DECNEW_PRESETS.forEach((p) => n.add(p.id)); return n; })}
+  >
+    Select all 13
+  </button>
+</div>
+<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+  {DECNEW_PRESETS.map((preset) => {
+    const isSelected = selectedPresets.has(preset.id);
+    return (
+      <div
+        key={preset.id}
+        className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+          isSelected ? "border-violet-500/70 bg-violet-500/10" : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+        }`}
+        onClick={() => togglePreset(preset.id)}
+      >
+        <div className="flex items-start gap-2.5">
+          <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+            isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+          }`}>
+            {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium leading-snug">{preset.name}</p>
+            {preset.defaultColour && (
+              <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                colour
+              </Badge>
+            )}
+            {preset.defaultColour && isSelected && (
+              <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="text"
+                  value={presetColours[preset.id] ?? ""}
+                  onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                  placeholder={`colour (default ${preset.defaultColour})`}
+                  className="w-full h-7 rounded border border-border/40 bg-background px-2 text-xs"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  })}
+</div>
 </>
 )}
 

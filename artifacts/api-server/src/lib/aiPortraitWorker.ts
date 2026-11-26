@@ -10,6 +10,7 @@ import { logger } from "./logger";
 import { geminiOk, geminiFailed } from "./aiCreditAlert";
 import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, TWEAKED_PRESETS, AUTUMN_PRESETS, HALLOWEEN_PRESETS, XMAS_PRESETS, XMAS_COUPLES_PRESETS, CASUAL_PRESETS, MIX_PRESETS, DINLEYS_PRESETS, SAME_ROOM_PRESETS, SAME_ROOM_WITH_ROOM_BASE, SAME_ROOM_BASE, BAILEY_PRESETS, ACADEMY_PRESETS, ROCK_GRANNY_PRESETS, ROCK_GRANNY_COLOUR_PRESETS, NEW_XMAS_PRESETS, REALISTIC_XMAS_PRESETS, TWEAKED_XMAS_PRESETS, TIMELESS_XMAS_PRESETS, HAPPYFACE_XMAS_PRESETS, TEVIOT_XMAS_PRESETS, RYDERWEB_PRESETS } from "./aiPortraitScenarios";
 import { TEXTBLAZE_PRESETS } from "./textblazePresets";
+import { DECNEW_PRESETS } from "./decnewPresets";
 
 // Every photo shoot image goes straight into that client's approved photos, so it shows up under
 // "Add approved photos" next to their name with no review step. One batch per client, repeats are skipped.
@@ -267,6 +268,7 @@ export async function processPortraitJob(
         TEVIOT_XMAS_PRESETS.find((p) => p.id === cfg.id) ??
         RYDERWEB_PRESETS.find((p) => p.id === cfg.id) ??
         TEXTBLAZE_PRESETS.find((p) => p.id === cfg.id) ??
+        DECNEW_PRESETS.find((p) => p.id === cfg.id) ??
         RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
