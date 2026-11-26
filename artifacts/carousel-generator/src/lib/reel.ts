@@ -19,8 +19,15 @@ export async function makeRiseReel(layers: { bg: HTMLCanvasElement; text: HTMLCa
   fd.append("logo", await pngBlob(layers.logo), "logo.png");
   const r = await fetch(`${BASE}/api/reel-rise`, { method: "POST", body: fd });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok || !data.videoUrl) throw new Error(data.error || "Could not make the reel");
-  return data.videoUrl as string;
+  if (!r.ok || !data.jobId) throw new Error(data.error || "Could not make the reel");
+  // The server makes the video in the background, so ask for it every couple of seconds until it is ready (up to 4 minutes).
+  for (let i = 0; i < 120; i++) {
+    await new Promise((res) => setTimeout(res, 2000));
+    const s = await fetch(`${BASE}/api/reel-rise/${data.jobId}`).then((x) => x.json().catch(() => ({}))).catch(() => ({} as Record<string, unknown>));
+    if (s.state === "done" && s.videoUrl) return s.videoUrl as string;
+    if (s.state === "failed" || s.error) throw new Error((s.error as string) || "Could not make the reel");
+  }
+  throw new Error("The reel is taking too long, try again in a minute");
 }
 
 // The first row of the text layer that has anything drawn on it, so the server knows where the box starts.
