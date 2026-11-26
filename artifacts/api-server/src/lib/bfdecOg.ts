@@ -37,7 +37,7 @@ export async function renderBfdecOg(closesAt: number, now = Date.now()): Promise
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
 <rect width="1200" height="630" fill="#ffffff"/>
 <rect x="0" y="0" width="1200" height="14" fill="${PINK}"/>
-${centred("BLACK FRIDAY ONLY", 600, 92, 34, PINK)}
+${centred("YOUR WHOLE MONTH OF SOCIALS, COVERED", 600, 92, 38, PINK)}
 ${centred("DECEMBER BUNDLE", 600, 92 + 20 + bundleSize * 0.8, bundleSize, "#000000")}
 ${centred("20 XMAS POSTS + 10 XMAS PHOTOS", 600, 330, 44, "#000000")}
 ${centred("£149 WITH CODE BFDEC", 600, 392, 44, PINK)}

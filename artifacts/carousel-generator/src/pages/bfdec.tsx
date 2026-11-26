@@ -190,7 +190,7 @@ export default function BfDec() {
         <div className="ps-k">Social Media Sister</div>
         {(stage === "form" || stage === "sending") && (<>
           <h1 className="ps-h1">DECEMBER <span>BUNDLE</span></h1>
-          <p className="ps-p">Twenty Christmas posts and ten Christmas photos, made for your clinic and delivered to your own private portal. That is the whole of your December content sorted, which leaves you free for a very large glass of something fizzy.</p>
+          <p className="ps-p">Your whole month of socials, covered, so you can relax for December. Twenty Christmas posts and ten Christmas photos, made for your clinic and delivered to your own private portal, which leaves you free for a very large glass of something fizzy.</p>
           <Results />
           <div className="ps-card">
             <div className="ps-k">Black Friday price</div>
@@ -201,6 +201,7 @@ export default function BfDec() {
             {state === "open" && <><div className="ps-k" style={{ marginTop: 16 }}>Ends 8pm tomorrow, Friday 27 November</div><div className="xs-clock">{clock(toClose)}</div></>}
             {state === "closed" && <p className="ps-p" style={{ marginTop: 16 }}>This Black Friday offer has now ended. Message me and I will tell you what I can do.</p>}
             <ul className="xs-list">
+              <li>Your whole December of socials covered, so you can properly relax</li>
               <li>20 Christmas posts, written for your clinic</li>
               <li>10 Christmas photos of you, made from the photo you upload, in your colours</li>
               <li>Your colours, your area and your logo throughout</li>
