@@ -9,14 +9,14 @@ import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 
 // Rising text reel: the page sends three flat pictures of one post, the background, the text box on its own (transparent) and the bow on its own (transparent).
-// This lays the text over the background and slides it up from the bottom of the frame, with the bow on top, as a silent 8 second 1080 x 1920 MP4.
+// This lays the text over the background and slides it up from the bottom of the frame, with the bow staying still on top, as a silent 8 second 1080 x 1920 MP4.
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 4 } });
 
 const RW = 1080, RH = 1920;
 const SECONDS = 8;
 const START = 1; // seconds before the box starts to rise
-const RISE = 1.6; // seconds it takes to rise
+const RISE = 4.2; // seconds it takes to rise (slow and smooth)
 const TOP_GAP = 220; // where the top of the box stops, measured from the top of the reel (clear of the Instagram name bar)
 
 function runFfmpeg(args: string[]): Promise<void> {
@@ -52,14 +52,15 @@ export async function makeRiseReel(bg: Buffer, text: Buffer, bow: Buffer | null,
       `[0:v]split[a][b];[a]scale=${RW}:${RH}:force_original_aspect_ratio=increase,crop=${RW}:${RH},boxblur=40:6[fill];[b]scale=${RW}:${ph},setsar=1[post];[fill][post]overlay=0:${top}`,
       "-frames:v", "1", "-y", basePng,
     ]);
-    // Pass 2: only the text layer and the bow move. They are laid over the still picture by the same rising move, so the bow stays on its box. The logo stays still on top.
+    // Pass 2: only the text layer moves. The bow and logo stay still on top.
     const rise = `overlay=x=0:y='${top + endShift}+${travel}*pow(1-${p}\\,3)':format=auto`;
     const bowIdx = 2, logoIdx = bow ? 3 : 2;
+    // Only the text box moves. The bow and the logo are laid on top afterwards and stay exactly where they are.
     const filter =
       `[1:v]scale=${RW}:${ph},format=rgba[tx];` +
-      (bow ? `[${bowIdx}:v]scale=${RW}:${ph},format=rgba[bw];[tx][bw]overlay=0:0:format=auto[txbw];` : `[tx]null[txbw];`) +
-      `[0:v][txbw]${rise}[withtext]` +
-      (logo ? `;[${logoIdx}:v]scale=${RW}:${ph},format=rgba[lg];[withtext][lg]overlay=0:${top}:format=auto[v]` : `;[withtext]null[v]`);
+      `[0:v][tx]${rise}[withtext]` +
+      (bow ? `;[${bowIdx}:v]scale=${RW}:${ph},format=rgba[bw];[withtext][bw]overlay=0:${top}:format=auto[withbow]` : `;[withtext]null[withbow]`) +
+      (logo ? `;[${logoIdx}:v]scale=${RW}:${ph},format=rgba[lg];[withbow][lg]overlay=0:${top}:format=auto[v]` : `;[withbow]null[v]`);
     const args = [
       "-loop", "1", "-framerate", "30", "-t", String(SECONDS), "-i", basePng,
       "-loop", "1", "-framerate", "30", "-t", String(SECONDS), "-i", txF,
