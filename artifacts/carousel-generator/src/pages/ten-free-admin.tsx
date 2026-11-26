@@ -821,7 +821,14 @@ export function Builder({ id }: { id: string }) {
   const publish = async () => {
     const client = clientRef.current;
     const assets = assetsRef.current;
-    if (!req || !client || !assets || !itemsRef.current.length) return;
+    if (!itemsRef.current.length) {
+      toast.error("There are no posts on this page to save. Build them first, and do not refresh before you press this button.");
+      return;
+    }
+    if (!req || !client || !assets) {
+      toast.error("The page is still loading her logo and photos. Wait a few seconds and press again.");
+      return;
+    }
     setBusy(true);
     try {
       const posts = [];
