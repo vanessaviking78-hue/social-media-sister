@@ -191,6 +191,7 @@ export default function BfDec() {
         {(stage === "form" || stage === "sending") && (<>
           <h1 className="ps-h1">DECEMBER <span>BUNDLE</span></h1>
           <p className="ps-p">Your whole month of socials, covered, so you can relax for December. Twenty Christmas posts and ten Christmas photos, made for your clinic and delivered to your own private portal, which leaves you free for a very large glass of something fizzy.</p>
+          <p className="ps-p">These are the photos that make people do a double take. I use my own facial mapping system, so every image looks properly like you, with your face, your features and your expression, and nothing like the plastic looking AI pictures you have scrolled past.</p>
           <Results />
           <div className="ps-card">
             <div className="ps-k">Black Friday price</div>
