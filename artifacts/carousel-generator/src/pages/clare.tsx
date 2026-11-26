@@ -1,4 +1,5 @@
-import { drawCoverBox, type CoverBox } from "@/lib/cover-box";
+import { drawCoverBox, DEFAULT_BOX, type CoverBox } from "@/lib/cover-box";
+import { BoxControls } from "@/components/box-controls";
 import { TabBoundary } from "@/components/tab-boundary";
 import { drawColumn } from "@/lib/column-block";
 import { StylePicker, styleForNumber, BLOCK_PCT, BLOCK_TEXT_H, FLAT_ALPHA } from "@/lib/post-style";
@@ -26,14 +27,14 @@ import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBo
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
 import { clinicTags } from "@/lib/sixteen-posts";
-import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, STATICQ_SECTIONS, STATICQ_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
+import { CLARE_SECTIONS, CLARE_SECTION_POSTS, XMAS_SECTIONS, XMAS_POSTS, FERAL_SECTIONS, FERAL_POSTS, SMX_POSTS, HOOK_SECTIONS, HOOK_POSTS, ALL_TREAT_POSTS, sectionsForTreatments, BF_SECTIONS, BF_POSTS, NEWXMAS_SECTIONS, NEWXMAS_POSTS, XMASFEELS_SECTIONS, XMASFEELS_POSTS, STATICQ_SECTIONS, STATICQ_POSTS, VOUCHER_SECTIONS, VOUCHER_POSTS, S16_SECTIONS, S16_SMS_POSTS, S16_CLINIC_POSTS, CLARE_SECTION_CLINIC, type ClareSectionPost } from "@/lib/clare-sections";
 
 // CLARE CONNOLLY AESTHETICS, Wakefield. Her own page, a copy of the Castle Clinic / Ryder page. Photo first, a soft wash over the bottom third.
 // Black and gold. Hatcher on the cover with a curly first letter only. One section per treatment plus Keeping fit over 40 and GLP1 volume loss, 6 posts each.
 
 const BASE = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const W = 1080;
-const H = 1350;
+let H = 1350; // the vouchers tab is 1080 x 1440, every other tool is 1080 x 1350. Set when the page opens.
 const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
 let CLINIC_KEY = "clare";
@@ -42,7 +43,7 @@ let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
 let SPARKLE_ON = false;
 let LOOK_KEY = "clare-look-v1";
 
-type Look = { wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
+type Look = { vop?: number; wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "metal:gold" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -232,6 +233,7 @@ type Post = {
   sub?: string; // NEWXMAS cover subtitle
   four?: boolean; // NEWXMAS posts have 4 slides: cover, two body slides, then the CTA
   one?: boolean; // XMAS FEELS posts are a single image: her line on the picture, nothing else
+  voucher?: boolean; // Vouchers: 1080 x 1440, plain colour, optional faded photo, floating text box, bow on top
   quote?: boolean; // STATIC - quotes: a single image, her line on a plain colour or metallic background, no photo
   slides: string[];
   cta: string;
@@ -285,7 +287,7 @@ const folderToGroup = (name: string): string | undefined => {
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...XMASFEELS_POSTS, ...STATICQ_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
+const TYPE_BY_ID = new Map([...CLARE_SECTION_POSTS, ...ALL_TREAT_POSTS, ...HOOK_POSTS, ...XMAS_POSTS, ...FERAL_POSTS, ...SMX_POSTS, ...BF_POSTS, ...NEWXMAS_POSTS, ...XMASFEELS_POSTS, ...STATICQ_POSTS, ...VOUCHER_POSTS, ...S16_SMS_POSTS, ...S16_CLINIC_POSTS].map((t) => [t.id, t]));
 let SECS = CLARE_SECTIONS;
 let POSTS = CLARE_SECTION_POSTS;
 
@@ -436,6 +438,23 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   const head = (px: number, w = 400) => `${w} ${px}px "${f.head}", serif`;
   const body = (px: number, w = 400) => `${w} ${px}px "${f.body}", sans-serif`;
 
+  // VOUCHERS: plain colour (or metallic), an optional photo faded right back, then the hook in a floating text box wrapped to the words (or plain writing if the box is off). The bow goes on top afterwards.
+  if (post.voucher) {
+    ctx.fillStyle = BGC;
+    ctx.fillRect(0, 0, W, H);
+    const vop = Math.max(0, Math.min(100, look.vop ?? 35)) / 100;
+    if (photo && vop > 0) { ctx.save(); ctx.globalAlpha = vop; coverFit(ctx, photo.bmp, post.adj?.zoom?.[0], post.adj?.px?.[0], post.adj?.py?.[0]); ctx.restore(); }
+    if (look.box) { drawCoverBox(ctx, { headline: post.hook || "", box: { ...look.box, tight: true }, tf: tf as any, headFont: f.head, ts }); return; }
+    ctx.textAlign = "center";
+    const vfit = fitText(ctx, post.hook || "", (px) => head(px), W - 200, 860 * Math.max(1, ts), Math.round(130 * ts), Math.round(50 * ts), 1.12);
+    const vtotal = vfit.lines.length * vfit.px * 1.12;
+    let vy = (H - vtotal) / 2 + cy;
+    ctx.fillStyle = look.headline !== "auto" ? paintOf(ctx, look.headline, vy, vy + vtotal) : INKC;
+    ctx.font = head(vfit.px);
+    for (const l of vfit.lines) { ctx.fillText(l, W / 2, vy); vy += vfit.px * 1.12; }
+    return;
+  }
+
   // STATIC - quotes: a plain colour (or metallic) board with her line painted across the middle in the picked writing colour. No photo, no wash.
   if (post.quote) {
     ctx.fillStyle = BGC;
@@ -555,7 +574,7 @@ function brandLook(p: { pageColor?: string; accentColor?: string; overlayColor?:
 }
 
 // Clare's own page uses this as it is. On any other client's page it opens on that client, with its own saved settings and photo library.
-export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xmasfeels" | "staticq" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
+export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xmasfeels" | "staticq" | "vouchers" | "hooks" | "feral" | "blackfriday" | "sms16" | "clinic16" } = {}) {
   const { presets } = usePresets();
   const forced = useForcedClient();
   const preset = useMemo(() => presets.find((p) => (forced?.pattern ?? /clare/i).test(p.name)) ?? null, [presets, forced]);
@@ -565,11 +584,12 @@ export function ClareOwn({ mode }: { mode?: "xmas" | "smxmas" | "newxmas" | "xma
   CLINIC_KEY = isClare ? "clare" : `client-${preset!.id}`;
   CLINIC_NAME = isClare ? CLARE_SECTION_CLINIC.name : preset!.name;
   const own = isClare ? { sections: CLARE_SECTIONS, posts: CLARE_SECTION_POSTS } : sectionsForTreatments(forced?.treatmentIds);
-  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "staticq" ? STATICQ_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
-  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "staticq" ? STATICQ_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
+  SECS = mode === "hooks" ? HOOK_SECTIONS : mode === "xmasfeels" ? XMASFEELS_SECTIONS : mode === "staticq" ? STATICQ_SECTIONS : mode === "vouchers" ? VOUCHER_SECTIONS : mode === "newxmas" ? NEWXMAS_SECTIONS : mode === "xmas" || mode === "smxmas" ? XMAS_SECTIONS : mode === "feral" ? FERAL_SECTIONS : mode === "blackfriday" ? BF_SECTIONS : mode === "sms16" || mode === "clinic16" ? S16_SECTIONS : own.sections;
+  POSTS = mode === "hooks" ? HOOK_POSTS : mode === "xmasfeels" ? XMASFEELS_POSTS : mode === "staticq" ? STATICQ_POSTS : mode === "vouchers" ? VOUCHER_POSTS : mode === "newxmas" ? NEWXMAS_POSTS : mode === "xmas" ? XMAS_POSTS : mode === "smxmas" ? SMX_POSTS : mode === "feral" ? FERAL_POSTS : mode === "blackfriday" ? BF_POSTS : mode === "sms16" ? S16_SMS_POSTS : mode === "clinic16" ? S16_CLINIC_POSTS : own.posts;
+  H = mode === "vouchers" ? 1440 : 1350;
   SPARKLE_ON = mode === "xmas" || mode === "smxmas" || mode === "newxmas" || mode === "xmasfeels" || mode === "staticq";
-  LOOK_KEY = `clare-look-v1${sfx}${mode === "staticq" ? "-staticq" : ""}`;
-  FONT_KEY = `clare-fonts-v1${sfx}${mode === "staticq" ? "-staticq" : ""}`;
+  LOOK_KEY = `clare-look-v1${sfx}${mode === "staticq" ? "-staticq" : mode === "vouchers" ? "-vouchers" : ""}`;
+  FONT_KEY = `clare-fonts-v1${sfx}${mode === "staticq" ? "-staticq" : mode === "vouchers" ? "-vouchers" : ""}`;
   AREA_KEY = `clare-area-v1${sfx}`;
   SCHED_KEY = `clare-scheduled-v1${sfx}`;
   return <ClareOwnInner key={`${preset?.id ?? "clare"}-${mode ?? ""}-${own.posts.length}`} preset={preset} />;
@@ -583,6 +603,7 @@ export function ClareFreebie({ req }: { req: FreebieReq }) {
   const preset = useMemo(() => ({ id: -1, name: req.clinicName, seoArea: req.area, clinicAddress: null, pageColor: req.mainHex, accentColor: req.accentHex, overlayColor: req.mainHex, logoUrl: req.logoUrl, defaultPostTime: "09:00", captionFootnote: "" }) as unknown as ReturnType<typeof usePresets>["presets"][number], [req]);
   CLINIC_KEY = `xmasfree-${req.id}`;
   CLINIC_NAME = req.clinicName;
+  H = 1350;
   SECS = NEWXMAS_SECTIONS;
   POSTS = NEWXMAS_POSTS;
   SPARKLE_ON = false;
@@ -620,8 +641,9 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const [group, setGroup] = useState(SECS[0].id);
   const [typeId, setTypeId] = useState(POSTS[0].id);
   const [scheduled, setScheduled] = useState<Record<string, string>>({}); // post type id -> date it goes out
-  const isQuote = POSTS === STATICQ_POSTS; // the STATIC - quotes tab: plain colour boards, painted marker writing
-  const [fonts, setFonts] = useState<Fonts>({ head: isQuote ? "SuitePermanentMarker" : "Hatcher", body: "Montserrat" });
+  const isVoucher = POSTS === VOUCHER_POSTS; // the Vouchers tab: 1080 x 1440, bow and text on a plain colour
+  const isQuote = POSTS === STATICQ_POSTS || isVoucher; // the STATIC - quotes tab: plain colour boards, painted marker writing
+  const [fonts, setFonts] = useState<Fonts>({ head: POSTS === STATICQ_POSTS ? "SuitePermanentMarker" : "Hatcher", body: "Montserrat" });
   const [tf, setTf] = useState<TitleFont>(null);
   const [look, setLook] = useState<Look>(() => {
     try {
@@ -792,8 +814,8 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   };
 
   const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
-  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : t.sq ? { one: true, quote: true, caption: t.sq.caption } : {});
-  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xf ? t.xf.line : t.sq ? t.sq.line : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
+  const nxFields = (t: ClareSectionPost): Partial<Post> => (t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : t.sq ? { one: true, quote: true, caption: t.sq.caption } : t.vq ? { one: true, quote: true, voucher: true, caption: t.vq.caption } : {});
+  const initHook = (t: ClareSectionPost) => (t.nx ? t.nx.hook : t.xf ? t.xf.line : t.sq ? t.sq.line : t.vq ? t.vq.line : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   // The 16 posts tab arrives with hooks, captions and hashtags already written. Clinic hashtags are built from the area typed on the page.
   const seed = (t: ClareSectionPost): Pick<Post, "hook" | "cta" | "caption" | "hashtags"> => t.fixed
     ? { hook: t.fixed.hook, cta: t.fixed.cta, caption: t.fixed.caption, hashtags: t.fixed.tags ?? clinicTags(area) }
@@ -1156,6 +1178,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
               <>
                 <ColourPicker label="Background colour (the default for every post)" value={normLook(look).wash} onChange={(v) => setLook((l) => ({ ...l, wash: v }))} />
                 <ColourPicker label="Text colour (the default for every post)" value={quoteText(normLook(look))} onChange={(v) => setLook((l) => ({ ...l, text: v, headline: v }))} />
+                {isVoucher && (
+                  <div className="space-y-3 rounded-lg border border-white/10 p-3">
+                    <label className="flex items-center gap-3 text-xs"><span className="w-40 shrink-0 text-white/60">Photo strength (only shows if you add a photo)</span>
+                      <input type="range" min={0} max={100} step={5} className="flex-1" value={look.vop ?? 35} onChange={(e) => setLook((l) => ({ ...l, vop: Number(e.target.value) }))} /><span className="w-10 text-right text-white/60">{look.vop ?? 35}%</span></label>
+                    <BoxControls label="Floating text box (wraps to the words)" box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b ? { ...b, tight: true, y: b.y === DEFAULT_BOX.y ? 0.5 : b.y } : undefined }))} />
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -1223,7 +1252,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
               </div>
             ))}
           </div>
-          <div className="text-sm text-white/60">{isQuote ? "Template: plain colour quote board, her line painted in the middle. Pick the background and text colour above, metallics included." : "Template: 1. Photo with gradient wash."}</div>
+          <div className="text-sm text-white/60">{isVoucher ? "Template: 1080 x 1440 gift voucher, a plain colour with the bow on top and your hook in a floating text box. Add a photo if you want one, it sits faded behind." : isQuote ? "Template: plain colour quote board, her line painted in the middle. Pick the background and text colour above, metallics included." : "Template: 1. Photo with gradient wash."}</div>
         </section>
 
         <section className="rounded-xl border border-white/10 p-4 space-y-4">
@@ -1409,7 +1438,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {(post.one ? [0] : post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={!post.quote && n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={(!post.quote || post.voucher) && n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 {(() => {

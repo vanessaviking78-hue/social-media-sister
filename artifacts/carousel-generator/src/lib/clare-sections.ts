@@ -5,7 +5,7 @@
 // recommends anything for the sake of it. No prices, no promises, no medicine names.
 // Edit this list to add or rename posts. Each name is crossed out once it has been scheduled.
 
-export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "newxmas" | "xmasfeels" | "staticq" | "feral" | "blackfriday";
+export type ClareSectionId = `t-${string}` | `h-${string}` | "boosters" | "poly" | "peels" | "filler" | "fit" | "glp1" | "about" | "safety" | "xmas" | "newxmas" | "xmasfeels" | "staticq" | "vouchers" | "feral" | "blackfriday";
 
 // word is the comment word on the last slide. Sections with no word close on a friendly engagement line.
 export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [
@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; nx?: NewXmasRow; xf?: XmasFeelsRow; sq?: StaticQuoteRow; fixed?: { hook: string; caption: string; cta: string; tags?: string[] } };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; nx?: NewXmasRow; xf?: XmasFeelsRow; sq?: StaticQuoteRow; vq?: VoucherRow; fixed?: { hook: string; caption: string; cta: string; tags?: string[] } };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -142,8 +142,11 @@ export const XMASFEELS_POSTS: ClareSectionPost[] = XMASFEELS_ROWS.map((r, i) => 
 
 // STATIC - quotes: 10 single image quote boards, her line on a plain colour or metallic background, caption already written.
 import { STATICQUOTES_ROWS, type StaticQuoteRow } from "./staticquotes";
+import { VOUCHER_ROWS, type VoucherRow } from "./voucher-hooks";
 export const STATICQ_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "staticq", label: "STATIC - quotes", word: "" }];
 export const STATICQ_POSTS: ClareSectionPost[] = STATICQUOTES_ROWS.map((r, i) => ({ id: `sqp-${r.id}`, group: "staticq" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", sq: r }));
+export const VOUCHER_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "vouchers", label: "Vouchers", word: "" }];
+export const VOUCHER_POSTS: ClareSectionPost[] = VOUCHER_ROWS.map((r, i) => ({ id: `vqp-${r.id}`, group: "vouchers" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", vq: r }));
 
 // XMAS: one carousel for each of the 32 hooks (8 weeks of 4). The cover hook is fixed to the version she picks, colloquial or professional.
 import { XMAS_WEEKS } from "./xmas-weeks";
