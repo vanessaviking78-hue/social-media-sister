@@ -164,10 +164,19 @@ function drawSlideBase(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   ctx.textBaseline = "top";
 
   if (n === 4) {
-    // Last slide: the comment line, on soft grey
-    ctx.fillStyle = C.soft;
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = C.ink;
+    // Last slide: the clinic's photo with a soft dark wash and the comment line over the top in white (soft grey when there is no photo)
+    const endPic = !!photo;
+    if (photo) {
+      coverFit(ctx, photo.bmp);
+      const sg = ctx.createLinearGradient(0, 0, 0, H);
+      sg.addColorStop(0, "rgba(0,0,0,0.38)"); sg.addColorStop(0.5, "rgba(0,0,0,0.58)"); sg.addColorStop(1, "rgba(0,0,0,0.68)");
+      ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+      ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 18;
+    } else {
+      ctx.fillStyle = C.soft;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.fillStyle = endPic ? "#ffffff" : C.ink;
     ctx.textAlign = "center";
     const f = fitText(ctx, post.cta || "", (px) => `700 ${px}px "${BODY}", serif`, 820, 520, 72, 40, 1.35);
     const total = f.lines.length * f.px * 1.35;
@@ -177,9 +186,10 @@ function drawSlideBase(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       ctx.fillText(l, W / 2, y);
       y += f.px * 1.35;
     }
-    ctx.fillStyle = C.grey;
+    ctx.fillStyle = endPic ? "rgba(255,255,255,0.85)" : C.grey;
     ctx.font = `400 30px "${BODY}", serif`;
     ctx.fillText(NO1_CLINIC, W / 2, H - 150);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
     return;
   }
 
@@ -401,7 +411,7 @@ function No1Page() {
     if (added.length) setPool((p) => [...p, ...added]);
   };
 
-  const photoFor = (post: Post, n: number): Photo | null => (pool.length ? pool[post.photos[n] % pool.length] ?? null : null);
+  const photoFor = (post: Post, n: number): Photo | null => (pool.length ? pool[(post.photos[n] ?? post.photos[0] ?? 0) % pool.length] ?? null : null);
 
   const addPost = () => {
     const t = TYPE_BY_ID.get(typeId)!;

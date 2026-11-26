@@ -388,19 +388,30 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
 
   const LEFT = 100;
   if (n === 4) {
-    ctx.fillStyle = BGC;
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = INKC;
+    // The last slide is the clinic's photo with a soft dark wash and the words over the top, in white. With no photo it keeps the plain colour.
+    const endPic = !!photo;
+    if (photo) {
+      coverFit(ctx, photo.bmp);
+      const sg = ctx.createLinearGradient(0, 0, 0, H);
+      sg.addColorStop(0, "rgba(0,0,0,0.38)"); sg.addColorStop(0.5, "rgba(0,0,0,0.58)"); sg.addColorStop(1, "rgba(0,0,0,0.68)");
+      ctx.fillStyle = sg; ctx.fillRect(0, 0, W, H);
+      ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 18;
+    } else {
+      ctx.fillStyle = BGC;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.fillStyle = endPic ? "#ffffff" : INKC;
     ctx.textAlign = "left";
     const fit = fitText(ctx, post.cta || "", (px) => head(px), W - LEFT * 2, 520 * Math.max(1, ts), Math.round(84 * ts), Math.round(44 * ts), 1.2);
     const total = fit.lines.length * fit.px * 1.2;
     let y = (H - total) / 2 - 30;
-    if (look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
+    if (!endPic && look.headline !== "auto") ctx.fillStyle = paintOf(ctx, look.headline, y, y + total);
     ctx.font = head(fit.px);
     for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.2; }
-    ctx.fillStyle = INKC;
-    ctx.strokeStyle = INKC; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
+    ctx.fillStyle = endPic ? "#ffffff" : INKC;
+    ctx.strokeStyle = endPic ? "#ffffff" : INKC; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(LEFT, y + 40); ctx.lineTo(LEFT + 120, y + 40); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
     return;
   }
 
@@ -592,7 +603,7 @@ function KathrynPage() {
     return [...saved, ...pool];
   };
   const photoCount = (post: Post) => (libBy.get(TYPE_BY_ID.get(post.typeId)?.group ?? "") ?? []).length + pool.length;
-  const photoFor = (post: Post, n: number): Photo | null => { const all = photosOf(post); return all.length ? all[post.photos[n] % all.length] ?? null : null; };
+  const photoFor = (post: Post, n: number): Photo | null => { const all = photosOf(post); return all.length ? all[(post.photos[n] ?? post.photos[0] ?? 0) % all.length] ?? null : null; };
 
   // Load the saved pictures any open post needs
   useEffect(() => {
