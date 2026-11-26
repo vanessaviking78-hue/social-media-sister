@@ -18,7 +18,7 @@ type Month = { id: string; month: string; status: string; choices: { treatments?
   bank?: { n: number; label: string; images: string[]; caption: string; tags: string }[];
   postsList?: { n: number; label: string; image: string }[] };
 type Member = {
-  id: string; name: string; email: string; phone?: string; link?: string; plan: "69" | "222"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
+  id: string; name: string; email: string; phone?: string; link?: string; plan: "69" | "222" | "portal"; status: string; detailsDone: boolean; canBuild?: boolean; details: Record<string, any>;
   photoCount: number; welcomePhotoUrl?: string; photoUrls?: string[]; logoUrl?: string; clinicPhotoUrl?: string; refPhotoUrl?: string; months: Month[];
 };
 
@@ -172,7 +172,7 @@ export default function ClubBuild() {
   const toggleDone = (id: string) => setDone((d) => { const n = d.includes(id) ? d.filter((i) => i !== id) : [...d, id]; try { localStorage.setItem("club-build-done", JSON.stringify(n)); } catch {} return n; });
   const latest = (m: Member) => [...m.months].sort((a, b) => b.month.localeCompare(a.month))[0];
   const rows = members
-    .filter((m) => showCancelled || m.status === "active" || m.status === "pending")
+    .filter((m) => m.plan !== "portal" && (showCancelled || m.status === "active" || m.status === "pending"))
     .map((m) => ({ m, x: latest(m) }))
     .map((r) => ({ ...r, s: stage(r.m, r.x) }))
     .map((r) => ({ ...r, isDone: !!r.x && (r.s.key === "live" || done.includes(r.x.id)) }))

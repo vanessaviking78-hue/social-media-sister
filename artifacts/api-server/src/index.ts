@@ -8,6 +8,7 @@ import { startHammeredMetricsSync } from "./routes/hammered-performance";
 import { startFreehouseMetricsSync } from "./routes/freehouse-performance";
 import { startSmsMetricsSync } from "./routes/sms-performance";
 import { startRevenueIdeasCron } from "./lib/revenueIdeasCron";
+import { seedPortalMembers } from "./routes/club";
 
 const rawPort = process.env["PORT"];
 
@@ -44,6 +45,7 @@ async function start(): Promise<void> {
   startHammeredMetricsSync();
   startFreehouseMetricsSync();
   startSmsMetricsSync();
+  void seedPortalMembers();
 }
 
 start().catch((err) => {

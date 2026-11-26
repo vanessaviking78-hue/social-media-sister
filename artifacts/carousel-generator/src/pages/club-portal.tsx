@@ -71,9 +71,11 @@ type Story = { n: number; text: string; poll: { question: string; a: string; b: 
 type MonthContent = { stories?: Story[]; posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] };
 type Portal = {
   pending?: boolean;
-  member: { name: string; plan: "69" | "222"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
+  member: { name: string; plan: "69" | "222" | "portal"; caps: Caps; detailsDone: boolean; details: Record<string, any>; logoUrl: string; photoUrls: string[]; clinicPhotoUrl: string; welcomePhotoUrl?: string; billingDay?: number };
   cycle: { month: string; nextBilling: string; cutOff: string; open: boolean; status: "choosing" | "building" | "approved"; choices: { treatments?: string[]; picks?: Pick[]; note?: string; savedAt?: string } };
   challengeHooks?: string[];
+  portalOnly?: boolean;
+  files?: string[];
   bank?: { id: number; postType: string; title: string; caption: string; imageUrls: string[]; videoUrl: string | null; createdAt: string }[];
   extras?: { kind: "book" | "recipe" | "rants"; title: string; body: string; imageUrl: string }[];
   months: { month: string; content: MonthContent; aiUrls: string[]; approvedAt: string; choose?: { cap: number; deadline: string | null; posts: { n: number; label: string; images: string[] }[] }; feedback?: { posts?: { n: number; rating: number; reason: string }[]; overall?: string } }[];
@@ -575,12 +577,19 @@ export default function ClubPortal({ token }: { token: string }) {
     <div className="cp">
       <style>{CSS}</style>
       <div className="cp-w">
-        <div className="cp-top"><span>Social Media Sister</span><span>{data ? (data.member.plan === "69" ? "The £69 club" : "The £275 club") : "The club"}</span></div>
+        <div className="cp-top"><span>Social Media Sister</span><span>{data ? (data.member.plan === "portal" ? "Your work" : data.member.plan === "69" ? "The £69 club" : "The £275 club") : ""}</span></div>
         {data && /tester account/i.test(data.member.name) && <div style={{ background: "#111", color: "#fff", textAlign: "center", fontWeight: 900, letterSpacing: ".2em", textTransform: "uppercase", padding: "8px 12px", borderRadius: 8, margin: "0 0 12px" }}>Tester account</div>}
         {ended && <><h1>See you <span>soon</span></h1><p className="cp-sub">{ended}</p></>}
         {error && <p className="cp-err">{error}</p>}
         {!data && !ended && !error && <p>Loading...</p>}
-        {data && !data.member.detailsDone && (
+        {data && data.portalOnly && (
+          <>
+            <h1>Hello, <span>{data.member.name.split(" ")[0]}</span></h1>
+            <p className="cp-sub">Everything I have made for you is here. Download the images, copy the captions and post when you like.</p>
+            {data.bank?.length ? <BankPosts posts={data.bank} /> : <div className="cp-box"><b>Nothing here just yet.</b><p className="cp-sub">As soon as I have something ready it will appear here. Pop back any time with the same link.</p></div>}
+          </>
+        )}
+        {data && !data.portalOnly && !data.member.detailsDone && (
           <>
             <h1>Welcome, <span>{data.member.name.split(" ")[0]}</span></h1>
             <p className="cp-sub">{data.pending ? "Your place is being held for you. Fill in your details once, as chatty as you like, and I will take it from here." : "Fill in your details once and I will do the rest, every single month."}</p>
@@ -588,7 +597,7 @@ export default function ClubPortal({ token }: { token: string }) {
             <Details token={token} onDone={() => { setDetailsSent(true); setTab("choose"); window.scrollTo({ top: 0 }); if (data.pending) fireConfetti(); load(); }} existing={data.member.details} />
           </>
         )}
-        {data && data.pending && data.member.detailsDone && (
+        {data && !data.portalOnly && data.pending && data.member.detailsDone && (
           <>
             <h1>Thank you, <span>{data.member.name.split(" ")[0]}</span></h1>
             <PayBox name={data.member.name} day={data.member.billingDay} token={token} />
@@ -598,7 +607,7 @@ export default function ClubPortal({ token }: { token: string }) {
             </div>
           </>
         )}
-        {data && !data.pending && data.member.detailsDone && (
+        {data && !data.portalOnly && !data.pending && data.member.detailsDone && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", margin: "6px 0 4px" }}>
               {data.member.welcomePhotoUrl && <img src={data.member.welcomePhotoUrl} alt="" style={{ width: 112, height: 112, borderRadius: "50%", objectFit: "cover", border: `4px solid ${PINK}` }} />}
@@ -612,12 +621,12 @@ export default function ClubPortal({ token }: { token: string }) {
               <button className={`cp-tab ${tab === "content" ? "on" : ""}`} onClick={() => setTab("content")}>My content</button>
               <button className={`cp-tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>My details</button>
             </div>
-            {tab === "home" && <Home data={data} plan={data.member.plan} token={token} reload={load} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
+            {tab === "home" && <Home data={data} plan={data.member.plan as "69" | "222"} token={token} reload={load} go={(t) => { setTab(t); window.scrollTo({ top: 0 }); }} />}
             {tab === "choose" && detailsSent && !data.cycle.choices.savedAt && (
               <div className="cp-box" style={{ borderColor: "#ff1f8e", background: "#fff5fa" }}><b>Your details have been sent to Vanessa.</b> Now choose the treatments you would like to promote this month, then press send.</div>
             )}
             {tab === "choose" && <Choose token={token} data={data} reload={load} />}
-            {tab === "content" && <Content data={data} plan={data.member.plan} token={token} reload={load} />}
+            {tab === "content" && <Content data={data} plan={data.member.plan as "69" | "222"} token={token} reload={load} />}
             {tab === "me" && (
               <div>
                 <h2>Add more photos</h2>

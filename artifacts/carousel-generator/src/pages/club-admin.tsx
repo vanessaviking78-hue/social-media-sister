@@ -19,14 +19,14 @@ type Month = {
   reelCount: number; postCount: number; aiUrls: string[]; aiStatus: string; aiError?: string; reelsStatus: string; note: string;
 };
 type Member = {
-  id: string; name: string; email: string; phone?: string; agreedName?: string; agreedAt?: string | null; plan: "69" | "222"; status: string; billingDay: number; detailsDone: boolean; canBuild?: boolean; link: string; nextBilling: string; daysToBilling: number;
+  id: string; name: string; email: string; phone?: string; agreedName?: string; agreedAt?: string | null; plan: "69" | "222" | "portal"; status: string; billingDay: number; detailsDone: boolean; canBuild?: boolean; link: string; nextBilling: string; daysToBilling: number;
   cycle: string; photoCount: number; hasClinicPhoto: boolean; photoUrls?: string[]; refPhotoUrl?: string; welcomePhotoUrl?: string; months: Month[];
 };
 type MonthFull = { id: string; content: { posts?: { n: number; label: string; images: string[]; caption: string; tags: string }[]; reels?: Reel[] }; aiUrls: string[] };
 
 const LIMITS = { "69": 5, "222": 7 } as const;
 // Two of the places are the About me posts she chooses in the builder, so the rest are picked here.
-const PICK_CAP = { "69": 4, "222": 14 } as const;
+const PICK_CAP = { "69": 4, "222": 14, portal: 0 } as const;
 const TOOLS: { id: string; name: string }[] = [
   { id: "empower", name: "Empower" }, { id: "november-posts", name: "November posts" }, { id: "xmas-posts", name: "Christmas and New Year posts" },
   { id: "unique", name: "Unique" }, { id: "halloween-posts", name: "Halloween posts" }, { id: "lux", name: "LUX" },
@@ -362,7 +362,8 @@ export default function ClubAdmin() {
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [plan, setPlan] = useState<"69" | "222">("69");
+  const [plan, setPlan] = useState<"69" | "222" | "portal">("69");
+  const [clientName, setClientName] = useState("");
   const [day, setDay] = useState(String(new Date().getDate()));
   const [over, setOver] = useState(false);
   const [made, setMade] = useState("");
@@ -377,7 +378,7 @@ export default function ClubAdmin() {
   useEffect(() => { if (window.location.hash === "#welcome") setTimeout(() => document.getElementById("welcome")?.scrollIntoView(), 400); }, []);
 
   const add = async () => {
-    const r = await fetch(`${API}/club/members`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify({ name, email, plan, billingDay: Number(day), overrideLimit: over }) });
+    const r = await fetch(`${API}/club/members`, { method: "POST", headers: jsonHeaders(), body: JSON.stringify({ name, email, plan, billingDay: Number(day), overrideLimit: over, clientName }) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) { toast.error(j.error || "Could not add"); return; }
     setMade(j.link);
@@ -407,7 +408,8 @@ export default function ClubAdmin() {
         <div className="flex flex-wrap gap-2">
           <input className="border rounded px-2 py-1" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
           <input className="border rounded px-2 py-1" placeholder="Email (optional)" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <select className="border rounded px-2 py-1" value={plan} onChange={(e) => setPlan(e.target.value as "69" | "222")}><option value="69">£69 club</option><option value="222">£275 club</option></select>
+          <select className="border rounded px-2 py-1" value={plan} onChange={(e) => setPlan(e.target.value as "69" | "222" | "portal")}><option value="69">£69 club</option><option value="222">£275 club</option><option value="portal">Portal only (no club, no billing)</option></select>
+          {plan === "portal" && <input className="border rounded px-2 py-1" placeholder="Their client name, e.g. ENHANCED" value={clientName} onChange={(e) => setClientName(e.target.value)} />}
           <label className="text-sm flex items-center gap-1">Billing day of the month <input className="border rounded px-2 py-1 w-16" value={day} onChange={(e) => setDay(e.target.value)} /></label>
           <label className="text-sm flex items-center gap-1"><input type="checkbox" checked={over} onChange={(e) => setOver(e.target.checked)} /> allow an extra place</label>
           <button className="px-4 py-1.5 rounded bg-pink-500 text-white" onClick={add}>Make their link</button>
@@ -416,12 +418,12 @@ export default function ClubAdmin() {
       </div>
 
       {loading && <p>Loading...</p>}
-      {(["69", "222"] as const).map((p) => {
+      {(["69", "222", "portal"] as const).map((p) => {
         const list = members.filter((m) => m.plan === p);
         const active = list.filter((m) => m.status === "active" || m.status === "pending").length;
         return (
           <div key={p} className="space-y-3">
-            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : "£275 club"} <span className="text-pink-500">{active} of {LIMITS[p]} places</span></h2>
+            <h2 className="font-bold uppercase">{p === "69" ? "£69 club" : p === "222" ? "£275 club" : "Portal only"} <span className="text-pink-500">{p === "portal" ? `${active} ${active === 1 ? "page" : "pages"}` : `${active} of ${LIMITS[p]} places`}</span></h2>
             {list.length === 0 && <p className="text-sm text-muted-foreground">No members yet.</p>}
             {list.map((m) => (
               <div key={m.id} className={`border rounded-lg p-4 space-y-2 ${m.status === "cancelled" ? "opacity-60" : ""} ${m.status === "pending" ? "border-pink-500 border-2" : ""}`}>

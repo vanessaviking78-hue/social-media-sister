@@ -28,6 +28,8 @@ const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 export const CLUB_PLANS = {
   "69": { price: 69, posts: 12, treatmentPosts: 3, aboutPosts: 3, picks: 9, reels: 10, stories: 12, tailoredReels: 4 },
   "222": { price: 275, posts: 16, treatmentPosts: 4, aboutPosts: 2, picks: 12, reels: 16, stories: 16, tailoredReels: 8 },
+  // A portal only member (a client or a freebie): no billing, no monthly build, just a private page to collect work from. Nothing on their page says club.
+  portal: { price: 0, posts: 0, treatmentPosts: 0, aboutPosts: 0, picks: 0, reels: 0, stories: 0, tailoredReels: 0 },
 } as const;
 type PlanId = keyof typeof CLUB_PLANS;
 // A few members get more than their plan as a favour. A member named here gets all of the built posts to use, with nothing held back to choose between.
@@ -310,6 +312,16 @@ router.get("/club/me/:token", async (req: Request, res: Response) => {
     }
     if (m.status !== "active") {
       res.status(403).json({ ended: true, error: "Your club membership has ended, so the portal is closed. Pop me a message if you would like to come back." });
+      return;
+    }
+    if (m.plan === "portal") {
+      // Portal only: just the posts and images Vanessa has sent to their Client Bank. No months, choices or billing.
+      const pid = Number((m as any).preset_id) || 0;
+      const rows = pid ? (await db.execute(sql`SELECT id, post_type, content, created_at FROM scheduled_posts WHERE preset_id = ${pid} AND status = 'draft' ORDER BY created_at DESC LIMIT 200`)).rows as any[] : [];
+      const bank = rows.map((r) => ({ id: r.id, postType: r.post_type, title: str(r.content?.title, 120), caption: str(r.content?.caption, 4000), imageUrls: Array.isArray(r.content?.imageUrls) ? r.content.imageUrls.filter((u: any) => typeof u === "string") : [], videoUrl: typeof r.content?.videoUrl === "string" ? r.content.videoUrl : null, createdAt: r.created_at }));
+      const files = Array.isArray(m.photo_urls) ? m.photo_urls.filter((u) => typeof u === "string") : [];
+      res.set("Cache-Control", "private, no-store");
+      res.json({ portalOnly: true, bank, files, extras: [], member: publicMember(m), cycle: { month: "", nextBilling: "", cutOff: "", open: false, status: "building", choices: {} }, months: [] });
       return;
     }
     const { date, month } = nextBilling(m.billing_day);
@@ -801,14 +813,50 @@ British English. No em dashes.` },
   }
 });
 
+// Makes a portal only member (once per name), active straight away, and joins her to her existing client page so what Vanessa sends to that client's Client Bank turns up on her page.
+async function makePortalMember(name: string, email: string, clientName: string): Promise<{ id: string; slug: string; clientLinked: boolean; existed: boolean }> {
+  const found = (await db.execute(sql`SELECT id, slug, token FROM club_members WHERE plan = 'portal' AND lower(name) = lower(${name}) LIMIT 1`)).rows[0] as any;
+  const presets = (await db.select().from(clientPresetsTable)) as any[];
+  const want = clientName.trim().toLowerCase();
+  const preset = presets.find((p) => String(p.name ?? "").trim().toLowerCase() === want);
+  if (found) {
+    if (preset) await db.execute(sql`UPDATE club_members SET preset_id = ${preset.id} WHERE id = ${found.id} AND preset_id IS NULL`);
+    return { id: found.id, slug: found.slug || found.token, clientLinked: !!preset, existed: true };
+  }
+  const id = uuid();
+  const token = randomBytes(18).toString("base64url");
+  const slugNew = makeSlug(name);
+  await db.execute(sql`INSERT INTO club_members (id, token, slug, plan, status, name, email, billing_day, details_done) VALUES (${id}, ${token}, ${slugNew}, 'portal', 'active', ${name}, ${email}, 1, true)`);
+  if (preset) await db.execute(sql`UPDATE club_members SET preset_id = ${preset.id} WHERE id = ${id}`);
+  return { id, slug: slugNew, clientLinked: !!preset, existed: false };
+}
+
+// Kelly (ENHANCED) and Julie Pawson Aesthetics (JPA) collect their work from a portal only page, set up once on the first start after this was added.
+export async function seedPortalMembers(): Promise<void> {
+  try {
+    await ensureTables();
+    for (const [name, client] of [["Kelly", "ENHANCED"], ["Julie Pawson Aesthetics", "Julie Pawson Aesthetics LTD"]] as const) {
+      const r = await makePortalMember(name, "", client);
+      logger.info({ name, clientLinked: r.clientLinked, existed: r.existed }, "Portal member ready");
+    }
+  } catch (err) {
+    logger.warn({ err }, "Could not set up the portal members");
+  }
+}
+
 router.post("/club/members", requireAuth, async (req: Request, res: Response) => {
   try {
     await ensureTables();
-    const b = req.body as { name?: string; email?: string; plan?: string; billingDay?: number };
-    const plan = b.plan === "222" ? "222" : b.plan === "69" ? "69" : null;
+    const b = req.body as { name?: string; email?: string; plan?: string; billingDay?: number; clientName?: string };
+    const plan = b.plan === "222" ? "222" : b.plan === "69" ? "69" : b.plan === "portal" ? "portal" : null;
     const name = str(b.name, 100);
     if (!plan || !name) {
       res.status(400).json({ error: "A name and a plan (69 or 222) are needed" });
+      return;
+    }
+    if (plan === "portal") {
+      const made = await makePortalMember(name, str(b.email, 160), str(b.clientName, 100) || name);
+      res.json({ id: made.id, link: appLink(`/club/${made.slug}`), clientLinked: made.clientLinked });
       return;
     }
     const limit = PLACES[plan];
@@ -1251,7 +1299,7 @@ router.patch("/club/months/:id", requireAuth, async (req: Request, res: Response
 export async function clubDueCheck(): Promise<void> {
   try {
     await ensureTables();
-    const ms = (await db.execute(sql`SELECT * FROM club_members WHERE status = 'active' AND details_done = true`)).rows as unknown as Member[];
+    const ms = (await db.execute(sql`SELECT * FROM club_members WHERE status = 'active' AND details_done = true AND plan <> 'portal'`)).rows as unknown as Member[];
     const started: string[] = [];
     for (const m of ms) {
       const { date, month } = nextBilling(m.billing_day);
