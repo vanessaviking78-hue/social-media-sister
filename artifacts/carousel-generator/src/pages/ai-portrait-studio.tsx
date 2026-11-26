@@ -1002,6 +1002,7 @@ const DECNEW_PRESETS: (PhotoStudioPreset & { defaultColour?: string })[] = [
   { id: "dc-08", name: "Tree Glow Portrait", hasColour: false, defaultColour: "navy blue" },
   { id: "dc-09", name: "Snowfall Motion Portrait", hasColour: false, defaultColour: "navy blue" },
   { id: "dc-11", name: "Candlelit Red Lip Shot", hasColour: false, defaultColour: "navy blue" },
+  ...TEXTBLAZE_PRESETS.filter((p) => p.group === "CLIENT SHOTS").map((p, i) => ({ id: `dc-${21 + i}`, name: p.name, hasColour: false, defaultColour: p.defaultColour })),
 ];
 
 const TEXTBLAZE_GROUPS = ["LUXURY XMAS", "CLIENT SHOTS", "DAVID BAILEY-ESQUE", "LIFESTYLE", "AI PHOTOSHOOTS", "CLINICAL JAN"];
@@ -3108,14 +3109,14 @@ export default function AiPortraitStudio() {
 {activeSection === "decnew" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">DECNEW</p>
-<p className="text-xs text-muted-foreground mb-3">Your TextBlaze December prompts. Face lock and hyper realism are on for every one that features her. Where a prompt has a colour, tick it and type the colour you want (blank uses navy blue).</p>
+<p className="text-xs text-muted-foreground mb-3">Your TextBlaze December prompts plus the clientshots prompts. Face lock and hyper realism are on for every one that features her. Where a prompt has a colour, tick it and type the colour you want (blank uses navy blue).</p>
 <div className="mb-4" onClick={(e) => e.stopPropagation()}>
   <button
     type="button"
     className="text-[11px] underline text-muted-foreground"
     onClick={() => setSelectedPresets((prev) => { const n = new Set(prev); DECNEW_PRESETS.forEach((p) => n.add(p.id)); return n; })}
   >
-    Select all 10
+    Select all {DECNEW_PRESETS.length}
   </button>
 </div>
 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">

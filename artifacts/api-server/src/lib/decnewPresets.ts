@@ -1,4 +1,5 @@
 import type { PhotoStudioPreset } from "./aiPortraitScenarios";
+import { TEXTBLAZE_PRESETS } from "./textblazePresets";
 
 // DECNEW: the TextBlaze DECEMBER folder prompts (/DE001 to /DE013; Minimalist Festive Flat Lay, Winter Desk Workspace and Frosted Editorial Look dropped on 26 Nov), copied across 26 Nov 2026.
 // Her TextBlaze colour field became a colour box on each card. The colour is passed in as the xmasColour
@@ -44,4 +45,9 @@ export const DECNEW_PRESETS: (PhotoStudioPreset & DecnewMeta)[] = [
   dc(8, "Tree Glow Portrait", `Portrait in front of warm festive lights, shallow depth of field, soft shadows, ${C} threaded subtly through décor.`, DEFAULT_COLOUR),
   dc(9, "Snowfall Motion Portrait", `Snow falling through the frame, soft blur, crisp winter palette, ${C} included through accessories or styling.`, DEFAULT_COLOUR),
   dc(11, "Candlelit Red Lip Shot", `Classic winter beauty portrait with bold lip, warm candlelight glow, atmospheric shadows, tailored ${C} detail in styling.`, DEFAULT_COLOUR),
+  // The 12 clientshots prompts (/CL001 to /CL013), reused exactly as they are in the TEXTBLAZE tab.
+  ...TEXTBLAZE_PRESETS.filter((p) => p.group === "CLIENT SHOTS").map((p, i) => ({
+    ...p,
+    id: `dc-${String(21 + i)}`,
+  })),
 ];
