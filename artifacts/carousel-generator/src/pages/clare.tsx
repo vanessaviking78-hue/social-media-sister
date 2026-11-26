@@ -568,8 +568,11 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
   for (const l of fit.lines) { ctx.fillText(l, LEFT, y); y += fit.px * 1.55; }
 }
 
-function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void }) {
+function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick, bowDrag }: { post: Post; n: number; photo: Photo | null; fonts: Fonts; tf: TitleFont; look: Look; logo: HTMLImageElement | null; onClick?: () => void; bowDrag?: { dx: number; dy: number; set: (dx: number, dy: number) => void } | null }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  // BOWS: with the bow on, dragging the picture moves the bow. dx and dy are shares of the post's width and height.
+  const drag = useRef<{ x: number; y: number; dx: number; dy: number; moved: boolean } | null>(null);
+  const clampB = (v: number) => Math.max(-0.5, Math.min(0.5, v));
   useEffect(() => {
     let live = true;
     (async () => {
@@ -581,7 +584,20 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
     })();
     return () => { live = false; };
   }, [post, n, photo, fonts, tf, look, logo, BOW_VERSION]);
-  return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
+  return <canvas ref={ref} width={W} height={H}
+    onClick={() => { if (drag.current?.moved) { drag.current = null; return; } onClick?.(); }}
+    onPointerDown={bowDrag ? (e) => { drag.current = { x: e.clientX, y: e.clientY, dx: bowDrag.dx, dy: bowDrag.dy, moved: false }; (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } : undefined}
+    onPointerMove={bowDrag ? (e) => {
+      const d = drag.current; if (!d) return;
+      const r = (e.target as HTMLElement).getBoundingClientRect();
+      const mx = e.clientX - d.x, my = e.clientY - d.y;
+      if (Math.abs(mx) + Math.abs(my) > 3) d.moved = true;
+      if (d.moved) bowDrag.set(clampB(d.dx + mx / r.width), clampB(d.dy + my / r.height));
+    } : undefined}
+    onPointerUp={bowDrag ? () => { if (drag.current && !drag.current.moved) drag.current = null; } : undefined}
+    style={bowDrag ? { touchAction: "none" } : undefined}
+    className={`w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 ${bowDrag ? "cursor-move" : "cursor-pointer"}`}
+    title={bowDrag ? "Drag to move the bow" : n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
 const nextDay = (hhmm: string) => {
@@ -1468,11 +1484,9 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     )}
                     {!freebie && (post.bow ?? bow.on) && (() => { const pos = post.bowPos ?? { dx: bow.dx, dy: bow.dy, size: bow.size }; return (
                       <div className="flex items-center gap-3 flex-wrap rounded-lg border border-pink-400/40 px-3 py-1.5 w-full">
-                        <span className="text-sm font-semibold">Move the bow</span>
-                        {([["Size", "size", 0.6, 1.6, 0.05], ["Left and right", "dx", -0.5, 0.5, 0.01], ["Up and down", "dy", -0.5, 0.5, 0.01]] as const).map(([lab, key, mn, mx, st]) => (
-                          <label key={key} className="flex items-center gap-2 text-xs"><span className="text-white/60">{lab}</span>
-                            <input type="range" min={mn} max={mx} step={st} className="w-32" value={pos[key]} onChange={(e) => patch(post.id, { bowPos: { ...pos, [key]: Number(e.target.value) } })} /></label>
-                        ))}
+                        <span className="text-sm font-semibold">Drag the bow on the picture to move it</span>
+                        <label className="flex items-center gap-2 text-xs"><span className="text-white/60">Size</span>
+                          <input type="range" min={0.6} max={1.6} step={0.05} className="w-32" value={pos.size} onChange={(e) => patch(post.id, { bowPos: { ...pos, size: Number(e.target.value) } })} /></label>
                         {post.bowPos && <button type="button" className="rounded border border-white/20 px-2 py-1 text-xs hover:border-white/50" onClick={() => patch(post.id, { bowPos: undefined })}>Back to the page setting</button>}
                       </div>
                     ); })()}
@@ -1561,7 +1575,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                 </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {(post.vstory ? [0, 1, 2] : post.one ? [0] : post.four ? [0, 1, 2, 3] : [0, 1, 2, 3, 4]).map((n) => (
-                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} onClick={(!post.quote || post.voucher) && n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
+                    <SlideCanvas key={n} post={post} n={n} photo={photoFor(post, n)} fonts={fonts} tf={tf} look={lookFor(post)} logo={logo} bowDrag={!freebie && (post.bow ?? bow.on) && (n === 0 || bow.all) ? { dx: (post.bowPos ?? bow).dx, dy: (post.bowPos ?? bow).dy, set: (dx, dy) => patch(post.id, { bowPos: { dx, dy, size: (post.bowPos ?? bow).size } }) } : null} onClick={(!post.quote || post.voucher) && n < (post.four ? 3 : 4) && photoCount(post) > 1 ? () => patch(post.id, { photos: post.photos.map((v, i) => (i === n ? v + 1 : v)) }) : undefined} />
                   ))}
                 </div>
                 {(() => {
