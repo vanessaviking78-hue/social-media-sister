@@ -22,7 +22,7 @@ import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SparkleControls } from "@/components/sparkle-controls";
 import { BowControls } from "@/components/bow-controls";
-import { drawBow, loadBowChoice, prepareBow, saveBowChoice, type ReadyBow } from "@/lib/bows";
+import { drawBow, loadBowChoice, prepareBow, saveBowChoice, RIBBON_IDS, RIBBON_LABELS, ribbonUrl, type ReadyBow, type RibbonId } from "@/lib/bows";
 import { ColourPicker as BrandColourPicker } from "@/components/colour-picker";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { makeRiseReel } from "@/lib/reel";
@@ -229,6 +229,7 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
 
 type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number; tScale?: number[]; tY?: number[]; bY?: number[] };
 type Post = {
+  bowRibbon?: RibbonId; // this post only: which bow picture (across, down, diagonal, corner); empty means the page setting
   bowPos?: { dx: number; dy: number; size: number }; // this post only: where the bow sits and how big it is
   bow?: boolean; // this post only: true puts the bow on, false takes it off, unset follows the page-wide Bows switch
   id: string;
@@ -422,12 +423,20 @@ function drawSubtitle(ctx: CanvasRenderingContext2D, f: Fonts, lines: string[], 
 let CURRENT_BOW: ReadyBow | null = null; // the page-wide bow (null when the page switch is off)
 let BOW_STYLE: ReadyBow | null = null; // the chosen ribbon and colour, ready even when the page switch is off, for posts that switch the bow on themselves
 let BOW_VERSION = 0;
+let BOW_RIBBONS: Partial<Record<RibbonId, ReadyBow>> = {}; // every bow picture in the page colour, so a post can pick its own
+async function loadRibbons(choice: Parameters<typeof prepareBow>[0]) {
+  const out: Partial<Record<RibbonId, ReadyBow>> = {};
+  await Promise.all(RIBBON_IDS.map(async (id) => { const r = await prepareBow(choice ? { ...choice, on: true, ribbon: id } : choice); if (r) out[id] = r; }));
+  BOW_RIBBONS = out;
+}
 
 // REELS: while a rising text reel is being made, the post is drawn in three separate pictures: "bg" is the photo or colour (and the wash), "text" is only the text box or writing on a clear background, "top" is the logo and bow.
 let REEL_LAYER: "bg" | "text" | null = null;
 
 function effectiveBow(post: Post): ReadyBow | null {
-  const rb = post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null;
+  let rb = post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null;
+  const mine = post.bowRibbon ? BOW_RIBBONS[post.bowRibbon] : undefined;
+  if (rb && mine) rb = mine;
   return rb && post.bowPos ? { ...rb, choice: { ...rb.choice, ...post.bowPos } } : rb;
 }
 
@@ -955,7 +964,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const [, setBowTick] = useState(0);
   useEffect(() => {
     let live = true;
-    prepareBow({ ...bow, on: true }).then((r) => { if (!live) return; BOW_STYLE = r; CURRENT_BOW = bow.on ? r : null; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
+    Promise.all([prepareBow({ ...bow, on: true }), loadRibbons(bow)]).then(([r]) => { if (!live) return; BOW_STYLE = r; CURRENT_BOW = bow.on ? r : null; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
     return () => { live = false; };
   }, [bow]);
   // COLOUR QUESTIONS: the first time a client's page opens it asks for the five colours, remembers them for that client, and uses them on every tab.
@@ -998,6 +1007,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
     BOW_STYLE = await prepareBow({ ...bow, on: true });
+    await loadRibbons(bow);
     CURRENT_BOW = bow.on ? BOW_STYLE : null;
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
@@ -1151,6 +1161,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
   const reelMade = async (post: Post): Promise<string> => {
     await ensureFonts(fonts);
     BOW_STYLE = await prepareBow({ ...bow, on: true });
+    await loadRibbons(bow);
     CURRENT_BOW = bow.on ? BOW_STYLE : null;
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const mk = (layer: "bg" | "text" | "bow" | "logo") => {
@@ -1587,14 +1598,24 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                       <button type="button" aria-pressed={bowOn} title="Put the bow on or off for this post only. Pick the ribbon and colour in the Bows box at the top." onClick={() => patch(post.id, { bow: !bowOn })} className={`rounded border px-3 py-1.5 text-sm ${bowOn ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>Bow: {bowOn ? "On" : "Off"}</button>
                     ); })()}
                     {!freebie && (
-                      <button type="button" title="Give every post on this page this post's bow: on or off, size and position" className="rounded border border-pink-400/60 px-3 py-1.5 text-sm hover:bg-pink-400/15" onClick={() => { const on = post.bow ?? bow.on; const pos = post.bowPos; setPosts((l) => l.map((p) => ({ ...p, bow: on, bowPos: pos ? { ...pos } : undefined }))); toast.success(on ? "Every post now has the bow, placed like this one" : "The bow is off on every post"); }}>Change all</button>
+                      <button type="button" title="Give every post on this page this post's bow: on or off, size and position" className="rounded border border-pink-400/60 px-3 py-1.5 text-sm hover:bg-pink-400/15" onClick={() => { const on = post.bow ?? bow.on; const pos = post.bowPos; setPosts((l) => l.map((p) => ({ ...p, bow: on, bowRibbon: post.bowRibbon, bowPos: pos ? { ...pos } : undefined }))); toast.success(on ? "Every post now has the bow, placed like this one" : "The bow is off on every post"); }}>Change all</button>
                     )}
                     {!freebie && (post.bow ?? bow.on) && (() => { const pos = post.bowPos ?? { dx: bow.dx, dy: bow.dy, size: bow.size }; return (
                       <div className="flex items-center gap-3 flex-wrap rounded-lg border border-pink-400/40 px-3 py-1.5 w-full">
+                        <div className="flex gap-1.5 flex-wrap w-full items-center">
+                          <span className="text-sm font-semibold mr-1">Pick the bow</span>
+                          {RIBBON_IDS.map((id) => { const cur = post.bowRibbon ?? bow.ribbon; return (
+                            <button key={id} type="button" aria-label={`${RIBBON_LABELS[id]} bow`} title={RIBBON_LABELS[id]} onClick={() => patch(post.id, { bowRibbon: id, bowPos: { dx: 0, dy: 0, size: (post.bowPos ?? bow).size } })}
+                              className={`rounded border p-1 text-xs ${cur === id ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>
+                              <img src={ribbonUrl(id)} alt="" className="h-10 w-10 object-contain bg-white/90 rounded" />
+                              <span className="block text-center">{RIBBON_LABELS[id]}</span>
+                            </button>
+                          ); })}
+                        </div>
                         <span className="text-sm font-semibold">Drag the bow on the picture to move it</span>
                         <label className="flex items-center gap-2 text-xs"><span className="text-white/60">Size</span>
                           <input type="range" min={0.6} max={1.6} step={0.05} className="w-32" value={pos.size} onChange={(e) => patch(post.id, { bowPos: { ...pos, size: Number(e.target.value) } })} /></label>
-                        {post.bowPos && <button type="button" className="rounded border border-white/20 px-2 py-1 text-xs hover:border-white/50" onClick={() => patch(post.id, { bowPos: undefined })}>Back to the page setting</button>}
+                        {post.bowPos && <button type="button" className="rounded border border-white/20 px-2 py-1 text-xs hover:border-white/50" onClick={() => patch(post.id, { bowPos: undefined, bowRibbon: undefined })}>Back to the page setting</button>}
                       </div>
                     ); })()}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!(post.caption || post.vstory)}><Download className="w-4 h-4 mr-2" />Download</Button>
