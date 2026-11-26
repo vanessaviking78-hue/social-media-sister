@@ -27,7 +27,7 @@ type OrderRow = {
 
 const mimeOf = (k: string) => (k.endsWith(".png") ? "image/png" : k.endsWith(".webp") ? "image/webp" : "image/jpeg");
 
-async function genOne(ai: GoogleGenAI, ref: { mimeType: string; data: string }, prompt: string): Promise<Buffer> {
+export async function genOne(ai: GoogleGenAI, ref: { mimeType: string; data: string }, prompt: string): Promise<Buffer> {
   let lastErr = "";
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {

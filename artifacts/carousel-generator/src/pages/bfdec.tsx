@@ -196,7 +196,7 @@ export default function BfDec() {
             {state === "closed" && <p className="ps-p" style={{ marginTop: 16 }}>This Black Friday offer has now ended. Message me and I will tell you what I can do.</p>}
             <ul className="xs-list">
               <li>20 Christmas posts, written for your clinic</li>
-              <li>10 Christmas photos of you, made from the photo you upload</li>
+              <li>10 Christmas photos of you, made from the photo you upload, in your colours</li>
               <li>Your colours, your area and your logo throughout</li>
               <li>Everything delivered in your own private portal, ready to download</li>
             </ul>
@@ -270,7 +270,7 @@ export default function BfDec() {
   );
 }
 
-type PortalItem = { id: string; kind: "post" | "photo"; label: string; url: string };
+type PortalItem = { id: string; kind: "post" | "photo"; label: string; url: string; n?: number };
 
 export function BfDecView({ slug }: { slug: string }) {
   const [d, setD] = useState<{ name: string; ready: boolean; expired: boolean; items: PortalItem[]; expiresAt?: string } | null | "none">(null);
@@ -298,7 +298,7 @@ export function BfDecView({ slug }: { slug: string }) {
   };
   const days = d && d !== "none" && d.expiresAt ? Math.max(0, Math.ceil((new Date(d.expiresAt).getTime() - Date.now()) / 86400000)) : null;
   const posts = d && d !== "none" ? d.items.filter((i) => i.kind === "post") : [];
-  const photos = d && d !== "none" ? d.items.filter((i) => i.kind === "photo") : [];
+  const photos = d && d !== "none" ? d.items.filter((i) => i.kind === "photo").sort((a, b) => (a.n ?? 99) - (b.n ?? 99)) : [];
   const grid = (list: PortalItem[], word: string) => (
     <div className="ps-grid">
       {list.map((im, i) => (

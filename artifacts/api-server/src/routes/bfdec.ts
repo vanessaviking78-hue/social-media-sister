@@ -10,6 +10,7 @@ import { appLink } from "../lib/freeSampleWorker";
 import { notifyOwner } from "../lib/notify";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
+import { runBfdecPhotos, BFDEC_PHOTO_COUNT } from "../lib/bfdecWorker";
 
 // DECEMBER BUNDLE at /bfdec. Black Friday offer: 20 Christmas pieces of content and 10 Christmas photos, delivered in the person's own portal.
 // Full price 699 pounds. Code BFDEC makes it 149 pounds, only between 8pm Thu 26 Nov 2026 and 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
@@ -29,7 +30,7 @@ const OPENS_AT = new Date(process.env.BFDEC_OPENS_AT || "2026-11-26T20:00:00Z").
 const CLOSES_AT = new Date(process.env.BFDEC_CLOSES_AT || "2026-11-27T20:00:00Z").getTime();
 const MONZO_LINK = process.env.BFDEC_MONZO || "https://monzo.com/pay/r/the-cyber-suite_d4YOpp0fx9iPkj";
 const POSTS_TARGET = 20;
-const PHOTOS_TARGET = 10;
+const PHOTOS_TARGET = BFDEC_PHOTO_COUNT;
 const KEEP_DAYS = 90;
 
 const pounds = (p: number) => `£${(p / 100).toFixed(2).replace(/\.00$/, "")}`;
@@ -73,6 +74,7 @@ function ensureTable(): Promise<void> {
       ready_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ
     )`)
+    .then(() => db.execute(sql`ALTER TABLE bfdec_orders ADD COLUMN IF NOT EXISTS photo_state TEXT NOT NULL DEFAULT 'idle'`))
     .then(() => undefined);
   ready = p;
   p.catch(() => {
@@ -81,7 +83,7 @@ function ensureTable(): Promise<void> {
   return p;
 }
 
-type Item = { id: string; kind: "post" | "photo"; label: string; url: string };
+type Item = { id: string; kind: "post" | "photo"; label: string; url: string; n?: number };
 type OrderRow = { id: string; photo_key: string; logo_key: string; items: Item[] };
 const keyOf = (url: string) => url.replace(/^\/api\/media\//, "");
 
@@ -281,7 +283,7 @@ router.get("/bfdec/view/:slug", async (req: Request, res: Response) => {
 // Vanessa's side.
 router.get("/bfdec/orders", requireAuth, async (_req: Request, res: Response) => {
   await ensureTable();
-  const rows = (await db.execute(sql`SELECT id, name, email, phone, insta, area, colours, amount_pence, pay_state, status, note, slug, marketing, photo_key, logo_key, items, created_at, expires_at
+  const rows = (await db.execute(sql`SELECT id, name, email, phone, insta, area, colours, amount_pence, pay_state, photo_state, status, note, slug, marketing, photo_key, logo_key, items, created_at, expires_at
     FROM bfdec_orders ORDER BY created_at DESC LIMIT 200`)).rows as unknown as Record<string, unknown>[];
   res.json({
     postsTarget: POSTS_TARGET,
@@ -301,7 +303,13 @@ router.get("/bfdec/orders", requireAuth, async (_req: Request, res: Response) =>
 router.post("/bfdec/orders/:id/payment-seen", requireAuth, async (req: Request, res: Response) => {
   await ensureTable();
   const seen = req.body?.seen !== false;
-  await db.execute(sql`UPDATE bfdec_orders SET pay_state = ${seen ? "seen" : "claimed"}, updated_at = now() WHERE id = ${str(req.params.id, 60)}`);
+  const id = str(req.params.id, 60);
+  await db.execute(sql`UPDATE bfdec_orders SET pay_state = ${seen ? "seen" : "claimed"}, updated_at = now() WHERE id = ${id}`);
+  // Payment seen starts the ten Christmas photos by itself, in the person's colours. Only the first time.
+  if (seen) {
+    const r = (await db.execute(sql`SELECT photo_state FROM bfdec_orders WHERE id = ${id}`)).rows[0] as { photo_state: string } | undefined;
+    if (r && r.photo_state === "idle") void runBfdecPhotos(id);
+  }
   res.json({ ok: true });
 });
 
@@ -360,6 +368,19 @@ router.post("/bfdec/orders/:id/publish", requireAuth, async (req: Request, res: 
   const slug = r.slug || (await makeSlug(r.name));
   await db.execute(sql`UPDATE bfdec_orders SET slug = ${slug}, status = 'ready', ready_at = COALESCE(ready_at, now()), expires_at = COALESCE(expires_at, now() + (${KEEP_DAYS} || ' days')::interval), updated_at = now() WHERE id = ${id}`);
   res.json({ ok: true, slug, link: appLink(`/${slug}`) });
+});
+
+// Makes the missing Christmas photos (or just the ones in `only`). Needs the payment ticked.
+router.post("/bfdec/orders/:id/photos", requireAuth, async (req: Request, res: Response) => {
+  await ensureTable();
+  const id = str(req.params.id, 60);
+  const r = (await db.execute(sql`SELECT pay_state, status FROM bfdec_orders WHERE id = ${id}`)).rows[0] as { pay_state: string; status: string } | undefined;
+  if (!r) { res.status(404).json({ error: "Not found" }); return; }
+  if (r.pay_state !== "seen") { res.status(402).json({ error: "Tick payment seen first" }); return; }
+  if (r.status === "expired") { res.status(410).json({ error: "This one has expired and the files are deleted" }); return; }
+  const only = Array.isArray(req.body?.only) ? (req.body.only as unknown[]).map(Number).filter((n) => n >= 1 && n <= BFDEC_PHOTO_COUNT) : undefined;
+  void runBfdecPhotos(id, only && only.length ? only : undefined);
+  res.json({ ok: true });
 });
 
 router.post("/bfdec/orders/:id/unpublish", requireAuth, async (req: Request, res: Response) => {
