@@ -138,7 +138,11 @@ export const NEWXMAS_POSTS: ClareSectionPost[] = NEWXMAS_ROWS.map((r, i) => ({ i
 // DECEMBER-NEW: 20 ready written Christmas carousels (cover, three body slides, CTA slide). Nothing here is rewritten by the AI.
 import { DECEMBER_ROWS, type DecemberRow } from "./decembernew";
 export const DECEMBERNEW_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "decembernew", label: "DECEMBER-NEW", word: "" }];
-export const DECEMBERNEW_POSTS: ClareSectionPost[] = DECEMBER_ROWS.map((r, i) => ({ id: `dnp-${r.id}`, group: "decembernew" as const, label: `${i + 1}. ${r.hook.length > 70 ? r.hook.slice(0, 67) + "..." : r.hook}`, brief: "", word: r.word, dn: r }));
+const dnBase: ClareSectionPost[] = DECEMBER_ROWS.map((r) => ({ id: `dnp-${r.id}`, group: "decembernew" as const, label: r.hook, brief: "", word: r.word, dn: r }));
+// Three posts borrowed from her other Christmas lists: nx31 and nx33 from NEWXMAS (4 slide carousels) and line 3 from XMAS FEELS (a single image).
+const dnNx: ClareSectionPost[] = NEWXMAS_ROWS.filter((r) => r.id === "nx31" || r.id === "nx33").map((r) => ({ id: `dnp-${r.id}`, group: "decembernew" as const, label: r.hook, brief: "", word: r.word, nx: r }));
+const dnXf: ClareSectionPost[] = XMASFEELS_ROWS.filter((r) => r.id === "xf3").map((r) => ({ id: `dnp-${r.id}`, group: "decembernew" as const, label: r.line, brief: "", word: "", xf: r }));
+export const DECEMBERNEW_POSTS: ClareSectionPost[] = [...dnBase, ...dnNx, ...dnXf].map((t, i) => ({ ...t, label: `${i + 1}. ${t.label.length > 70 ? t.label.slice(0, 67) + "..." : t.label}` }));
 
 // XMAS FEELS: 40 emotive single image Christmas posts, her line on the picture word for word, caption already written.
 import { XMASFEELS_ROWS, type XmasFeelsRow } from "./xmasfeels";

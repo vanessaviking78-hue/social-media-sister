@@ -104,16 +104,6 @@ export const DECEMBER_ROWS: DecemberRow[] = [
   "caption": "Here are three things I hear in my clinic every December. The first is \"I have been wrapping since September and I am still behind.\" I tell her that is called being a woman, and then I make her sit down for ten minutes.\n\nThe second is \"I will book in January.\" I smile, because January me is a very busy woman. Those who book now get a calmer, happier December.\n\nThe third is \"Is it okay if I cry in the chair?\" Always, and I keep the tissues close by. This room is full of kindness and zero judgement. Which one is you? Tell me in the comments, I promise not to tell anyone."
  },
  {
-  "id": "dn11",
-  "hook": "A woman's Christmas Day, hour by hour.",
-  "s2": "5am: wide awake and mentally basting a turkey that is still frozen. 8am: opening presents with a coffee going cold on the side. 10am: the first person asks what is for lunch.",
-  "s3": "1pm: dinner is served and I have still not sat down. 3pm: the King's speech, and the first moment of peace all day. 5pm: someone suggests a board game.",
-  "s4": "9pm: stretchy trousers, a plate of leftovers and no regrets. 10pm: asleep on the sofa with the cat. A perfect day, honestly.",
-  "cta": "Which hour of the day is yours? Tell me in the comments.",
-  "word": "",
-  "caption": "A woman's Christmas Day, hour by hour. At 5am she is wide awake and mentally basting a turkey that is still frozen. By 8am she is opening presents with a coffee going cold on the side, and by 10am somebody has asked what is for lunch.\n\nAt 1pm dinner is served and she has still not sat down. At 3pm the King's speech arrives, and with it the first moment of peace all day. By 5pm someone suggests a board game and she suggests a nap.\n\nBy 9pm it is stretchy trousers, a plate of leftovers and no regrets, and by 10pm she is asleep on the sofa with the cat. A perfect day, honestly. Which hour of Christmas Day is yours? Tell me in the comments."
- },
- {
   "id": "dn12",
   "hook": "Dear Santa, the elf on the shelf has more energy than me.",
   "s2": "December is a marathon with a glitter finish line. We run it in the dark, carrying shopping and other people's feelings. Somebody had better hand out water.",
@@ -154,16 +144,6 @@ export const DECEMBER_ROWS: DecemberRow[] = [
   "caption": "Is your skin feeling tight and dry right now? Warm, dry air from central heating pulls water out of your skin all day long. You may not notice until the evening, when everything looks a little tired and flat.\n\nThat tight feeling after a shower is your skin asking for help. Heavy perfume and very hot baths make it worse, while gentle cleansing and a rich cream are much kinder. Hydrating treatments and a good night cream put the water back where it belongs, and the change is quick and very satisfying.\n\nYour skin can feel soft again, and I would love to help you get there before party season starts. What is your skin saying to you right now? Comment HYDRATE for more info."
  },
  {
-  "id": "dn16",
-  "hook": "I decorated my clinic, and this is the honest rating.",
-  "s2": "The tree: elegant, even if I say so myself. The wonky bauble somebody made me: the best thing in the room. The fairy lights: a mild fire risk, but pretty.",
-  "s3": "The tinsel: I lost that battle and it is everywhere. I found some in my car this morning. It may be there until Easter.",
-  "s4": "The result is a room that smells and feels like Christmas, which is exactly what I wanted. I hope you feel it the moment you walk in. Come and have a look.",
-  "cta": "Where do you sit on the tinsel debate? Tell me in the comments.",
-  "word": "",
-  "caption": "I decorated my clinic and this is the honest rating. The tree is elegant, even if I say so myself. The wonky bauble somebody made me is the best thing in the room, and the fairy lights are a mild fire risk but very pretty.\n\nThe tinsel is another story. I lost that battle and it is everywhere. I found some in my car this morning and I expect it will be there until Easter.\n\nThe result is a room that smells and feels like Christmas, which is exactly what I wanted. I hope you feel it the moment you walk in, so come and have a look. Where do you sit on the tinsel debate? Tell me in the comments."
- },
- {
   "id": "dn17",
   "hook": "Thank you for 2026.",
   "s2": "This year you trusted me with your skin, your confidence and sometimes your secrets. I never take that lightly. It is the best part of my job.",
@@ -172,16 +152,6 @@ export const DECEMBER_ROWS: DecemberRow[] = [
   "cta": "What was your best moment of 2026? Tell me in the comments, I would love to hear it.",
   "word": "",
   "caption": "Thank you for 2026. This year you trusted me with your skin, your confidence and sometimes your secrets. I never take that lightly, and it is the best part of my job.\n\nYou told me about weddings, new jobs, tough days and wonderful ones. You made me laugh more than I can say, and I have loved every conversation we have had in that chair.\n\nEvery one of you made my year better, and I am so grateful you chose to spend your time with me. Thank you, from the bottom of my heart. What was your best moment of 2026? Tell me in the comments, I would love to hear it."
- },
- {
-  "id": "dn18",
-  "hook": "Christmas jumper or smart dress? The great clinic debate.",
-  "s2": "The jumper is comfy, festive and forgiving at the waist. It says I am here for the fun. Nobody has ever regretted wearing one.",
-  "s3": "The dress has sparkle, confidence and a good excuse to feel gorgeous. It says I have arrived. Heels optional, glow compulsory.",
-  "s4": "Whichever you choose, glowing skin goes with both. It is the one accessory that never clashes. Take it with you everywhere.",
-  "cta": "Jumper or dress? Tell me in the comments.",
-  "word": "",
-  "caption": "Christmas jumper or smart dress? The great clinic debate. The jumper is comfy, festive and forgiving at the waist, and nobody has ever regretted wearing one. It says I am here for the fun.\n\nThe dress has sparkle, confidence and a very good excuse to feel gorgeous. It says I have arrived, with heels optional and glow compulsory.\n\nWhichever you choose, glowing skin goes with both. It is the one accessory that never clashes, and you can take it everywhere. Jumper or dress for the Christmas party? Tell me in the comments."
  },
  {
   "id": "dn19",
