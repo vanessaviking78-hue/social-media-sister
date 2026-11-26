@@ -1123,6 +1123,26 @@ border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 },
 {
+href: "/bfdec-admin",
+group: "decbundle",
+icon: Inbox,
+name: "December Bundle Inbox",
+description: "Everyone who has asked for a December Bundle. Check Monzo, tick payment seen, upload their 20 posts and 10 photos, publish, then send them their portal link.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
+href: "/bfdec",
+group: "decbundle",
+icon: Gift,
+name: "December Bundle",
+description: "The Black Friday page people use: 20 Xmas posts and 10 Xmas photos in their own portal, £149 with code BFDEC from 8pm tonight to 8pm tomorrow. Open it to check it, or copy the link to share.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
 href: "/xmasshoot-admin",
 group: "xmasshoot",
 icon: Inbox,
@@ -1239,7 +1259,7 @@ const [freeWaiting, setFreeWaiting] = useState(0);
 const [creditLow, setCreditLow] = useState(false);
 const [query, setQuery] = useState("");
 const [showTucked, setShowTucked] = useState(false);
-const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients" | "club" | "xmasshoot">("today");
+const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel" | "clients" | "club" | "xmasshoot" | "decbundle">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
 if (!pw) return;
@@ -1385,6 +1405,7 @@ Your Google AI Studio credits look empty, so Studio portraits are failing. Top u
 { key: "clients", label: "Clients", icon: Users },
 { key: "club", label: "Club", icon: Crown },
 { key: "xmasshoot", label: "Xmas Shoot", icon: TreePine },
+{ key: "decbundle", label: "December Bundle", icon: Gift },
 ].map((tab) => {
 const on = activeGroup === tab.key;
 return (

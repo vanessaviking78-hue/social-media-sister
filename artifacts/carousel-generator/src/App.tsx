@@ -221,6 +221,8 @@ import SecretShop from "@/pages/secretshop";
 import PhotoshootAdmin from "@/pages/photoshoot-admin";
 import XmasShoot, { XmasShootView } from "@/pages/xmasshoot";
 import XmasShootAdmin from "@/pages/xmasshoot-admin";
+import BfDec, { BfDecView } from "@/pages/bfdec";
+import BfDecAdmin from "@/pages/bfdec-admin";
 
 const queryClient = new QueryClient();
 
@@ -258,6 +260,7 @@ function ProtectedRouter() {
       <Route path="/yearpass-admin" component={YearPassAdmin} />
       <Route path="/photoshoot-admin" component={PhotoshootAdmin} />
       <Route path="/xmasshoot-admin" component={XmasShootAdmin} />
+      <Route path="/bfdec-admin" component={BfDecAdmin} />
       <Route path="/10free-tracker" component={TenFreeTracker} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
@@ -456,6 +459,7 @@ function AppContent() {
   const [isOver50] = useRoute("/over50");
   const [isPhotoshoot] = useRoute("/photoshoot");
   const [isXmasShoot] = useRoute("/xmasshoot");
+  const [isBfDec] = useRoute("/bfdec");
   const [isShop] = useRoute("/shop");
   const [isSecretShop] = useRoute("/secretshop");
   const [isPhotosView, photosParams] = useRoute("/photos/:token");
@@ -684,6 +688,14 @@ function AppContent() {
   }
   if (isXmasShoot) {
     return <XmasShoot />;
+  }
+  if (isBfDec) {
+    return <BfDec />;
+  }
+  // DECEMBER BUNDLE private portals, made from the person's first name: /vanessadecbundle, /vanessa2decbundle
+  const bfdecSlug = /^\/([a-z0-9]+decbundle)$/.exec(location)?.[1];
+  if (bfdecSlug) {
+    return <BfDecView slug={bfdecSlug} />;
   }
   // CYBERSUITE CHRISTMAS SHOOT private links, made from the person's first name: /vanessaxmas, /vanessa2xmas
   const xmasSlug = /^\/([a-z0-9]+xmas)$/.exec(location)?.[1];

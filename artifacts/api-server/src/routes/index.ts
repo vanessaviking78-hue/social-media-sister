@@ -133,6 +133,7 @@ import hammeredSalesRouter from "./hammered-sales";
 import freehouseSalesRouter from "./freehouse-sales";
 import photoshootRouter from "./photoshoot";
 import xmasshootRouter from "./xmasshoot";
+import bfdecRouter from "./bfdec";
 
 const router: IRouter = Router();
 
@@ -165,6 +166,7 @@ router.use(hammeredSalesRouter);
 router.use(freehouseSalesRouter);
 router.use(photoshootRouter);
 router.use(xmasshootRouter);
+router.use(bfdecRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
 router.use(magazinePostRouter);
