@@ -185,6 +185,14 @@ export function Builder({ id }: { id: string }) {
   const ownRef = useRef<{ url: string; bmp: ImageBitmap }[]>([]);
   const itemsRef = useRef<Item[]>([]);
   itemsRef.current = items;
+  // Built posts only live in this browser tab until they are sent. Warn before a refresh or close wipes them.
+  const savedRef = useRef(false);
+  useEffect(() => {
+    if (!isClub || !items.length) return;
+    const warn = (e: BeforeUnloadEvent) => { if (savedRef.current) return; e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isClub, items.length]);
 
   // Subtitles and every page after the first use Playfair Display on all the posts. The headline font is the picker.
   useEffect(() => {
@@ -507,6 +515,7 @@ export function Builder({ id }: { id: string }) {
           if (pl) o.poll = { question: pl.question, a: pl.a, b: pl.b, instruction: pl.instruction || "" };
         }
       }
+      savedRef.current = false;
       itemsRef.current = out;
       setItems(out);
       setFact(pickFact(req.id));
@@ -845,6 +854,7 @@ export function Builder({ id }: { id: string }) {
       }
       if (isClub) {
         await post(`/club/months/${monthId}/posts`, { posts, bank });
+        savedRef.current = true;
         setStatus(`Saved ${posts.length} posts to your approval queue. Nothing reaches the member until you approve it. She then picks her own from them.`);
       } else {
         const j = await post("/ten-free/publish", { id: req.id, posts, stories, hooks, fact, logoUrl });
