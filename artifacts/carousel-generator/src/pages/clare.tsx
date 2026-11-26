@@ -1202,7 +1202,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   <div className="space-y-3 rounded-lg border border-white/10 p-3">
                     <label className="flex items-center gap-3 text-xs"><span className="w-40 shrink-0 text-white/60">Photo strength (only shows if you add a photo)</span>
                       <input type="range" min={0} max={100} step={5} className="flex-1" value={look.vop ?? 35} onChange={(e) => setLook((l) => ({ ...l, vop: Number(e.target.value) }))} /><span className="w-10 text-right text-white/60">{look.vop ?? 35}%</span></label>
-                    <BoxControls label="Floating text box (wraps to the words)" box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b ? { ...b, tight: true, y: b.y === DEFAULT_BOX.y ? 0.5 : b.y } : undefined }))} />
+                    <BoxControls label="Floating text box (wraps to the words)" box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b ? { ...b, tight: true, y: l.box ? b.y : 0.5 } : undefined }))} />
                   </div>
                 )}
               </>
