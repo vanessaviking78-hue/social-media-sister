@@ -428,9 +428,10 @@ function effectiveBow(post: Post): ReadyBow | null {
   return rb && post.bowPos ? { ...rb, choice: { ...rb.choice, ...post.bowPos } } : rb;
 }
 
-function drawReelLayer(ctx: CanvasRenderingContext2D, post: Post, photo: Photo | null, f: Fonts, tf: TitleFont, look: Look, logo: HTMLImageElement | null, layer: "bg" | "text" | "top") {
+function drawReelLayer(ctx: CanvasRenderingContext2D, post: Post, photo: Photo | null, f: Fonts, tf: TitleFont, look: Look, logo: HTMLImageElement | null, layer: "bg" | "text" | "bow" | "logo") {
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-  if (layer === "top") { drawLogo(ctx, logo, look); drawBow(ctx, effectiveBow(post), 0); return; }
+  if (layer === "logo") { drawLogo(ctx, logo, look); return; }
+  if (layer === "bow") { drawBow(ctx, effectiveBow(post), 0); return; }
   REEL_LAYER = layer;
   try {
     const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
@@ -1096,13 +1097,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     BOW_STYLE = await prepareBow({ ...bow, on: true });
     CURRENT_BOW = bow.on ? BOW_STYLE : null;
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
-    const mk = (layer: "bg" | "text" | "top") => {
+    const mk = (layer: "bg" | "text" | "bow" | "logo") => {
       const c = document.createElement("canvas");
       c.width = W; c.height = H;
       drawReelLayer(c.getContext("2d")!, post, photoFor(post, 0), fonts, tfNow, lookFor(post), logo, layer);
       return c;
     };
-    return makeRiseReel({ bg: mk("bg"), text: mk("text"), top: mk("top") });
+    return makeRiseReel({ bg: mk("bg"), text: mk("text"), bow: mk("bow"), logo: mk("logo") });
   };
   const reelDownload = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
