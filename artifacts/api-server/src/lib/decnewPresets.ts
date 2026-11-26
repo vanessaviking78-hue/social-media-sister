@@ -1,6 +1,6 @@
 import type { PhotoStudioPreset } from "./aiPortraitScenarios";
 
-// DECNEW: the 13 prompts from her TextBlaze DECEMBER folder (/DE001 to /DE013), copied across 26 Nov 2026.
+// DECNEW: the TextBlaze DECEMBER folder prompts (/DE001 to /DE013; Minimalist Festive Flat Lay, Winter Desk Workspace and Frosted Editorial Look dropped on 26 Nov), copied across 26 Nov 2026.
 // Her TextBlaze colour field became a colour box on each card. The colour is passed in as the xmasColour
 // prompt variable, so [XMAS COLOUR] below is simply "the colour picked on that card".
 // The hyper realistic and face lock lines are added to every prompt that features her, so the face always stays as the uploaded photo.
@@ -43,8 +43,5 @@ export const DECNEW_PRESETS: (PhotoStudioPreset & DecnewMeta)[] = [
   dc(7, "Old-School Magazine Beauty Shot", `Vintage magazine-style beauty portrait, muted lighting, classic eyeliner, backdrop softened with ${C}.`, DEFAULT_COLOUR),
   dc(8, "Tree Glow Portrait", `Portrait in front of warm festive lights, shallow depth of field, soft shadows, ${C} threaded subtly through décor.`, DEFAULT_COLOUR),
   dc(9, "Snowfall Motion Portrait", `Snow falling through the frame, soft blur, crisp winter palette, ${C} included through accessories or styling.`, DEFAULT_COLOUR),
-  dc(10, "Minimalist Festive Flat Lay", `Clean festive flat lay: skincare, winter foliage, textured linen, touches of ${C} for seasonal branding.`, DEFAULT_COLOUR, true),
   dc(11, "Candlelit Red Lip Shot", `Classic winter beauty portrait with bold lip, warm candlelight glow, atmospheric shadows, tailored ${C} detail in styling.`, DEFAULT_COLOUR),
-  dc(12, "Winter Desk Workspace", `Top-down desk shot with planner, pen, iPhone, winter candle, and refined ${C} worked into stationery.`, DEFAULT_COLOUR, true),
-  dc(13, "Frosted Editorial Look", `Cinematic winter light, sharp cheekbones, soft shadows, refined confidence.`),
 ];
