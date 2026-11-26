@@ -14,7 +14,7 @@ import { runBfdecPhotos, BFDEC_PHOTO_COUNT } from "../lib/bfdecWorker";
 import { renderBfdecOg } from "../lib/bfdecOg";
 
 // DECEMBER BUNDLE at /bfdec. Black Friday offer: 20 Christmas pieces of content and 10 Christmas photos, delivered in the person's own portal.
-// Full price 699 pounds. Code BFDEC makes it 149 pounds, from the evening of Thu 26 Nov 2026 (open from the moment it went live) until 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
+// Full price 699 pounds. Code BFDEC makes it 86 pounds, from the evening of Thu 26 Nov 2026 (open from the moment it went live) until 8pm Fri 27 Nov 2026 (UK time, which is GMT in November).
 // Payment is by Monzo link. Monzo cannot tell the site who has paid, so the person taps "I have paid", Vanessa sees it in her inbox, checks Monzo
 // and ticks "payment seen". She makes the work, uploads it into the order, and the site gives the person a private portal link (/<name>decbundle).
 
@@ -25,12 +25,12 @@ const uploadMany = multer({ storage: multer.memoryStorage(), limits: { fileSize:
 const str = (v: unknown, max = 200) => String(v ?? "").trim().slice(0, max);
 
 const FULL_PENCE = 69900;
-const DEAL_PENCE = 14900;
+const DEAL_PENCE = 8600;
 const CODE = "BFDEC";
 const FREE_CODE = "LEDZEP"; // free for whoever Vanessa gives it to, works any time, no payment needed
 const OPENS_AT = new Date(process.env.BFDEC_OPENS_AT || "2026-11-26T18:00:00Z").getTime();
 const CLOSES_AT = new Date(process.env.BFDEC_CLOSES_AT || "2026-11-27T20:00:00Z").getTime();
-const MONZO_LINK = process.env.BFDEC_MONZO || "https://monzo.com/pay/r/the-cyber-suite_d4YOpp0fx9iPkj";
+const MONZO_LINK = process.env.BFDEC_MONZO || "https://monzo.com/pay/r/the-cyber-suite_pjLANzP1K58lEK";
 const POSTS_TARGET = 20;
 const PHOTOS_TARGET = BFDEC_PHOTO_COUNT;
 const KEEP_DAYS = 90;

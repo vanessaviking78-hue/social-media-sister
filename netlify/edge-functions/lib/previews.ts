@@ -332,7 +332,7 @@ export const PREVIEWS: { id: string; paths: string[]; title: string; desc: strin
    "/bfdec"
   ],
   "title": "December Bundle",
-  "desc": "Your whole month of socials covered, so you can relax for December. 20 Christmas posts and 10 Christmas photos in your own portal, \u00a3149 with code BFDEC.",
+  "desc": "Your whole month of socials covered, so you can relax for December. 20 Christmas posts and 10 Christmas photos in your own portal, \u00a386 with code BFDEC.",
   "img": "/api/bfdec/og.jpg"
  },
  {

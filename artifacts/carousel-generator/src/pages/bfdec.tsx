@@ -195,7 +195,7 @@ export default function BfDec() {
           <div className="ps-card">
             <div className="ps-k">Black Friday price</div>
             <div className="xs-was">{offer?.fullLabel || "£699"}</div>
-            <div className="xs-price">{isFree ? "Free" : offer?.dealLabel || "£149"}</div>
+            <div className="xs-price">{isFree ? "Free" : offer?.dealLabel || "£86"}</div>
             <p className="ps-p" style={{ marginTop: 10 }}>Use code BFDEC. It covers the whole of your December content: 20 Christmas pieces of content and 10 Christmas photos, in your colours, for your area.</p>
             {state === "before" && <><div className="ps-k" style={{ marginTop: 16 }}>Opens at 8pm tonight</div><div className="xs-clock">{clock(toOpen)}</div></>}
             {state === "open" && <><div className="ps-k" style={{ marginTop: 16 }}>Ends 8pm tomorrow, Friday 27 November</div><div className="xs-clock">{clock(toClose)}</div></>}

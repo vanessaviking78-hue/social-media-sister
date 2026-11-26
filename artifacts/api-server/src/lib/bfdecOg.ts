@@ -40,7 +40,7 @@ export async function renderBfdecOg(closesAt: number, now = Date.now(), fixedLab
 ${centred("YOUR WHOLE MONTH OF SOCIALS, COVERED", 600, 92, 38, PINK)}
 ${centred("DECEMBER BUNDLE", 600, 92 + 20 + bundleSize * 0.8, bundleSize, "#000000")}
 ${centred("20 XMAS POSTS + 10 XMAS PHOTOS", 600, 330, 44, "#000000")}
-${centred("£149 WITH CODE BFDEC", 600, 392, 44, PINK)}
+${centred("£86 WITH CODE BFDEC", 600, 392, 44, PINK)}
 <rect x="60" y="430" width="1080" height="150" fill="${PINK}"/>
 ${centred(left, 600, 430 + 75 + leftSize * 0.36, leftSize * 0.9 > 130 ? 120 : leftSize, "#ffffff")}
 </svg>`;
