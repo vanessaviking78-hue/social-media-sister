@@ -20,6 +20,8 @@ import { newxmasHashtags, areaFromPreset } from "@/lib/newxmas";
 import ClinicHookPicker from "@/components/clinic-hook-picker";
 import { uploadPngs } from "@/lib/month-engine";
 import { SparkleControls } from "@/components/sparkle-controls";
+import { BowControls } from "@/components/bow-controls";
+import { drawBow, loadBowChoice, prepareBow, type ReadyBow } from "@/lib/bows";
 import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
@@ -406,10 +408,15 @@ function drawSubtitle(ctx: CanvasRenderingContext2D, f: Fonts, lines: string[], 
   ctx.restore();
 }
 
+// BOWS: the bow that is switched on is loaded and recoloured once, then laid over each slide as it is drawn (preview, download, Sparkle and scheduling all use the same drawing).
+let CURRENT_BOW: ReadyBow | null = null;
+let BOW_VERSION = 0;
+
 function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK, logo: HTMLImageElement | null = null) {
   const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
   drawSlideBody(ctx, fixed, post.four && n === 3 ? 4 : n, photo, f, tf, look);
   drawLogo(ctx, logo, look);
+  drawBow(ctx, CURRENT_BOW, n);
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
@@ -522,7 +529,7 @@ function SlideCanvas({ post, n, photo, fonts, tf, look, logo, onClick }: { post:
       if (ctx) drawSlide(ctx, post, n, photo, fonts, tf, look, logo);
     })();
     return () => { live = false; };
-  }, [post, n, photo, fonts, tf, look, logo]);
+  }, [post, n, photo, fonts, tf, look, logo, BOW_VERSION]);
   return <canvas ref={ref} width={W} height={H} onClick={onClick} className="w-[260px] max-w-[46vw] h-auto rounded-md border border-white/10 cursor-pointer" title={n < 4 && onClick ? "Click to swap the photo" : undefined} />;
 }
 
@@ -868,8 +875,17 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     }
   };
 
+  // BOWS: a ribbon and bow over the post, switched on or off here and used by every download, schedule and Sparkle on this page.
+  const [bow, setBow] = useState(loadBowChoice);
+  const [, setBowTick] = useState(0);
+  useEffect(() => {
+    let live = true;
+    prepareBow(bow).then((r) => { if (!live) return; CURRENT_BOW = r; BOW_VERSION++; setBowTick(BOW_VERSION); }).catch(() => { /* the bow image did not load, posts carry on without it */ });
+    return () => { live = false; };
+  }, [bow]);
   const render = async (post: Post): Promise<HTMLCanvasElement[]> => {
     await ensureFonts(fonts);
+    CURRENT_BOW = await prepareBow(bow);
     const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
     const out: HTMLCanvasElement[] = [];
     for (let n = 0; n < (post.one ? 1 : post.four ? 4 : 5); n++) {
@@ -1130,6 +1146,9 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                 <select className="w-full bg-white/5 rounded p-2" value={hookTreatment} onChange={(e) => setHookTreatment(e.target.value)}>{hookOptions.map((t) => <option key={t.id} value={t.name} className="text-black">{t.name}</option>)}</select>
               </label>
             )}
+          </div>
+          <div className="rounded-lg border border-pink-400/40 px-3 py-2">
+            <BowControls value={bow} onChange={setBow} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
           </div>
           <p className="text-white/40 text-xs">Body font is a plain name for now, until you confirm it. Caption footnote from her preset: {foot ? `"${foot}"` : "none saved yet"}. It goes at the very end of every post, under the 5 hashtags.</p>
           <div className="space-y-4 text-sm">

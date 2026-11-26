@@ -3,7 +3,19 @@ import { paintFor, isHexColour, flatHexOf } from "./metal-colours";
 
 // A text box cover: the whole photo stays clear and the hook sits inside one coloured box that can go anywhere on the page.
 // Shared by every client tool so the look is the same everywhere. Colours are a hex or a metallic finish ("metal:gold").
-export type CoverBox = { fill: string; text?: string; x: number; y: number; w?: number; tight?: boolean }; // tight: a floating box only as big as the words
+export type CoverBox = { fill: string; text?: string; x: number; y: number; w?: number; tight?: boolean; outline?: string; outlineW?: number }; // tight: a floating box only as big as the words. outline: a border colour (hex or metal), outlineW: its thickness in pixels
+
+// The outline sits just inside the edge of the box, so the box keeps its size and the line is never cut off at the edge of the post.
+function strokeBox(ctx: CanvasRenderingContext2D, b: CoverBox, l: number, t: number, w: number, h: number) {
+  if (!b.outline) return;
+  const lw = Math.max(2, Math.round(b.outlineW ?? 6));
+  ctx.save();
+  ctx.strokeStyle = paintFor(ctx, b.outline, l, t, w, h);
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "miter";
+  ctx.strokeRect(l + lw / 2, t + lw / 2, w - lw, h - lw);
+  ctx.restore();
+}
 export const DEFAULT_BOX: CoverBox = { fill: "#ffffff", x: 0.5, y: 0.78, w: 780 }; // sits in the lower part of the post
 
 const lum = (h: string) => { const v = parseInt(h.slice(1), 16); return (0.2126 * ((v >> 16) & 255) + 0.7152 * ((v >> 8) & 255) + 0.0722 * (v & 255)) / 255; };
@@ -67,6 +79,7 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
   ctx.fillStyle = paintFor(ctx, b.fill, bl, bt, bw, bh);
   ctx.fillRect(bl, bt, bw, bh);
   ctx.restore();
+  strokeBox(ctx, b, bl, bt, bw, bh);
   const ty = bt + pad;
   ctx.textBaseline = "top";
   if (o.tf && layout) {
@@ -90,7 +103,8 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
 // Floating box: behaves like a Canva text box. The box is the real ink size of the words plus the same gap on every side,
 // sitting directly behind the text (no extra line height, no shadow), so nothing looks off centre or justified.
 function drawTightBox(ctx: CanvasRenderingContext2D, a: { W: number; H: number; b: CoverBox; size: number; ts: number; layout: ReturnType<typeof layoutTitle> | null; lines: string[]; subLines: string[]; subPx: number; o: { headline: string; tf: { lf: any; style: any } | null; headFont: string; subFont?: string }; textVal: string; pad: number }) {
-  const { W, H, b, size, layout, lines, subLines, subPx, o, textVal, pad } = a;
+  const { W, H, b, size, layout, lines, subLines, subPx, o, textVal } = a;
+  const pad = a.pad + (b.outline ? Math.max(2, Math.round(b.outlineW ?? 6)) : 0); // the outline takes its own room, so the gap round the words stays the same
   const subFont = `400 ${subPx}px "${o.subFont ?? o.headFont}", sans-serif`;
   const headFont = `400 ${size}px "${o.headFont}", serif`;
   // ink bounds of the headline, relative to the point it is drawn from (x = left, y = top of first line)
@@ -152,6 +166,7 @@ function drawTightBox(ctx: CanvasRenderingContext2D, a: { W: number; H: number; 
   ctx.fillStyle = paintFor(ctx, b.fill, bl, bt, bw, bh);
   ctx.fillRect(bl, bt, bw, bh);
   ctx.restore();
+  strokeBox(ctx, b, bl, bt, bw, bh);
   // words sit dead centre in the box: equal gap left and right, top and bottom
   const hx = bl + pad + (contentW - headW) / 2 - iL; // draw origin x for the headline
   const hy = bt + pad - iT; // draw origin y (top of first line)
