@@ -992,19 +992,19 @@ const TEXTBLAZE_PRESETS: (PhotoStudioPreset & { group: string; defaultColour?: s
   { id: "tb-75", name: "Male Patient Pre-Treatment", hasColour: false, group: "CLINICAL JAN" },
 ];
 const DECNEW_PRESETS: (PhotoStudioPreset & { defaultColour?: string })[] = [
-  { id: "dn-01", name: "Winter Editorial Portrait", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-02", name: "Golden Hour Glow Portrait", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-03", name: "Monochrome Power Shot", hasColour: false },
-  { id: "dn-04", name: "Icy Toned Winter Portrait", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-05", name: "Skincare Technique Close-Up", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-06", name: "Polaroid Knit Jumper Moment", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-07", name: "Old-School Magazine Beauty Shot", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-08", name: "Tree Glow Portrait", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-09", name: "Snowfall Motion Portrait", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-10", name: "Minimalist Festive Flat Lay", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-11", name: "Candlelit Red Lip Shot", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-12", name: "Winter Desk Workspace", hasColour: false, defaultColour: "navy blue" },
-  { id: "dn-13", name: "Frosted Editorial Look", hasColour: false },
+  { id: "dc-01", name: "Winter Editorial Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-02", name: "Golden Hour Glow Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-03", name: "Monochrome Power Shot", hasColour: false },
+  { id: "dc-04", name: "Icy Toned Winter Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-05", name: "Skincare Technique Close-Up", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-06", name: "Polaroid Knit Jumper Moment", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-07", name: "Old-School Magazine Beauty Shot", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-08", name: "Tree Glow Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-09", name: "Snowfall Motion Portrait", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-10", name: "Minimalist Festive Flat Lay", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-11", name: "Candlelit Red Lip Shot", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-12", name: "Winter Desk Workspace", hasColour: false, defaultColour: "navy blue" },
+  { id: "dc-13", name: "Frosted Editorial Look", hasColour: false },
 ];
 
 const TEXTBLAZE_GROUPS = ["LUXURY XMAS", "CLIENT SHOTS", "DAVID BAILEY-ESQUE", "LIFESTYLE", "AI PHOTOSHOOTS", "CLINICAL JAN"];
@@ -1339,7 +1339,7 @@ export default function AiPortraitStudio() {
         ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("nx-") ? { promptVars: { xmasColour: newXmasColour.trim() || "red" } } : {}),
         ...(id.startsWith("rx-") ? { promptVars: { xmasColour: realXmasColour.trim() || "red" } } : {}),
-        ...(id.startsWith("dn-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || DECNEW_PRESETS.find((p) => p.id === id)?.defaultColour || "navy blue" } } : {}),
+        ...(id.startsWith("dc-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || DECNEW_PRESETS.find((p) => p.id === id)?.defaultColour || "navy blue" } } : {}),
         ...(id.startsWith("tb-") ? { promptVars: { xmasColour: presetColours[id]?.trim() || TEXTBLAZE_PRESETS.find((p) => p.id === id)?.defaultColour || "red" } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
