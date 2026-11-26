@@ -38,7 +38,8 @@ export default function XmasShootAdmin() {
   const [sisterSlots, setSisterSlots] = useState<number | null>(null);
   const [open, setOpen] = useState("");
   const [imgs, setImgs] = useState<Img[]>([]);
-  const loadList = useCallback(() => fetch(`${API}/xmasshoot/orders`, { headers: H() }).then((r) => r.json()).then((j) => { setRows(j.orders || []); setTotal(j.total || 10); setSisterLeft(j.sisterLeft ?? null); setSisterSlots(j.sisterSlots ?? null); setSisterUsed(j.sisterUsed ?? 0); }).catch(() => undefined), []);
+  const [loadErr, setLoadErr] = useState("");
+  const loadList = useCallback(() => fetch(`${API}/xmasshoot/orders`, { headers: H() }).then(async (r) => { if (!r.ok) { setLoadErr(r.status === 401 ? "Your login has expired on this browser, so the list cannot load. Log out from the Hub and log back in with the tools password. Your orders are safe." : `The list could not load (error ${r.status}). Your orders are safe, try again in a minute.`); throw new Error("load"); } setLoadErr(""); return r.json(); }).then((j) => { setRows(j.orders || []); setTotal(j.total || 10); setSisterLeft(j.sisterLeft ?? null); setSisterSlots(j.sisterSlots ?? null); setSisterUsed(j.sisterUsed ?? 0); }).catch(() => undefined), []);
   const loadOne = useCallback((id: string) => fetch(`${API}/xmasshoot/orders/${id}`, { headers: H() }).then((r) => r.json()).then((j) => setImgs(j.order?.images || [])).catch(() => undefined), []);
   useEffect(() => { loadList(); const t = setInterval(() => { loadList(); if (open) loadOne(open); }, 10000); return () => clearInterval(t); }, [loadList, loadOne, open]);
   const act = async (url: string, method = "POST", body?: unknown) => {
@@ -54,7 +55,8 @@ export default function XmasShootAdmin() {
         <div className="ps-k">CYBERSUITE CHRISTMAS SHOOT</div>
         <h1 className="ps-h1">Christmas shoot <span>inbox</span></h1>
         <p className="ps-p">{sisterSlots === null ? `SISTER: no limit, ${sisterUsed} used so far` : `SISTER spaces left: ${sisterLeft} of ${sisterSlots}`}</p>
-        {rows.length === 0 && <p className="ps-p">Nobody yet. The first selfie will land here and in your email.</p>}
+        {loadErr && <p className="ps-p" style={{ color: "#e6007e", fontWeight: 800 }}>{loadErr}</p>}
+        {!loadErr && rows.length === 0 && <p className="ps-p">Nobody yet. The first selfie will land here and in your email.</p>}
         {rows.map((r) => {
           const canCreate = r.pay_state === "free" || r.pay_state === "seen";
           const link = r.link;
