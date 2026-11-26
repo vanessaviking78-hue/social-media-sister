@@ -17,8 +17,8 @@ export const BLOCK_TEXT_H = 118; // room for the cover words inside that strip, 
 export const FLAT_ALPHA = 0.55; // how strong the faded page colour is at 100% strength
 
 export const STYLE_LABELS: Record<StyleId, string> = { opacity: "Faded page", gradient: "Gradient", block: "Block strip", box: "Text box", float: "Floating box", column: "Column" };
-const ORDER: StyleId[] = ["opacity", "gradient", "block", "box", "float", "column"];
-export const styleForNumber = (i: number): StyleLook => stylePatch(ORDER[i % ORDER.length], {}); // Make 40: faded, gradient, block, box, then round again
+const ORDER: StyleId[] = ["opacity", "gradient", "float", "column"]; // the colour block strip and the plain text box are no longer offered
+export const styleForNumber = (i: number): StyleLook => stylePatch(ORDER[i % ORDER.length], {}); // Make 40: faded, gradient, floating box, column, then round again
 
 export const styleOf = (l: StyleLook): StyleId => (l.box ? (l.box.tight ? "float" : "box") : l.col ? "column" : l.block ? "block" : l.flat ? "opacity" : "gradient");
 export const stylePatch = (id: StyleId, cur: StyleLook): StyleLook => ({ flat: id === "opacity", block: id === "block", col: id === "column", box: id === "box" || id === "float" ? { ...(cur.box ?? DEFAULT_BOX), tight: id === "float" } : undefined });

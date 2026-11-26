@@ -1552,7 +1552,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   <a className="underline text-white/70" href={gift.link} target="_blank" rel="noreferrer">Open it</a>
                 </div>
               )}
-              <p className="text-xs text-white/50">Open any post below, tick "In the gift", choose gradient, block or text box, then publish. Photos from the clinic's form are already loaded.</p>
+              <p className="text-xs text-white/50">Open any post below, tick "In the gift", choose gradient or floating box, then publish. Photos from the clinic's form are already loaded.</p>
             </div>
           )}
           {posts.length > 0 && !freebie && (
