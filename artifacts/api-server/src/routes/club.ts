@@ -818,7 +818,10 @@ async function makePortalMember(name: string, email: string, clientName: string)
   const found = (await db.execute(sql`SELECT id, slug, token FROM club_members WHERE plan = 'portal' AND lower(name) = lower(${name}) LIMIT 1`)).rows[0] as any;
   const presets = (await db.select().from(clientPresetsTable)) as any[];
   const want = clientName.trim().toLowerCase();
-  const preset = presets.find((p) => String(p.name ?? "").trim().toLowerCase() === want);
+  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const preset = presets.find((p) => String(p.name ?? "").trim().toLowerCase() === want)
+    ?? presets.find((p) => squash(String(p.name ?? "")) === squash(clientName))
+    ?? presets.find((p) => squash(clientName).length >= 6 && squash(String(p.name ?? "")).includes(squash(clientName)));
   if (found) {
     if (preset) await db.execute(sql`UPDATE club_members SET preset_id = ${preset.id} WHERE id = ${found.id} AND preset_id IS NULL`);
     return { id: found.id, slug: found.slug || found.token, clientLinked: !!preset, existed: true };
@@ -835,7 +838,7 @@ async function makePortalMember(name: string, email: string, clientName: string)
 export async function seedPortalMembers(): Promise<void> {
   try {
     await ensureTables();
-    for (const [name, client] of [["Kelly", "ENHANCED"], ["Julie Pawson Aesthetics", "Julie Pawson Aesthetics LTD"]] as const) {
+    for (const [name, client] of [["Kelly", "ENHANCED"], ["Julie Pawson Aesthetics", "Julie Pawson Aesthetics LTD"], ["Dermaluxe", "Dermaluxe"]] as const) {
       const r = await makePortalMember(name, "", client);
       logger.info({ name, clientLinked: r.clientLinked, existed: r.existed }, "Portal member ready");
     }
