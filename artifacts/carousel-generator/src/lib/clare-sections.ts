@@ -18,7 +18,7 @@ export const CLARE_SECTIONS: { id: ClareSectionId; label: string; word: string }
   { id: "safety", label: "Safety", word: "" },
 ];
 
-export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; nx?: NewXmasRow; xf?: XmasFeelsRow; sq?: StaticQuoteRow; vq?: VoucherRow; fixed?: { hook: string; caption: string; cta: string; tags?: string[] } };
+export type ClareSectionPost = { id: string; group: ClareSectionId; label: string; brief: string; word: string; xmas?: { c: string; p: string }; feral?: boolean; smx?: boolean; bf?: boolean; date?: string; slot?: number; nx?: NewXmasRow; xf?: XmasFeelsRow; sq?: StaticQuoteRow; vq?: VoucherRow; vs?: boolean; fixed?: { hook: string; caption: string; cta: string; tags?: string[] } };
 
 const WORD = new Map(CLARE_SECTIONS.map((s) => [s.id, s.word]));
 const p = (id: string, group: ClareSectionId, label: string, brief: string): ClareSectionPost => ({ id, group, label, brief, word: WORD.get(group) || "" });
@@ -142,11 +142,14 @@ export const XMASFEELS_POSTS: ClareSectionPost[] = XMASFEELS_ROWS.map((r, i) => 
 
 // STATIC - quotes: 10 single image quote boards, her line on a plain colour or metallic background, caption already written.
 import { STATICQUOTES_ROWS, type StaticQuoteRow } from "./staticquotes";
-import { VOUCHER_ROWS, type VoucherRow } from "./voucher-hooks";
+import { VOUCHER_ROWS, VOUCHER_GROUPS, type VoucherRow } from "./voucher-hooks";
 export const STATICQ_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "staticq", label: "STATIC - quotes", word: "" }];
 export const STATICQ_POSTS: ClareSectionPost[] = STATICQUOTES_ROWS.map((r, i) => ({ id: `sqp-${r.id}`, group: "staticq" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", sq: r }));
-export const VOUCHER_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = [{ id: "vouchers", label: "Vouchers", word: "" }];
-export const VOUCHER_POSTS: ClareSectionPost[] = VOUCHER_ROWS.map((r, i) => ({ id: `vqp-${r.id}`, group: "vouchers" as const, label: `${i + 1}. ${r.line.length > 70 ? r.line.slice(0, 67) + "..." : r.line}`, brief: "", word: "", vq: r }));
+export const VOUCHER_SECTIONS: { id: ClareSectionId; label: string; word: string }[] = VOUCHER_GROUPS.map((g) => ({ id: `h-${g.id}` as ClareSectionId, label: g.label, word: "" }));
+const voucherLabel = (r: VoucherRow) => `${r.n}. ${r.s1.length > 70 ? r.s1.slice(0, 67) + "..." : r.s1}`;
+// The static voucher posts (1080 x 1440), one per hook, and the same hooks as 3 story sequences (1080 x 1920).
+export const VOUCHER_POSTS: ClareSectionPost[] = VOUCHER_ROWS.map((r) => ({ id: `vqp-${r.id}`, group: `h-${r.group}` as ClareSectionId, label: voucherLabel(r), brief: "", word: "", vq: r }));
+export const VSTORY_POSTS: ClareSectionPost[] = VOUCHER_ROWS.map((r) => ({ id: `vsp-${r.id}`, group: `h-${r.group}` as ClareSectionId, label: voucherLabel(r), brief: "", word: "", vq: r, vs: true }));
 
 // XMAS: one carousel for each of the 32 hooks (8 weeks of 4). The cover hook is fixed to the version she picks, colloquial or professional.
 import { XMAS_WEEKS } from "./xmas-weeks";
