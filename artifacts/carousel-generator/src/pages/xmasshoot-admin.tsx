@@ -31,7 +31,7 @@ export default function XmasShootAdmin() {
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(10);
   const [clients, setClients] = useState<string[]>([]);
-  useEffect(() => { fetch(`${API}/presets`).then((r) => r.json()).then((j) => setClients(((j.presets || []) as { name: string }[]).map((p) => p.name).filter(Boolean))).catch(() => undefined); }, []);
+  useEffect(() => { fetch(`${API}/presets`).then((r) => r.json()).then((j) => setClients(Array.from(new Set([...((j.presets || []) as { name: string }[]).map((p) => p.name).filter(Boolean), "LHD"])).sort((a, b) => a.localeCompare(b)))).catch(() => undefined); }, []);
   const guessClient = (r: Row) => { const n = r.name.trim().toLowerCase(); if (n.length < 4) return ""; return clients.find((c) => c.toLowerCase().includes(n) || n.includes(c.toLowerCase())) || ""; };
   const [sisterUsed, setSisterUsed] = useState(0);
   const [sisterLeft, setSisterLeft] = useState<number | null>(null);
