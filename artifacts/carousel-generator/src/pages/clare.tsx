@@ -26,6 +26,7 @@ import { drawBow, loadBowChoice, prepareBow, saveBowChoice, type ReadyBow } from
 import { ColourPicker as BrandColourPicker } from "@/components/colour-picker";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { makeRiseReel } from "@/lib/reel";
+import { exportMagazineMp4 } from "@/lib/magazine-flip";
 import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
@@ -1160,6 +1161,53 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     };
     return makeRiseReel({ bg: mk("bg"), text: mk("text"), bow: mk("bow"), logo: mk("logo") });
   };
+  // FLIP REEL: every slide of the post as one 1080 x 1920 video, turned like the pages of a magazine from the cover to the last page.
+  const flipMade = async (post: Post, id: string | number): Promise<string> => {
+    const cs = await render(post);
+    const blob = await exportMagazineMp4(cs.map(storyOf), (pct) => toast.loading(`Turning the pages, ${Math.round(pct * 100)}%`, { id }));
+    toast.loading("Saving the video", { id });
+    const fd = new FormData();
+    fd.append("video", blob, "flip.mp4");
+    fd.append("size", "reel");
+    const r = await fetch(`${BASE}/api/stylish-reel/upload`, { method: "POST", body: fd });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.videoUrl) throw new Error(j.error || "Could not save the flip reel");
+    return j.videoUrl as string;
+  };
+  const flipDownload = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Turning the pages");
+    try {
+      const url = await flipMade(post, id);
+      await downloadSparkleZip([{ prefix: `flip-${t.id}`, urls: [url], caption: fullCaption(post) }], `flip-${t.id}.zip`);
+      toast.success("Flip reel downloaded", { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the flip reel", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
+  const flipSend = async (post: Post, mode: "schedule" | "bank") => {
+    if (!preset) { toast.error("I cannot find the client preset for this page"); return; }
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Turning the pages");
+    try {
+      const url = await flipMade(post, id);
+      const { postType, content } = sparklePostBody([url], fullCaption(post), `${t.label} · ${CLINIC_NAME} · flip reel`, "clare");
+      const body = mode === "bank"
+        ? { postType, content, status: "draft", presetId: preset.id }
+        : { postType, content, scheduledAt: new Date(post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
+      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Could not save the flip reel"); }
+      if (mode === "schedule") setScheduled((s) => ({ ...s, [t.id]: new Date(post.when).toISOString() }));
+      else patch(post.id, { banked: true });
+      toast.success(mode === "bank" ? `Flip reel added to ${preset.name || CLINIC_NAME}'s Client Bank, no date` : "Flip reel scheduled", { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the flip reel", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
   const reelDownload = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { scheduling: true });
@@ -1556,6 +1604,14 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                         <Button size="sm" variant="secondary" onClick={() => reelDownload(post)} disabled={!post.caption || post.scheduling}><Download className="w-4 h-4 mr-2" />Reel download</Button>
                         <Button size="sm" variant="secondary" onClick={() => reelSend(post, "bank")} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />Reel to bank</Button>
                         <Button size="sm" variant="secondary" onClick={() => reelSend(post, "schedule")} disabled={!post.caption || post.scheduling}><CalendarCheck className="w-4 h-4 mr-2" />Reel schedule</Button>
+                      </div>
+                    )}
+                    {!freebie && !post.vstory && !post.one && (
+                      <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">
+                        <span className="text-sm font-semibold">Flip reel (one video, 1080 x 1920)</span>
+                        <Button size="sm" variant="secondary" onClick={() => flipDownload(post)} disabled={!post.caption || post.scheduling}><Download className="w-4 h-4 mr-2" />Flip download</Button>
+                        <Button size="sm" variant="secondary" onClick={() => flipSend(post, "bank")} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />Flip to bank</Button>
+                        <Button size="sm" variant="secondary" onClick={() => flipSend(post, "schedule")} disabled={!post.caption || post.scheduling}><CalendarCheck className="w-4 h-4 mr-2" />Flip schedule</Button>
                       </div>
                     )}
                     {SPARKLE_ON && !freebie && (

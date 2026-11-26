@@ -87,6 +87,7 @@ router.post("/stylish-reel/upload", uploadVideo.single("video"), async (req, res
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!f) { res.status(400).json({ error: "No video received" }); return; }
   if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+  const RH = req.body?.size === "reel" ? 1920 : 1440; // reel size flips are 1080 x 1920
   const dir = await mkdtemp(join(tmpdir(), "flip-upload-"));
   try {
     const inPath = join(dir, "in.mp4");
@@ -95,7 +96,7 @@ router.post("/stylish-reel/upload", uploadVideo.single("video"), async (req, res
     await runFfmpeg([
       "-i", inPath,
       "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-      "-vf", "scale=1080:1440:force_original_aspect_ratio=decrease,pad=1080:1440:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p",
+      "-vf", `scale=1080:${RH}:force_original_aspect_ratio=decrease,pad=1080:${RH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p`,
       "-map", "0:v:0", "-map", "1:a:0",
       "-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-preset", "medium", "-crf", "18",
       "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart",
