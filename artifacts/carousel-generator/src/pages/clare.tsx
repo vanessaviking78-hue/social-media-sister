@@ -225,6 +225,7 @@ async function loadTitleFont(client?: string): Promise<TitleFont> {
 
 type Adj = { zoom?: number[]; px?: number[]; py?: number[]; blockY?: number; coverY?: number; coverScale?: number; tScale?: number[]; tY?: number[]; bY?: number[] };
 type Post = {
+  bowPos?: { dx: number; dy: number; size: number }; // this post only: where the bow sits and how big it is
   bow?: boolean; // this post only: true puts the bow on, false takes it off, unset follows the page-wide Bows switch
   id: string;
   pick?: boolean; // chosen for a gift (Xmas freebies)
@@ -422,7 +423,8 @@ function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: 
   const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
   drawSlideBody(ctx, fixed, post.four && n === 3 ? 4 : n, photo, f, tf, look);
   drawLogo(ctx, logo, look);
-  drawBow(ctx, post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null, n);
+  const rb = post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null;
+  drawBow(ctx, rb && post.bowPos ? { ...rb, choice: { ...rb.choice, ...post.bowPos } } : rb, n);
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
@@ -1387,6 +1389,16 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                     {!freebie && <Button size="sm" variant="secondary" onClick={() => bank(post)} disabled={!(post.caption || post.vstory) || post.scheduling}><Archive className="w-4 h-4 mr-2" />{post.banked ? "In the bank" : "Client Bank"}</Button>}
                     {!freebie && (() => { const bowOn = post.bow ?? bow.on; return (
                       <button type="button" aria-pressed={bowOn} title="Put the bow on or off for this post only. Pick the ribbon and colour in the Bows box at the top." onClick={() => patch(post.id, { bow: !bowOn })} className={`rounded border px-3 py-1.5 text-sm ${bowOn ? "border-emerald-400 bg-emerald-400/15" : "border-white/20 hover:border-white/50"}`}>Bow: {bowOn ? "On" : "Off"}</button>
+                    ); })()}
+                    {!freebie && (post.bow ?? bow.on) && (() => { const pos = post.bowPos ?? { dx: bow.dx, dy: bow.dy, size: bow.size }; return (
+                      <div className="flex items-center gap-3 flex-wrap rounded-lg border border-pink-400/40 px-3 py-1.5 w-full">
+                        <span className="text-sm font-semibold">Move the bow</span>
+                        {([["Size", "size", 0.6, 1.6, 0.05], ["Left and right", "dx", -0.5, 0.5, 0.01], ["Up and down", "dy", -0.5, 0.5, 0.01]] as const).map(([lab, key, mn, mx, st]) => (
+                          <label key={key} className="flex items-center gap-2 text-xs"><span className="text-white/60">{lab}</span>
+                            <input type="range" min={mn} max={mx} step={st} className="w-32" value={pos[key]} onChange={(e) => patch(post.id, { bowPos: { ...pos, [key]: Number(e.target.value) } })} /></label>
+                        ))}
+                        {post.bowPos && <button type="button" className="rounded border border-white/20 px-2 py-1 text-xs hover:border-white/50" onClick={() => patch(post.id, { bowPos: undefined })}>Back to the page setting</button>}
+                      </div>
                     ); })()}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!(post.caption || post.vstory)}><Download className="w-4 h-4 mr-2" />Download</Button>
                     {SPARKLE_ON && !freebie && (
