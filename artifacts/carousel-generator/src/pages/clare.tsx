@@ -23,6 +23,7 @@ import { uploadPngs } from "@/lib/month-engine";
 import { SparkleControls } from "@/components/sparkle-controls";
 import { BowControls } from "@/components/bow-controls";
 import { drawBow, loadBowChoice, prepareBow, type ReadyBow } from "@/lib/bows";
+import { makeRiseReel } from "@/lib/reel";
 import { downloadSparkleZip, loadSparkleChoice, saveSparkleChoice, sparklePostBody, sparkleSlides } from "@/lib/sparkle";
 import { SUITE_FONTS, injectSuiteFontCss, clientSlug, hasClientStyle, DEFAULT_TITLE_STYLE, readTitleStyle, loadSuiteFont, drawTitle, layoutTitle, titleHeight, type LoadedFont, type TitleStyle } from "@/lib/suite-fonts";
 import { hatcherCss, loadHatcherTitle } from "@/lib/hatcher-title";
@@ -419,12 +420,29 @@ let CURRENT_BOW: ReadyBow | null = null; // the page-wide bow (null when the pag
 let BOW_STYLE: ReadyBow | null = null; // the chosen ribbon and colour, ready even when the page switch is off, for posts that switch the bow on themselves
 let BOW_VERSION = 0;
 
+// REELS: while a rising text reel is being made, the post is drawn in three separate pictures: "bg" is the photo or colour (and the wash), "text" is only the text box or writing on a clear background, "top" is the logo and bow.
+let REEL_LAYER: "bg" | "text" | null = null;
+
+function effectiveBow(post: Post): ReadyBow | null {
+  const rb = post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null;
+  return rb && post.bowPos ? { ...rb, choice: { ...rb.choice, ...post.bowPos } } : rb;
+}
+
+function drawReelLayer(ctx: CanvasRenderingContext2D, post: Post, photo: Photo | null, f: Fonts, tf: TitleFont, look: Look, logo: HTMLImageElement | null, layer: "bg" | "text" | "top") {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  if (layer === "top") { drawLogo(ctx, logo, look); drawBow(ctx, effectiveBow(post), 0); return; }
+  REEL_LAYER = layer;
+  try {
+    const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
+    drawSlideBody(ctx, fixed, 0, photo, f, tf, look);
+  } finally { REEL_LAYER = null; }
+}
+
 function drawSlide(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK, logo: HTMLImageElement | null = null) {
   const fixed: Post = { ...post, hook: fixDoctor(post.hook), cta: fixDoctor(post.cta), slides: post.slides.map(fixDoctor) };
   drawSlideBody(ctx, fixed, post.four && n === 3 ? 4 : n, photo, f, tf, look);
   drawLogo(ctx, logo, look);
-  const rb = post.bow === undefined ? CURRENT_BOW : post.bow ? BOW_STYLE : null;
-  drawBow(ctx, rb && post.bowPos ? { ...rb, choice: { ...rb.choice, ...post.bowPos } } : rb, n);
+  drawBow(ctx, effectiveBow(post), n);
 }
 
 function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, photo: Photo | null, f: Fonts, tf: TitleFont = null, look: Look = DEFAULT_LOOK) {
@@ -446,12 +464,15 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
 
   // VOUCHERS: plain colour (or metallic), an optional photo faded right back, then the hook in a floating text box wrapped to the words (or plain writing if the box is off). The bow goes on top afterwards.
   if (post.voucher) {
-    ctx.fillStyle = BGC;
-    ctx.fillRect(0, 0, W, H);
     const vop = Math.max(0, Math.min(100, look.vop ?? 35)) / 100;
-    if (photo && vop > 0) { ctx.save(); ctx.globalAlpha = vop; coverFit(ctx, photo.bmp, post.adj?.zoom?.[0], post.adj?.px?.[0], post.adj?.py?.[0]); ctx.restore(); }
+    if (REEL_LAYER !== "text") {
+      ctx.fillStyle = BGC;
+      ctx.fillRect(0, 0, W, H);
+      if (photo && vop > 0) { ctx.save(); ctx.globalAlpha = vop; coverFit(ctx, photo.bmp, post.adj?.zoom?.[0], post.adj?.px?.[0], post.adj?.py?.[0]); ctx.restore(); }
+    }
     const vtext = post.vstory && n > 0 ? post.slides[n - 1] || "" : post.hook || "";
-    if (look.box) { drawCoverBox(ctx, { headline: vtext, box: { ...look.box, tight: true }, tf: tf as any, headFont: f.head, ts }); return; }
+    if (look.box) { if (REEL_LAYER !== "bg") drawCoverBox(ctx, { headline: vtext, box: { ...look.box, tight: true }, tf: tf as any, headFont: f.head, ts }); return; }
+    if (REEL_LAYER === "bg") return;
     ctx.textAlign = "center";
     const vfit = fitText(ctx, vtext, (px) => head(px), W - 200, Math.round(H * 0.6) * Math.max(1, ts), Math.round(130 * ts), Math.round(50 * ts), 1.12);
     const vtotal = vfit.lines.length * vfit.px * 1.12;
@@ -494,13 +515,16 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
     return;
   }
 
-  if (photo) coverFit(ctx, photo.bmp, post.adj?.zoom?.[n], post.adj?.px?.[n], post.adj?.py?.[n]);
-  else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
+  if (REEL_LAYER !== "text") {
+    if (photo) coverFit(ctx, photo.bmp, post.adj?.zoom?.[n], post.adj?.px?.[n], post.adj?.py?.[n]);
+    else { ctx.fillStyle = "#e9e6e1"; ctx.fillRect(0, 0, W, H); }
+  }
 
   if (n === 0) {
-    if (look.col) { drawColumn(ctx, { text: post.hook || "", paint: () => blockAt(ctx, 0, look), ink: INKC, tf: tf as any, font: (px) => head(px), maxPx: Math.round(96 * ts), minPx: 28, lead: 1.12, sub: post.sub, subFont: (px) => body(px) }); return; }
-    if (look.box) { drawCoverBox(ctx, { headline: post.hook || "", box: look.box, tf: tf as any, headFont: f.head, ts, sub: post.sub, subFont: f.body }); return; }
-    if (!look.block) wash(ctx, 0.52, look);
+    if (look.col) { if (REEL_LAYER === "bg") return; drawColumn(ctx, { text: post.hook || "", paint: () => blockAt(ctx, 0, look), ink: INKC, tf: tf as any, font: (px) => head(px), maxPx: Math.round(96 * ts), minPx: 28, lead: 1.12, sub: post.sub, subFont: (px) => body(px) }); return; }
+    if (look.box) { if (REEL_LAYER !== "bg") drawCoverBox(ctx, { headline: post.hook || "", box: look.box, tf: tf as any, headFont: f.head, ts, sub: post.sub, subFont: f.body }); return; }
+    if (!look.block && REEL_LAYER !== "text") wash(ctx, 0.52, look);
+    if (REEL_LAYER === "bg") return;
     if (tf) {
       // the title font: drawn glyph by glyph so wide spacing and curly letters work
       const sb = subtitleOf(ctx, f, post.sub);
@@ -1066,6 +1090,54 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     const cs = await render(post);
     return sparkleSlides(cs, sparkle.style, sparkle.amount, sparkle.color);
   };
+  // REELS: the text box rises from the bottom over the cover, bow and logo on top, silent, 8 seconds, 1080 x 1920.
+  const reelMade = async (post: Post): Promise<string> => {
+    await ensureFonts(fonts);
+    BOW_STYLE = await prepareBow({ ...bow, on: true });
+    CURRENT_BOW = bow.on ? BOW_STYLE : null;
+    const tfNow = await loadTitleFont(preset?.name ?? CLINIC_NAME);
+    const mk = (layer: "bg" | "text" | "top") => {
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      drawReelLayer(c.getContext("2d")!, post, photoFor(post, 0), fonts, tfNow, lookFor(post), logo, layer);
+      return c;
+    };
+    return makeRiseReel({ bg: mk("bg"), text: mk("text"), top: mk("top") });
+  };
+  const reelDownload = async (post: Post) => {
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Making the reel, this takes about a minute");
+    try {
+      const url = await reelMade(post);
+      await downloadSparkleZip([{ prefix: `reel-${t.id}`, urls: [url], caption: fullCaption(post) }], `reel-${t.id}.zip`);
+      toast.success("Reel downloaded", { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the reel", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
+  const reelSend = async (post: Post, mode: "schedule" | "bank") => {
+    if (!preset) { toast.error("I cannot find the client preset for this page"); return; }
+    const t = TYPE_BY_ID.get(post.typeId)!;
+    patch(post.id, { scheduling: true });
+    const id = toast.loading("Making the reel, this takes about a minute");
+    try {
+      const url = await reelMade(post);
+      const { postType, content } = sparklePostBody([url], fullCaption(post), `${t.label} · ${CLINIC_NAME} · reel`, "clare");
+      const body = mode === "bank"
+        ? { postType, content, status: "draft", presetId: preset.id }
+        : { postType, content, scheduledAt: new Date(post.when).toISOString(), isTrial: false, notes: "", presetId: preset.id };
+      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error || "Could not save the reel"); }
+      if (mode === "schedule") setScheduled((s) => ({ ...s, [t.id]: new Date(post.when).toISOString() }));
+      else patch(post.id, { banked: true });
+      toast.success(mode === "bank" ? `Reel added to ${preset.name || CLINIC_NAME}'s Client Bank, no date` : "Reel scheduled", { id });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the reel", { id });
+    }
+    patch(post.id, { scheduling: false });
+  };
   const sparkleDownload = async (post: Post) => {
     const t = TYPE_BY_ID.get(post.typeId)!;
     patch(post.id, { scheduling: true });
@@ -1404,6 +1476,14 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                       </div>
                     ); })()}
                     <Button size="sm" variant="secondary" onClick={() => download(post)} disabled={!(post.caption || post.vstory)}><Download className="w-4 h-4 mr-2" />Download</Button>
+                    {!freebie && !post.vstory && (post.voucher || post.dec) && (
+                      <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">
+                        <span className="text-sm font-semibold">Rising reel</span>
+                        <Button size="sm" variant="secondary" onClick={() => reelDownload(post)} disabled={!post.caption || post.scheduling}><Download className="w-4 h-4 mr-2" />Reel download</Button>
+                        <Button size="sm" variant="secondary" onClick={() => reelSend(post, "bank")} disabled={!post.caption || post.scheduling}><Archive className="w-4 h-4 mr-2" />Reel to bank</Button>
+                        <Button size="sm" variant="secondary" onClick={() => reelSend(post, "schedule")} disabled={!post.caption || post.scheduling}><CalendarCheck className="w-4 h-4 mr-2" />Reel schedule</Button>
+                      </div>
+                    )}
                     {SPARKLE_ON && !freebie && (
                       <div className="flex gap-2 items-center flex-wrap rounded-lg border border-pink-400/40 px-2 py-1">
                         <SparkleControls style={sparkle.style} amount={sparkle.amount} color={sparkle.color} onChange={changeSparkle} brand={[preset?.accentColor ?? "", preset?.pageColor ?? "", preset?.overlayColor ?? "", look.headline, look.wash]} />
