@@ -24,14 +24,14 @@ export function timeLeftLabel(closesAt: number, now = Date.now()): string {
   return `${hrs} ${hrs === 1 ? "HOUR" : "HOURS"} LEFT`;
 }
 
-export async function renderBfdecOg(closesAt: number, now = Date.now()): Promise<Buffer> {
+export async function renderBfdecOg(closesAt: number, now = Date.now(), fixedLabel?: string): Promise<Buffer> {
   const f = getFont();
   const w = (t: string, size: number) => f.getAdvanceWidth(t, size);
   const fit = (t: string, size: number, max: number) => { while (w(t, size) > max && size > 20) size -= 2; return size; };
   const path = (t: string, x: number, baseline: number, size: number, fill: string) => `<path d="${f.getPath(t, x, baseline, size).toPathData(2)}" fill="${fill}"/>`;
   const centred = (t: string, cx: number, baseline: number, size: number, fill: string) => path(t, cx - w(t, size) / 2, baseline, size, fill);
 
-  const left = timeLeftLabel(closesAt, now);
+  const left = fixedLabel || timeLeftLabel(closesAt, now);
   const leftSize = fit(left, 120, 1000);
   const bundleSize = fit("DECEMBER BUNDLE", 112, 1080);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">

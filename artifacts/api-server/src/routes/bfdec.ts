@@ -136,9 +136,10 @@ router.get("/bfdec/offer", (_req: Request, res: Response) => {
 });
 
 // The link preview picture (WhatsApp, Instagram DMs): says how long the offer has left, drawn fresh each time.
-router.get("/bfdec/og.jpg", async (_req: Request, res: Response) => {
+router.get("/bfdec/og.jpg", async (req: Request, res: Response) => {
   try {
-    const jpg = await renderBfdecOg(CLOSES_AT);
+    // ?fixed=1 gives the version that says "ENDS 8PM TOMORROW" instead of the hours left, handy to post alongside a message.
+    const jpg = await renderBfdecOg(CLOSES_AT, Date.now(), req.query.fixed ? "ENDS 8PM TOMORROW" : undefined);
     res.set("Content-Type", "image/jpeg").set("Cache-Control", "public, max-age=300").send(jpg);
   } catch {
     res.status(500).end();
