@@ -23,6 +23,10 @@ export const VOUCHER_GROUPS: { id: string; label: string }[] = [
  {
   "id": "vg5",
   "label": "For the last-minute shoppers"
+ },
+ {
+  "id": "vg6",
+  "label": "Gift vouchers: extra free"
  }
 ];
 const DATA: { g: number; n: number; s1: string; s2: string; s3: string }[] = [
@@ -235,6 +239,48 @@ const DATA: { g: number; n: number; s1: string; s2: string; s3: string }[] = [
 "s1": "If your plan was “I’ll nip into town on Christmas Eve”, read the next slide.",
 "s2": "A Christmas gift voucher for [Clinic name] could save you a lap of the shops and another argument with the parking machine.",
 "s3": "DM me GIFT and I’ll send you the voucher options and the last available collection time."
+},
+ {
+"g": 5,
+"n": 31,
+"s1": "A gift voucher that gives you [bonus] extra for free.",
+"s2": "Buy a gift voucher at [Clinic name] this Christmas and I’ll add [bonus] on top. They get the treat, you get to look like the generous one.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
+},
+ {
+"g": 5,
+"n": 32,
+"s1": "The only maths I enjoy is [bonus] extra being added to your gift voucher.",
+"s2": "Spend on a Christmas gift voucher at [Clinic name] and I’ll top it up by [bonus] for free. Your friend gets more and your bank balance barely notices.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
+},
+ {
+"g": 5,
+"n": 33,
+"s1": "Treat someone this Christmas and I’ll treat you back with [bonus] extra.",
+"s2": "Every gift voucher bought at [Clinic name] gets [bonus] added to its value. Consider it a thank you for being so organised.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
+},
+ {
+"g": 5,
+"n": 34,
+"s1": "Your gift voucher is about to get a bonus of [bonus].",
+"s2": "For a limited time, every Christmas gift voucher at [Clinic name] comes with [bonus] extra to spend. It’s the nicest bit of gift wrapping I offer.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
+},
+ {
+"g": 5,
+"n": 35,
+"s1": "Buying early gets you [bonus] extra on a gift voucher.",
+"s2": "Order a gift voucher from [Clinic name] and I’ll add [bonus] to the value. Sorted before the panic starts, with a bonus on top.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
+},
+ {
+"g": 5,
+"n": 36,
+"s1": "Gift vouchers with [bonus] extra free, because you did the thinking.",
+"s2": "Skip the wrapping paper, the queues and the guessing of sizes. A gift voucher from [Clinic name] with [bonus] extra added is ready when you are.",
+"s3": "DM me GIFT and I’ll send you the voucher options and how to claim your [bonus] extra."
 }
 ];
 export const VOUCHER_ROWS: VoucherRow[] = DATA.map((r) => ({ id: `vq${r.n}`, group: VOUCHER_GROUPS[r.g].id, n: r.n, s1: r.s1, s2: r.s2, s3: r.s3 }));
