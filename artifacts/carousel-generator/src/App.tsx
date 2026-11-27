@@ -215,6 +215,7 @@ import ClubPortal from "@/pages/club-portal";
 import ClubInvite from "@/pages/club-invite";
 import SmsKirsty from "@/pages/sms-kirsty";
 import KirstyProposal from "@/pages/kirsty-proposal";
+import JillSocialProposal from "@/pages/jill-social-proposal";
 import TenFreeTracker from "@/pages/ten-free-tracker";
 import Over50 from "@/pages/over50";
 import Photoshoot, { PhotosView } from "@/pages/photoshoot";
@@ -486,6 +487,7 @@ function AppContent() {
   const [isYoureInvited] = useRoute("/youreinvited");
   const [isSmsKirsty] = useRoute("/smskirsty");
   const [isKirstyProposal] = useRoute("/kirstyproposal");
+  const [isJillSocialProposal] = useRoute("/jillsocialproposal");
   const [isSuitsCrm] = useRoute("/suitscrm");
   const [isTenFreePublic, tenFreeParams] = useRoute("/10free/:slug");
   const [isYearPass, yearPassParams] = useRoute("/yearpass/:token");
@@ -749,6 +751,7 @@ function AppContent() {
   if (isYoureInvited) return <ClubInvite />;
   if (isSmsKirsty) return <SmsKirsty />;
   if (isKirstyProposal) return <KirstyProposal />;
+  if (isJillSocialProposal) return <JillSocialProposal />;
   if (isSuitsCrm) return <SuitsCrmPage />;
   if (isClubPortal && clubParams?.token) {
     return <ClubPortal token={clubParams.token} />;

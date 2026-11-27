@@ -10,6 +10,7 @@ export const SALES_PREVIEWS: { id: string; paths: string[]; title: string; desc:
   { id: "freehousesales", paths: ["/freehousesales"], title: "Freehouse Socials sales dashboard", desc: "Partner login. Log your leads and track your commission." },
   { id: "salesproposal", paths: ["/salesproposal"], title: "Social Media Sister sales partner proposal", desc: "What you earn, how it works and what to say. Bring in new clinics and earn 25% of every package." },
     { id: "kirstyproposal", paths: ["/kirstyproposal"], title: "For Kirsty: The Aesthetic Shift Community development rate", desc: "£222 a month for your clinics, fixed for a year, and £22 a month for you on every clinic that joins. Social Media Sister, part of the Very Vanessa Media Group." },
+    { id: "jillsocialproposal", paths: ["/jillsocialproposal"], title: "For Jill: three ways to work with me", desc: "Done For You, Own It or Half and Half. A branded Cyber Suite for Yorkshire businesses. Social Media Sister, part of the Very Vanessa Media Group." },
     { id: "smskirsty", paths: ["/smskirsty"], title: "The Aesthetic Shift Community: the development rate", desc: "£222 a month for a whole year, fixed price. By application only. Social Media Sister, part of the Very Vanessa Media Group." },
   { id: "salesdashboard", paths: ["/salesdashboard"], title: "Social Media Sister sales dashboard", desc: "Partner login. Log your leads and track your commission." },
 ];
