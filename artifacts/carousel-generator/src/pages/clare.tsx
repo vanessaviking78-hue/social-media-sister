@@ -1756,6 +1756,25 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                         <ColourPicker small label="This post: text colour" value={quoteText(lookFor(post))} onChange={(v) => patch(post.id, { look: { ...post.look, text: v, headline: v } })} />
                         {post.look && Object.keys(post.look).length > 0 && <button className="underline text-white/50" onClick={() => patch(post.id, { look: undefined })}>Back to the page setting</button>}
                       </div>
+                      {post.voucher && (() => {
+                        const bx = lookFor(post).box;
+                        const setBox = (nb: CoverBox | undefined) => patch(post.id, { look: { ...post.look, box: nb } });
+                        return (
+                          <div className="space-y-2 md:col-span-2 rounded border border-pink-400/30 p-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-white/60">This post: floating text box</span>
+                              <button type="button" onClick={() => setBox(bx ? undefined : { ...DEFAULT_BOX, tight: true, y: 0.5 })} className={`rounded border px-2 py-1 ${bx ? "border-emerald-400 bg-emerald-400/10" : "border-white/20"}`}>{bx ? "On" : "Off"}</button>
+                            </div>
+                            {bx && (
+                              <div className="grid md:grid-cols-3 gap-3">
+                                <ColourPicker small label="Box colour" value={bx.fill} onChange={(v) => v && setBox({ ...bx, fill: v })} />
+                                <ColourPicker small label="Box text colour" value={bx.text ?? "auto"} extra={[{ name: "Automatic", hex: "auto" }]} onChange={(v) => setBox({ ...bx, text: v === "auto" ? undefined : v })} />
+                                <ColourPicker small label="Box outline" value={bx.outline ?? "none"} extra={[{ name: "No outline", hex: "none" }]} onChange={(v) => setBox({ ...bx, outline: v === "none" ? undefined : v })} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </>
                   ) : (
                     <>
