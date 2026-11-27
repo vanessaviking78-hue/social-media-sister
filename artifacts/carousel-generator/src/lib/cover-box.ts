@@ -49,12 +49,12 @@ export function drawCoverBox(ctx: CanvasRenderingContext2D, o: { headline: strin
   if (o.tf) {
     const make = (s: number) => layoutTitle(o.tf!.lf, o.headline, o.tf!.style, s, inner, 1.1);
     layout = make(size);
-    while (size > Math.round(40 * ts) && titleHeight(layout) > 460) { size -= 4; layout = make(size); }
+    while (size > Math.round(40 * ts) && titleHeight(layout) > 460 * Math.max(1, ts)) { size -= 4; layout = make(size); }
     lineH = titleHeight(layout);
   } else {
     ctx.font = `400 ${size}px "${o.headFont}", serif`;
     lines = wrapLines(ctx, o.headline, inner);
-    while (size > 40 && lines.length * size * 1.1 > 460) { size -= 4; ctx.font = `400 ${size}px "${o.headFont}", serif`; lines = wrapLines(ctx, o.headline, inner); }
+    while (size > 40 && lines.length * size * 1.1 > 460 * Math.max(1, ts)) { size -= 4; ctx.font = `400 ${size}px "${o.headFont}", serif`; lines = wrapLines(ctx, o.headline, inner); }
     lineH = lines.length * size * 1.1;
   }
   let subLines: string[] = [];

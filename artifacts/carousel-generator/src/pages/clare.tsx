@@ -485,10 +485,11 @@ function drawSlideBody(ctx: CanvasRenderingContext2D, post: Post, n: number, pho
       if (photo && vop > 0) { ctx.save(); ctx.globalAlpha = vop; coverFit(ctx, photo.bmp, post.adj?.zoom?.[0], post.adj?.px?.[0], post.adj?.py?.[0]); ctx.restore(); }
     }
     const vtext = post.vstory && n > 0 ? post.slides[n - 1] || "" : post.hook || "";
-    if (look.box) { if (REEL_LAYER !== "bg") drawCoverBox(ctx, { headline: vtext, box: { ...look.box, tight: true }, tf: tf as any, headFont: f.head, ts }); return; }
+    const vts = ((look.titleSize || 100) / 100) * sc; // the page Title size slider and this post's Headline size / Text size slider both count, on every slide
+    if (look.box) { if (REEL_LAYER !== "bg") drawCoverBox(ctx, { headline: vtext, box: { ...look.box, tight: true, y: Math.max(0.05, Math.min(0.95, look.box.y + cy / H)) }, tf: tf as any, headFont: f.head, ts: vts }); return; }
     if (REEL_LAYER === "bg") return;
     ctx.textAlign = "center";
-    const vfit = fitText(ctx, vtext, (px) => head(px), W - 200, Math.round(H * 0.6) * Math.max(1, ts), Math.round(130 * ts), Math.round(50 * ts), 1.12);
+    const vfit = fitText(ctx, vtext, (px) => head(px), W - 200, Math.round(H * 0.6) * Math.max(1, vts), Math.round(130 * vts), Math.round(50 * vts), 1.12);
     const vtotal = vfit.lines.length * vfit.px * 1.12;
     let vy = (H - vtotal) / 2 + cy;
     ctx.fillStyle = look.headline !== "auto" ? paintOf(ctx, look.headline, vy, vy + vtotal) : INKC;
