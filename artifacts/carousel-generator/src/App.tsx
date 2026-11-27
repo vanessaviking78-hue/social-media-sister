@@ -176,6 +176,7 @@ import HammeredTool from "@/pages/hammered";
 import HammeredLinks from "@/pages/hammered-links";
 import HammeredPerformance from "@/pages/hammered-performance";
 import InboxPage from "@/pages/inbox";
+import CommentsPage from "@/pages/comments";
 import TenFreePublic from "@/pages/ten-free-public";
 import YearPass from "@/pages/yearpass";
 import YearPassAdmin from "@/pages/yearpass-admin";
@@ -286,6 +287,7 @@ function ProtectedRouter() {
       <Route path="/freehouselinks" component={FreehouseLinks} />
       <Route path="/freehouseperformance" component={FreehousePerformance} />
       <Route path="/inbox" component={InboxPage} />
+      <Route path="/comments" component={CommentsPage} />
       <Route path="/clare" component={ClarePage} />
       <Route path="/clients" component={ClientsIndexPage} />
       <Route path="/client/:id" component={ClientByIdPage} />

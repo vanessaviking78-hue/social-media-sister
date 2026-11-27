@@ -247,6 +247,33 @@ router.get("/inbox/items", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/inbox/comments", requireAuth, async (req, res) => {
+  try {
+    await ensureTables();
+    const showDone = req.query.done === "1";
+    const r = rowsOf(await db.execute(sql`SELECT id, preset_id, client_name, thread_id, permalink, media_caption, author_name, body, is_read, replied, created_at_meta
+      FROM inbox_items WHERE kind = 'comment' AND direction = 'in' AND (${showDone} OR (replied = false AND is_read = false))
+      ORDER BY created_at_meta DESC LIMIT 400`));
+    const accounts = rowsOf(await db.execute(sql`SELECT DISTINCT client_name FROM inbox_items WHERE kind = 'comment'`)).map((x) => String(x.client_name));
+    res.json({
+      items: r.map((x) => ({
+        id: Number(x.id), presetId: Number(x.preset_id), clientName: x.client_name, threadId: x.thread_id, permalink: x.permalink, caption: x.media_caption,
+        author: x.author_name, body: x.body, isRead: x.is_read, replied: x.replied, at: x.created_at_meta,
+      })),
+      accounts,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Could not load comments" });
+  }
+});
+
+router.post("/inbox/:id/done", requireAuth, async (req, res) => {
+  await ensureTables();
+  const id = Number(req.params.id);
+  if (id) await db.execute(sql`UPDATE inbox_items SET is_read = true WHERE id = ${id}`);
+  res.json({ ok: true });
+});
+
 router.post("/inbox/sync", requireAuth, async (_req, res) => {
   const r = await syncInbox();
   res.json(r);
