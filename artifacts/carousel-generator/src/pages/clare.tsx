@@ -1085,6 +1085,35 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [freebie?.id]);
+  // VOUCHER COLLECT LINK: the ticked voucher designs go to a private page the clinic opens to download them.
+  const [collect, setCollect] = useState<{ busy: string; link: string }>({ busy: "", link: "" });
+  const publishCollect = async () => {
+    const chosen = posts.filter((p) => p.pick);
+    if (!chosen.length) { toast.error("Tick the designs for the clinic first"); return; }
+    try {
+      const out: { n: number; kind: string; label: string; images: string[]; caption: string; tags: string }[] = [];
+      for (let i = 0; i < chosen.length; i++) {
+        setCollect({ busy: `Making design ${i + 1} of ${chosen.length}`, link: "" });
+        const post = chosen[i];
+        const t = TYPE_BY_ID.get(post.typeId)!;
+        const cs = await render(post);
+        const urls = await uploadPngs(cs.map((c) => c.toDataURL("image/png")), cs.map((_, k) => `vouchercollect-${t.id}-${k + 1}-${Date.now()}.png`));
+        const words = post.vstory ? [post.hook, ...post.slides].filter(Boolean).join("\n\n") : noFoot(post.caption);
+        out.push({ n: i + 1, kind: post.vstory ? "story" : "post", label: t.label.replace(/^\d+\.\s*/, ""), images: urls, caption: words, tags: post.vstory ? "" : tagsOf(post).join(" ") });
+      }
+      setCollect({ busy: "Publishing the link", link: "" });
+      const pw = localStorage.getItem("cybersuite-pw") || "";
+      const r = await fetch(`${BASE}/api/voucher-collect/publish`, { method: "POST", headers: { "Content-Type": "application/json", "x-app-password": pw, Authorization: "Bearer " + pw }, body: JSON.stringify({ clinicName: CLINIC_NAME, items: out }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.slug) throw new Error(j?.error || "Could not publish the link");
+      setCollect({ busy: "", link: `${window.location.origin}${BASE}/voucher-collect/${j.slug}` });
+      toast.success("The collect link is ready");
+    } catch (e) {
+      setCollect({ busy: "", link: "" });
+      toast.error(e instanceof Error ? e.message : "Could not publish the link");
+    }
+  };
+
   const publishGift = async () => {
     if (!freebie) return;
     const chosen = posts.filter((p) => p.pick);
@@ -1587,6 +1616,22 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
               <p className="text-xs text-white/50">Open any post below, tick "In the gift", choose gradient or floating box, then publish. Photos from the clinic's form are already loaded.</p>
             </div>
           )}
+          {isVoucher && !freebie && posts.length > 0 && (
+            <div className="rounded-lg border border-pink-400/40 p-3 mb-4 space-y-2">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-sm text-white/80">{posts.filter((p) => p.pick).length} ticked for {CLINIC_NAME}'s collect link</span>
+                <Button size="sm" disabled={!!collect.busy} onClick={() => void publishCollect()}>{collect.busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{collect.busy}</> : "Make the collect link"}</Button>
+              </div>
+              {collect.link && (
+                <div className="flex items-center gap-2 flex-wrap text-sm">
+                  <input readOnly value={collect.link} className="bg-white/10 rounded p-2 flex-1 min-w-[260px]" onFocus={(e) => e.currentTarget.select()} />
+                  <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard.writeText(collect.link).then(() => toast.success("Link copied")).catch(() => undefined); }}>Copy link</Button>
+                  <a className="underline text-white/70" href={collect.link} target="_blank" rel="noreferrer">Open it</a>
+                </div>
+              )}
+              <p className="text-xs text-white/50">Tick "In the collect link" on each finished design below, then make the link and send it to the clinic. They open it and download their posts, stories and captions.</p>
+            </div>
+          )}
           {posts.length > 0 && !freebie && (
             <div className="rounded-xl border border-white/10 p-4 flex items-center gap-3 flex-wrap">
               <span className="text-sm text-white/70">{ready.length} written and waiting{picked.size ? `, ${picked.size} ticked` : ""}</span>
@@ -1606,6 +1651,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={picked.has(post.id)} onChange={() => togglePick(post.id)} className="w-4 h-4 accent-pink-500" aria-label="Tick this post" /><h3 className="font-semibold">{t.label}</h3></label>
                   <div className="flex gap-2 items-center flex-wrap">
+                    {isVoucher && !freebie && <label className="flex items-center gap-2 text-sm rounded border border-pink-400/50 px-3 py-1.5"><input type="checkbox" checked={!!post.pick} onChange={(e) => patch(post.id, { pick: e.target.checked })} />In the collect link</label>}
                     {freebie && <label className="flex items-center gap-2 text-sm rounded border border-pink-400/50 px-3 py-1.5"><input type="checkbox" checked={!!post.pick} onChange={(e) => patch(post.id, { pick: e.target.checked })} />In the gift</label>}
                     {!freebie && <Button size="sm" onClick={() => write(post)} disabled={post.busy}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}Write it
