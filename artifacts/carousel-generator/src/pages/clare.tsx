@@ -43,11 +43,12 @@ const INK = "#1b1b1b";
 const GREY = "#6a6a6a";
 let CLINIC_KEY = "clare";
 let CLINIC_NAME: string = CLARE_SECTION_CLINIC.name;
+let BONUS = 10; // the extra-free percentage she chooses for the gift voucher posts
 // Sparkle buttons show on the Christmas tabs (Xmas, NEWXMAS, XMAS FEELS) and on STATIC - quotes.
 let SPARKLE_ON = false;
 let LOOK_KEY = "clare-look-v1";
 
-type Look = { vop?: number; wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
+type Look = { bonus?: number; vop?: number; wash: string; opacity: number; text: string; titleSize: number; bodySize: number; logoSize: number; logoWhite: boolean; headline: string; block?: boolean; flat?: boolean; col?: boolean; box?: CoverBox };
 const DEFAULT_LOOK: Look = { wash: "#0d0d0d", opacity: 100, text: "#ffffff", titleSize: 100, bodySize: 100, logoSize: 100, logoWhite: false, headline: "metal:gold" };
 
 // "Doctor" always has a capital D, wherever it appears in the writing.
@@ -728,6 +729,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
     return CLINIC_KEY === "clare" ? DEFAULT_LOOK : brandLook(preset);
   });
   useEffect(() => { try { localStorage.setItem(LOOK_KEY, JSON.stringify(look)); } catch { /* ignore */ } }, [look]);
+  BONUS = Math.max(1, Math.min(100, Math.round(look.bonus ?? 10)));
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -886,7 +888,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
 
   const initWhen = (t: ClareSectionPost) => (t.date ? `${t.date}T${t.slot ? "18:00" : preset?.defaultPostTime ?? "09:00"}` : nextDay(preset?.defaultPostTime ?? "09:00"));
   // [Clinic name] in her voucher lines becomes this client's own name (capitals stay capitals).
-  const cn = (x: string) => x.replace(/\[clinic name\]/gi, (m) => (m === m.toUpperCase() ? CLINIC_NAME.toUpperCase() : CLINIC_NAME));
+  const cn = (x: string) => x.replace(/\[bonus\]/gi, `${BONUS}%`).replace(/\[clinic name\]/gi, (m) => (m === m.toUpperCase() ? CLINIC_NAME.toUpperCase() : CLINIC_NAME));
   const nxFields = (t: ClareSectionPost): Partial<Post> => (t.dn ? { dec: true, slides: [t.dn.s2, t.dn.s3, t.dn.s4], cta: t.dn.cta, caption: t.dn.caption } : t.nx ? { four: true, sub: t.nx.sub, slides: [t.nx.s2, t.nx.s3, ""], cta: t.nx.cta, caption: t.nx.caption } : t.xf ? { one: true, caption: t.xf.caption } : t.sq ? { one: true, quote: true, caption: t.sq.caption } : t.vq ? (t.vs ? { vstory: true, quote: true, voucher: true, slides: [cn(t.vq.s2), cn(t.vq.s3), ""], caption: "" } : { one: true, quote: true, voucher: true, caption: cn(`${t.vq.s2}\n\n${t.vq.s3}`) }) : {});
   const initHook = (t: ClareSectionPost) => (t.dn ? t.dn.hook : t.nx ? t.nx.hook : t.xf ? t.xf.line : t.sq ? t.sq.line : t.vq ? cn(t.vq.s1) : t.xmas ? fillArea(fillTreatment(t.xmas.c, hookTreatment), area).replace(/\[TOWN\]/g, area.trim() || "your town") : t.label);
   // The 16 posts tab arrives with hooks, captions and hashtags already written. Clinic hashtags are built from the area typed on the page.
@@ -1426,6 +1428,13 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
                   <div className="space-y-3 rounded-lg border border-white/10 p-3">
                     <label className="flex items-center gap-3 text-xs"><span className="w-40 shrink-0 text-white/60">Photo strength (only shows if you add a photo)</span>
                       <input type="range" min={0} max={100} step={5} className="flex-1" value={look.vop ?? 35} onChange={(e) => setLook((l) => ({ ...l, vop: Number(e.target.value) }))} /><span className="w-10 text-right text-white/60">{look.vop ?? 35}%</span></label>
+                    <label className="flex items-center gap-3 text-xs"><span className="w-40 shrink-0 text-white/60">Gift Vouchers: extra free % (you choose, then add the posts from that tab)</span>
+                      <input type="number" min={1} max={100} className="w-20 rounded bg-white/10 px-2 py-1 text-sm" value={look.bonus ?? 10} onChange={(e) => {
+                        const v = Math.max(1, Math.min(100, Math.round(Number(e.target.value) || 10)));
+                        BONUS = v;
+                        setLook((l) => ({ ...l, bonus: v }));
+                        setPosts((l) => l.map((p) => { const t = POSTS.find((x) => x.id === p.typeId); if (!t?.vq || t.vq.group !== "vg6") return p; return { ...p, hook: cn(t.vq.s1), ...nxFields(t) }; }));
+                      }} /><span className="text-white/60">% extra free. Posts already added from that tab update to the new number.</span></label>
                     <BoxControls label="Floating text box (wraps to the words)" box={look.box} onChange={(b) => setLook((l) => ({ ...l, box: b ? { ...b, tight: true, y: l.box ? b.y : 0.5 } : undefined }))} />
                   </div>
                 )}
