@@ -1422,7 +1422,7 @@ function ClareOwnInner({ preset, freebie }: { preset: ReturnType<typeof usePrese
           <Link href="/hub" className="text-white/70 hover:text-white"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
             <h1 className="text-3xl" style={{ fontFamily: `"${fonts.head}", serif` }}>{CLINIC_NAME}</h1>
-            <p className="text-white/60 text-sm">Her own page. Photo first with a soft black wash and gold. 6 sections of 6 posts, names cross out once scheduled.{!preset && " (I cannot see her client preset yet, so scheduling is off.)"}</p>
+            <p className="text-white/60 text-sm">{isVoucher ? `Gift voucher designs for ${CLINIC_NAME}: pick the colours, bow and floating text box, then download, schedule or add to the Client Bank.` : CLINIC_KEY === "clare" ? "Her own page. Photo first with a soft black wash and gold. 6 sections of 6 posts, names cross out once scheduled." : `${CLINIC_NAME}'s own page. Tick the posts you want, then schedule them or add them to the Client Bank.`}{!preset && " (I cannot see her client preset yet, so scheduling is off.)"}</p>
           </div>
         </div>
 

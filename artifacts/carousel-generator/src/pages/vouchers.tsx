@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { ForcedClientContext } from "@/lib/forced-client";
@@ -9,14 +9,12 @@ import VoucherStoriesTab from "./vstories-tab";
 
 // VOUCHERS in Content Creation: pick a client, then make their gift voucher posts (1080 x 1440) or the same hooks as 3 story sequences (1080 x 1920).
 // It is the same tool as the Vouchers tabs on each client's own page, opened on the client picked here.
-const KEY = "vouchers-client-v1";
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export default function VouchersPage() {
   const { presets, loading } = usePresets();
-  const [name, setName] = useState(() => { try { return localStorage.getItem(KEY) || ""; } catch { return ""; } });
+  const [name, setName] = useState(""); // always opens on "Pick a client", so it never lands on the last client by surprise
   const [kind, setKind] = useState<"posts" | "stories">("posts");
-  useEffect(() => { try { localStorage.setItem(KEY, name); } catch { /* ignore */ } }, [name]);
   const sorted = useMemo(() => [...presets].sort((a, b) => a.name.localeCompare(b.name)), [presets]);
   const forced = useMemo(() => (name ? { pattern: new RegExp(`^${esc(name)}$`, "i") } : null), [name]);
   return (
