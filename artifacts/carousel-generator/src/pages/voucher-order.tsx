@@ -20,6 +20,8 @@ const SW_CSS = `
 .vo-err { color:#c00; font-weight:700; margin-top:12px; }
 `;
 
+const DEALS = ["10% extra free", "Spend £50, get £60", "Spend £100, get £120", "Spend £200, get £250"];
+
 export default function VoucherOrder() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,6 +31,7 @@ export default function VoucherOrder() {
   const [picked, setPicked] = useState<string[]>([]);
   const [other, setOther] = useState("");
   const [offers, setOffers] = useState("");
+  const [deal, setDeal] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -40,7 +43,7 @@ export default function VoucherOrder() {
     setBusy(true);
     try {
       const colours = [...picked, other.trim()].filter(Boolean).join(", ");
-      const r = await fetch(`${BASE}/api/voucher-orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, insta, area, colours, offers, note }) });
+      const r = await fetch(`${BASE}/api/voucher-orders`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, phone, insta, area, colours, offers, deal, note }) });
       const b = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(b.error || "Something went wrong, please try again");
       setDone(true);
@@ -79,6 +82,9 @@ export default function VoucherOrder() {
             <input className="ps-in" style={{ marginTop: 8 }} value={other} onChange={(e) => setOther(e.target.value)} placeholder="Or type your brand colours, for example #7a1f3d" />
             <label className="ps-l">Your voucher offers (one per line, for example: £50 towards any facial)</label>
             <textarea className="ps-in" rows={5} value={offers} onChange={(e) => setOffers(e.target.value)} />
+            <label className="ps-l">Your discount or bonus deal (optional)</label>
+            <div className="vo-sw">{DEALS.map((d) => <button key={d} type="button" className={deal === d ? "on" : ""} onClick={() => setDeal(deal === d ? "" : d)}>{d}</button>)}</div>
+            <input className="ps-in" style={{ marginTop: 8 }} value={deal} onChange={(e) => setDeal(e.target.value)} placeholder="Or type your own, for example: Spend £100, get £120 to spend" />
             <label className="ps-l">Anything else I should know?</label>
             <textarea className="ps-in" rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
             {err && <div className="vo-err">{err}</div>}

@@ -27,6 +27,7 @@ function ensureTable(): Promise<void> {
       note TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )`)
+    .then(() => db.execute(sql`ALTER TABLE voucher_orders ADD COLUMN IF NOT EXISTS deal TEXT NOT NULL DEFAULT ''`))
     .then(() => undefined);
   ready = p;
   p.catch(() => { ready = null; });
@@ -53,13 +54,14 @@ router.post("/voucher-orders", async (req: Request, res: Response) => {
     const area = str(req.body?.area, 160);
     const colours = str(req.body?.colours, 300);
     const offers = str(req.body?.offers, 2000);
+    const deal = str(req.body?.deal, 200);
     const note = str(req.body?.note, 1000);
     if (!name || !/^\S+@\S+\.\S+$/.test(email) || !area || !colours || !offers) {
       res.status(400).json({ error: "Please fill in your name, email, area, colours and your voucher offers" });
       return;
     }
     const id = uuid();
-    await db.execute(sql`INSERT INTO voucher_orders (id, name, email, phone, insta, area, colours, offers, note) VALUES (${id}, ${name}, ${email}, ${phone}, ${insta}, ${area}, ${colours}, ${offers}, ${note})`);
+    await db.execute(sql`INSERT INTO voucher_orders (id, name, email, phone, insta, area, colours, offers, deal, note) VALUES (${id}, ${name}, ${email}, ${phone}, ${insta}, ${area}, ${colours}, ${offers}, ${deal}, ${note})`);
     void notifyOwner(
       `Voucher order: ${name}`,
       [
@@ -72,6 +74,7 @@ router.post("/voucher-orders", async (req: Request, res: Response) => {
         "",
         "Voucher offers they want:",
         offers,
+        deal ? `\nDiscount or bonus deal: ${deal}` : "",
         note ? `\nAnything else: ${note}` : "",
         "",
         "Make their designs here, then send them back:",
